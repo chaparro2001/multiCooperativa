@@ -4,7 +4,7 @@
 
 Control de los albaranes y facturas de la cooperativa con sus **proveedores** (compras) y sus **clientes** (ventas): registro, conciliación entre albaranes y facturas, vencimientos de pagos y cobros, y captura desde la cámara mediante un modelo de visión.
 
-Permisos: módulo `facturas-albaranes`, alcance siempre «todas». Los socios no acceden por defecto: es información de gestión de la cooperativa. El consejo rector consulta y el gestor y el administrador gestionan.
+Permisos: módulo `facturas`, alcance siempre «todas». Los socios no acceden por defecto: es información de gestión de la cooperativa. El consejo rector consulta y el gestor y el administrador gestionan.
 
 > **Frontera del módulo.** La app **controla y consulta, no emite**. Las facturas de venta se emiten fuera (ERP o programa de facturación) y aquí se registran, igual que las recibidas de proveedores. La emisión con validez fiscal (series, numeración legal, Verifactu) queda fuera de alcance.
 >
@@ -160,6 +160,12 @@ stateDiagram-v2
 
 El estado de conciliación (sin albaranes, conciliada, con discrepancia) es independiente del estado de pago o cobro.
 
+**Líneas de factura.** Para conciliar por concepto y unidad (RN-FAC-08), la factura lleva sus líneas (concepto, cantidad, unidad). Son obligatorias si agrupa albaranes y opcionales si no (un servicio). Los conceptos se comparan sin distinguir mayúsculas, tildes ni espacios sobrantes.
+
+**Representación de importes (RN-FAC-13).** En el dominio, céntimos, milésimas de cantidad y centésimas de punto de IVA como enteros (`bigint`); en base de datos, `Decimal`; en la API, cadenas decimales (`"1234.56"`). El IVA se redondea a céntimos, mitad hacia arriba.
+
+**Anular una factura** devuelve sus albaranes a «pendiente de facturar», para que la factura que la sustituye pueda agruparlos.
+
 ## 4. Extracción con visión
 
 1. La app envía la imagen o el PDF al backend, nunca directamente al proveedor de IA.
@@ -189,6 +195,7 @@ erDiagram
     TERCERO ||--o{ FACTURA : "emite o recibe"
     ALBARAN ||--|{ LINEA_ALBARAN : contiene
     FACTURA ||--o{ ALBARAN : agrupa
+    FACTURA ||--o{ LINEA_FACTURA : contiene
     FACTURA ||--o{ DISCREPANCIA : registra
     FACTURA ||--o{ RECLAMACION : "puede tener"
     RECLAMACION ||--|{ NOTA_RECLAMACION : contiene
@@ -237,6 +244,13 @@ erDiagram
         enum estadoConciliacion
         date liquidadaEn
         string claveFichero
+    }
+    LINEA_FACTURA {
+        uuid id
+        uuid facturaId
+        string concepto
+        decimal cantidad
+        string unidad
     }
     DISCREPANCIA {
         uuid id
