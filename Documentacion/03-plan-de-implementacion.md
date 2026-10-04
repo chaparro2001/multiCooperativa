@@ -47,7 +47,7 @@ Especificaciones: [02-comunicados](requisitos/02-comunicados.md) · [03-document
 
 Especificación: [04-asambleas](requisitos/04-asambleas.md)
 
-- [ ] Dominio con TDD: tabla de casos de quórum y mayorías del apartado 9.
+- [x] Dominio con TDD: tabla de casos de quórum y mayorías del apartado 9.
 - [ ] Convocatoria, puntos, censo, votos con restricción única en base de datos.
 - [ ] API y eventos.
 - [ ] App: listado, detalle, votar, resultado; editor y control de votaciones para gestión.
