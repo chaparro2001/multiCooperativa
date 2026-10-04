@@ -31,7 +31,7 @@ Especificación: [requisitos/01-acceso-y-perfiles.md](requisitos/01-acceso-y-per
 - [x] `GET /cooperativas/{id}/me/permisos`.
 - [x] Test parametrizado de la matriz perfiles × módulos y test de aislamiento entre cooperativas.
 - [ ] App: login, almacenamiento seguro de tokens, renovación automática, selector de cooperativa, navegación según permisos, biometría.
-- [ ] Datos de ejemplo: dos cooperativas con usuarios de cada perfil.
+- [x] Datos de ejemplo: dos cooperativas con usuarios de cada perfil.
 
 ## Hito 2 · Comunicados y documentos (9–11 oct)
 

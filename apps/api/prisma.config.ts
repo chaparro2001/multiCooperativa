@@ -10,6 +10,8 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
+    // `prisma migrate reset` y `prisma db seed` cargan los datos de ejemplo.
+    seed: 'tsx scripts/seed.ts',
   },
   datasource: {
     // `prisma generate` no necesita la base de datos; las migraciones sí exigen DATABASE_URL.

@@ -62,6 +62,7 @@ Requisitos: Node 24 (`.nvmrc`), pnpm y Docker.
 pnpm install                 # instala y genera el cliente de Prisma
 pnpm db:up                   # PostgreSQL con pgvector (Docker Compose)
 pnpm --filter @multicooperativa/api db:migrate   # aplica o crea migraciones
+pnpm --filter @multicooperativa/api db:seed      # datos de ejemplo (Documentacion/datos-de-ejemplo.md)
 pnpm --filter @multicooperativa/api dev          # API en http://localhost:3000
 pnpm --filter @multicooperativa/mobile start     # app Expo
 

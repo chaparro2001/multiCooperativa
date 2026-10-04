@@ -63,6 +63,7 @@ export type { AuthRateLimits } from './infrastructure/http/auth-router';
 export type { InvitationSender } from './application/ports/invitation-sender';
 export {
   ConsoleInvitationSender,
+  invitationLink,
   UnavailableInvitationSender,
 } from './infrastructure/invitation-senders';
 
