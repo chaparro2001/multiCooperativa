@@ -11,10 +11,12 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "cooperative:create": "tsx --env-file-if-exists=.env scripts/create-cooperative.ts"
   },
   "dependencies": {
     "@multicooperativa/contracts": "workspace:*",
+    "@node-rs/argon2": "^2.2.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "express": "^5.2.1",
