@@ -211,9 +211,12 @@ describe('pagos, cobros y vencimientos (HU-FAC-07)', () => {
     expect(markOverdue(pending, '2026-11-01').paymentStatus).toBe('vencida');
   });
 
-  it('avisa cuando vence en 3 días', () => {
+  it('avisa cuando vence en los próximos 3 días, también si un día no se ejecutó el proceso', () => {
     expect(isDueSoon(pending, '2026-10-28')).toBe(true);
+    expect(isDueSoon(pending, '2026-10-30')).toBe(true);
+    expect(isDueSoon(pending, '2026-10-31')).toBe(true);
     expect(isDueSoon(pending, '2026-10-27')).toBe(false);
+    expect(isDueSoon(pending, '2026-11-01')).toBe(false);
     expect(isDueSoon({ ...pending, paymentStatus: 'liquidada' }, '2026-10-28')).toBe(false);
   });
 

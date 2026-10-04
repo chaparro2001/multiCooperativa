@@ -3,6 +3,7 @@ import { type RequestHandler, Router } from 'express';
 import type { EventPublisher } from '../../shared/events';
 import type { FileStorage } from '../../shared/files/file-storage';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
+import { runDueDates } from './application/due-dates';
 import type { InvoicingEvent } from './application/events';
 import { createInvoicingDocumentsRouter } from './infrastructure/http/documents-router';
 import { invoicingErrorHandler } from './infrastructure/http/error-handler';
@@ -12,6 +13,7 @@ import {
   PrismaInvoiceStore,
   PrismaInvoicingSettingsStore,
 } from './infrastructure/prisma-document-stores';
+import { PrismaDueDatesStore } from './infrastructure/prisma-due-dates-store';
 import { PrismaThirdPartyStore } from './infrastructure/prisma-third-party-store';
 
 export type {
@@ -26,6 +28,19 @@ export type {
 /** Calendar day in Spain, where the cooperatives are (AAAA-MM-DD). */
 export function todayInSpain(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(now);
+}
+
+/** HU-FAC-07: the daily due-date process over every cooperative. Idempotent (RNF-FAC-04). */
+export function runDueDatesJob(deps: {
+  prisma: PrismaClient;
+  events: EventPublisher<InvoicingEvent>;
+  now?: () => Date;
+}) {
+  const now = deps.now ?? (() => new Date());
+  return runDueDates(
+    { dueDates: new PrismaDueDatesStore(deps.prisma), events: deps.events, now },
+    todayInSpain(now()),
+  );
 }
 
 /** Public interface of the invoicing module (requisitos/05). */

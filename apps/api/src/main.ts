@@ -12,7 +12,7 @@ const files = new S3FileStorage(s3SettingsFromEnv(env));
 // En local el bucket se crea solo; en producción se aprovisiona antes (ADR-005).
 if (!production) await files.ensureBucket();
 
-const { app, indexing } = createApi({
+const { app, indexing, runDueDates } = createApi({
   prisma: createPrismaClient(env.DATABASE_URL),
   jwtSecret: env.JWT_SECRET,
   files,
@@ -35,3 +35,16 @@ indexing
   .catch((error) =>
     console.error('No se han podido recuperar las indexaciones pendientes:', error),
   );
+
+// Vencimientos de facturas (HU-FAC-07): al arrancar y cada hora. Trabaja por fechas y es
+// idempotente (RNF-FAC-04), así que en la práctica actúa una vez al día.
+const HOUR = 60 * 60 * 1000;
+const dueDates = () =>
+  runDueDates()
+    .then(({ overdue, dueSoon }) => {
+      if (overdue + dueSoon > 0)
+        console.log(`Vencimientos: ${overdue} vencidas, ${dueSoon} avisos`);
+    })
+    .catch((error) => console.error('Fallo en el proceso de vencimientos:', error));
+void dueDates();
+setInterval(dueDates, HOUR).unref();

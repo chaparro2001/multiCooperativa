@@ -259,12 +259,20 @@ export function markOverdue<T extends { paymentStatus: PaymentStatus; dueDate: D
 
 export const DUE_SOON_DAYS = 3;
 
-/** HU-FAC-07: «vence en 3 días». */
+/**
+ * HU-FAC-07: due within the next 3 days. A window rather than an exact day, so
+ * a day the daily process does not run loses no notice; the reminder record
+ * keeps it from being sent twice (RNF-FAC-04).
+ */
 export function isDueSoon(
   invoice: { paymentStatus: PaymentStatus; dueDate: Day },
   today: Day,
 ): boolean {
-  return invoice.paymentStatus === 'pendiente' && invoice.dueDate === addDays(today, DUE_SOON_DAYS);
+  return (
+    invoice.paymentStatus === 'pendiente' &&
+    invoice.dueDate >= today &&
+    invoice.dueDate <= addDays(today, DUE_SOON_DAYS)
+  );
 }
 
 /** Paid (purchase) or collected (sale), with its date. */

@@ -317,6 +317,7 @@ Contrato (esquemas en `packages/contracts/src/invoicing.ts`):
 - La factura lleva `lines` (obligatorias si agrupa albaranes) y `deliveryNoteIds`. Se registra, agrupa y concilia en una transacción que bloquea los albaranes: dos facturas simultáneas no pueden facturar el mismo albarán.
 - `GET /terceros/{id}` es la ficha: datos, albaranes, facturas y saldo pendiente de pagar y de cobrar.
 - `GET /facturas/resumen` devuelve, para pagos (`toPay`) y cobros (`toCollect`), lo pendiente (incluye lo vencido) y lo vencido, con importe y número de facturas; además, facturas con discrepancia abiertas y albaranes pendientes de facturar con más de 30 días (HU-FAC-09).
+- Proceso diario de vencimientos (HU-FAC-07): el API lo ejecuta al arrancar y cada hora, y también existe como script (`jobs:due-dates`) para un cron. Marca vencidas las pendientes con vencimiento anterior a hoy (hora de España) y avisa de las que vencen en los próximos 3 días; con una ventana en lugar de un día exacto, un día sin ejecutar no pierde avisos. Cada aviso se registra en `InvoiceReminder` y solo se emite si se registró ahora: repetirlo, incluso a la vez, no duplica nada (RNF-FAC-04).
 - Errores: `400 invalid_document`, `400 invalid_third_party`, `400 invalid_amount`, `400 total_mismatch` con `details.expected` y `details.difference`, `404 not_found`, `409 third_party_exists` con `details.thirdPartyId`, `409 duplicate_number` y `409 invalid_invoice_transition`.
 
 ## 9. Pantallas

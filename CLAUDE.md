@@ -64,6 +64,7 @@ pnpm db:up                   # PostgreSQL con pgvector, almacenamiento S3 (RustF
 pnpm ai:pull                 # descarga el modelo de embeddings bge-m3 en Ollama (una vez)
 pnpm --filter @multicooperativa/api db:migrate   # aplica o crea migraciones
 pnpm --filter @multicooperativa/api db:seed      # datos de ejemplo (Documentacion/datos-de-ejemplo.md)
+pnpm --filter @multicooperativa/api jobs:due-dates  # vencimientos de facturas (el API ya lo ejecuta cada hora)
 pnpm --filter @multicooperativa/api dev          # API en http://localhost:3000
 pnpm --filter @multicooperativa/mobile start     # app Expo
 

@@ -5,7 +5,7 @@ import { type AuthRateLimits, createAccessModule, type InvitationSender } from '
 import { type AnnouncementEvent, createAnnouncementsModule } from './modules/announcements';
 import { type AssemblyEvent, createAssembliesModule } from './modules/assemblies';
 import { createDocumentsModule, type DocumentEvent, type Embedder } from './modules/documents';
-import { createInvoicingModule, type InvoicingEvent } from './modules/invoicing';
+import { createInvoicingModule, type InvoicingEvent, runDueDatesJob } from './modules/invoicing';
 import { type EventBus, InProcessEventBus } from './shared/events';
 import type { FileStorage } from './shared/files/file-storage';
 import type { PrismaClient } from './shared/infrastructure/prisma';
@@ -30,6 +30,8 @@ export interface Api {
   app: Express;
   /** Background document indexing: resumed at startup, awaited in tests. */
   indexing: { resumePending(): Promise<number>; idle(): Promise<void> };
+  /** Daily due dates of invoices, on this API's event bus (HU-FAC-07). */
+  runDueDates(): Promise<{ overdue: number; dueSoon: number }>;
 }
 
 /**
@@ -101,5 +103,9 @@ export function createApi(deps: ApiDeps): Api {
     ],
     trustProxy: deps.trustProxy,
   });
-  return { app, indexing: documents.indexing };
+  return {
+    app,
+    indexing: documents.indexing,
+    runDueDates: () => runDueDatesJob({ prisma: deps.prisma, events }),
+  };
 }
