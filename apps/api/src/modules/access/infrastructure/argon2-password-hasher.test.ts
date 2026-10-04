@@ -22,4 +22,8 @@ describe('Argon2PasswordHasher (RNF-ACC-01)', () => {
   it('un hash almacenado corrupto se trata como contraseña incorrecta', async () => {
     expect(await hasher.verify('no-es-un-hash', 'una-clave-larga')).toBe(false);
   });
+
+  it('sin hash (usuario inexistente o sin activar) siempre es falso', async () => {
+    expect(await hasher.verify(null, 'contraseña-ficticia-para-igualar-tiempos')).toBe(false);
+  });
 });

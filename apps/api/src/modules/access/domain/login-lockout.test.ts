@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { lockedUntil } from './login-lockout';
+import { lockedUntil, relevantAttemptsSince } from './login-lockout';
 
 const start = new Date('2026-10-05T10:00:00Z');
 const minutes = (n: number) => new Date(start.getTime() + n * 60 * 1000);
@@ -31,5 +31,11 @@ describe('bloqueo por intentos (RN-ACC-11)', () => {
 
   it('no depende del orden de los intentos', () => {
     expect(lockedUntil([4, 2, 0, 3, 1].map(minutes), minutes(5))).toEqual(minutes(19));
+  });
+
+  it('basta con los intentos de los últimos 30 minutos para decidir el bloqueo', () => {
+    // El quinto fallo más antiguo que aún bloquea ocurrió hace casi 15 minutos
+    // y su primer fallo, 15 minutos antes.
+    expect(relevantAttemptsSince(minutes(30))).toEqual(minutes(0));
   });
 });

@@ -24,6 +24,49 @@ export class PasswordRequiredError extends AccessApplicationError {
   }
 }
 
+/** Generic on purpose: never tells whether the email exists (RNF-ACC-05). */
+export class InvalidCredentialsError extends AccessApplicationError {
+  readonly code = 'invalid_credentials';
+
+  constructor() {
+    super('Email o contraseña incorrectos.');
+  }
+}
+
+export class LoginLockedError extends AccessApplicationError {
+  readonly code = 'login_locked';
+
+  constructor(readonly until: Date) {
+    super('Demasiados intentos fallidos. Vuelve a intentarlo más tarde (RN-ACC-11).');
+  }
+}
+
+export class NoActiveMembershipError extends AccessApplicationError {
+  readonly code = 'no_active_membership';
+
+  constructor() {
+    super('No tienes acceso a ninguna cooperativa.');
+  }
+}
+
+/** Unknown, expired, revoked or replayed: the client must log in again. */
+export class InvalidRefreshTokenError extends AccessApplicationError {
+  readonly code = 'invalid_refresh_token';
+
+  constructor() {
+    super('La sesión no es válida. Vuelve a iniciar sesión.');
+  }
+}
+
+/** Same code as an expired or used invitation: an unknown token reveals nothing more. */
+export class InvitationNotFoundError extends AccessApplicationError {
+  readonly code = 'invitation_not_usable';
+
+  constructor() {
+    super('La invitación ha caducado o ya se ha usado; hay que pedir una nueva (RN-ACC-10).');
+  }
+}
+
 export class AdminNotActivatedError extends AccessApplicationError {
   readonly code = 'admin_not_activated';
 

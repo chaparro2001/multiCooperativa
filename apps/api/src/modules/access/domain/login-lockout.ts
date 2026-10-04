@@ -23,3 +23,8 @@ export function lockedUntil(failedAttempts: readonly Date[], now: Date): Date | 
   }
   return null;
 }
+
+/** Older failures can no longer contribute to a lock that is still active at `now`. */
+export function relevantAttemptsSince(now: Date): Date {
+  return new Date(now.getTime() - (ATTEMPT_WINDOW_MINUTES + LOCKOUT_MINUTES) * MINUTE_IN_MS);
+}

@@ -1,0 +1,10 @@
+/** Signs the short-lived access token. It carries identity only, never permissions (RNF-ACC-04). */
+export interface AccessTokenIssuer {
+  issue(claims: { userId: string; sessionId: string }, now: Date): Promise<string>;
+}
+
+/** Opaque high-entropy secrets (refresh tokens, invitation links). Only their hash is stored. */
+export interface SecretTokens {
+  generate(): string;
+  hash(token: string): string;
+}

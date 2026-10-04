@@ -35,10 +35,14 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-const prisma = createPrismaClient(loadEnv(process.env).DATABASE_URL);
+const env = loadEnv(process.env);
+const prisma = createPrismaClient(env.DATABASE_URL);
 
 try {
-  const result = await createAccessModule({ prisma }).provisionCooperative({
+  const result = await createAccessModule({
+    prisma,
+    jwtSecret: env.JWT_SECRET,
+  }).provisionCooperative({
     name: values.name!,
     cif: values.cif!,
     admin: {

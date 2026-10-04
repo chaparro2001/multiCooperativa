@@ -299,6 +299,13 @@ Autenticación (sin cooperativa):
 | POST | `/auth/password/reset` | Establecer nueva contraseña |
 | GET | `/me` | Datos del usuario y sus membresías activas |
 
+Contrato de autenticación (esquemas en `packages/contracts/src/auth.ts`):
+
+- El login, la renovación y la activación de un usuario nuevo devuelven `accessToken` (JWT de 15 minutos con `sub` y `sid`, sin permisos), `accessTokenExpiresIn` y `refreshToken`. El token de refresco tiene la forma `<idSesión>.<secreto>`; en base de datos solo se guarda el SHA-256 del secreto. Cada renovación lo rota y amplía la sesión 30 días.
+- Al aceptar una invitación, un usuario que ya tenía cuenta no recibe sesión (`tokens: null`): el enlace por sí solo no abre una cuenta existente, así que la app le lleva al inicio de sesión.
+- Errores con cuerpo `{ error, message? }`: `400 invalid_request`, `400 password_required`, `400 weak_password`, `401 invalid_credentials`, `401 invalid_refresh_token` (desconocido, caducado, revocado o reutilizado), `403 no_active_membership`, `410 invitation_not_usable` (también si el token no existe), `429 login_locked` con cabecera `Retry-After`.
+- Los intentos fallidos cuentan por email exista o no, y un inicio de sesión correcto los pone a cero.
+
 Dentro de una cooperativa:
 
 | Método | Ruta | Uso | Permiso |
