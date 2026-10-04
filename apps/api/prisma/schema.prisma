@@ -1,0 +1,11 @@
+// Esquema de datos del backend. Cada módulo añade aquí sus modelos;
+// ningún módulo consulta las tablas de otro (ADR-002).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

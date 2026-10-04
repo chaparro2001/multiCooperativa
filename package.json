@@ -12,7 +12,10 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",
     "prepare": "husky",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration": "pnpm --filter @multicooperativa/api test:integration",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

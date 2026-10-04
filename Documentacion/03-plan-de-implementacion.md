@@ -12,7 +12,7 @@ Plan por hitos para ejecutar con Claude Code. Cada tarea es lo bastante pequeña
 - [x] ESLint y Prettier; regla que impide importar entre módulos del backend salvo por su interfaz pública.
 - [x] Husky con lint y tests en pre-commit.
 - [x] `apps/api`: servidor HTTP, configuración por variables de entorno validadas con Zod, endpoint de salud.
-- [ ] PostgreSQL local con Docker Compose (imagen con pgvector) y Prisma inicializado.
+- [x] PostgreSQL local con Docker Compose (imagen con pgvector) y Prisma inicializado.
 - [x] Vitest configurado en `apps/api` y `packages/contracts`.
 - [ ] `apps/mobile`: proyecto Expo con Expo Router y TypeScript; configuración inyectada (URL del API).
 - [ ] GitHub Actions: instalación, lint, typecheck y tests en cada push.

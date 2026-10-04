@@ -1,0 +1,20 @@
+# Infraestructura local de desarrollo. Las credenciales son solo para el entorno local.
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: multicooperativa
+      POSTGRES_PASSWORD: multicooperativa
+      POSTGRES_DB: multicooperativa
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U multicooperativa -d multicooperativa']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
