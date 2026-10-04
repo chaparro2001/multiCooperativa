@@ -60,6 +60,12 @@ describe('votar (HU-ASA-05)', () => {
     ).toThrow(NotInCensusError);
   });
 
+  it('una votación que aún no se ha abierto no admite votos', () => {
+    expect(() =>
+      assertCanVote({ votingStatus: 'pendiente', inCensus: false, previousVote: null }),
+    ).toThrow(VotingClosedError);
+  });
+
   it('Dado una votación cerrada, entonces se rechaza', () => {
     expect(() =>
       assertCanVote({ votingStatus: 'cerrada', inCensus: true, previousVote: null }),

@@ -155,3 +155,19 @@ export function assertCanAttach(status: AssemblyStatus): void {
 export function isVisible(status: AssemblyStatus, canManage: boolean): boolean {
   return canManage || status !== 'borrador';
 }
+
+/**
+ * HU-ASA-03: drafts first (only «gestión» sees them), then upcoming by date,
+ * then the celebrated or cancelled ones, most recent first.
+ */
+export function orderForListing<T extends { status: AssemblyStatus; firstCallAt: Date }>(
+  assemblies: readonly T[],
+): T[] {
+  const group = (a: T) => (a.status === 'borrador' ? 0 : a.status === 'convocada' ? 1 : 2);
+  return [...assemblies].sort((a, b) => {
+    const byGroup = group(a) - group(b);
+    if (byGroup !== 0) return byGroup;
+    const byDate = a.firstCallAt.getTime() - b.firstCallAt.getTime();
+    return group(a) === 2 ? -byDate : byDate;
+  });
+}

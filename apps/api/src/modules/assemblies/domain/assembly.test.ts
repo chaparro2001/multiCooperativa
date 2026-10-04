@@ -9,6 +9,7 @@ import {
   createDraft,
   editDraft,
   isVisible,
+  orderForListing,
 } from './assembly';
 import {
   InsufficientNoticeError,
@@ -155,5 +156,26 @@ describe('cancelar y cerrar', () => {
     expect(isVisible('borrador', false)).toBe(false);
     expect(isVisible('convocada', false)).toBe(true);
     expect(isVisible('borrador', true)).toBe(true);
+  });
+});
+
+describe('orden del listado (HU-ASA-03)', () => {
+  it('primero las próximas por fecha y después las celebradas, de la más reciente a la más antigua', () => {
+    const at = (day: number) => new Date(Date.UTC(2026, 9, day));
+    const ordered = orderForListing([
+      { id: 'celebrada-1', status: 'celebrada', firstCallAt: at(1) },
+      { id: 'proxima-25', status: 'convocada', firstCallAt: at(25) },
+      { id: 'cancelada-5', status: 'cancelada', firstCallAt: at(5) },
+      { id: 'proxima-20', status: 'convocada', firstCallAt: at(20) },
+      { id: 'borrador', status: 'borrador', firstCallAt: at(30) },
+    ] as const);
+
+    expect(ordered.map((a) => a.id)).toEqual([
+      'borrador',
+      'proxima-20',
+      'proxima-25',
+      'cancelada-5',
+      'celebrada-1',
+    ]);
   });
 });

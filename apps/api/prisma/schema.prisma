@@ -298,3 +298,154 @@ model DocumentChunk {
   @@index([cooperativeId])
   @@index([documentId])
 }
+
+// ───────────── Asambleas (requisitos/04) ─────────────
+
+enum AssemblyType {
+  ordinaria
+  extraordinaria
+}
+
+enum AssemblyStatus {
+  borrador
+  convocada
+  celebrada
+  cancelada
+}
+
+enum Majority {
+  simple
+  reforzada
+}
+
+/// «Pendiente» no tiene fila: la votación nace al abrirse.
+enum VotingStatus {
+  abierta
+  cerrada
+}
+
+enum VoteChoice {
+  a_favor
+  en_contra
+  abstencion
+}
+
+enum CallApplied {
+  primera
+  segunda
+}
+
+enum VotingOutcome {
+  aprobado
+  rechazado
+  sin_quorum
+}
+
+/// Reglas configurables por cooperativa (RN-ASA-05, RN-ASA-08, RN-ASA-09). Sin fila, valen los valores por defecto.
+model AssemblySettings {
+  cooperativeId           String @id @db.Uuid
+  firstCallQuorumPercent  Int    @default(50)
+  secondCallQuorumPercent Int    @default(0)
+  reinforcedNumerator     Int    @default(2)
+  reinforcedDenominator   Int    @default(3)
+  minNoticeDays           Int    @default(15)
+}
+
+model Assembly {
+  id            String         @id @default(uuid()) @db.Uuid
+  cooperativeId String         @db.Uuid
+  type          AssemblyType
+  status        AssemblyStatus @default(borrador)
+  firstCallAt   DateTime
+  secondCallAt  DateTime?
+  place         String         @db.VarChar(200)
+  createdAt     DateTime       @default(now())
+
+  points AssemblyPoint[]
+
+  @@index([cooperativeId, status, firstCallAt])
+}
+
+model AssemblyPoint {
+  id          String    @id @default(uuid()) @db.Uuid
+  assemblyId  String    @db.Uuid
+  /// Orden en el orden del día, desde 1.
+  position    Int
+  title       String    @db.VarChar(200)
+  description String
+  votable     Boolean
+  majority    Majority?
+
+  assembly    Assembly          @relation(fields: [assemblyId], references: [id])
+  attachments PointAttachment[]
+  voting      Voting?
+
+  @@index([assemblyId, position])
+}
+
+model PointAttachment {
+  id        String   @id @default(uuid()) @db.Uuid
+  pointId   String   @db.Uuid
+  name      String
+  /// Clave en el almacenamiento de ficheros (ADR-005).
+  fileKey   String   @unique
+  size      Int
+  createdAt DateTime @default(now())
+
+  point AssemblyPoint @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  @@index([pointId])
+}
+
+/// Copia las reglas al abrir: cambiar los ajustes después no altera una votación en curso.
+model Voting {
+  id                      String        @id @default(uuid()) @db.Uuid
+  pointId                 String        @unique @db.Uuid
+  status                  VotingStatus  @default(abierta)
+  majority                Majority
+  firstCallQuorumPercent  Int
+  secondCallQuorumPercent Int
+  reinforcedNumerator     Int
+  reinforcedDenominator   Int
+  secondCallAvailable     Boolean
+  openedAt                DateTime
+  closedAt                DateTime?
+  /// Resultado al cerrar (HU-ASA-06).
+  inFavor                 Int?
+  against                 Int?
+  abstentions             Int?
+  callApplied             CallApplied?
+  quorumReached           Boolean?
+  outcome                 VotingOutcome?
+
+  point  AssemblyPoint  @relation(fields: [pointId], references: [id])
+  census VotingCensus[]
+  votes  Vote[]
+}
+
+/// RN-ASA-02: socios activos al abrir la votación.
+model VotingCensus {
+  votingId     String @db.Uuid
+  membershipId String @db.Uuid
+
+  voting Voting @relation(fields: [votingId], references: [id])
+  vote   Vote?
+
+  @@id([votingId, membershipId])
+}
+
+/// RNF-ASA-01: un voto por censado y votación, garantizado por la clave única
+/// y por la clave foránea al censo (solo vota quien estaba al abrir).
+model Vote {
+  id           String     @id @default(uuid()) @db.Uuid
+  votingId     String     @db.Uuid
+  membershipId String     @db.Uuid
+  choice       VoteChoice
+  /// RNF-ASA-03: hora del servidor.
+  castAt       DateTime   @default(now())
+
+  voting       Voting       @relation(fields: [votingId], references: [id])
+  censusEntry  VotingCensus @relation(fields: [votingId, membershipId], references: [votingId, membershipId])
+
+  @@unique([votingId, membershipId])
+}

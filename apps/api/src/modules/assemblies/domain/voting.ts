@@ -42,6 +42,8 @@ export function assertCanVote(input: {
   inCensus: boolean;
   previousVote: VoteChoice | null;
 }): void {
+  // Not opened yet: there is no census to be in.
+  if (input.votingStatus === 'pendiente') throw new VotingClosedError();
   if (!input.inCensus) throw new NotInCensusError();
   if (input.previousVote) throw new AlreadyVotedError(input.previousVote);
   if (input.votingStatus !== 'abierta') throw new VotingClosedError();

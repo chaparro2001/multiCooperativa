@@ -9,6 +9,15 @@ export class PrismaMemberDirectory {
     return this.prisma.membership.count({ where: { cooperativeId, status: 'activa' } });
   }
 
+  /** RN-ASA-02: active memberships with partner status, the census of a voting. */
+  async listVoters(cooperativeId: string): Promise<string[]> {
+    const voters = await this.prisma.membership.findMany({
+      where: { cooperativeId, status: 'activa', isPartner: true },
+      select: { id: true },
+    });
+    return voters.map((voter) => voter.id);
+  }
+
   /** Names by membership id, only for memberships of this cooperative (any status: authorship stays, RN-ACC-14). */
   async displayNames(cooperativeId: string, membershipIds: string[]): Promise<Map<string, string>> {
     if (membershipIds.length === 0) return new Map();
