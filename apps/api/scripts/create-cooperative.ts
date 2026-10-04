@@ -15,6 +15,7 @@ import {
   AccessApplicationError,
   AccessDomainError,
   createAccessModule,
+  UnavailableInvitationSender,
 } from '../src/modules/access';
 import { createPrismaClient } from '../src/shared/infrastructure/prisma';
 
@@ -42,6 +43,8 @@ try {
   const result = await createAccessModule({
     prisma,
     jwtSecret: env.JWT_SECRET,
+    // El alta crea al administrador directamente activo: no envía invitaciones.
+    invitationSender: new UnavailableInvitationSender(),
   }).provisionCooperative({
     name: values.name!,
     cif: values.cif!,

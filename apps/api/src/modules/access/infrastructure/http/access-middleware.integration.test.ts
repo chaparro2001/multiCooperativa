@@ -22,7 +22,12 @@ const prisma = createTestPrisma();
 const jwtSecret = loadEnv(process.env).JWT_SECRET;
 
 function buildApp(authRateLimits: AuthRateLimits | false = false) {
-  const access = createAccessModule({ prisma, jwtSecret, authRateLimits });
+  const access = createAccessModule({
+    prisma,
+    jwtSecret,
+    authRateLimits,
+    invitationSender: { send: async () => {} },
+  });
 
   // Stand-in for another module's router, wired the way real modules will be.
   const facturas = Router();

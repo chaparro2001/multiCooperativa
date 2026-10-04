@@ -7,14 +7,21 @@ import { AccessDomainError } from '../../domain/errors';
 const STATUS_BY_CODE: Record<string, number> = {
   password_required: 400,
   weak_password: 400,
+  profile_not_found: 400,
   invalid_credentials: 401,
   invalid_refresh_token: 401,
   unauthenticated: 401,
   no_active_membership: 403,
   forbidden: 403,
   not_found: 404,
+  member_already_exists: 409,
+  invitation_not_pending: 409,
+  self_modification: 409,
+  last_admin: 409,
+  invalid_membership_transition: 409,
   invitation_not_usable: 410,
   login_locked: 429,
+  invitation_delivery_unavailable: 503,
 };
 
 /**

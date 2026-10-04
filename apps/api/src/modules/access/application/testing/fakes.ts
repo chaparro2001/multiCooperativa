@@ -1,5 +1,15 @@
+import type { MembershipStatus } from '../../domain/membership';
 import type { PendingInvitation } from '../ports/invitation-store';
 import type { LoginStore, UserCredentials } from '../ports/login-store';
+import type {
+  AuditInput,
+  MemberRecord,
+  MemberSnapshot,
+  MemberStore,
+  MemberUpdate,
+  NewInvitation,
+  ProfileRecord,
+} from '../ports/member-store';
 import type { PasswordHasher } from '../ports/password-hasher';
 import type { SessionStore, StoredSession } from '../ports/session-store';
 import type { SessionDeps } from '../session-tokens';
@@ -104,4 +114,110 @@ export function pendingInvitation(overrides: Partial<PendingInvitation> = {}): P
     user: { id: 'user-1', hasPassword: false },
     ...overrides,
   };
+}
+
+export class InMemoryMemberStore implements MemberStore {
+  readonly members: MemberRecord[] = [];
+  readonly profiles: ProfileRecord[] = [
+    { id: '10000000-0000-4000-8000-000000000001', name: 'Socio', predefined: true, isAdmin: false },
+    {
+      id: '10000000-0000-4000-8000-000000000002',
+      name: 'Gestor',
+      predefined: true,
+      isAdmin: false,
+    },
+    {
+      id: '10000000-0000-4000-8000-000000000003',
+      name: 'Administrador',
+      predefined: true,
+      isAdmin: true,
+    },
+  ];
+  readonly invitations = new Map<string, NewInvitation>();
+  readonly audit: (AuditInput & { targetUserId: string })[] = [];
+  private nextId = 1;
+
+  profile(name: string): ProfileRecord {
+    return this.profiles.find((profile) => profile.name === name)!;
+  }
+
+  addMember(email: string, profileName: string, status: MembershipStatus = 'activa'): MemberRecord {
+    const profile = this.profile(profileName);
+    const id = String(this.nextId++).padStart(12, '0');
+    const member: MemberRecord = {
+      membershipId: `20000000-0000-4000-8000-${id}`,
+      userId: `30000000-0000-4000-8000-${id}`,
+      email,
+      name: email,
+      profileId: profile.id,
+      profileName: profile.name,
+      isAdmin: profile.isAdmin,
+      status,
+      isPartner: false,
+      partnerNumber: null,
+    };
+    this.members.push(member);
+    return member;
+  }
+
+  async listMembers() {
+    return this.members.filter((member) => member.status !== 'baja');
+  }
+
+  async listProfiles() {
+    return this.profiles;
+  }
+
+  async findProfile(_cooperativeId: string, profileId: string) {
+    return this.profiles.find((profile) => profile.id === profileId) ?? null;
+  }
+
+  async createInvitedMember(
+    _cooperativeId: string,
+    data: Parameters<MemberStore['createInvitedMember']>[1],
+  ) {
+    if (this.members.some((m) => m.email === data.email && m.status !== 'baja')) {
+      return 'already_member' as const;
+    }
+    const existing = this.members.find((m) => m.email === data.email);
+    const member = this.addMember(
+      data.email,
+      this.profiles.find((p) => p.id === data.profileId)!.name,
+      'invitada',
+    );
+    if (existing) member.userId = existing.userId;
+    member.isPartner = data.isPartner;
+    member.partnerNumber = data.partnerNumber;
+    this.invitations.set(member.membershipId, data.invitation);
+    this.audit.push({ ...data.audit, targetUserId: member.userId });
+    return { membershipId: member.membershipId, userId: member.userId };
+  }
+
+  async updateMember(
+    _cooperativeId: string,
+    membershipId: string,
+    decide: (snapshot: MemberSnapshot) => MemberUpdate,
+  ) {
+    const member = this.members.find((m) => m.membershipId === membershipId);
+    if (!member) return null;
+    const activeAdminCount = this.members.filter((m) => m.status === 'activa' && m.isAdmin).length;
+
+    const update = decide({ member: { ...member }, activeAdminCount });
+    if (update.status) member.status = update.status;
+    if (update.profileId) {
+      const profile = this.profiles.find((p) => p.id === update.profileId)!;
+      Object.assign(member, {
+        profileId: profile.id,
+        profileName: profile.name,
+        isAdmin: profile.isAdmin,
+      });
+    }
+    if (update.invitation) this.invitations.set(membershipId, update.invitation);
+    this.audit.push({ ...update.audit, targetUserId: member.userId });
+    return { ...member };
+  }
+
+  async listAudit() {
+    return [];
+  }
 }

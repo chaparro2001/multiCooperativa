@@ -341,6 +341,15 @@ Contexto de cada petición:
 - En `/cooperativas/{id}/...` se carga la membresía activa del usuario con su perfil y permisos en cada petición. Sin membresía activa, cooperativa inexistente o id mal formado: `404 not_found`. Sin permiso para el módulo: `403 forbidden`, antes de ejecutar ninguna lógica.
 - Los endpoints `/auth` tienen límite de peticiones por IP (100 cada 15 minutos) y el login, además, por email (20 cada 15 minutos): `429 too_many_requests` (RNF-ACC-09). El contador vive en memoria, válido mientras el API corra en una sola instancia.
 
+Gestión de miembros (esquemas en `packages/contracts/src/access.ts`):
+
+- Todas las rutas de miembros, perfiles y auditoría exigen «Usuarios y perfiles · gestión». El listado excluye las membresías de baja; la auditoría devuelve los últimos 100 eventos de la cooperativa.
+- `PATCH /miembros/{miembroId}` acepta un solo cambio por petición: `{ "profileId": "…" }` o `{ "status": "activa" | "suspendida" }`. La baja va por su propio endpoint porque es definitiva.
+- Errores: `400 profile_not_found`, `404 not_found` (miembro de otra cooperativa o inexistente), `409 member_already_exists`, `409 self_modification` (RN-ACC-08), `409 last_admin` (RN-ACC-07), `409 invalid_membership_transition`, `409 invitation_not_pending`, `503 invitation_delivery_unavailable`.
+- Los cambios de una cooperativa se serializan bloqueando su fila, de modo que dos administradores que se quitan el perfil a la vez no la dejan sin ninguno.
+- Cada invitación, reenvío, cambio de perfil, suspensión, reactivación y baja se registra en la misma transacción con autor, afectado, valores anterior y nuevo, y fecha (HU-ACC-12).
+- El enlace de invitación es `multicooperativa://invitacion?token=<token>`. Mientras no haya proveedor de correo, en desarrollo se escribe en la consola del API y en producción invitar responde 503 (la membresía queda creada y se puede reenviar).
+
 ## 9. Pantallas de la app
 
 1. Inicio de sesión.

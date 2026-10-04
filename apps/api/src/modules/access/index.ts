@@ -3,6 +3,16 @@ import { Router } from 'express';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
 import { acceptInvitation } from './application/accept-invitation';
 import { login } from './application/login';
+import {
+  changeMember,
+  inviteMember,
+  listAudit,
+  listMembers,
+  listProfiles,
+  removeMember,
+  resendInvitation,
+} from './application/members';
+import type { InvitationSender } from './application/ports/invitation-sender';
 import { logout } from './application/logout';
 import {
   provisionCooperative,
@@ -27,11 +37,13 @@ import {
 } from './infrastructure/http/auth-router';
 import { accessErrorHandler } from './infrastructure/http/error-handler';
 import { createMeRouter } from './infrastructure/http/me-router';
+import { createMembersRouter } from './infrastructure/http/members-router';
 import { JoseAccessTokens } from './infrastructure/jose-access-tokens';
 import { PrismaAccessContextStore } from './infrastructure/prisma-access-context-store';
 import { PrismaCooperativeProvisioningStore } from './infrastructure/prisma-cooperative-provisioning-store';
 import { PrismaInvitationStore } from './infrastructure/prisma-invitation-store';
 import { PrismaLoginStore } from './infrastructure/prisma-login-store';
+import { PrismaMemberStore } from './infrastructure/prisma-member-store';
 import { PrismaSessionStore } from './infrastructure/prisma-session-store';
 
 export type { ProvisionCooperativeInput } from './application/provision-cooperative';
@@ -48,6 +60,11 @@ export {
   requirePermission,
 } from './infrastructure/http/access-middleware';
 export type { AuthRateLimits } from './infrastructure/http/auth-router';
+export type { InvitationSender } from './application/ports/invitation-sender';
+export {
+  ConsoleInvitationSender,
+  UnavailableInvitationSender,
+} from './infrastructure/invitation-senders';
 
 export interface AccessModuleDeps {
   prisma: PrismaClient;
@@ -55,6 +72,8 @@ export interface AccessModuleDeps {
   now?: () => Date;
   /** RNF-ACC-09; false disables it (tests). */
   authRateLimits?: AuthRateLimits | false;
+  /** Delivers invitation links (HU-ACC-08). */
+  invitationSender: InvitationSender;
 }
 
 /** Public interface of the access module: the only entry point for the rest of the backend. */
@@ -75,6 +94,12 @@ export function createAccessModule(deps: AccessModuleDeps) {
   };
   const contextDeps = { contexts: new PrismaAccessContextStore(deps.prisma) };
   const provisioningStore = new PrismaCooperativeProvisioningStore(deps.prisma);
+  const memberDeps = {
+    members: new PrismaMemberStore(deps.prisma),
+    secrets: sessionDeps.secrets,
+    invitationSender: deps.invitationSender,
+    now: sessionDeps.now,
+  };
 
   const requestContext = {
     authenticate: (accessToken: string | undefined) =>
@@ -105,6 +130,20 @@ export function createAccessModule(deps: AccessModuleDeps) {
       requireSession,
       requireCooperative,
     }),
+  );
+  router.use(
+    createMembersRouter(
+      {
+        listMembers: (context) => listMembers(memberDeps, context),
+        listProfiles: (context) => listProfiles(memberDeps, context),
+        inviteMember: (context, input) => inviteMember(memberDeps, context, input),
+        changeMember: (context, id, change) => changeMember(memberDeps, context, id, change),
+        removeMember: (context, id) => removeMember(memberDeps, context, id),
+        resendInvitation: (context, id) => resendInvitation(memberDeps, context, id),
+        listAudit: (context) => listAudit(memberDeps, context),
+      },
+      requireCooperative,
+    ),
   );
 
   return {

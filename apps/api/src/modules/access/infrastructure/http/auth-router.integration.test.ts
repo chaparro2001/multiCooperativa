@@ -17,6 +17,7 @@ const access = createAccessModule({
   prisma,
   jwtSecret: loadEnv(process.env).JWT_SECRET,
   authRateLimits: false,
+  invitationSender: { send: async () => {} },
 });
 const app = createApp({ routers: [access.router], errorHandlers: [access.errorHandler] });
 const secrets = new CryptoSecretTokens();

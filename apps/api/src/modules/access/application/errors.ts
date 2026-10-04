@@ -97,3 +97,47 @@ export class AdminNotActivatedError extends AccessApplicationError {
     );
   }
 }
+
+/** A member of another cooperative, or one that does not exist: 404 (RNF-ACC-06). */
+export class MemberNotFoundError extends AccessApplicationError {
+  readonly code = 'not_found';
+
+  constructor() {
+    super('No encontrado.');
+  }
+}
+
+/** HU-ACC-08: the email already has a live membership in this cooperative. */
+export class MemberAlreadyExistsError extends AccessApplicationError {
+  readonly code = 'member_already_exists';
+
+  constructor() {
+    super('Esa persona ya es miembro de la cooperativa o tiene una invitación pendiente.');
+  }
+}
+
+/** The profile does not exist in this cooperative. */
+export class ProfileNotFoundError extends AccessApplicationError {
+  readonly code = 'profile_not_found';
+
+  constructor() {
+    super('El perfil no existe en esta cooperativa.');
+  }
+}
+
+export class InvitationNotPendingError extends AccessApplicationError {
+  readonly code = 'invitation_not_pending';
+
+  constructor() {
+    super('Solo se puede reenviar la invitación de un miembro que aún no la ha aceptado.');
+  }
+}
+
+/** No way to deliver invitations is configured (production without email provider). */
+export class InvitationDeliveryUnavailableError extends AccessApplicationError {
+  readonly code = 'invitation_delivery_unavailable';
+
+  constructor() {
+    super('No se ha podido enviar la invitación. Inténtalo de nuevo más tarde con «Reenviar».');
+  }
+}
