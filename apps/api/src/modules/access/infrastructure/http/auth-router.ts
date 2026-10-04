@@ -7,17 +7,17 @@ import {
   logoutRequestSchema,
   refreshRequestSchema,
 } from '@multicooperativa/contracts';
-import { type ErrorRequestHandler, type Response, Router } from 'express';
-import type { z } from 'zod';
+import { type Response, Router } from 'express';
+import { rateLimit } from 'express-rate-limit';
 
+import { parseBody } from '../../../../shared/infrastructure/http/validation';
 import type {
   AcceptInvitationInput,
   AcceptInvitationResult,
 } from '../../application/accept-invitation';
-import { AccessApplicationError, LoginLockedError } from '../../application/errors';
 import type { LoginInput } from '../../application/login';
 import type { AuthTokens as IssuedTokens } from '../../application/session-tokens';
-import { AccessDomainError } from '../../domain/errors';
+import { normalizeEmail } from '../../domain/email';
 
 export interface AuthUseCases {
   login(input: LoginInput): Promise<IssuedTokens>;
@@ -26,50 +26,57 @@ export interface AuthUseCases {
   acceptInvitation(input: AcceptInvitationInput): Promise<AcceptInvitationResult>;
 }
 
-class InvalidRequestError extends Error {}
-
-function parseBody<T extends z.ZodType>(schema: T, body: unknown): z.infer<T> {
-  const result = schema.safeParse(body);
-  if (!result.success) throw new InvalidRequestError();
-  return result.data;
+/** RNF-ACC-09. In memory: valid while the API runs as a single instance. */
+export interface AuthRateLimits {
+  windowMs: number;
+  /** Requests per IP to any /auth endpoint. */
+  perIp: number;
+  /** Login requests per email, whatever the IP. */
+  perEmail: number;
 }
 
-const STATUS_BY_CODE: Record<string, number> = {
-  invalid_credentials: 401,
-  invalid_refresh_token: 401,
-  no_active_membership: 403,
-  invitation_not_usable: 410,
-  login_locked: 429,
-  password_required: 400,
-  weak_password: 400,
+export const DEFAULT_AUTH_RATE_LIMITS: AuthRateLimits = {
+  windowMs: 15 * 60 * 1000,
+  // Generous: everyone in a cooperative office may share one public IP.
+  perIp: 100,
+  perEmail: 20,
 };
 
-const authErrors: ErrorRequestHandler = (error, _req, res, next) => {
-  if (error instanceof InvalidRequestError) {
-    res.status(400).json({ error: 'invalid_request' } satisfies ApiError);
-    return;
-  }
-  const isAccessError =
-    error instanceof AccessApplicationError || error instanceof AccessDomainError;
-  const status = isAccessError ? STATUS_BY_CODE[error.code] : undefined;
-  if (!isAccessError || status === undefined) {
-    next(error);
-    return;
-  }
-  if (error instanceof LoginLockedError) {
-    const seconds = Math.max(1, Math.ceil((error.until.getTime() - Date.now()) / 1000));
-    res.setHeader('Retry-After', String(seconds));
-  }
-  res.status(status).json({ error: error.code, message: error.message } satisfies ApiError);
-};
+function rateLimiters(limits: AuthRateLimits) {
+  const common = {
+    windowMs: limits.windowMs,
+    standardHeaders: 'draft-8' as const,
+    legacyHeaders: false,
+    handler: (_req: unknown, res: Response) => {
+      res.status(429).json({ error: 'too_many_requests' } satisfies ApiError);
+    },
+  };
+  return {
+    perIp: rateLimit({ ...common, limit: limits.perIp }),
+    perEmail: rateLimit({
+      ...common,
+      limit: limits.perEmail,
+      identifier: 'email',
+      // Without a usable email the request fails validation anyway; it still counts per IP.
+      skip: (req) => typeof req.body?.email !== 'string',
+      keyGenerator: (req) => normalizeEmail(req.body.email as string),
+    }),
+  };
+}
 
 function sendTokens(res: Response, tokens: IssuedTokens) {
   res.json(tokens satisfies AuthTokens);
 }
 
 /** HTTP adapter for the authentication endpoints, which run without a cooperative context. */
-export function createAuthRouter(auth: AuthUseCases): Router {
+export function createAuthRouter(auth: AuthUseCases, limits: AuthRateLimits | false): Router {
   const router = Router();
+
+  if (limits) {
+    const limiter = rateLimiters(limits);
+    router.use('/auth', limiter.perIp);
+    router.use('/auth/login', limiter.perEmail);
+  }
 
   router.post('/auth/login', async (req, res) => {
     sendTokens(res, await auth.login(parseBody(loginRequestSchema, req.body)));
@@ -91,6 +98,5 @@ export function createAuthRouter(auth: AuthUseCases): Router {
     res.json(result satisfies AcceptInvitationResponse);
   });
 
-  router.use('/auth', authErrors);
   return router;
 }

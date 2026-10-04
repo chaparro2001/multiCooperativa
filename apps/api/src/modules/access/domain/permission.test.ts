@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { InvalidPermissionError } from './errors';
-import { createPermission, type Permission, resolveAccess } from './permission';
+import { InvalidPermissionError, ModuleAccessDeniedError } from './errors';
+import { createPermission, type Permission, requireAccess, resolveAccess } from './permission';
 
 const permissions: Permission[] = [
   createPermission('comunicados', 'consulta'),
@@ -63,4 +63,26 @@ describe('createPermission (RN-ACC-05)', () => {
       expect(() => createPermission(module, 'consulta', 'propias')).toThrow(InvalidPermissionError);
     },
   );
+});
+
+describe('requireAccess (HU-ACC-07)', () => {
+  it('devuelve el alcance cuando el permiso lo concede', () => {
+    expect(requireAccess(permissions, 'area-socio', 'consulta')).toBe('propias');
+  });
+
+  it('Dado un miembro sin acceso a un módulo, cuando lo pide, entonces se deniega', () => {
+    expect(() => requireAccess(permissions, 'asambleas', 'consulta')).toThrow(
+      ModuleAccessDeniedError,
+    );
+  });
+
+  it('deniega gestión con solo consulta', () => {
+    expect(() => requireAccess(permissions, 'comunicados', 'gestion')).toThrow(
+      ModuleAccessDeniedError,
+    );
+  });
+
+  it('sin permisos deniega todo', () => {
+    expect(() => requireAccess([], 'comunicados', 'consulta')).toThrow(ModuleAccessDeniedError);
+  });
 });

@@ -58,6 +58,27 @@ export class InvalidRefreshTokenError extends AccessApplicationError {
   }
 }
 
+/** Missing, invalid or expired access token, or a closed session: 401 (HU-ACC-07). */
+export class UnauthenticatedError extends AccessApplicationError {
+  readonly code = 'unauthenticated';
+
+  constructor() {
+    super('Hace falta iniciar sesión.');
+  }
+}
+
+/**
+ * The cooperative does not exist or the user has no active membership in it.
+ * Both look the same, so nobody learns which cooperatives exist (ADR-003, RNF-ACC-06).
+ */
+export class CooperativeNotFoundError extends AccessApplicationError {
+  readonly code = 'not_found';
+
+  constructor() {
+    super('No encontrado.');
+  }
+}
+
 /** Same code as an expired or used invitation: an unknown token reveals nothing more. */
 export class InvitationNotFoundError extends AccessApplicationError {
   readonly code = 'invitation_not_usable';

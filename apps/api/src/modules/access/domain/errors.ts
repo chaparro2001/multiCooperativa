@@ -12,6 +12,18 @@ export class InvalidPermissionError extends AccessDomainError {
   readonly code = 'invalid_permission';
 }
 
+/** The profile has no permission for the module: 403 (RNF-ACC-06). */
+export class ModuleAccessDeniedError extends AccessDomainError {
+  readonly code = 'forbidden';
+
+  constructor(
+    readonly module: string,
+    readonly required: string,
+  ) {
+    super('Tu perfil no tiene acceso a este módulo.');
+  }
+}
+
 export class InvalidMembershipTransitionError extends AccessDomainError {
   readonly code = 'invalid_membership_transition';
 }

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+export * from './access';
 export * from './auth';
 
 export const healthResponseSchema = z.object({

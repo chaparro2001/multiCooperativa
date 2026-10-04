@@ -1,6 +1,7 @@
 import { ACCESS_TOKEN_TTL_SECONDS, sessionExpiry } from '../domain/session';
 import type { SessionStore } from './ports/session-store';
 import type { AccessTokenIssuer, SecretTokens } from './ports/tokens';
+import { isUuid } from './uuid';
 
 export interface AuthTokens {
   accessToken: string;
@@ -16,8 +17,6 @@ export interface SessionDeps {
   now: () => Date;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
  * The refresh token is "<sessionId>.<secret>": the id locates the session, so a
  * replayed old secret can be told apart from an unknown token (HU-ACC-03).
@@ -30,7 +29,7 @@ export function parseRefreshToken(token: string): { sessionId: string; secret: s
   const separator = token.indexOf('.');
   const sessionId = token.slice(0, separator);
   const secret = token.slice(separator + 1);
-  if (separator < 0 || !UUID.test(sessionId) || secret.length === 0) return null;
+  if (separator < 0 || !isUuid(sessionId) || secret.length === 0) return null;
   return { sessionId, secret };
 }
 

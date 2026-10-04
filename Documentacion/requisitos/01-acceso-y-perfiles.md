@@ -323,15 +323,23 @@ Respuesta de `/cooperativas/{id}/me/permisos`, con la que la app construye la na
 
 ```json
 {
-  "cooperativaId": "…",
-  "perfil": "Socio",
-  "esSocio": true,
-  "permisos": [
-    { "modulo": "comunicados", "nivel": "consulta", "alcance": "todas" },
-    { "modulo": "area-socio", "nivel": "consulta", "alcance": "propias" }
+  "cooperativeId": "…",
+  "profileName": "Socio",
+  "isPartner": true,
+  "permissions": [
+    { "module": "comunicados", "level": "consulta", "scope": "todas" },
+    { "module": "area-socio", "level": "consulta", "scope": "propias" }
   ]
 }
 ```
+
+Las claves JSON van en inglés, como el resto de identificadores; los valores (módulos, niveles, alcances) son los del dominio. Esquemas en `packages/contracts/src/access.ts`; `GET /me` devuelve `id`, `email`, `name` y `memberships` (solo las activas, con `cooperativeId`, `cooperativeName`, `profileName` e `isPartner`).
+
+Contexto de cada petición:
+
+- Las rutas protegidas exigen `Authorization: Bearer <accessToken>`. Además de la firma, se comprueba que la sesión (`sid`) siga abierta, así que un cierre de sesión o una reutilización detectada cortan el acceso al momento. Sin sesión válida: `401 unauthenticated`.
+- En `/cooperativas/{id}/...` se carga la membresía activa del usuario con su perfil y permisos en cada petición. Sin membresía activa, cooperativa inexistente o id mal formado: `404 not_found`. Sin permiso para el módulo: `403 forbidden`, antes de ejecutar ninguna lógica.
+- Los endpoints `/auth` tienen límite de peticiones por IP (100 cada 15 minutos) y el login, además, por email (20 cada 15 minutos): `429 too_many_requests` (RNF-ACC-09). El contador vive en memoria, válido mientras el API corra en una sola instancia.
 
 ## 9. Pantallas de la app
 

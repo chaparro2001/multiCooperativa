@@ -13,8 +13,12 @@ import { createAccessModule } from '../../index';
 import { CryptoSecretTokens } from '../crypto-secret-tokens';
 
 const prisma = createTestPrisma();
-const access = createAccessModule({ prisma, jwtSecret: loadEnv(process.env).JWT_SECRET });
-const app = createApp([access.router]);
+const access = createAccessModule({
+  prisma,
+  jwtSecret: loadEnv(process.env).JWT_SECRET,
+  authRateLimits: false,
+});
+const app = createApp({ routers: [access.router], errorHandlers: [access.errorHandler] });
 const secrets = new CryptoSecretTokens();
 
 const ADMIN = { email: 'admin@campo.es', password: 'clave-del-admin' };

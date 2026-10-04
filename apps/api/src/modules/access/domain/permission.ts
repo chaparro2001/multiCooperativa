@@ -1,4 +1,4 @@
-import { InvalidPermissionError } from './errors';
+import { InvalidPermissionError, ModuleAccessDeniedError } from './errors';
 
 export const MODULES = [
   'comunicados',
@@ -53,4 +53,18 @@ export function resolveAccess(
   if (!permission) return { granted: false };
   if (required === 'gestion' && permission.level !== 'gestion') return { granted: false };
   return { granted: true, scope: permission.scope };
+}
+
+/**
+ * Guard every use case calls before doing anything (HU-ACC-07). Returns the
+ * scope the use case must filter by; throws when the profile lacks the module.
+ */
+export function requireAccess(
+  permissions: readonly Permission[],
+  module: Module,
+  required: AccessLevel,
+): Scope {
+  const decision = resolveAccess(permissions, module, required);
+  if (!decision.granted) throw new ModuleAccessDeniedError(module, required);
+  return decision.scope;
 }

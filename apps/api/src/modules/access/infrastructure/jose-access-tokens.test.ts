@@ -37,3 +37,45 @@ describe('JoseAccessTokens (RNF-ACC-02)', () => {
     expect(decodeJwt(token).sub).toBe('u');
   });
 });
+
+describe('JoseAccessTokens.verify', () => {
+  const tokens = new JoseAccessTokens(SECRET);
+  const claims = { userId: 'user-1', sessionId: 'session-1' };
+
+  it('devuelve el usuario y la sesión de un token válido', async () => {
+    const token = await tokens.issue(claims, now);
+
+    await expect(tokens.verify(token, now)).resolves.toEqual(claims);
+  });
+
+  it('rechaza un token caducado', async () => {
+    const token = await tokens.issue(claims, now);
+
+    await expect(
+      tokens.verify(token, new Date(now.getTime() + 15 * 60 * 1000)),
+    ).resolves.toBeNull();
+  });
+
+  it('rechaza un token firmado con otra clave', async () => {
+    const token = await new JoseAccessTokens(`${SECRET}-otra`).issue(claims, now);
+
+    await expect(tokens.verify(token, now)).resolves.toBeNull();
+  });
+
+  it('rechaza un token sin firma (alg none)', async () => {
+    const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
+    const unsigned = `${encode({ alg: 'none' })}.${encode({
+      sub: 'user-1',
+      sid: 'session-1',
+      iss: JWT_ISSUER,
+      aud: JWT_AUDIENCE,
+      exp: now.getTime() / 1000 + 60,
+    })}.`;
+
+    await expect(tokens.verify(unsigned, now)).resolves.toBeNull();
+  });
+
+  it('rechaza basura', async () => {
+    await expect(tokens.verify('no-es-un-jwt', now)).resolves.toBeNull();
+  });
+});
