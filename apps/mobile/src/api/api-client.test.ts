@@ -169,6 +169,30 @@ describe('cliente del API (HU-ACC-03)', () => {
     expect(error).toMatchObject({ status: 403, code: 'forbidden', message: 'No.' });
   });
 
+  it('envía un FormData tal cual, sin forzar JSON, y con el token', async () => {
+    let seen: { contentType: string | null; body: unknown; auth: string | null } | undefined;
+    const c = createApiClient({
+      baseUrl: BASE,
+      tokens,
+      now: () => now,
+      fetch: (async (_url: string, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        seen = {
+          contentType: headers.get('Content-Type'),
+          body: init?.body,
+          auth: headers.get('Authorization'),
+        };
+        return new Response(null, { status: 204 });
+      }) as typeof fetch,
+    });
+    const form = new FormData();
+    form.append('title', 'Acta');
+
+    await c.request('/subida', { method: 'POST', body: form });
+
+    expect(seen).toEqual({ contentType: null, body: form, auth: 'Bearer access-1' });
+  });
+
   it('una respuesta 204 no se valida', async () => {
     await expect(client().request('/vacio', { method: 'POST' })).resolves.toBeUndefined();
   });

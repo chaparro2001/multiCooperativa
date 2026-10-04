@@ -41,7 +41,7 @@ Especificaciones: [02-comunicados](requisitos/02-comunicados.md) · [03-document
 - [x] Comunicados: dominio, API, lecturas, evento `ComunicadoPublicado`.
 - [x] Documentos: dominio, versiones, API.
 - [x] Indexación: extracción de texto, troceado, embeddings, pgvector con `cooperativaId`.
-- [ ] App: listado y detalle de comunicados; listado y visor de documentos; editor para gestión.
+- [x] App: listado y detalle de comunicados; listado y visor de documentos; editor para gestión.
 
 ## Hito 3 · Asambleas (12–14 oct)
 

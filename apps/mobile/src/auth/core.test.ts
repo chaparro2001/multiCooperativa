@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ApiError, messageFor, NetworkError } from '../api/api-error';
 import { initialCooperative } from '../cooperatives/selection';
-import { canAccess, visibleModules } from '../navigation/modules';
+import { canAccess, canManage, visibleModules } from '../navigation/modules';
 import { MemoryKeyValueStore } from '../storage/key-value-store';
 import { RELOCK_AFTER_MS, shouldLock } from './biometric-lock';
 import { TokenStore, toStoredTokens } from './token-store';
@@ -58,6 +58,14 @@ describe('navegación según permisos (HU-ACC-06)', () => {
     expect(canAccess(undefined, 'comunicados')).toBe(false);
     expect(canAccess([...socio], 'comunicados')).toBe(true);
     expect(canAccess([...socio], 'facturas')).toBe(false);
+  });
+
+  it('canManage solo con nivel gestión: las pantallas de edición no existen sin él', () => {
+    expect(canManage([...socio], 'comunicados')).toBe(false);
+    expect(
+      canManage([{ module: 'comunicados', level: 'gestion', scope: 'todas' }], 'comunicados'),
+    ).toBe(true);
+    expect(canManage(undefined, 'comunicados')).toBe(false);
   });
 });
 

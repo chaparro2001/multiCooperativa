@@ -40,3 +40,11 @@ export function canAccess(
 ): boolean {
   return permissions?.some((permission) => permission.module === module) ?? false;
 }
+
+/** «Gestión» on the module: create, edit and delete screens exist only then. */
+export function canManage(
+  permissions: MyPermissionsResponse['permissions'] | undefined,
+  module: Module,
+): boolean {
+  return permissions?.some((p) => p.module === module && p.level === 'gestion') ?? false;
+}

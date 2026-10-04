@@ -18,6 +18,7 @@ export interface ApiClientDeps {
 
 export interface RequestOptions<S extends z.ZodType> {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  /** JSON-serializable, or a FormData for file uploads. */
   body?: unknown;
   /** Validates the answer against its contract; omit for 204 responses. */
   schema?: S;
@@ -95,15 +96,17 @@ export function createApiClient(deps: ApiClientDeps) {
       }
     }
 
+    // Files go as multipart: fetch sets the boundary in Content-Type itself.
+    const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
     const call = (tokens: StoredTokens | null) =>
       send(path, {
         method,
         headers: {
           Accept: 'application/json',
-          ...(body !== undefined && { 'Content-Type': 'application/json' }),
+          ...(body !== undefined && !multipart && { 'Content-Type': 'application/json' }),
           ...(tokens && { Authorization: `Bearer ${tokens.accessToken}` }),
         },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined ? undefined : multipart ? body : JSON.stringify(body),
       });
 
     let response = await call(session);

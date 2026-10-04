@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { messageFor } from '@/api/api-error';
 import { ActiveCooperativeProvider, useActiveCooperative } from '@/cooperatives/active-cooperative';
-import { canAccess } from '@/navigation/modules';
+import { canAccess, canManage } from '@/navigation/modules';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 
@@ -39,13 +39,21 @@ function CooperativeNavigator() {
         <Stack.Screen name="index" options={{ title: cooperative?.cooperativeName ?? '' }} />
         <Stack.Screen name="ajustes" options={{ title: 'Ajustes' }} />
         <Stack.Protected guard={canAccess(allowed, 'comunicados')}>
-          <Stack.Screen name="comunicados" options={{ title: 'Comunicados' }} />
+          <Stack.Screen name="comunicados/index" options={{ title: 'Comunicados' }} />
+          <Stack.Screen name="comunicados/[id]" options={{ title: 'Comunicado' }} />
+          <Stack.Protected guard={canManage(allowed, 'comunicados')}>
+            <Stack.Screen name="comunicados/editor" options={{ title: 'Comunicado' }} />
+          </Stack.Protected>
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'asambleas')}>
           <Stack.Screen name="asambleas" options={{ title: 'Asambleas' }} />
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'documentos')}>
-          <Stack.Screen name="documentos" options={{ title: 'Documentos' }} />
+          <Stack.Screen name="documentos/index" options={{ title: 'Documentos' }} />
+          <Stack.Screen name="documentos/[id]" options={{ title: 'Documento' }} />
+          <Stack.Protected guard={canManage(allowed, 'documentos')}>
+            <Stack.Screen name="documentos/subir" options={{ title: 'Subir documento' }} />
+          </Stack.Protected>
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'facturas')}>
           <Stack.Screen name="facturas" options={{ title: 'Facturas y albaranes' }} />
