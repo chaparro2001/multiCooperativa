@@ -3,19 +3,21 @@ import type { Module, MyPermissionsResponse } from '@multicooperativa/contracts'
 export interface ModuleEntry {
   module: Module;
   title: string;
+  /** Shown in the home grid; decorative, screen readers read the title. */
+  emoji: string;
   /** Screen of the module inside the cooperative. */
   route: `/${string}`;
 }
 
-/** Order of the home screen. */
+/** Order of the home grid. */
 export const MODULE_ENTRIES: readonly ModuleEntry[] = [
-  { module: 'comunicados', title: 'Comunicados', route: '/comunicados' },
-  { module: 'asambleas', title: 'Asambleas', route: '/asambleas' },
-  { module: 'documentos', title: 'Documentos', route: '/documentos' },
-  { module: 'facturas', title: 'Facturas y albaranes', route: '/facturas' },
-  { module: 'area-socio', title: 'Área del socio', route: '/area-socio' },
-  { module: 'asistente', title: 'Asistente', route: '/asistente' },
-  { module: 'usuarios', title: 'Miembros', route: '/miembros' },
+  { module: 'comunicados', title: 'Comunicados', emoji: '📢', route: '/comunicados' },
+  { module: 'asambleas', title: 'Asambleas', emoji: '🗳️', route: '/asambleas' },
+  { module: 'documentos', title: 'Documentos', emoji: '📄', route: '/documentos' },
+  { module: 'facturas', title: 'Facturas y albaranes', emoji: '🧾', route: '/facturas' },
+  { module: 'area-socio', title: 'Área del socio', emoji: '👤', route: '/area-socio' },
+  { module: 'asistente', title: 'Asistente', emoji: '🤖', route: '/asistente' },
+  { module: 'usuarios', title: 'Miembros', emoji: '👥', route: '/miembros' },
 ];
 
 export interface VisibleModule extends ModuleEntry {

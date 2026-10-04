@@ -43,7 +43,13 @@ describe('navegación según permisos (HU-ACC-06)', () => {
   it('marca si se pueden mostrar las acciones de gestión', () => {
     const modules = visibleModules([{ module: 'facturas', level: 'gestion', scope: 'todas' }]);
     expect(modules).toEqual([
-      { module: 'facturas', title: 'Facturas y albaranes', route: '/facturas', canManage: true },
+      {
+        module: 'facturas',
+        title: 'Facturas y albaranes',
+        emoji: '🧾',
+        route: '/facturas',
+        canManage: true,
+      },
     ]);
     expect(visibleModules([...socio])[0]?.canManage).toBe(false);
   });

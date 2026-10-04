@@ -6,7 +6,7 @@ import { visibleModules } from '@/navigation/modules';
 import { Loading, Screen } from '@/ui/screen';
 import { colors } from '@/ui/theme';
 
-/** Inicio de la cooperativa: solo los módulos del perfil (HU-ACC-06). */
+/** Inicio de la cooperativa: una celda por módulo del perfil, dos por fila (HU-ACC-06). */
 export default function HomeScreen() {
   const { cooperative, permissions } = useActiveCooperative();
 
@@ -28,17 +28,22 @@ export default function HomeScreen() {
         {cooperative?.profileName}
         {permissions.isPartner ? ' · Socio' : ''}
       </Text>
-      <View style={styles.list}>
+      <View style={styles.grid}>
         {modules.map((entry) => (
           <Pressable
             key={entry.module}
             accessibilityRole="button"
+            accessibilityLabel={entry.title}
             onPress={() => router.push(entry.route as Href)}
-            style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
             testID={`modulo-${entry.module}`}
           >
-            <Text style={styles.cardTitle}>{entry.title}</Text>
-            <Text style={styles.cardDetail}>{entry.canManage ? 'Gestión' : 'Consulta'}</Text>
+            <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
+              {entry.emoji}
+            </Text>
+            <Text style={styles.cellTitle} numberOfLines={2}>
+              {entry.title}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -49,16 +54,28 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   headerLink: { color: colors.primary, fontSize: 16 },
   profile: { fontSize: 15, color: colors.muted },
-  list: { gap: 12 },
-  card: {
-    padding: 16,
-    borderRadius: 12,
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
+  cell: {
+    // Two per row; the gap between them comes from space-between.
+    width: '48.5%',
+    aspectRatio: 1,
+    borderRadius: 16,
     backgroundColor: colors.surface,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 12,
   },
   pressed: { opacity: 0.7 },
-  cardTitle: { fontSize: 17, fontWeight: '600', color: colors.text },
-  cardDetail: { fontSize: 13, color: colors.muted },
+  emoji: { fontSize: 44 },
+  cellTitle: {
+    fontSize: 16,
+    lineHeight: 20,
+    // Always two lines tall, so emojis line up across a row even when a title wraps.
+    minHeight: 40,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+  },
 });
