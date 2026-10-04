@@ -9,6 +9,19 @@ export type EventHandler<TEvent extends DomainEvent> = (event: TEvent) => void |
 
 export type Unsubscribe = () => void;
 
+/** What an emitting module needs: a bus of a wider event union also satisfies it. */
+export interface EventPublisher<TEvents extends DomainEvent = DomainEvent> {
+  publish(event: TEvents): Promise<void>;
+}
+
+/** What a reacting module needs, for the events it listens to. */
+export interface EventSubscriber<TEvents extends DomainEvent = DomainEvent> {
+  subscribe<TType extends TEvents['type']>(
+    type: TType,
+    handler: EventHandler<Extract<TEvents, { type: TType }>>,
+  ): Unsubscribe;
+}
+
 /**
  * Port for internal events between modules (ADR-002). Emitters do not know
  * their subscribers, and a failing subscriber never fails the emitter.

@@ -1,5 +1,5 @@
 import { type CooperativeContext, hasAccess, requireAccess } from '../../access';
-import type { EventBus } from '../../../shared/events';
+import type { EventPublisher } from '../../../shared/events';
 import { type FileStorage, newFileKey } from '../../../shared/files/file-storage';
 import { isPdf } from '../../../shared/domain/pdf';
 import {
@@ -29,7 +29,7 @@ export interface AnnouncementDeps {
   announcements: AnnouncementStore;
   members: MemberDirectory;
   files: FileStorage;
-  events: EventBus<AnnouncementEvent>;
+  events: EventPublisher<AnnouncementEvent>;
   now: () => Date;
 }
 

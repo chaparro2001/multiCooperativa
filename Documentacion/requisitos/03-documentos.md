@@ -166,6 +166,16 @@ erDiagram
 | POST | `/cooperativas/{id}/documentos/{documentoId}/retirar` | Retirar | Gestión |
 | POST | `/cooperativas/{id}/documentos/{documentoId}/reindexar` | Reintentar indexación | Gestión |
 
+Contrato (esquemas en `packages/contracts/src/documents.ts`):
+
+- Categorías: `estatutos`, `reglamento`, `actas`, `cuentas`, `otros`. Título de 1 a 150 caracteres; fecha del documento como día (AAAA-MM-DD).
+- El listado acepta `?categoria=` y `?q=` (coincidencia en el título sin distinguir mayúsculas) y ordena por fecha del documento descendente. La app agrupa por categoría.
+- Subir un documento o una versión es `multipart/form-data` con el PDF en el campo `fichero`; al subir el documento, además, `title`, `category` y `documentDate`. El tipo se comprueba por contenido.
+- El detalle trae la URL firmada de la versión vigente (5 minutos). El estado de indexación y su motivo solo se devuelven con gestión.
+- Una sola versión vigente también lo garantiza la base de datos (índice único parcial), incluso con subidas simultáneas.
+- Errores: `400 invalid_document`, `400 file_rejected` con `details.reason` (`not_pdf`, `too_large`, `empty`), `404 not_found` y `409 invalid_document_transition`.
+- Eventos: `DocumentoPublicado` (`cooperativeId`, `documentId`, `versionId`) y `DocumentoRetirado` (`cooperativeId`, `documentId`), emitidos después de guardar. `buscar` y `reindexar` llegan con la tarea de indexación.
+
 ## 9. Pantallas
 
 1. Listado por categorías con buscador.

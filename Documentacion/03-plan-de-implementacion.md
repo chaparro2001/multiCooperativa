@@ -39,7 +39,7 @@ Especificaciones: [02-comunicados](requisitos/02-comunicados.md) · [03-document
 
 - [x] Almacenamiento de ficheros con URL firmadas (puerto + adaptador).
 - [x] Comunicados: dominio, API, lecturas, evento `ComunicadoPublicado`.
-- [ ] Documentos: dominio, versiones, API.
+- [x] Documentos: dominio, versiones, API.
 - [ ] Indexación: extracción de texto, troceado, embeddings, pgvector con `cooperativaId`.
 - [ ] App: listado y detalle de comunicados; listado y visor de documentos; editor para gestión.
 

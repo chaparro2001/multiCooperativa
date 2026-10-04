@@ -3,12 +3,13 @@ import type { Express } from 'express';
 import { createApp } from './app';
 import { type AuthRateLimits, createAccessModule, type InvitationSender } from './modules/access';
 import { type AnnouncementEvent, createAnnouncementsModule } from './modules/announcements';
+import { createDocumentsModule, type DocumentEvent } from './modules/documents';
 import { type EventBus, InProcessEventBus } from './shared/events';
 import type { FileStorage } from './shared/files/file-storage';
 import type { PrismaClient } from './shared/infrastructure/prisma';
 
 /** Every internal event of the app: the union grows with each module that emits. */
-export type AppEvent = AnnouncementEvent;
+export type AppEvent = AnnouncementEvent | DocumentEvent;
 
 export interface ApiDeps {
   prisma: PrismaClient;
@@ -49,10 +50,17 @@ export function createApi(deps: ApiDeps): Express {
     members: access.directory,
     requireCooperative: access.requireCooperative,
   });
+  const documents = createDocumentsModule({
+    prisma: deps.prisma,
+    files: deps.files,
+    events,
+    members: access.directory,
+    requireCooperative: access.requireCooperative,
+  });
 
   return createApp({
-    routers: [access.router, announcements.router],
-    errorHandlers: [access.errorHandler, announcements.errorHandler],
+    routers: [access.router, announcements.router, documents.router],
+    errorHandlers: [access.errorHandler, announcements.errorHandler, documents.errorHandler],
     trustProxy: deps.trustProxy,
   });
 }

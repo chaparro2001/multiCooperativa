@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 
-import type { EventBus } from '../../shared/events';
+import type { EventPublisher } from '../../shared/events';
 import type { FileStorage } from '../../shared/files/file-storage';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
 import type { AnnouncementEvent } from './application/events';
@@ -15,7 +15,7 @@ export type { AnnouncementEvent, AnnouncementPublished } from './application/eve
 export function createAnnouncementsModule(deps: {
   prisma: PrismaClient;
   files: FileStorage;
-  events: EventBus<AnnouncementEvent>;
+  events: EventPublisher<AnnouncementEvent>;
   /** From the access module's public interface. */
   members: MemberDirectory;
   requireCooperative: RequestHandler;

@@ -53,6 +53,11 @@ const MULTIPART_PDF = { multipartField: 'fichero' } as const;
 
 async function snapshot() {
   return {
+    documents: await prisma.document.findMany({
+      where: { cooperativeId: campo },
+      orderBy: { id: 'asc' },
+      include: { versions: true },
+    }),
     announcements: await prisma.announcement.findMany({
       where: { cooperativeId: campo },
       orderBy: { id: 'asc' },
@@ -110,7 +115,29 @@ beforeAll(async () => {
       publishedAt: new Date(),
     },
   });
-  campoParams = { cooperativeId: campo, memberId: member.id, announcementId: announcement.id };
+  const document = await prisma.document.create({
+    data: {
+      cooperativeId: campo,
+      title: 'Estatutos',
+      category: 'estatutos',
+      documentDate: new Date('2026-01-01'),
+      versions: {
+        create: {
+          fileKey: `cooperativas/${campo}/documentos/estatutos`,
+          fileName: 'Estatutos.pdf',
+          size: 10,
+          isCurrent: true,
+          uploadedByMembershipId: member.id,
+        },
+      },
+    },
+  });
+  campoParams = {
+    cooperativeId: campo,
+    memberId: member.id,
+    announcementId: announcement.id,
+    documentId: document.id,
+  };
 
   const marProfile = await prisma.profile.findFirstOrThrow({
     where: { cooperativeId: mar, name: 'Socio' },
@@ -124,6 +151,8 @@ beforeAll(async () => {
     'POST /cooperativas/:cooperativeId/comunicados/:announcementId/retirar': {},
     'POST /cooperativas/:cooperativeId/comunicados/:announcementId/adjuntos': MULTIPART_PDF,
     'POST /cooperativas/:cooperativeId/comunicados': { title: 'Nuevo', body: 'Texto' },
+    'POST /cooperativas/:cooperativeId/documentos/:documentId/versiones': MULTIPART_PDF,
+    'POST /cooperativas/:cooperativeId/documentos/:documentId/retirar': {},
     'POST /cooperativas/:cooperativeId/miembros': {
       email: 'nuevo@mar.es',
       name: 'Nuevo',

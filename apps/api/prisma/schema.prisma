@@ -221,3 +221,60 @@ model AnnouncementRead {
 
   @@id([announcementId, membershipId])
 }
+
+// ───────────── Documentos (requisitos/03) ─────────────
+
+enum DocumentCategory {
+  estatutos
+  reglamento
+  actas
+  cuentas
+  otros
+}
+
+enum DocumentStatus {
+  publicado
+  retirado
+}
+
+enum IndexingStatus {
+  pendiente
+  indexado
+  error
+  no_indexable
+}
+
+model Document {
+  id            String           @id @default(uuid()) @db.Uuid
+  cooperativeId String           @db.Uuid
+  title         String           @db.VarChar(150)
+  category      DocumentCategory
+  documentDate  DateTime         @db.Date
+  status        DocumentStatus   @default(publicado)
+  createdAt     DateTime         @default(now())
+
+  versions DocumentVersion[]
+
+  @@index([cooperativeId, status, category, documentDate])
+}
+
+model DocumentVersion {
+  id                     String         @id @default(uuid()) @db.Uuid
+  documentId             String         @db.Uuid
+  /// Clave en el almacenamiento de ficheros (ADR-005).
+  fileKey                String         @unique
+  /// Nombre original, para la descarga.
+  fileName               String
+  size                   Int
+  isCurrent              Boolean
+  indexingStatus         IndexingStatus @default(pendiente)
+  indexingError          String?
+  uploadedByMembershipId String         @db.Uuid
+  uploadedAt             DateTime       @default(now())
+
+  document Document @relation(fields: [documentId], references: [id])
+
+  // RN-DOC-03: exactamente una versión vigente por documento.
+  @@unique([documentId], where: raw("\"isCurrent\""))
+  @@index([documentId, uploadedAt])
+}
