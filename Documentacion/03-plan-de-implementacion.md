@@ -22,7 +22,7 @@ Plan por hitos para ejecutar con Claude Code. Cada tarea es lo bastante pequeña
 
 Especificación: [requisitos/01-acceso-y-perfiles.md](requisitos/01-acceso-y-perfiles.md)
 
-- [ ] Dominio con TDD: permisos (nivel y alcance), estados de membresía, último administrador, invitación, bloqueo por intentos.
+- [x] Dominio con TDD: permisos (nivel y alcance), estados de membresía, último administrador, invitación, bloqueo por intentos.
 - [ ] Esquema Prisma: usuario, cooperativa, membresía, perfil, permiso, sesión, invitación, auditoría.
 - [ ] Script de alta de cooperativa con sus 4 perfiles predefinidos y un administrador.
 - [ ] Autenticación: login, refresh rotatorio, logout, aceptar invitación (Argon2id, JWT).
