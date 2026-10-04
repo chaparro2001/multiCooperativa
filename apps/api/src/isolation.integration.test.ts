@@ -55,6 +55,11 @@ const MULTIPART_PDF = { multipartField: 'fichero' } as const;
 
 async function snapshot() {
   return {
+    assemblies: await prisma.assembly.findMany({
+      where: { cooperativeId: campo },
+      orderBy: { id: 'asc' },
+      include: { points: { include: { attachments: true, voting: true } } },
+    }),
     documents: await prisma.document.findMany({
       where: { cooperativeId: campo },
       orderBy: { id: 'asc' },
@@ -134,11 +139,32 @@ beforeAll(async () => {
       },
     },
   });
+  const assembly = await prisma.assembly.create({
+    data: {
+      cooperativeId: campo,
+      type: 'ordinaria',
+      status: 'convocada',
+      firstCallAt: new Date('2026-12-01T18:00:00Z'),
+      place: 'Salón social',
+      points: {
+        create: {
+          position: 1,
+          title: 'Cuentas',
+          description: '',
+          votable: true,
+          majority: 'simple',
+        },
+      },
+    },
+    include: { points: true },
+  });
   campoParams = {
     cooperativeId: campo,
     memberId: member.id,
     announcementId: announcement.id,
     documentId: document.id,
+    assemblyId: assembly.id,
+    pointId: assembly.points[0]!.id,
   };
 
   const marProfile = await prisma.profile.findFirstOrThrow({
@@ -156,6 +182,20 @@ beforeAll(async () => {
     'POST /cooperativas/:cooperativeId/documentos/:documentId/versiones': MULTIPART_PDF,
     'POST /cooperativas/:cooperativeId/documentos/:documentId/retirar': {},
     'POST /cooperativas/:cooperativeId/documentos/:documentId/reindexar': {},
+    'PATCH /cooperativas/:cooperativeId/asambleas/:assemblyId': {
+      type: 'ordinaria',
+      firstCallAt: '2026-12-01T18:00:00Z',
+      secondCallAt: null,
+      place: 'Otro lugar',
+      points: [{ title: 'X', description: '', votable: false, majority: null }],
+    },
+    'POST /cooperativas/:cooperativeId/asambleas/:assemblyId/convocar': {},
+    'POST /cooperativas/:cooperativeId/asambleas/:assemblyId/cancelar': {},
+    'POST /cooperativas/:cooperativeId/asambleas/:assemblyId/cerrar': {},
+    'POST /cooperativas/:cooperativeId/puntos/:pointId/documentos': MULTIPART_PDF,
+    'POST /cooperativas/:cooperativeId/puntos/:pointId/votacion/abrir': {},
+    'POST /cooperativas/:cooperativeId/puntos/:pointId/votacion/cerrar': {},
+    'POST /cooperativas/:cooperativeId/puntos/:pointId/votacion/votos': { choice: 'a_favor' },
     'POST /cooperativas/:cooperativeId/miembros': {
       email: 'nuevo@mar.es',
       name: 'Nuevo',

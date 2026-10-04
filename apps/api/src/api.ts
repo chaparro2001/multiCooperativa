@@ -3,13 +3,14 @@ import type { Express } from 'express';
 import { createApp } from './app';
 import { type AuthRateLimits, createAccessModule, type InvitationSender } from './modules/access';
 import { type AnnouncementEvent, createAnnouncementsModule } from './modules/announcements';
+import { type AssemblyEvent, createAssembliesModule } from './modules/assemblies';
 import { createDocumentsModule, type DocumentEvent, type Embedder } from './modules/documents';
 import { type EventBus, InProcessEventBus } from './shared/events';
 import type { FileStorage } from './shared/files/file-storage';
 import type { PrismaClient } from './shared/infrastructure/prisma';
 
 /** Every internal event of the app: the union grows with each module that emits. */
-export type AppEvent = AnnouncementEvent | DocumentEvent;
+export type AppEvent = AnnouncementEvent | DocumentEvent | AssemblyEvent;
 
 export interface ApiDeps {
   prisma: PrismaClient;
@@ -67,9 +68,22 @@ export function createApi(deps: ApiDeps): Api {
     embedder: deps.embedder,
   });
 
+  const assemblies = createAssembliesModule({
+    prisma: deps.prisma,
+    files: deps.files,
+    events,
+    members: access.directory,
+    requireCooperative: access.requireCooperative,
+  });
+
   const app = createApp({
-    routers: [access.router, announcements.router, documents.router],
-    errorHandlers: [access.errorHandler, announcements.errorHandler, documents.errorHandler],
+    routers: [access.router, announcements.router, documents.router, assemblies.router],
+    errorHandlers: [
+      access.errorHandler,
+      announcements.errorHandler,
+      documents.errorHandler,
+      assemblies.errorHandler,
+    ],
     trustProxy: deps.trustProxy,
   });
   return { app, indexing: documents.indexing };

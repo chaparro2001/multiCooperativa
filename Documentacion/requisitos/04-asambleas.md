@@ -207,6 +207,17 @@ erDiagram
 | POST | `/cooperativas/{id}/puntos/{puntoId}/votacion/cerrar` | Cerrar votación | Gestión |
 | POST | `/cooperativas/{id}/puntos/{puntoId}/votacion/votos` | Votar | Socio en el censo |
 | GET | `/cooperativas/{id}/puntos/{puntoId}/votacion` | Estado y resultado | Consulta |
+| POST | `/cooperativas/{id}/asambleas/{asambleaId}/cerrar` | Pasar a celebrada (sin votaciones abiertas) | Gestión |
+| POST | `/cooperativas/{id}/puntos/{puntoId}/documentos` | Adjuntar documentación a un punto (PDF, 10 MB) | Gestión |
+
+Contrato (esquemas en `packages/contracts/src/assemblies.ts`):
+
+- Crear y editar envían el borrador completo: `type`, `firstCallAt`, `secondCallAt`, `place` y `points` en su orden. Cada punto lleva `id` para conservarse; los que faltan se eliminan con su documentación. Solo en borrador (RN-ASA-10). La documentación se puede añadir también con la asamblea convocada.
+- La votación «pendiente» no existe en base de datos: nace al abrirse, con el censo y las reglas en vigor (quórum, fracción reforzada, segunda convocatoria) copiados en ese instante.
+- Cada votación devuelve `status`, `censusSize`, `votesCast`, `tally` (nulo mientras está abierta sin gestión), `result`, `myVote` y `canVote`.
+- Votar no exige permiso del módulo, solo estar en el censo (RN-ACC-06). El voto tiene una clave única por votación y miembro y una clave foránea al censo.
+- Errores: `400 invalid_assembly`, `400 insufficient_notice` con `details.minNoticeDays`, `403 not_in_census`, `404 not_found` (también borradores sin gestión), `409 already_voted` con `details.choice`, `409 voting_not_open`, `409 invalid_assembly_transition` y `409 invalid_voting_transition`.
+- Ajustes por cooperativa en la tabla `AssemblySettings`; sin fila valen los valores por defecto. No tienen pantalla en el MVP.
 
 ## 8. Pantallas
 
