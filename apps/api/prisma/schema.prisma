@@ -2,10 +2,167 @@
 // ningún módulo consulta las tablas de otro (ADR-002).
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ───────────── Acceso y perfiles (requisitos/01) ─────────────
+
+enum MembershipStatus {
+  invitada
+  activa
+  suspendida
+  baja
+}
+
+enum PermissionModule {
+  comunicados
+  asambleas
+  documentos
+  facturas
+  area_socio
+  asistente
+  usuarios
+}
+
+enum AccessLevel {
+  consulta
+  gestion
+}
+
+enum PermissionScope {
+  propias
+  todas
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  /// Normalizado en minúsculas (RN-ACC-01).
+  email        String   @unique
+  /// Nulo mientras el usuario no haya aceptado su primera invitación.
+  passwordHash String?
+  name         String
+  createdAt    DateTime @default(now())
+
+  memberships    Membership[]
+  sessions       Session[]
+  auditsAuthored AuditEvent[] @relation("auditActor")
+  auditsReceived AuditEvent[] @relation("auditTarget")
+}
+
+model Cooperative {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  cif       String   @unique
+  createdAt DateTime @default(now())
+
+  profiles    Profile[]
+  memberships Membership[]
+  auditEvents AuditEvent[]
+}
+
+model Profile {
+  id            String  @id @default(uuid()) @db.Uuid
+  cooperativeId String  @db.Uuid
+  name          String
+  /// Los perfiles predefinidos no se editan ni se borran (RN-ACC-13).
+  predefined    Boolean @default(false)
+
+  cooperative Cooperative  @relation(fields: [cooperativeId], references: [id])
+  permissions Permission[]
+  memberships Membership[]
+
+  @@unique([cooperativeId, name])
+  // Destino de la clave compuesta de Membership (RN-ACC-03).
+  @@unique([id, cooperativeId])
+}
+
+model Permission {
+  profileId String           @db.Uuid
+  module    PermissionModule
+  level     AccessLevel
+  scope     PermissionScope  @default(todas)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, module])
+}
+
+model Membership {
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @db.Uuid
+  cooperativeId String           @db.Uuid
+  profileId     String           @db.Uuid
+  status        MembershipStatus @default(invitada)
+  isPartner     Boolean          @default(false)
+  partnerNumber String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id])
+  cooperative Cooperative @relation(fields: [cooperativeId], references: [id])
+  /// Clave compuesta: el perfil pertenece a la misma cooperativa (RN-ACC-03).
+  profile     Profile     @relation(fields: [profileId, cooperativeId], references: [id, cooperativeId])
+  invitation  Invitation?
+
+  // RN-ACC-02 con RN-ACC-14: una membresía viva por usuario y cooperativa;
+  // las de baja se conservan y no impiden una membresía nueva.
+  @@unique([userId, cooperativeId], where: raw("status <> 'baja'"))
+  @@index([cooperativeId, status])
+}
+
+model Invitation {
+  id           String    @id @default(uuid()) @db.Uuid
+  membershipId String    @unique @db.Uuid
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  /// Hash del token de refresco vigente; rota en cada renovación (RNF-ACC-02).
+  refreshTokenHash String
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+/// Intentos fallidos de inicio de sesión para el bloqueo temporal (RN-ACC-11).
+model FailedLoginAttempt {
+  id         String   @id @default(uuid()) @db.Uuid
+  email      String
+  occurredAt DateTime @default(now())
+
+  @@index([email, occurredAt])
+}
+
+model AuditEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  cooperativeId String   @db.Uuid
+  /// Nulo cuando la acción la ejecuta un script de plataforma.
+  actorUserId   String?  @db.Uuid
+  targetUserId  String   @db.Uuid
+  action        String
+  detail        Json
+  createdAt     DateTime @default(now())
+
+  cooperative Cooperative @relation(fields: [cooperativeId], references: [id])
+  actor       User?       @relation("auditActor", fields: [actorUserId], references: [id])
+  target      User        @relation("auditTarget", fields: [targetUserId], references: [id])
+
+  @@index([cooperativeId, createdAt])
 }

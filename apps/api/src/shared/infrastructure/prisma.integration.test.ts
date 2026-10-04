@@ -1,9 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { loadEnv } from '../../config/env';
-import { createPrismaClient } from './prisma';
+import { createTestPrisma } from '../../../test/database';
 
-const prisma = createPrismaClient(loadEnv(process.env).DATABASE_URL);
+const prisma = createTestPrisma();
 
 afterAll(() => prisma.$disconnect());
 

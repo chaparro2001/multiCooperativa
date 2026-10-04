@@ -69,7 +69,7 @@ pnpm lint                    # ESLint (incluye las fronteras entre módulos)
 pnpm format                  # Prettier
 pnpm typecheck
 pnpm test                    # tests unitarios (sin base de datos)
-pnpm test:integration        # tests *.integration.test.ts (necesitan pnpm db:up)
+pnpm test:integration        # tests *.integration.test.ts contra la BD multicooperativa_test (necesitan pnpm db:up)
 ```
 
 Variables de entorno: copiar `apps/api/.env.example` y `apps/mobile/.env.example` a `.env`.
