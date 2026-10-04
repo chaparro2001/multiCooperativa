@@ -5,6 +5,7 @@ import { type AuthRateLimits, createAccessModule, type InvitationSender } from '
 import { type AnnouncementEvent, createAnnouncementsModule } from './modules/announcements';
 import { type AssemblyEvent, createAssembliesModule } from './modules/assemblies';
 import { createDocumentsModule, type DocumentEvent, type Embedder } from './modules/documents';
+import { createInvoicingModule } from './modules/invoicing';
 import { type EventBus, InProcessEventBus } from './shared/events';
 import type { FileStorage } from './shared/files/file-storage';
 import type { PrismaClient } from './shared/infrastructure/prisma';
@@ -76,13 +77,25 @@ export function createApi(deps: ApiDeps): Api {
     requireCooperative: access.requireCooperative,
   });
 
+  const invoicing = createInvoicingModule({
+    prisma: deps.prisma,
+    requireCooperative: access.requireCooperative,
+  });
+
   const app = createApp({
-    routers: [access.router, announcements.router, documents.router, assemblies.router],
+    routers: [
+      access.router,
+      announcements.router,
+      documents.router,
+      assemblies.router,
+      invoicing.router,
+    ],
     errorHandlers: [
       access.errorHandler,
       announcements.errorHandler,
       documents.errorHandler,
       assemblies.errorHandler,
+      invoicing.errorHandler,
     ],
     trustProxy: deps.trustProxy,
   });

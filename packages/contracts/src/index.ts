@@ -5,6 +5,7 @@ export * from './announcements';
 export * from './assemblies';
 export * from './auth';
 export * from './documents';
+export * from './invoicing';
 
 export const healthResponseSchema = z.object({
   status: z.literal('ok'),

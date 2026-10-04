@@ -55,6 +55,10 @@ const MULTIPART_PDF = { multipartField: 'fichero' } as const;
 
 async function snapshot() {
   return {
+    thirdParties: await prisma.thirdParty.findMany({
+      where: { cooperativeId: campo },
+      orderBy: { id: 'asc' },
+    }),
     assemblies: await prisma.assembly.findMany({
       where: { cooperativeId: campo },
       orderBy: { id: 'asc' },
@@ -158,7 +162,17 @@ beforeAll(async () => {
     },
     include: { points: true },
   });
+  const thirdParty = await prisma.thirdParty.create({
+    data: {
+      cooperativeId: campo,
+      nif: 'B12345674',
+      name: 'Abonos del Sur',
+      isSupplier: true,
+      isCustomer: false,
+    },
+  });
   campoParams = {
+    thirdPartyId: thirdParty.id,
     cooperativeId: campo,
     memberId: member.id,
     announcementId: announcement.id,
@@ -196,6 +210,14 @@ beforeAll(async () => {
     'POST /cooperativas/:cooperativeId/puntos/:pointId/votacion/abrir': {},
     'POST /cooperativas/:cooperativeId/puntos/:pointId/votacion/cerrar': {},
     'POST /cooperativas/:cooperativeId/puntos/:pointId/votacion/votos': { choice: 'a_favor' },
+    'PATCH /cooperativas/:cooperativeId/terceros/:thirdPartyId': {
+      name: 'Cambiado',
+      isSupplier: true,
+      isCustomer: false,
+      email: null,
+      phone: null,
+      active: false,
+    },
     'POST /cooperativas/:cooperativeId/miembros': {
       email: 'nuevo@mar.es',
       name: 'Nuevo',
