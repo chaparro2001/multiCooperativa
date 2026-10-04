@@ -7,6 +7,7 @@ import { fillPath, listRoutes, type RegisteredRoute } from '../test/routes';
 import { createApi } from './api';
 import { loadEnv } from './config/env';
 import { createAccessModule } from './modules/access';
+import { InMemoryFileStorage } from './shared/files/in-memory-file-storage';
 
 /**
  * ADR-003, mandatory measure 5: every endpoint is tried by a user of another
@@ -20,6 +21,7 @@ const jwtSecret = loadEnv(process.env).JWT_SECRET;
 const app = createApi({
   prisma,
   jwtSecret,
+  files: new InMemoryFileStorage(),
   authRateLimits: false,
   invitationSender: { send: async () => {} },
 });
@@ -46,8 +48,16 @@ let marToken: string;
 /** Valid bodies, so a cross-cooperative write is refused for the resource, not the body. */
 let validBodies: Record<string, object>;
 
+/** Marks a route that receives a PDF as multipart/form-data. */
+const MULTIPART_PDF = { multipartField: 'fichero' } as const;
+
 async function snapshot() {
   return {
+    announcements: await prisma.announcement.findMany({
+      where: { cooperativeId: campo },
+      orderBy: { id: 'asc' },
+      include: { attachments: true, reads: true },
+    }),
     memberships: await prisma.membership.findMany({
       where: { cooperativeId: campo },
       orderBy: { id: 'asc' },
@@ -90,7 +100,17 @@ beforeAll(async () => {
   const member = await prisma.membership.create({
     data: { cooperativeId: campo, profileId: socio.id, userId: margaret.id, status: 'activa' },
   });
-  campoParams = { cooperativeId: campo, memberId: member.id };
+  const announcement = await prisma.announcement.create({
+    data: {
+      cooperativeId: campo,
+      authorMembershipId: member.id,
+      title: 'Asamblea',
+      body: 'Convocatoria',
+      status: 'publicado',
+      publishedAt: new Date(),
+    },
+  });
+  campoParams = { cooperativeId: campo, memberId: member.id, announcementId: announcement.id };
 
   const marProfile = await prisma.profile.findFirstOrThrow({
     where: { cooperativeId: mar, name: 'Socio' },
@@ -99,6 +119,11 @@ beforeAll(async () => {
     'PATCH /cooperativas/:cooperativeId/miembros/:memberId': { status: 'suspendida' },
     'POST /cooperativas/:cooperativeId/miembros/:memberId/baja': {},
     'POST /cooperativas/:cooperativeId/miembros/:memberId/invitacion': {},
+    'PATCH /cooperativas/:cooperativeId/comunicados/:announcementId': { title: 'Cambiado' },
+    'POST /cooperativas/:cooperativeId/comunicados/:announcementId/publicar': {},
+    'POST /cooperativas/:cooperativeId/comunicados/:announcementId/retirar': {},
+    'POST /cooperativas/:cooperativeId/comunicados/:announcementId/adjuntos': MULTIPART_PDF,
+    'POST /cooperativas/:cooperativeId/comunicados': { title: 'Nuevo', body: 'Texto' },
     'POST /cooperativas/:cooperativeId/miembros': {
       email: 'nuevo@mar.es',
       name: 'Nuevo',
@@ -117,7 +142,11 @@ afterAll(() => prisma.$disconnect());
 const send = (route: RegisteredRoute, path: string, token?: string, body: object = {}) => {
   const call = request(app)[route.method](path);
   if (token) call.set('Authorization', `Bearer ${token}`);
-  return route.method === 'get' ? call : call.send(body);
+  if (route.method === 'get') return call;
+  if (body === MULTIPART_PDF) {
+    return call.attach(MULTIPART_PDF.multipartField, Buffer.from('%PDF-1.4 prueba'), 'a.pdf');
+  }
+  return call.send(body);
 };
 
 describe('inventario de rutas', () => {

@@ -2,12 +2,21 @@ import type { Express } from 'express';
 
 import { createApp } from './app';
 import { type AuthRateLimits, createAccessModule, type InvitationSender } from './modules/access';
+import { type AnnouncementEvent, createAnnouncementsModule } from './modules/announcements';
+import { type EventBus, InProcessEventBus } from './shared/events';
+import type { FileStorage } from './shared/files/file-storage';
 import type { PrismaClient } from './shared/infrastructure/prisma';
+
+/** Every internal event of the app: the union grows with each module that emits. */
+export type AppEvent = AnnouncementEvent;
 
 export interface ApiDeps {
   prisma: PrismaClient;
   jwtSecret: string;
   invitationSender: InvitationSender;
+  files: FileStorage;
+  /** Injectable so tests can observe the events; one in-process bus by default. */
+  events?: EventBus<AppEvent>;
   authRateLimits?: AuthRateLimits | false;
   trustProxy?: number | false;
 }
@@ -17,16 +26,33 @@ export interface ApiDeps {
  * runs it and the isolation test walks all the routes it registers.
  */
 export function createApi(deps: ApiDeps): Express {
+  const events =
+    deps.events ??
+    new InProcessEventBus<AppEvent>({
+      onHandlerError: (error, event) =>
+        console.error(
+          `Fallo al procesar ${event.type}:`,
+          error instanceof Error ? error.stack : error,
+        ),
+    });
+
   const access = createAccessModule({
     prisma: deps.prisma,
     jwtSecret: deps.jwtSecret,
     invitationSender: deps.invitationSender,
     authRateLimits: deps.authRateLimits,
   });
+  const announcements = createAnnouncementsModule({
+    prisma: deps.prisma,
+    files: deps.files,
+    events,
+    members: access.directory,
+    requireCooperative: access.requireCooperative,
+  });
 
   return createApp({
-    routers: [access.router],
-    errorHandlers: [access.errorHandler],
+    routers: [access.router, announcements.router],
+    errorHandlers: [access.errorHandler, announcements.errorHandler],
     trustProxy: deps.trustProxy,
   });
 }

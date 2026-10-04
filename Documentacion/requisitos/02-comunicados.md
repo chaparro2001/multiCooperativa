@@ -138,6 +138,15 @@ erDiagram
 | POST | `/cooperativas/{id}/comunicados/{comunicadoId}/retirar` | Retirar | Gestión |
 | POST | `/cooperativas/{id}/comunicados/{comunicadoId}/adjuntos` | Subir adjunto | Gestión |
 
+Contrato (esquemas en `packages/contracts/src/announcements.ts`):
+
+- El listado se pagina de 20 en 20 con `?offset=N`; la respuesta trae `nextOffset`, nulo en la última página. Con consulta solo aparecen los publicados; con gestión, también borradores y retirados. Orden: fijados, luego por fecha de publicación descendente, y los borradores al final.
+- El detalle incluye las URL firmadas de los adjuntos (5 minutos); la app vuelve a pedir el detalle al abrir un adjunto. Abrir un comunicado publicado registra la lectura; abrir un borrador no. Con gestión, el detalle trae `readStats` con lecturas y miembros activos (HU-COM-07).
+- `PATCH` acepta `title`, `body` y `pinned`. Un borrador puede guardarse incompleto; publicar exige título y cuerpo.
+- Los adjuntos se suben como `multipart/form-data` en el campo `fichero`. El tipo se comprueba por el contenido (firma `%PDF-`), no por el nombre.
+- Errores: `400 invalid_announcement` con `details.issues` (qué falta o qué sobra), `400 attachment_rejected` con `details.reason` (`too_many`, `not_pdf`, `too_large`), `404 not_found` (también borradores y retirados sin gestión, y comunicados de otra cooperativa) y `409 invalid_announcement_transition`.
+- `ComunicadoPublicado` lleva `cooperativeId`, `announcementId` y `title`, y se emite después de guardar.
+
 ## 7. Pantallas
 
 1. Listado de comunicados.

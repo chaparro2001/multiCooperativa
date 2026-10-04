@@ -10,7 +10,6 @@ import { InvalidRequestError } from './shared/infrastructure/http/validation';
 
 /** Last resort: never leaks internals to the client (RNF-ACC-08 keeps tokens out of logs too). */
 // Express tells error handlers apart by their four parameters, so `_next` must stay.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const unhandledErrors: ErrorRequestHandler = (error, _req, res, _next) => {
   // A body that breaks its contract, or malformed JSON rejected by express.json().
   if (error instanceof InvalidRequestError || error?.type === 'entity.parse.failed') {

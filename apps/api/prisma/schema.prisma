@@ -166,3 +166,58 @@ model AuditEvent {
 
   @@index([cooperativeId, createdAt])
 }
+
+// ───────────── Comunicados (requisitos/02) ─────────────
+// Sin relaciones de Prisma hacia las tablas de acceso: solo sus ids (ADR-002).
+
+enum AnnouncementStatus {
+  borrador
+  publicado
+  retirado
+}
+
+model Announcement {
+  id                 String             @id @default(uuid()) @db.Uuid
+  cooperativeId      String             @db.Uuid
+  authorMembershipId String             @db.Uuid
+  title              String             @db.VarChar(120)
+  /// Texto plano (RNF-COM-02).
+  body               String
+  status             AnnouncementStatus @default(borrador)
+  pinned             Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  publishedAt        DateTime?
+  editedAt           DateTime?
+
+  attachments AnnouncementAttachment[]
+  reads       AnnouncementRead[]
+
+  // Listado: fijados primero y del más reciente al más antiguo (RNF-COM-01).
+  @@index([cooperativeId, status, pinned, publishedAt])
+}
+
+model AnnouncementAttachment {
+  id             String   @id @default(uuid()) @db.Uuid
+  announcementId String   @db.Uuid
+  /// Nombre original, para mostrarlo y para la descarga.
+  name           String
+  /// Clave en el almacenamiento de ficheros (ADR-005).
+  fileKey        String   @unique
+  size           Int
+  createdAt      DateTime @default(now())
+
+  announcement Announcement @relation(fields: [announcementId], references: [id])
+
+  @@index([announcementId])
+}
+
+/// RN-COM-06: una lectura por miembro y comunicado.
+model AnnouncementRead {
+  announcementId String   @db.Uuid
+  membershipId   String   @db.Uuid
+  readAt         DateTime @default(now())
+
+  announcement Announcement @relation(fields: [announcementId], references: [id])
+
+  @@id([announcementId, membershipId])
+}

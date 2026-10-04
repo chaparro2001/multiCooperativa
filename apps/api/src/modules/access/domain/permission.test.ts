@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { InvalidPermissionError, ModuleAccessDeniedError } from './errors';
-import { createPermission, type Permission, requireAccess, resolveAccess } from './permission';
+import {
+  createPermission,
+  hasAccess,
+  type Permission,
+  requireAccess,
+  resolveAccess,
+} from './permission';
 
 const permissions: Permission[] = [
   createPermission('comunicados', 'consulta'),
@@ -84,5 +90,13 @@ describe('requireAccess (HU-ACC-07)', () => {
 
   it('sin permisos deniega todo', () => {
     expect(() => requireAccess([], 'comunicados', 'consulta')).toThrow(ModuleAccessDeniedError);
+  });
+});
+
+describe('hasAccess', () => {
+  it('dice si el nivel está concedido sin lanzar', () => {
+    expect(hasAccess(permissions, 'facturas', 'gestion')).toBe(true);
+    expect(hasAccess(permissions, 'comunicados', 'gestion')).toBe(false);
+    expect(hasAccess(permissions, 'asambleas', 'consulta')).toBe(false);
   });
 });

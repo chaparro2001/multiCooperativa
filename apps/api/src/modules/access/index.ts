@@ -43,6 +43,7 @@ import { PrismaAccessContextStore } from './infrastructure/prisma-access-context
 import { PrismaCooperativeProvisioningStore } from './infrastructure/prisma-cooperative-provisioning-store';
 import { PrismaInvitationStore } from './infrastructure/prisma-invitation-store';
 import { PrismaLoginStore } from './infrastructure/prisma-login-store';
+import { PrismaMemberDirectory } from './infrastructure/prisma-member-directory';
 import { PrismaMemberStore } from './infrastructure/prisma-member-store';
 import { PrismaSessionStore } from './infrastructure/prisma-session-store';
 
@@ -54,6 +55,7 @@ export { AccessApplicationError } from './application/errors';
 export { AccessDomainError, ModuleAccessDeniedError } from './domain/errors';
 /** Guard for use cases: returns the scope to filter by, or throws 403 (HU-ACC-07). */
 export { requireAccess } from './domain/permission';
+export { hasAccess } from './domain/permission';
 export {
   getCooperativeContext,
   getSessionContext,
@@ -152,6 +154,8 @@ export function createAccessModule(deps: AccessModuleDeps) {
       provisionCooperative({ store: provisioningStore, hasher }, input),
     requireSession,
     requireCooperative,
+    /** Member data for other modules, always scoped to a cooperative. */
+    directory: new PrismaMemberDirectory(deps.prisma),
     router,
     errorHandler: accessErrorHandler,
   };

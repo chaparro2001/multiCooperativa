@@ -68,3 +68,12 @@ export function requireAccess(
   if (!decision.granted) throw new ModuleAccessDeniedError(module, required);
   return decision.scope;
 }
+
+/** For use cases that change behaviour with the level (e.g. «gestión» also sees drafts). */
+export function hasAccess(
+  permissions: readonly Permission[],
+  module: Module,
+  required: AccessLevel,
+): boolean {
+  return resolveAccess(permissions, module, required).granted;
+}

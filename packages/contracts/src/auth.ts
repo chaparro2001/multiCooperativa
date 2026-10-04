@@ -35,6 +35,8 @@ export const acceptInvitationResponseSchema = z.object({
 export const apiErrorSchema = z.object({
   error: z.string(),
   message: z.string().optional(),
+  /** Datos del error para la interfaz, p. ej. qué campos faltan al publicar un comunicado. */
+  details: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;

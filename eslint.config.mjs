@@ -19,6 +19,13 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     languageOptions: { globals: globals.node },
+    rules: {
+      // `{ secret: _secret, ...rest }` drops fields; `_next` keeps Express error handlers at 4 params.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { ignoreRestSiblings: true, argsIgnorePattern: '^_' },
+      ],
+    },
   },
   {
     // ADR-002: un módulo solo importa de otro a través de su interfaz pública.

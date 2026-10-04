@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createTestPrisma, resetDatabase } from '../../test/database';
 import { createApi } from '../api';
+import { InMemoryFileStorage } from '../shared/files/in-memory-file-storage';
 import { loadEnv } from '../config/env';
 import { createAccessModule } from '../modules/access';
 import { DEMO_COOPERATIVES, type DemoSeedResult, seedDemoData } from './demo-seed';
@@ -18,7 +19,13 @@ const prisma = createTestPrisma();
 const jwtSecret = loadEnv(process.env).JWT_SECRET;
 const invitationSender = { send: async () => {} };
 const access = createAccessModule({ prisma, jwtSecret, invitationSender });
-const app = createApi({ prisma, jwtSecret, invitationSender, authRateLimits: false });
+const app = createApi({
+  prisma,
+  jwtSecret,
+  invitationSender,
+  files: new InMemoryFileStorage(),
+  authRateLimits: false,
+});
 
 let seeded: DemoSeedResult;
 
