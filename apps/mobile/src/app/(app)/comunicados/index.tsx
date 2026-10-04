@@ -9,6 +9,7 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading } from '@/ui/screen';
+import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 import { colors } from '@/ui/theme';
 
 const STATUS_LABEL = { borrador: 'Borrador', retirado: 'Retirado' } as const;
@@ -17,6 +18,7 @@ const STATUS_LABEL = { borrador: 'Borrador', retirado: 'Retirado' } as const;
 export default function AnnouncementListScreen() {
   const { canManage } = useModuleAccess('comunicados');
   const list = useAnnouncementList();
+  const { refreshing, onRefresh } = usePullToRefresh(list.refetch);
 
   if (list.isPending) return <Loading />;
   if (list.isError) {
@@ -53,9 +55,7 @@ export default function AnnouncementListScreen() {
         onEndReachedThreshold={0.4}
         onEndReached={() => list.hasNextPage && !list.isFetchingNextPage && list.fetchNextPage()}
         ListFooterComponent={list.isFetchingNextPage ? <Loading /> : null}
-        refreshControl={
-          <RefreshControl refreshing={list.isRefetching} onRefresh={() => list.refetch()} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
     </>
   );
