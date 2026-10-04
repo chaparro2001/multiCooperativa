@@ -15,12 +15,15 @@ process.env.DATABASE_URL = url.toString();
 // Secreto efímero de cada ejecución: los tests no dependen del .env ni de la CI.
 const jwtSecret = randomBytes(48).toString('base64url');
 
+// Mismo criterio que la base de datos: los tests usan su propio bucket.
+const testBucket = `${process.env.S3_BUCKET ?? 'multicooperativa'}-test`;
+
 export default defineConfig({
   test: {
     name: 'api-integration',
     include: ['src/**/*.integration.test.ts'],
     globalSetup: ['test/integration-global-setup.ts'],
-    env: { DATABASE_URL: url.toString(), JWT_SECRET: jwtSecret },
+    env: { DATABASE_URL: url.toString(), JWT_SECRET: jwtSecret, S3_BUCKET: testBucket },
     fileParallelism: false,
   },
 });

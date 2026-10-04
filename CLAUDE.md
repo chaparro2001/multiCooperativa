@@ -60,7 +60,7 @@ Requisitos: Node 24 (`.nvmrc`), pnpm y Docker.
 
 ```bash
 pnpm install                 # instala y genera el cliente de Prisma
-pnpm db:up                   # PostgreSQL con pgvector (Docker Compose)
+pnpm db:up                   # PostgreSQL con pgvector y almacenamiento S3 (RustFS) con Docker Compose
 pnpm --filter @multicooperativa/api db:migrate   # aplica o crea migraciones
 pnpm --filter @multicooperativa/api db:seed      # datos de ejemplo (Documentacion/datos-de-ejemplo.md)
 pnpm --filter @multicooperativa/api dev          # API en http://localhost:3000
@@ -70,7 +70,7 @@ pnpm lint                    # ESLint (incluye las fronteras entre módulos)
 pnpm format                  # Prettier
 pnpm typecheck
 pnpm test                    # tests unitarios (sin base de datos)
-pnpm test:integration        # tests *.integration.test.ts contra la BD multicooperativa_test (necesitan pnpm db:up)
+pnpm test:integration        # tests *.integration.test.ts contra la BD multicooperativa_test y el bucket multicooperativa-test (necesitan pnpm db:up)
 ```
 
 Variables de entorno: copiar `apps/api/.env.example` y `apps/mobile/.env.example` a `.env`.

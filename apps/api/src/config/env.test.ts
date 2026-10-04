@@ -7,12 +7,18 @@ const JWT_SECRET = 'x'.repeat(32);
 const required = { DATABASE_URL, JWT_SECRET };
 
 describe('loadEnv', () => {
-  it('aplica los valores por defecto', () => {
+  it('aplica los valores por defecto, con el almacenamiento local de docker-compose', () => {
     expect(loadEnv(required)).toEqual({
       NODE_ENV: 'development',
       PORT: 3000,
       DATABASE_URL,
       JWT_SECRET,
+      S3_ENDPOINT: 'http://localhost:9000',
+      S3_REGION: 'us-east-1',
+      S3_BUCKET: 'multicooperativa',
+      S3_ACCESS_KEY_ID: 'multicooperativa',
+      S3_SECRET_ACCESS_KEY: 'multicooperativa-dev',
+      S3_FORCE_PATH_STYLE: true,
     });
   });
 
@@ -41,5 +47,28 @@ describe('loadEnv', () => {
   it('exige un JWT_SECRET de al menos 32 caracteres', () => {
     expect(() => loadEnv({ DATABASE_URL })).toThrow(/JWT_SECRET/);
     expect(() => loadEnv({ DATABASE_URL, JWT_SECRET: 'corto' })).toThrow(/JWT_SECRET/);
+  });
+
+  it('en producción exige las credenciales del almacenamiento (ADR-005)', () => {
+    expect(() => loadEnv({ ...required, NODE_ENV: 'production' })).toThrow(
+      /S3_BUCKET.*S3_ACCESS_KEY_ID.*S3_SECRET_ACCESS_KEY/,
+    );
+  });
+
+  it('en producción sin S3_ENDPOINT usa AWS S3', () => {
+    const env = loadEnv({
+      ...required,
+      NODE_ENV: 'production',
+      S3_BUCKET: 'docs-prod',
+      S3_ACCESS_KEY_ID: 'id',
+      S3_SECRET_ACCESS_KEY: 'secret',
+      S3_FORCE_PATH_STYLE: 'false',
+    });
+
+    expect(env).toMatchObject({
+      S3_ENDPOINT: undefined,
+      S3_BUCKET: 'docs-prod',
+      S3_FORCE_PATH_STYLE: false,
+    });
   });
 });

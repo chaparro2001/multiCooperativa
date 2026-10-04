@@ -16,5 +16,18 @@ services:
       timeout: 3s
       retries: 10
 
+  # Almacenamiento compatible con S3 (ADR-005). Consola web en http://localhost:9001.
+  storage:
+    image: rustfs/rustfs:1.0.1
+    environment:
+      RUSTFS_ACCESS_KEY: multicooperativa
+      RUSTFS_SECRET_KEY: multicooperativa-dev
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - storage-data:/data
+
 volumes:
   postgres-data:
+  storage-data:

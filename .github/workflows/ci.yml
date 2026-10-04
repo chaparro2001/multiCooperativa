@@ -26,6 +26,14 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      # Almacenamiento compatible con S3 para los tests de integración (ADR-005).
+      storage:
+        image: rustfs/rustfs:1.0.1
+        env:
+          RUSTFS_ACCESS_KEY: multicooperativa
+          RUSTFS_SECRET_KEY: multicooperativa-dev
+        ports:
+          - 9000:9000
     env:
       # Credenciales efímeras del contenedor de servicio de este job.
       DATABASE_URL: postgresql://multicooperativa:multicooperativa@localhost:5432/multicooperativa

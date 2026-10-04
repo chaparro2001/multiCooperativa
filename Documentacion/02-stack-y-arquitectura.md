@@ -15,7 +15,7 @@ Las decisiones de fondo están razonadas en los ADR. Este documento es la foto d
 | Backend | Node + TypeScript, monolito modular con Clean Architecture y eventos internos |
 | API | REST documentada con OpenAPI, autenticación con JWT |
 | Persistencia | PostgreSQL con Prisma; pgvector para el RAG |
-| Ficheros | Almacenamiento de PDF con URL firmadas y caducidad |
+| Ficheros | Almacenamiento de objetos compatible con S3, con URL firmadas y caducidad (ADR-005); RustFS en desarrollo |
 | Tests | Vitest en dominio y backend; React Native Testing Library en la app; Maestro para E2E |
 | Entrega | GitHub Actions, EAS Build (binarios iOS y Android), Railway (backend) |
 | Observabilidad | Sentry en app y backend |
