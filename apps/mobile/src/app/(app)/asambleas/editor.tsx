@@ -12,17 +12,20 @@ import {
   toPointInputs,
 } from '@/features/assemblies/agenda';
 import { useAssembly, useSaveAssembly } from '@/features/assemblies/queries';
-import { fromLocalInput, toLocalInput } from '@/features/shared/format';
 import { Button } from '@/ui/button';
+import { DateField } from '@/ui/date-field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
 
-const DEFAULT_TIME = (() => {
+/** 20 days ahead at 19:00: past the default minimum notice of 15 days (RN-ASA-09). */
+function defaultFirstCall(): Date {
   const date = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000);
   date.setHours(19, 0, 0, 0);
-  return toLocalInput(date.toISOString());
-})();
+  return date;
+}
+
+const HALF_AN_HOUR = 30 * 60 * 1000;
 
 /** HU-ASA-01 and HU-ASA-02: date, place, type and agenda while in draft. */
 export default function AssemblyEditorScreen() {
@@ -31,8 +34,8 @@ export default function AssemblyEditorScreen() {
   const save = useSaveAssembly();
   const [loaded, setLoaded] = useState(!params.id);
   const [type, setType] = useState<AssemblyType>('ordinaria');
-  const [firstCall, setFirstCall] = useState(DEFAULT_TIME);
-  const [secondCall, setSecondCall] = useState('');
+  const [firstCall, setFirstCall] = useState<Date>(defaultFirstCall);
+  const [secondCall, setSecondCall] = useState<Date | null>(null);
   const [place, setPlace] = useState('');
   const [points, setPoints] = useState<EditablePoint[]>([newPoint()]);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +44,8 @@ export default function AssemblyEditorScreen() {
     const data = existing.data;
     if (loaded || !data) return;
     setType(data.type);
-    setFirstCall(toLocalInput(data.firstCallAt));
-    setSecondCall(data.secondCallAt ? toLocalInput(data.secondCallAt) : '');
+    setFirstCall(new Date(data.firstCallAt));
+    setSecondCall(data.secondCallAt ? new Date(data.secondCallAt) : null);
     setPlace(data.place);
     setPoints(
       data.points.map((point) => ({
@@ -64,12 +67,8 @@ export default function AssemblyEditorScreen() {
 
   async function submit() {
     setError(null);
-    const firstCallAt = fromLocalInput(firstCall);
-    const secondCallAt = secondCall.trim() ? fromLocalInput(secondCall) : null;
-    if (!firstCallAt || (secondCall.trim() && !secondCallAt)) {
-      setError('Escribe las fechas como AAAA-MM-DD HH:MM.');
-      return;
-    }
+    const firstCallAt = firstCall.toISOString();
+    const secondCallAt = secondCall?.toISOString() ?? null;
     try {
       const saved = await save.mutateAsync({
         id: params.id,
@@ -94,19 +93,23 @@ export default function AssemblyEditorScreen() {
           />
         ))}
       </View>
-      <TextField
-        label="Primera convocatoria (AAAA-MM-DD HH:MM)"
+      <DateField
+        label="Primera convocatoria"
+        mode="datetime"
         value={firstCall}
-        onChangeText={setFirstCall}
-        keyboardType="numbers-and-punctuation"
+        onChange={(date) => date && setFirstCall(date)}
+        minimumDate={new Date()}
         testID="campo-primera"
       />
-      <TextField
+      <DateField
         label="Segunda convocatoria (opcional)"
+        mode="datetime"
         value={secondCall}
-        onChangeText={setSecondCall}
-        placeholder="AAAA-MM-DD HH:MM"
-        keyboardType="numbers-and-punctuation"
+        onChange={setSecondCall}
+        minimumDate={firstCall}
+        optional
+        // Usually half an hour after the first call.
+        suggested={() => new Date(firstCall.getTime() + HALF_AN_HOUR)}
         testID="campo-segunda"
       />
       <TextField

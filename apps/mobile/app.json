@@ -45,7 +45,8 @@
           "faceIDPermission": "Permite que $(PRODUCT_NAME) use Face ID para desbloquear la app."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

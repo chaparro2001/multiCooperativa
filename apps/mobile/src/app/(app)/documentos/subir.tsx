@@ -9,6 +9,7 @@ import { useUploadDocument } from '@/features/documents/queries';
 import { formatSize, today } from '@/features/shared/format';
 import { type PickedPdf, pickPdf } from '@/features/shared/pdf-upload';
 import { Button } from '@/ui/button';
+import { DateField } from '@/ui/date-field';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
@@ -20,7 +21,7 @@ export default function UploadDocumentScreen() {
   const upload = useUploadDocument();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<DocumentCategory>('actas');
-  const [documentDate, setDocumentDate] = useState(today());
+  const [documentDate, setDocumentDate] = useState(() => new Date());
   const [pdf, setPdf] = useState<PickedPdf | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,14 +42,18 @@ export default function UploadDocumentScreen() {
     if (!pdf) return;
     setError(null);
     try {
-      await upload.mutateAsync({ title: title.trim(), category, documentDate, pdf });
+      // The API takes the calendar day as AAAA-MM-DD, in the device's time zone.
+      await upload.mutateAsync({
+        title: title.trim(),
+        category,
+        documentDate: today(documentDate),
+        pdf,
+      });
       router.back();
     } catch (failure) {
       setError(messageFor(failure));
     }
   }
-
-  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(documentDate);
 
   return (
     <Screen testID="subir-documento-pantalla">
@@ -87,12 +92,11 @@ export default function UploadDocumentScreen() {
           </Pressable>
         ))}
       </View>
-      <TextField
-        label="Fecha del documento (AAAA-MM-DD)"
+      <DateField
+        label="Fecha del documento"
+        mode="date"
         value={documentDate}
-        onChangeText={setDocumentDate}
-        keyboardType="numbers-and-punctuation"
-        maxLength={10}
+        onChange={(date) => date && setDocumentDate(date)}
         testID="campo-fecha-documento"
       />
       {error && <ErrorText>{error}</ErrorText>}
@@ -100,7 +104,7 @@ export default function UploadDocumentScreen() {
         title="Subir y publicar"
         onPress={submit}
         loading={upload.isPending}
-        disabled={!pdf || !title.trim() || !validDate}
+        disabled={!pdf || !title.trim()}
         testID="confirmar-subida"
       />
     </Screen>
