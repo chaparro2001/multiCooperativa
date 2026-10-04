@@ -28,6 +28,15 @@ services:
     volumes:
       - storage-data:/data
 
+  # Embeddings con un modelo local (ADR-006). El modelo se descarga con `pnpm ai:pull`.
+  ollama:
+    image: ollama/ollama:0.35.1
+    ports:
+      - '11434:11434'
+    volumes:
+      - ollama-data:/root/.ollama
+
 volumes:
   postgres-data:
   storage-data:
+  ollama-data:

@@ -1,0 +1,28 @@
+import type { IndexingStatus } from '../../domain/document';
+
+export interface VersionToIndex {
+  fileKey: string;
+  /** Only the current version of a published document is indexed (RN-DOC-04). */
+  indexable: boolean;
+}
+
+export interface PendingVersion {
+  cooperativeId: string;
+  documentId: string;
+  versionId: string;
+}
+
+/** Bookkeeping of the indexing state of each version (HU-DOC-06). */
+export interface IndexingStore {
+  findVersion(
+    cooperativeId: string,
+    documentId: string,
+    versionId: string,
+  ): Promise<VersionToIndex | null>;
+  setStatus(versionId: string, status: IndexingStatus, error: string | null): Promise<void>;
+  /**
+   * Platform-wide on purpose: at startup the indexer resumes what a restart
+   * interrupted, in every cooperative. Only current versions of published documents.
+   */
+  listPending(): Promise<PendingVersion[]>;
+}

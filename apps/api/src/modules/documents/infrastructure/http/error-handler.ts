@@ -3,6 +3,7 @@ import type { ErrorRequestHandler } from 'express';
 import { MulterError } from 'multer';
 
 import { DocumentApplicationError } from '../../application/errors';
+import { EmbeddingUnavailableError } from '../../application/ports/embedder';
 import { DocumentDomainError, DocumentFileRejectedError } from '../../domain/errors';
 
 const STATUS_BY_CODE: Record<string, number> = {
@@ -16,6 +17,15 @@ export const documentErrorHandler: ErrorRequestHandler = (error, _req, res, next
   // Multer stops reading at 20 MB, before the file reaches the use case (RN-DOC-02).
   if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
     error = new DocumentFileRejectedError('too_large');
+  }
+  if (error instanceof EmbeddingUnavailableError) {
+    // Search depends on the embeddings service (ADR-006); everything else keeps working.
+    console.error(error.message);
+    res.status(503).json({
+      error: 'search_unavailable',
+      message: 'La búsqueda por contenido no está disponible en este momento.',
+    } satisfies ApiError);
+    return;
   }
   const ownError =
     error instanceof DocumentDomainError || error instanceof DocumentApplicationError;

@@ -174,7 +174,10 @@ Contrato (esquemas en `packages/contracts/src/documents.ts`):
 - El detalle trae la URL firmada de la versión vigente (5 minutos). El estado de indexación y su motivo solo se devuelven con gestión.
 - Una sola versión vigente también lo garantiza la base de datos (índice único parcial), incluso con subidas simultáneas.
 - Errores: `400 invalid_document`, `400 file_rejected` con `details.reason` (`not_pdf`, `too_large`, `empty`), `404 not_found` y `409 invalid_document_transition`.
-- Eventos: `DocumentoPublicado` (`cooperativeId`, `documentId`, `versionId`) y `DocumentoRetirado` (`cooperativeId`, `documentId`), emitidos después de guardar. `buscar` y `reindexar` llegan con la tarea de indexación.
+- Eventos: `DocumentoPublicado` (`cooperativeId`, `documentId`, `versionId`) y `DocumentoRetirado` (`cooperativeId`, `documentId`), emitidos después de guardar. El propio módulo los consume para indexar.
+- Indexación (ADR-006): cola en proceso, una versión cada vez; la subida no la espera. Al arrancar, el API vuelve a encolar las versiones pendientes. Fragmentos de hasta 800 caracteres más 150 de solapamiento, sin mezclar páginas. Embeddings con `bge-m3` (1024 dimensiones) en Ollama. Medido: 50 páginas en 16 s en local.
+- `GET /documentos/buscar?q=` (de 3 a 300 caracteres) devuelve hasta 10 fragmentos con `documentId`, `title`, `category`, `page`, `excerpt` y `score`. Busca solo en documentos publicados de la cooperativa y filtra antes de ordenar. Si el servicio de embeddings no responde: `503 search_unavailable`.
+- `POST /documentos/{documentoId}/reindexar` responde `202` y deja la versión vigente como pendiente.
 
 ## 9. Pantallas
 

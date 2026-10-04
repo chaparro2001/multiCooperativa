@@ -254,6 +254,7 @@ model Document {
   createdAt     DateTime         @default(now())
 
   versions DocumentVersion[]
+  chunks   DocumentChunk[]
 
   @@index([cooperativeId, status, category, documentDate])
 }
@@ -277,4 +278,23 @@ model DocumentVersion {
   // RN-DOC-03: exactamente una versión vigente por documento.
   @@unique([documentId], where: raw("\"isCurrent\""))
   @@index([documentId, uploadedAt])
+}
+
+/// Fragmento indexado para el RAG (RN-DOC-06). El embedding se escribe y se consulta con SQL (ADR-006).
+model DocumentChunk {
+  id            String                      @id @default(uuid()) @db.Uuid
+  cooperativeId String                      @db.Uuid
+  documentId    String                      @db.Uuid
+  versionId     String                      @db.Uuid
+  page          Int
+  /// Orden del fragmento dentro del documento.
+  position      Int
+  content       String
+  embedding     Unsupported("vector(1024)")
+
+  document Document @relation(fields: [documentId], references: [id])
+
+  // RNF-DOC-03: la búsqueda filtra por cooperativa antes de ordenar por similitud.
+  @@index([cooperativeId])
+  @@index([documentId])
 }

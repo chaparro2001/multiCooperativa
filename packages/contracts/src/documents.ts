@@ -74,3 +74,24 @@ export type DocumentDetail = z.infer<typeof documentDetailSchema>;
 export type UploadDocumentFields = z.infer<typeof uploadDocumentFieldsSchema>;
 export type DocumentVersion = z.infer<typeof documentVersionSchema>;
 export type ListDocumentVersionsResponse = z.infer<typeof listDocumentVersionsResponseSchema>;
+
+/** GET /cooperativas/{id}/documentos/buscar?q=…: búsqueda por contenido (HU-DOC-07). */
+export const searchDocumentsQuerySchema = z.object({
+  q: z.string().trim().min(3).max(300),
+});
+
+export const documentSearchHitSchema = z.object({
+  documentId: z.uuid(),
+  title: z.string(),
+  category: documentCategorySchema,
+  /** Página donde aparece el fragmento, para citarla y abrir el visor en ella. */
+  page: z.number().int().min(1),
+  excerpt: z.string(),
+  /** Similitud de 0 a 1: más alto, más relevante. */
+  score: z.number(),
+});
+
+export const searchDocumentsResponseSchema = z.object({ items: z.array(documentSearchHitSchema) });
+
+export type DocumentSearchHit = z.infer<typeof documentSearchHitSchema>;
+export type SearchDocumentsResponse = z.infer<typeof searchDocumentsResponseSchema>;

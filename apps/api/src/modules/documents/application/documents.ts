@@ -10,7 +10,12 @@ import {
   isVisible,
   withdraw,
 } from '../domain/document';
+import { InvalidDocumentTransitionError } from '../domain/errors';
 import { DocumentNotFoundError } from './errors';
+import type { Indexer } from './indexing';
+import type { Embedder } from './ports/embedder';
+import type { FragmentHit, FragmentIndex } from './ports/fragment-index';
+import type { IndexingStore } from './ports/indexing-store';
 import type { DocumentEvent } from './events';
 import type {
   DocumentRecord,
@@ -206,4 +211,41 @@ export async function withdrawDocument(
     payload: { cooperativeId: context.cooperativeId, documentId: withdrawn.id },
   });
   return withdrawn;
+}
+
+export interface IndexingDeps {
+  indexingStore: IndexingStore;
+  indexer: Pick<Indexer, 'enqueue'>;
+}
+
+/** HU-DOC-06: retry. Answers at once; the indexing runs in the background. */
+export async function reindexDocument(
+  deps: DocumentDeps & IndexingDeps,
+  context: CooperativeContext,
+  id: string,
+): Promise<void> {
+  requireAccess(context.permissions, 'documentos', 'gestion');
+  const document = await findVisible(deps, context, id);
+  if (document.status !== 'publicado') {
+    throw new InvalidDocumentTransitionError('Un documento retirado no se indexa.');
+  }
+  await deps.indexingStore.setStatus(document.current.id, 'pendiente', null);
+  deps.indexer.enqueue({
+    cooperativeId: context.cooperativeId,
+    documentId: document.id,
+    versionId: document.current.id,
+  });
+}
+
+export const SEARCH_RESULTS = 10;
+
+/** HU-DOC-07: the most relevant fragments of this cooperative's published documents. */
+export async function searchDocuments(
+  deps: { embedder: Embedder; index: FragmentIndex },
+  context: CooperativeContext,
+  query: string,
+): Promise<FragmentHit[]> {
+  requireAccess(context.permissions, 'documentos', 'consulta');
+  const [embedding] = await deps.embedder.embed([query.trim()]);
+  return deps.index.search(context.cooperativeId, embedding!, SEARCH_RESULTS);
 }

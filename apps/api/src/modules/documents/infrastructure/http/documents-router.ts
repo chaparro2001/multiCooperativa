@@ -4,6 +4,8 @@ import {
   listDocumentsQuerySchema,
   type ListDocumentsResponse,
   type ListDocumentVersionsResponse,
+  searchDocumentsQuerySchema,
+  type SearchDocumentsResponse,
   uploadDocumentFieldsSchema,
 } from '@multicooperativa/contracts';
 import { type Request, type RequestHandler, Router } from 'express';
@@ -17,7 +19,9 @@ import {
 } from '../../../access';
 import { InvalidRequestError, parseBody } from '../../../../shared/infrastructure/http/validation';
 import * as useCases from '../../application/documents';
-import type { DocumentDeps, UploadedFile } from '../../application/documents';
+import type { DocumentDeps, IndexingDeps, UploadedFile } from '../../application/documents';
+import type { Embedder } from '../../application/ports/embedder';
+import type { FragmentIndex } from '../../application/ports/fragment-index';
 import type { DocumentWithCurrent } from '../../application/ports/document-store';
 import { MAX_FILE_BYTES } from '../../domain/document';
 
@@ -45,7 +49,7 @@ function toSummary(document: DocumentWithCurrent, context: CooperativeContext): 
 
 /** HTTP adapter of the documents module (requisitos/03, section 8). */
 export function createDocumentsRouter(
-  deps: DocumentDeps,
+  deps: DocumentDeps & IndexingDeps & { embedder: Embedder; index: FragmentIndex },
   requireCooperative: RequestHandler,
 ): Router {
   const router = Router();
@@ -69,6 +73,23 @@ export function createDocumentsRouter(
     res.json({
       items: documents.map((document) => toSummary(document, context)),
     } satisfies ListDocumentsResponse);
+  });
+
+  // Before `/:documentId`, which would otherwise take «buscar» as an id.
+  router.get(`${base}/buscar`, ...read, async (req, res) => {
+    const query = searchDocumentsQuerySchema.safeParse(req.query);
+    if (!query.success) throw new InvalidRequestError();
+    const hits = await useCases.searchDocuments(deps, getCooperativeContext(res), query.data.q);
+    res.json({
+      items: hits.map((hit) => ({
+        documentId: hit.documentId,
+        title: hit.title,
+        category: hit.category,
+        page: hit.page,
+        excerpt: hit.content,
+        score: Math.round(hit.score * 1000) / 1000,
+      })),
+    } satisfies SearchDocumentsResponse);
   });
 
   router.get(`${base}/:documentId`, ...read, async (req, res) => {
@@ -129,6 +150,12 @@ export function createDocumentsRouter(
       String(req.params.documentId),
     );
     res.status(204).end();
+  });
+
+  // HU-DOC-06: answers at once; the indexing runs in the background.
+  router.post(`${base}/:documentId/reindexar`, ...manage, async (req, res) => {
+    await useCases.reindexDocument(deps, getCooperativeContext(res), String(req.params.documentId));
+    res.status(202).end();
   });
 
   return router;

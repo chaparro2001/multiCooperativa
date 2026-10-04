@@ -7,6 +7,7 @@ import { fillPath, listRoutes, type RegisteredRoute } from '../test/routes';
 import { createApi } from './api';
 import { loadEnv } from './config/env';
 import { createAccessModule } from './modules/access';
+import { HashingEmbedder } from './modules/documents';
 import { InMemoryFileStorage } from './shared/files/in-memory-file-storage';
 
 /**
@@ -18,7 +19,8 @@ import { InMemoryFileStorage } from './shared/files/in-memory-file-storage';
 const PASSWORD = 'una-clave-larga';
 const prisma = createTestPrisma();
 const jwtSecret = loadEnv(process.env).JWT_SECRET;
-const app = createApi({
+const { app } = createApi({
+  embedder: new HashingEmbedder(),
   prisma,
   jwtSecret,
   files: new InMemoryFileStorage(),
@@ -153,6 +155,7 @@ beforeAll(async () => {
     'POST /cooperativas/:cooperativeId/comunicados': { title: 'Nuevo', body: 'Texto' },
     'POST /cooperativas/:cooperativeId/documentos/:documentId/versiones': MULTIPART_PDF,
     'POST /cooperativas/:cooperativeId/documentos/:documentId/retirar': {},
+    'POST /cooperativas/:cooperativeId/documentos/:documentId/reindexar': {},
     'POST /cooperativas/:cooperativeId/miembros': {
       email: 'nuevo@mar.es',
       name: 'Nuevo',

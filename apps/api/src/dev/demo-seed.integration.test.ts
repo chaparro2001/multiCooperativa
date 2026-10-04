@@ -12,6 +12,7 @@ import { createApi } from '../api';
 import { InMemoryFileStorage } from '../shared/files/in-memory-file-storage';
 import { loadEnv } from '../config/env';
 import { createAccessModule } from '../modules/access';
+import { HashingEmbedder } from '../modules/documents';
 import { DEMO_COOPERATIVES, type DemoSeedResult, seedDemoData } from './demo-seed';
 
 const PASSWORD = 'clave-de-demo-larga';
@@ -19,7 +20,8 @@ const prisma = createTestPrisma();
 const jwtSecret = loadEnv(process.env).JWT_SECRET;
 const invitationSender = { send: async () => {} };
 const access = createAccessModule({ prisma, jwtSecret, invitationSender });
-const app = createApi({
+const { app } = createApi({
+  embedder: new HashingEmbedder(),
   prisma,
   jwtSecret,
   invitationSender,

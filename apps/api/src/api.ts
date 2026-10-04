@@ -3,7 +3,7 @@ import type { Express } from 'express';
 import { createApp } from './app';
 import { type AuthRateLimits, createAccessModule, type InvitationSender } from './modules/access';
 import { type AnnouncementEvent, createAnnouncementsModule } from './modules/announcements';
-import { createDocumentsModule, type DocumentEvent } from './modules/documents';
+import { createDocumentsModule, type DocumentEvent, type Embedder } from './modules/documents';
 import { type EventBus, InProcessEventBus } from './shared/events';
 import type { FileStorage } from './shared/files/file-storage';
 import type { PrismaClient } from './shared/infrastructure/prisma';
@@ -16,17 +16,25 @@ export interface ApiDeps {
   jwtSecret: string;
   invitationSender: InvitationSender;
   files: FileStorage;
+  /** Embeddings for document indexing and search (ADR-006). */
+  embedder: Embedder;
   /** Injectable so tests can observe the events; one in-process bus by default. */
   events?: EventBus<AppEvent>;
   authRateLimits?: AuthRateLimits | false;
   trustProxy?: number | false;
 }
 
+export interface Api {
+  app: Express;
+  /** Background document indexing: resumed at startup, awaited in tests. */
+  indexing: { resumePending(): Promise<number>; idle(): Promise<void> };
+}
+
 /**
  * Wires every module into the HTTP app. The only composition root: `main.ts`
  * runs it and the isolation test walks all the routes it registers.
  */
-export function createApi(deps: ApiDeps): Express {
+export function createApi(deps: ApiDeps): Api {
   const events =
     deps.events ??
     new InProcessEventBus<AppEvent>({
@@ -56,11 +64,13 @@ export function createApi(deps: ApiDeps): Express {
     events,
     members: access.directory,
     requireCooperative: access.requireCooperative,
+    embedder: deps.embedder,
   });
 
-  return createApp({
+  const app = createApp({
     routers: [access.router, announcements.router, documents.router],
     errorHandlers: [access.errorHandler, announcements.errorHandler, documents.errorHandler],
     trustProxy: deps.trustProxy,
   });
+  return { app, indexing: documents.indexing };
 }

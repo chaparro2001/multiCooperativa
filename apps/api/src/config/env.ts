@@ -8,10 +8,14 @@ const LOCAL_STORAGE = {
   S3_SECRET_ACCESS_KEY: 'multicooperativa-dev',
 } as const;
 
-const STORAGE_REQUIRED_IN_PRODUCTION = [
+/** Local Ollama of docker-compose.yml (ADR-006). */
+const LOCAL_OLLAMA_URL = 'http://localhost:11434';
+
+const REQUIRED_IN_PRODUCTION = [
   'S3_BUCKET',
   'S3_ACCESS_KEY_ID',
   'S3_SECRET_ACCESS_KEY',
+  'OLLAMA_URL',
 ] as const;
 
 const envSchema = z
@@ -32,10 +36,13 @@ const envSchema = z
       .enum(['true', 'false'])
       .default('true')
       .transform((value) => value === 'true'),
+    /** Servicio de Ollama que calcula los embeddings (ADR-006). */
+    OLLAMA_URL: z.url({ protocol: /^https?$/ }).optional(),
+    EMBEDDING_MODEL: z.string().min(1).default('bge-m3'),
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV !== 'production') return;
-    for (const name of STORAGE_REQUIRED_IN_PRODUCTION) {
+    for (const name of REQUIRED_IN_PRODUCTION) {
       if (!env[name]) {
         context.addIssue({ code: 'custom', path: [name], message: 'obligatoria en producción' });
       }
@@ -51,6 +58,7 @@ const envSchema = z
       S3_BUCKET: env.S3_BUCKET ?? local?.S3_BUCKET ?? '',
       S3_ACCESS_KEY_ID: env.S3_ACCESS_KEY_ID ?? local?.S3_ACCESS_KEY_ID ?? '',
       S3_SECRET_ACCESS_KEY: env.S3_SECRET_ACCESS_KEY ?? local?.S3_SECRET_ACCESS_KEY ?? '',
+      OLLAMA_URL: env.OLLAMA_URL ?? (local ? LOCAL_OLLAMA_URL : ''),
     };
   });
 

@@ -2,6 +2,7 @@ import {
   authTokensSchema,
   documentDetailSchema,
   documentSummarySchema,
+  searchDocumentsResponseSchema,
   listDocumentsResponseSchema,
   listDocumentVersionsResponseSchema,
 } from '@multicooperativa/contracts';
@@ -9,11 +10,13 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createTestPrisma, resetDatabase } from '../../../../../test/database';
+import { buildPdf } from '../../../../../test/pdf';
 import { type AppEvent, createApi } from '../../../../api';
 import { loadEnv } from '../../../../config/env';
 import { InProcessEventBus } from '../../../../shared/events';
 import { S3FileStorage, s3SettingsFromEnv } from '../../../../shared/files/s3-file-storage';
 import { createAccessModule } from '../../../access';
+import { HashingEmbedder } from '../../index';
 
 const PASSWORD = 'una-clave-larga';
 const env = loadEnv(process.env);
@@ -24,7 +27,8 @@ const bus = new InProcessEventBus<AppEvent>({ onHandlerError: () => {} });
 bus.subscribe('DocumentoPublicado', (event) => void events.push(event));
 bus.subscribe('DocumentoRetirado', (event) => void events.push(event));
 const invitationSender = { send: async () => {} };
-const app = createApi({
+const { app, indexing } = createApi({
+  embedder: new HashingEmbedder(),
   prisma,
   jwtSecret: env.JWT_SECRET,
   invitationSender,
@@ -34,8 +38,10 @@ const app = createApi({
 });
 
 let campo: string;
+let mar: string;
 let admin: string;
 let socio: string;
+let marAdmin: string;
 
 const as = (token: string) => ({ Authorization: `Bearer ${token}` });
 const pdf = (text: string) => Buffer.from(`%PDF-1.4\n${text}\n%%EOF`);
@@ -58,6 +64,13 @@ beforeEach(async () => {
       admin: { email: 'admin@campo.test', name: 'Ana', password: PASSWORD },
     })
   ).cooperativeId;
+  mar = (
+    await access.provisionCooperative({
+      name: 'Mar',
+      cif: 'F76543214',
+      admin: { email: 'admin@mar.test', name: 'Rosa', password: PASSWORD },
+    })
+  ).cooperativeId;
   const { passwordHash } = await prisma.user.findUniqueOrThrow({
     where: { email: 'admin@campo.test' },
   });
@@ -70,20 +83,31 @@ beforeEach(async () => {
   await prisma.membership.create({
     data: { userId: user.id, cooperativeId: campo, profileId: profile.id, status: 'activa' },
   });
-  [admin, socio] = await Promise.all([login('admin@campo.test'), login('socio@campo.test')]);
+  [admin, socio, marAdmin] = await Promise.all([
+    login('admin@campo.test'),
+    login('socio@campo.test'),
+    login('admin@mar.test'),
+  ]);
 });
 afterAll(() => prisma.$disconnect());
 
 const base = () => `/cooperativas/${campo}/documentos`;
 
-async function upload(title: string, category: string, documentDate: string, content = pdf(title)) {
+async function upload(
+  title: string,
+  category: string,
+  documentDate: string,
+  content: Uint8Array = pdf(title),
+  token = admin,
+  cooperativeId = campo,
+) {
   return request(app)
-    .post(base())
-    .set(as(admin))
+    .post(`/cooperativas/${cooperativeId}/documentos`)
+    .set(as(token))
     .field('title', title)
     .field('category', category)
     .field('documentDate', documentDate)
-    .attach('fichero', content, `${title}.pdf`);
+    .attach('fichero', Buffer.from(content), `${title}.pdf`);
 }
 
 describe('documentos por HTTP (HU-DOC-01..05)', () => {
@@ -212,5 +236,109 @@ describe('documentos por HTTP (HU-DOC-01..05)', () => {
     ]);
 
     expect(responses.map((r) => r.status)).toEqual([403, 403, 403, 403]);
+  });
+});
+
+describe('indexación y búsqueda (requisitos/03, apartado 4; HU-DOC-06, HU-DOC-07)', () => {
+  const estatutos = () =>
+    buildPdf([
+      ['Artículo 1. Denominación.', 'La cooperativa se denomina San Isidro.'],
+      ['Artículo 12. Asamblea general.', 'La asamblea general ordinaria se celebra en junio.'],
+    ]);
+
+  const search = (q: string, token = socio, cooperativeId = campo) =>
+    request(app)
+      .get(`/cooperativas/${cooperativeId}/documentos/buscar`)
+      .query({ q })
+      .set(as(token));
+
+  it('un PDF real queda indexado por páginas con su cooperativa y se encuentra por contenido', async () => {
+    const document = documentSummarySchema.parse(
+      (await upload('Estatutos', 'estatutos', '2026-01-01', await estatutos())).body,
+    );
+    await indexing.idle();
+
+    const detail = documentDetailSchema.parse(
+      (await request(app).get(`${base()}/${document.id}`).set(as(admin))).body,
+    );
+    expect(detail.indexingStatus).toBe('indexado');
+    const chunks = await prisma.documentChunk.findMany({ orderBy: { position: 'asc' } });
+    expect(chunks.map((c) => [c.cooperativeId, c.documentId, c.page])).toEqual([
+      [campo, document.id, 1],
+      [campo, document.id, 2],
+    ]);
+
+    const results = searchDocumentsResponseSchema.parse(
+      (await search('asamblea general junio')).body,
+    );
+    expect(results.items[0]).toMatchObject({
+      documentId: document.id,
+      page: 2,
+      title: 'Estatutos',
+    });
+    expect(results.items[0]?.excerpt).toContain('se celebra en junio');
+  });
+
+  it('la búsqueda nunca devuelve fragmentos de otra cooperativa, aunque el texto coincida exactamente', async () => {
+    await upload('Estatutos del Mar', 'estatutos', '2026-01-01', await estatutos(), marAdmin, mar);
+    await indexing.idle();
+
+    const results = searchDocumentsResponseSchema.parse(
+      (await search('La asamblea general ordinaria se celebra en junio.')).body,
+    );
+
+    expect(results.items).toEqual([]);
+  });
+
+  it('retirar elimina los fragmentos; una versión nueva sustituye los anteriores (RN-DOC-05)', async () => {
+    const document = documentSummarySchema.parse(
+      (await upload('Estatutos', 'estatutos', '2026-01-01', await estatutos())).body,
+    );
+    await indexing.idle();
+
+    await request(app)
+      .post(`${base()}/${document.id}/versiones`)
+      .set(as(admin))
+      .attach('fichero', Buffer.from(await buildPdf([['Reglamento nuevo de riego.']])), 'v2.pdf');
+    await indexing.idle();
+    expect((await prisma.documentChunk.findMany()).map((c) => c.content)).toEqual([
+      'Reglamento nuevo de riego.',
+    ]);
+
+    await request(app).post(`${base()}/${document.id}/retirar`).set(as(admin));
+    await indexing.idle();
+    expect(await prisma.documentChunk.count()).toBe(0);
+  });
+
+  it('un PDF sin texto queda como no indexable con el motivo, y sigue siendo consultable', async () => {
+    const document = documentSummarySchema.parse(
+      (await upload('Escaneado', 'actas', '2026-01-01', await buildPdf([[]]))).body,
+    );
+    await indexing.idle();
+
+    const detail = documentDetailSchema.parse(
+      (await request(app).get(`${base()}/${document.id}`).set(as(admin))).body,
+    );
+    expect(detail).toMatchObject({ indexingStatus: 'no_indexable' });
+    expect(detail.indexingError).toMatch(/escaneado/);
+    expect((await request(app).get(`${base()}/${document.id}`).set(as(socio))).status).toBe(200);
+  });
+
+  it('reindexar responde 202 y vuelve a indexar', async () => {
+    const document = documentSummarySchema.parse(
+      (await upload('Estatutos', 'estatutos', '2026-01-01', await estatutos())).body,
+    );
+    await indexing.idle();
+    await prisma.documentChunk.deleteMany();
+
+    const response = await request(app).post(`${base()}/${document.id}/reindexar`).set(as(admin));
+    await indexing.idle();
+
+    expect(response.status).toBe(202);
+    expect(await prisma.documentChunk.count()).toBe(2);
+  });
+
+  it('una consulta demasiado corta responde 400', async () => {
+    expect((await search('ab')).status).toBe(400);
   });
 });

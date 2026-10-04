@@ -13,6 +13,7 @@ import { loadEnv } from '../../../../config/env';
 import { InProcessEventBus } from '../../../../shared/events';
 import { S3FileStorage, s3SettingsFromEnv } from '../../../../shared/files/s3-file-storage';
 import { createAccessModule } from '../../../access';
+import { HashingEmbedder } from '../../../documents';
 
 const PASSWORD = 'una-clave-larga';
 const env = loadEnv(process.env);
@@ -22,7 +23,8 @@ const events: AppEvent[] = [];
 const bus = new InProcessEventBus<AppEvent>({ onHandlerError: () => {} });
 bus.subscribe('ComunicadoPublicado', (event) => void events.push(event));
 const invitationSender = { send: async () => {} };
-const app = createApi({
+const { app } = createApi({
+  embedder: new HashingEmbedder(),
   prisma,
   jwtSecret: env.JWT_SECRET,
   invitationSender,

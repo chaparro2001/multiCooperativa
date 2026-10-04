@@ -19,6 +19,8 @@ describe('loadEnv', () => {
       S3_ACCESS_KEY_ID: 'multicooperativa',
       S3_SECRET_ACCESS_KEY: 'multicooperativa-dev',
       S3_FORCE_PATH_STYLE: true,
+      OLLAMA_URL: 'http://localhost:11434',
+      EMBEDDING_MODEL: 'bge-m3',
     });
   });
 
@@ -49,9 +51,9 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ DATABASE_URL, JWT_SECRET: 'corto' })).toThrow(/JWT_SECRET/);
   });
 
-  it('en producción exige las credenciales del almacenamiento (ADR-005)', () => {
+  it('en producción exige el almacenamiento (ADR-005) y Ollama (ADR-006)', () => {
     expect(() => loadEnv({ ...required, NODE_ENV: 'production' })).toThrow(
-      /S3_BUCKET.*S3_ACCESS_KEY_ID.*S3_SECRET_ACCESS_KEY/,
+      /S3_BUCKET.*S3_ACCESS_KEY_ID.*S3_SECRET_ACCESS_KEY.*OLLAMA_URL/,
     );
   });
 
@@ -63,6 +65,7 @@ describe('loadEnv', () => {
       S3_ACCESS_KEY_ID: 'id',
       S3_SECRET_ACCESS_KEY: 'secret',
       S3_FORCE_PATH_STYLE: 'false',
+      OLLAMA_URL: 'http://ollama.internal:11434',
     });
 
     expect(env).toMatchObject({
