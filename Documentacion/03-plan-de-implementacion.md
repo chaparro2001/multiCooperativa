@@ -8,7 +8,7 @@ Plan por hitos para ejecutar con Claude Code. Cada tarea es lo bastante pequeña
 
 ## Hito 0 · Cimientos (5–6 oct)
 
-- [ ] Monorepo pnpm con `apps/mobile`, `apps/api`, `packages/contracts`, TypeScript estricto compartido.
+- [x] Monorepo pnpm con `apps/mobile`, `apps/api`, `packages/contracts`, TypeScript estricto compartido.
 - [ ] ESLint y Prettier; regla que impide importar entre módulos del backend salvo por su interfaz pública.
 - [ ] Husky con lint y tests en pre-commit.
 - [ ] `apps/api`: servidor HTTP, configuración por variables de entorno validadas con Zod, endpoint de salud.

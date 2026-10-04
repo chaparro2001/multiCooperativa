@@ -1,0 +1,12 @@
+{
+  "name": "@multicooperativa/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@multicooperativa/contracts": "workspace:*"
+  }
+}
