@@ -56,4 +56,22 @@ Cada módulo del backend vive en `apps/api/src/modules/<modulo>/` con las capas 
 
 ## Comandos
 
-Se completan al montar el monorepo (Hito 0).
+Requisitos: Node 24 (`.nvmrc`), pnpm y Docker.
+
+```bash
+pnpm install                 # instala y genera el cliente de Prisma
+pnpm db:up                   # PostgreSQL con pgvector (Docker Compose)
+pnpm --filter @multicooperativa/api db:migrate   # aplica o crea migraciones
+pnpm --filter @multicooperativa/api dev          # API en http://localhost:3000
+pnpm --filter @multicooperativa/mobile start     # app Expo
+
+pnpm lint                    # ESLint (incluye las fronteras entre módulos)
+pnpm format                  # Prettier
+pnpm typecheck
+pnpm test                    # tests unitarios (sin base de datos)
+pnpm test:integration        # tests *.integration.test.ts (necesitan pnpm db:up)
+```
+
+Variables de entorno: copiar `apps/api/.env.example` y `apps/mobile/.env.example` a `.env`.
+
+En `apps/mobile` las dependencias se añaden con `pnpm exec expo install <paquete>` para que casen con el SDK de Expo.
