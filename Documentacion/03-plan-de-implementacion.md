@@ -50,7 +50,7 @@ Especificación: [04-asambleas](requisitos/04-asambleas.md)
 - [x] Dominio con TDD: tabla de casos de quórum y mayorías del apartado 9.
 - [x] Convocatoria, puntos, censo, votos con restricción única en base de datos.
 - [x] API y eventos.
-- [ ] App: listado, detalle, votar, resultado; editor y control de votaciones para gestión.
+- [x] App: listado, detalle, votar, resultado; editor y control de votaciones para gestión.
 
 ## Hito 4 · Facturas y albaranes (14–17 oct)
 

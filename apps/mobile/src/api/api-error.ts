@@ -6,6 +6,8 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    /** Extra data of the error for the UI, e.g. the vote already cast. */
+    readonly details: Record<string, unknown> = {},
   ) {
     super(message);
     this.name = 'ApiError';
@@ -21,7 +23,8 @@ export class ApiError extends Error {
     const parsed = apiErrorSchema.safeParse(body);
     const code = parsed.success ? parsed.data.error : `http_${response.status}`;
     const message = parsed.success && parsed.data.message ? parsed.data.message : '';
-    return new ApiError(response.status, code, message);
+    const details = parsed.success ? (parsed.data.details ?? {}) : {};
+    return new ApiError(response.status, code, message, details);
   }
 }
 

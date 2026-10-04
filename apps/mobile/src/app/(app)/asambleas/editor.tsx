@@ -1,0 +1,252 @@
+import type { AssemblyType, Majority } from '@multicooperativa/contracts';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+
+import { messageFor } from '@/api/api-error';
+import {
+  ASSEMBLY_TYPE_LABEL,
+  type EditablePoint,
+  movePoint,
+  newPoint,
+  toPointInputs,
+} from '@/features/assemblies/agenda';
+import { useAssembly, useSaveAssembly } from '@/features/assemblies/queries';
+import { fromLocalInput, toLocalInput } from '@/features/shared/format';
+import { Button } from '@/ui/button';
+import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { TextField } from '@/ui/text-field';
+import { colors } from '@/ui/theme';
+
+const DEFAULT_TIME = (() => {
+  const date = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000);
+  date.setHours(19, 0, 0, 0);
+  return toLocalInput(date.toISOString());
+})();
+
+/** HU-ASA-01 and HU-ASA-02: date, place, type and agenda while in draft. */
+export default function AssemblyEditorScreen() {
+  const params = useLocalSearchParams<{ id?: string }>();
+  const existing = useAssembly(params.id);
+  const save = useSaveAssembly();
+  const [loaded, setLoaded] = useState(!params.id);
+  const [type, setType] = useState<AssemblyType>('ordinaria');
+  const [firstCall, setFirstCall] = useState(DEFAULT_TIME);
+  const [secondCall, setSecondCall] = useState('');
+  const [place, setPlace] = useState('');
+  const [points, setPoints] = useState<EditablePoint[]>([newPoint()]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const data = existing.data;
+    if (loaded || !data) return;
+    setType(data.type);
+    setFirstCall(toLocalInput(data.firstCallAt));
+    setSecondCall(data.secondCallAt ? toLocalInput(data.secondCallAt) : '');
+    setPlace(data.place);
+    setPoints(
+      data.points.map((point) => ({
+        key: point.id,
+        id: point.id,
+        title: point.title,
+        description: point.description,
+        votable: point.votable,
+        majority: point.majority,
+      })),
+    );
+    setLoaded(true);
+  }, [existing.data, loaded]);
+
+  if (!loaded) return <Loading />;
+
+  const update = (key: string, changes: Partial<EditablePoint>) =>
+    setPoints((current) => current.map((p) => (p.key === key ? { ...p, ...changes } : p)));
+
+  async function submit() {
+    setError(null);
+    const firstCallAt = fromLocalInput(firstCall);
+    const secondCallAt = secondCall.trim() ? fromLocalInput(secondCall) : null;
+    if (!firstCallAt || (secondCall.trim() && !secondCallAt)) {
+      setError('Escribe las fechas como AAAA-MM-DD HH:MM.');
+      return;
+    }
+    try {
+      const saved = await save.mutateAsync({
+        id: params.id,
+        input: { type, firstCallAt, secondCallAt, place, points: toPointInputs(points) },
+      });
+      router.replace(`/asambleas/${saved.id}`);
+    } catch (failure) {
+      setError(messageFor(failure));
+    }
+  }
+
+  return (
+    <Screen testID="editor-asamblea">
+      <Stack.Screen options={{ title: params.id ? 'Editar convocatoria' : 'Nueva asamblea' }} />
+      <View style={styles.chips}>
+        {(Object.keys(ASSEMBLY_TYPE_LABEL) as AssemblyType[]).map((value) => (
+          <Chip
+            key={value}
+            label={ASSEMBLY_TYPE_LABEL[value]}
+            selected={type === value}
+            onPress={() => setType(value)}
+          />
+        ))}
+      </View>
+      <TextField
+        label="Primera convocatoria (AAAA-MM-DD HH:MM)"
+        value={firstCall}
+        onChangeText={setFirstCall}
+        keyboardType="numbers-and-punctuation"
+        testID="campo-primera"
+      />
+      <TextField
+        label="Segunda convocatoria (opcional)"
+        value={secondCall}
+        onChangeText={setSecondCall}
+        placeholder="AAAA-MM-DD HH:MM"
+        keyboardType="numbers-and-punctuation"
+        testID="campo-segunda"
+      />
+      <TextField
+        label="Lugar"
+        value={place}
+        onChangeText={setPlace}
+        maxLength={200}
+        testID="campo-lugar"
+      />
+
+      <Text style={styles.section}>Orden del día</Text>
+      {points.map((point, index) => (
+        <View key={point.key} style={styles.point} testID={`editor-punto-${index + 1}`}>
+          <View style={styles.pointHeader}>
+            <Text style={styles.pointNumber}>Punto {index + 1}</Text>
+            <View style={styles.pointTools}>
+              <Tool
+                label="↑"
+                onPress={() => setPoints((c) => movePoint(c, index, -1))}
+                disabled={index === 0}
+              />
+              <Tool
+                label="↓"
+                onPress={() => setPoints((c) => movePoint(c, index, 1))}
+                disabled={index === points.length - 1}
+              />
+              <Tool
+                label="Quitar"
+                onPress={() => setPoints((c) => c.filter((p) => p.key !== point.key))}
+              />
+            </View>
+          </View>
+          <TextField
+            label="Título"
+            value={point.title}
+            onChangeText={(title) => update(point.key, { title })}
+            maxLength={200}
+          />
+          <TextField
+            label="Descripción"
+            value={point.description}
+            onChangeText={(description) => update(point.key, { description })}
+            multiline
+          />
+          <View style={styles.switchRow}>
+            <Text style={styles.label}>Se somete a votación</Text>
+            <Switch
+              value={point.votable}
+              onValueChange={(votable) =>
+                update(point.key, {
+                  votable,
+                  majority: votable ? (point.majority ?? 'simple') : null,
+                })
+              }
+            />
+          </View>
+          {point.votable && (
+            <View style={styles.chips}>
+              {(['simple', 'reforzada'] as Majority[]).map((value) => (
+                <Chip
+                  key={value}
+                  label={value === 'simple' ? 'Mayoría simple' : 'Mayoría reforzada'}
+                  selected={point.majority === value}
+                  onPress={() => update(point.key, { majority: value })}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      ))}
+      <Button
+        title="Añadir punto"
+        variant="secondary"
+        onPress={() => setPoints((c) => [...c, newPoint()])}
+      />
+
+      {error && <ErrorText>{error}</ErrorText>}
+      <Button
+        title="Guardar borrador"
+        onPress={submit}
+        loading={save.isPending}
+        testID="guardar-asamblea"
+      />
+      <Text style={styles.hint}>
+        Después podrás convocarla desde su detalle. La documentación de cada punto se añade allí.
+      </Text>
+    </Screen>
+  );
+}
+
+function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress(): void }) {
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      onPress={onPress}
+      style={[styles.chip, selected && styles.chipSelected]}
+    >
+      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function Tool({
+  label,
+  onPress,
+  disabled = false,
+}: {
+  label: string;
+  onPress(): void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} style={styles.tool}>
+      <Text style={[styles.toolText, disabled && styles.toolDisabled]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  section: { fontSize: 15, fontWeight: '600', color: colors.text, marginTop: 8 },
+  point: { backgroundColor: colors.surface, borderRadius: 12, padding: 12, gap: 10 },
+  pointHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  pointNumber: { fontWeight: '600', color: colors.text },
+  pointTools: { flexDirection: 'row', gap: 4 },
+  tool: { paddingHorizontal: 10, paddingVertical: 4 },
+  toolText: { color: colors.primary, fontSize: 15 },
+  toolDisabled: { color: colors.border },
+  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  label: { fontSize: 14, color: colors.text },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { color: colors.text },
+  chipTextSelected: { color: '#fff', fontWeight: '600' },
+  hint: { fontSize: 13, color: colors.muted },
+});

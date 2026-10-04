@@ -46,7 +46,12 @@ function CooperativeNavigator() {
           </Stack.Protected>
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'asambleas')}>
-          <Stack.Screen name="asambleas" options={{ title: 'Asambleas' }} />
+          <Stack.Screen name="asambleas/index" options={{ title: 'Asambleas' }} />
+          <Stack.Screen name="asambleas/[id]" options={{ title: 'Asamblea' }} />
+          <Stack.Screen name="asambleas/votar" options={{ title: 'Votar' }} />
+          <Stack.Protected guard={canManage(allowed, 'asambleas')}>
+            <Stack.Screen name="asambleas/editor" options={{ title: 'Asamblea' }} />
+          </Stack.Protected>
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'documentos')}>
           <Stack.Screen name="documentos/index" options={{ title: 'Documentos' }} />

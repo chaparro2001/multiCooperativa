@@ -28,3 +28,24 @@ export function today(now = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
+
+/** «AAAA-MM-DD HH:MM» in the device's time zone, for editing a date and time as text. */
+export function toLocalInput(iso: string): string {
+  const date = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${today(date)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Back to an ISO instant; null if the text is not a valid date and time. */
+export function fromLocalInput(text: string): string | null {
+  const match = text.trim().match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/);
+  if (!match) return null;
+  const [, y, m, d, h, min] = match.map(Number) as [number, number, number, number, number, number];
+  const date = new Date(y, m - 1, d, h, min);
+  const roundTrip =
+    date.getFullYear() === y &&
+    date.getMonth() === m - 1 &&
+    date.getDate() === d &&
+    date.getHours() === h;
+  return roundTrip ? date.toISOString() : null;
+}
