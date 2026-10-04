@@ -16,7 +16,7 @@ Plan por hitos para ejecutar con Claude Code. Cada tarea es lo bastante pequeña
 - [x] Vitest configurado en `apps/api` y `packages/contracts`.
 - [x] `apps/mobile`: proyecto Expo con Expo Router y TypeScript; configuración inyectada (URL del API).
 - [x] GitHub Actions: instalación, lint, typecheck y tests en cada push.
-- [ ] Bus de eventos interno en proceso.
+- [x] Bus de eventos interno en proceso.
 
 ## Hito 1 · Acceso y perfiles (6–9 oct)
 
