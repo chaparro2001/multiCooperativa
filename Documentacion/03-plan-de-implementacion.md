@@ -58,7 +58,7 @@ Especificación: [05-facturas-y-albaranes](requisitos/05-facturas-y-albaranes.md
 
 - [x] Dominio con TDD: tipo de tercero según operación, cuadre de totales, unicidad de facturación, conciliación con tolerancia, estados, vencimientos, validación de NIF. Importes con decimal exacto.
 - [x] Terceros: alta, edición y desactivación.
-- [ ] API de albaranes y facturas de compra y venta, resumen de pagos y cobros.
+- [x] API de albaranes y facturas de compra y venta, resumen de pagos y cobros.
 - [ ] Proceso diario idempotente de vencimientos.
 - [ ] Extracción con visión: puerto, adaptador, salida validada con el esquema Zod.
 - [ ] Explicación de discrepancias con IA.

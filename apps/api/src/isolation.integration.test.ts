@@ -59,6 +59,14 @@ async function snapshot() {
       where: { cooperativeId: campo },
       orderBy: { id: 'asc' },
     }),
+    deliveryNotes: await prisma.deliveryNote.findMany({
+      where: { cooperativeId: campo },
+      orderBy: { id: 'asc' },
+    }),
+    invoices: await prisma.invoice.findMany({
+      where: { cooperativeId: campo },
+      orderBy: { id: 'asc' },
+    }),
     assemblies: await prisma.assembly.findMany({
       where: { cooperativeId: campo },
       orderBy: { id: 'asc' },
@@ -171,7 +179,33 @@ beforeAll(async () => {
       isCustomer: false,
     },
   });
+  const note = await prisma.deliveryNote.create({
+    data: {
+      cooperativeId: campo,
+      thirdPartyId: thirdParty.id,
+      operation: 'compra',
+      number: 'A-1',
+      date: new Date('2026-10-01'),
+      lines: { create: { position: 1, concept: 'Abono', quantity: '10', unit: 'kg' } },
+    },
+  });
+  const invoice = await prisma.invoice.create({
+    data: {
+      cooperativeId: campo,
+      thirdPartyId: thirdParty.id,
+      operation: 'compra',
+      number: 'F-1',
+      issueDate: new Date('2026-10-01'),
+      dueDate: new Date('2026-10-31'),
+      base: '100.00',
+      vatRate: '21',
+      total: '121.00',
+      reconciliationStatus: 'sin_albaranes',
+    },
+  });
   campoParams = {
+    noteId: note.id,
+    invoiceId: invoice.id,
     thirdPartyId: thirdParty.id,
     cooperativeId: campo,
     memberId: member.id,
@@ -210,6 +244,9 @@ beforeAll(async () => {
     'POST /cooperativas/:cooperativeId/puntos/:pointId/votacion/abrir': {},
     'POST /cooperativas/:cooperativeId/puntos/:pointId/votacion/cerrar': {},
     'POST /cooperativas/:cooperativeId/puntos/:pointId/votacion/votos': { choice: 'a_favor' },
+    'POST /cooperativas/:cooperativeId/albaranes/:noteId/anular': {},
+    'POST /cooperativas/:cooperativeId/facturas/:invoiceId/liquidar': { date: '2026-10-15' },
+    'POST /cooperativas/:cooperativeId/facturas/:invoiceId/anular': {},
     'PATCH /cooperativas/:cooperativeId/terceros/:thirdPartyId': {
       name: 'Cambiado',
       isSupplier: true,

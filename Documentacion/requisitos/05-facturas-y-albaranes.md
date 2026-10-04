@@ -307,6 +307,17 @@ erDiagram
 | POST | `/cooperativas/{id}/reclamaciones` | Abrir | Gestión |
 | POST | `/cooperativas/{id}/reclamaciones/{reclamacionId}/notas` | Añadir nota | Gestión |
 | POST | `/cooperativas/{id}/reclamaciones/{reclamacionId}/resolver` | Resolver | Gestión |
+| POST | `/cooperativas/{id}/albaranes/{albaranId}/anular` | Anular un albarán pendiente de facturar | Gestión |
+| POST | `/cooperativas/{id}/facturas/{facturaId}/anular` | Anular una factura pendiente o vencida (sus albaranes vuelven a pendientes) | Gestión |
+
+Contrato (esquemas en `packages/contracts/src/invoicing.ts`):
+
+- Importes y cantidades viajan como cadenas decimales (`"1210.00"`, `"1250.5"`), nunca como números.
+- Registrar un albarán o una factura es `multipart/form-data`: el registro como JSON en el campo `datos` y, opcionalmente, el original (PDF, JPEG o PNG, 10 MB como máximo) en `fichero`. El tipo se comprueba por contenido. Así, la captura con cámara guarda el original junto al registro confirmado (RN-FAC-11).
+- La factura lleva `lines` (obligatorias si agrupa albaranes) y `deliveryNoteIds`. Se registra, agrupa y concilia en una transacción que bloquea los albaranes: dos facturas simultáneas no pueden facturar el mismo albarán.
+- `GET /terceros/{id}` es la ficha: datos, albaranes, facturas y saldo pendiente de pagar y de cobrar.
+- `GET /facturas/resumen` devuelve, para pagos (`toPay`) y cobros (`toCollect`), lo pendiente (incluye lo vencido) y lo vencido, con importe y número de facturas; además, facturas con discrepancia abiertas y albaranes pendientes de facturar con más de 30 días (HU-FAC-09).
+- Errores: `400 invalid_document`, `400 invalid_third_party`, `400 invalid_amount`, `400 total_mismatch` con `details.expected` y `details.difference`, `404 not_found`, `409 third_party_exists` con `details.thirdPartyId`, `409 duplicate_number` y `409 invalid_invoice_transition`.
 
 ## 9. Pantallas
 

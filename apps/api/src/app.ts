@@ -6,13 +6,20 @@ import express, {
   type Router,
 } from 'express';
 
+import { MulterError } from 'multer';
+
 import { InvalidRequestError } from './shared/infrastructure/http/validation';
 
 /** Last resort: never leaks internals to the client (RNF-ACC-08 keeps tokens out of logs too). */
 // Express tells error handlers apart by their four parameters, so `_next` must stay.
 const unhandledErrors: ErrorRequestHandler = (error, _req, res, _next) => {
-  // A body that breaks its contract, or malformed JSON rejected by express.json().
-  if (error instanceof InvalidRequestError || error?.type === 'entity.parse.failed') {
+  // A body that breaks its contract, malformed JSON rejected by express.json(), or a
+  // multipart form multer refuses (extra fields or files). File size is each module's.
+  if (
+    error instanceof InvalidRequestError ||
+    error?.type === 'entity.parse.failed' ||
+    error instanceof MulterError
+  ) {
     res.status(400).json({ error: 'invalid_request' } satisfies ApiError);
     return;
   }

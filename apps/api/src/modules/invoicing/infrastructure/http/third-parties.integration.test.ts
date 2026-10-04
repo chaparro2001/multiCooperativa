@@ -154,17 +154,14 @@ describe('terceros (HU-FAC-01)', () => {
     );
     expect(byText.items.map((p) => p.name)).toEqual(['Almazara Norte']);
 
-    const patched = await request(app)
-      .patch(`${base()}/${party.id}`)
-      .set(as('gestor'))
-      .send({
-        name: 'Abonos del Sur SL',
-        isSupplier: true,
-        isCustomer: false,
-        email: null,
-        phone: null,
-        active: false,
-      });
+    const patched = await request(app).patch(`${base()}/${party.id}`).set(as('gestor')).send({
+      name: 'Abonos del Sur SL',
+      isSupplier: true,
+      isCustomer: false,
+      email: null,
+      phone: null,
+      active: false,
+    });
     expect(thirdPartySchema.parse(patched.body).active).toBe(false);
 
     const active = listThirdPartiesResponseSchema.parse(

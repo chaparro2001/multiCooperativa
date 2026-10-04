@@ -42,11 +42,9 @@ export const invoicingErrorHandler: ErrorRequestHandler = (error, _req, res, nex
     next(error);
     return;
   }
-  res
-    .status(status)
-    .json({
-      error: error.code,
-      message: error.message,
-      details: details(error),
-    } satisfies ApiError);
+  res.status(status).json({
+    error: error.code,
+    message: error.message,
+    details: details(error),
+  } satisfies ApiError);
 };

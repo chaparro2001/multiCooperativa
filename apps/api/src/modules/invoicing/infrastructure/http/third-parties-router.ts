@@ -44,15 +44,6 @@ export function createThirdPartiesRouter(
     res.json({ items: parties.map(toThirdParty) } satisfies ListThirdPartiesResponse);
   });
 
-  router.get(`${base}/:thirdPartyId`, ...read, async (req, res) => {
-    const party = await useCases.getThirdParty(
-      deps,
-      getCooperativeContext(res),
-      String(req.params.thirdPartyId),
-    );
-    res.json(toThirdParty(party));
-  });
-
   router.post(base, ...manage, async (req, res) => {
     const input = parseBody(thirdPartyInputSchema, req.body);
     const party = await useCases.registerThirdParty(deps, getCooperativeContext(res), input);
