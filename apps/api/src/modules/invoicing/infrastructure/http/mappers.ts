@@ -5,7 +5,7 @@ import type { Amounts } from '../../application/documents';
 import type { Line as DomainLine } from '../../domain/documents';
 import { formatMoney, formatQuantity, formatVatRate } from '../../domain/money';
 
-/** Domain bigints become exact decimal strings for the API (RN-FAC-13). */
+/** Domain bigints become exact decimal strings for the API (BR-INV-13). */
 export const toLine = (line: DomainLine): Line => ({
   concept: line.concept,
   quantity: formatQuantity(line.quantity),

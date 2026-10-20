@@ -4,23 +4,23 @@ import { inviteMemberRequestSchema, updateMemberRequestSchema } from './access';
 
 const profileId = '10000000-0000-4000-8000-000000000001';
 
-describe('contratos de miembros', () => {
-  it('la invitación exige un email válido', () => {
+describe('member contracts', () => {
+  it('the invitation requires a valid email', () => {
     const base = { name: 'Grace', profileId, isPartner: true };
 
-    expect(inviteMemberRequestSchema.safeParse({ ...base, email: 'no-es-email' }).success).toBe(
+    expect(inviteMemberRequestSchema.safeParse({ ...base, email: 'not-an-email' }).success).toBe(
       false,
     );
-    expect(inviteMemberRequestSchema.parse({ ...base, email: ' grace@campo.es ' }).email).toBe(
-      'grace@campo.es',
+    expect(inviteMemberRequestSchema.parse({ ...base, email: ' grace@field.test ' }).email).toBe(
+      'grace@field.test',
     );
   });
 
-  it('el cambio de un miembro es de perfil o de estado, no ambos ni otro', () => {
+  it('a member change is either profile or status, not both nor anything else', () => {
     expect(updateMemberRequestSchema.safeParse({ profileId }).success).toBe(true);
-    expect(updateMemberRequestSchema.safeParse({ status: 'suspendida' }).success).toBe(true);
-    expect(updateMemberRequestSchema.safeParse({ status: 'baja' }).success).toBe(false);
-    expect(updateMemberRequestSchema.safeParse({ profileId, status: 'suspendida' }).success).toBe(
+    expect(updateMemberRequestSchema.safeParse({ status: 'suspended' }).success).toBe(true);
+    expect(updateMemberRequestSchema.safeParse({ status: 'removed' }).success).toBe(false);
+    expect(updateMemberRequestSchema.safeParse({ profileId, status: 'suspended' }).success).toBe(
       false,
     );
     expect(updateMemberRequestSchema.safeParse({}).success).toBe(false);

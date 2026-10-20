@@ -6,29 +6,29 @@ import { UnpdfTextExtractor } from './unpdf-text-extractor';
 
 const extractor = new UnpdfTextExtractor();
 
-describe('extracción de texto de PDF', () => {
-  it('devuelve el texto de cada página con su número, tildes incluidas', async () => {
+describe('PDF text extraction', () => {
+  it('returns the text of each page with its number, accents included', async () => {
     const pdf = await buildPdf([
-      ['Artículo 1. Denominación', 'La cooperativa se denomina San Isidro.'],
-      ['Artículo 2. Domicilio', 'El domicilio social está en Cáceres.'],
+      ['Article 1. Name', 'The cooperative is named San Isidro.'],
+      ['Article 2. Registered office', 'The registered office is in Cáceres.'],
     ]);
 
     const pages = await extractor.extract(pdf);
 
     expect(pages.map((p) => p.page)).toEqual([1, 2]);
-    expect(pages[0]?.text).toContain('La cooperativa se denomina San Isidro.');
-    expect(pages[1]?.text).toContain('El domicilio social está en Cáceres.');
+    expect(pages[0]?.text).toContain('The cooperative is named San Isidro.');
+    expect(pages[1]?.text).toContain('The registered office is in Cáceres.');
   });
 
-  it('una página sin capa de texto vuelve vacía', async () => {
+  it('a page without a text layer comes back empty', async () => {
     const pages = await extractor.extract(await buildPdf([[]]));
 
     expect(pages).toEqual([{ page: 1, text: '' }]);
   });
 
-  it('un fichero que no se puede leer como PDF falla con UnreadablePdfError', async () => {
+  it('a file that cannot be read as a PDF fails with UnreadablePdfError', async () => {
     await expect(
-      extractor.extract(new TextEncoder().encode('%PDF-1.4 roto')),
+      extractor.extract(new TextEncoder().encode('%PDF-1.4 broken')),
     ).rejects.toBeInstanceOf(UnreadablePdfError);
   });
 });

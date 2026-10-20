@@ -30,7 +30,7 @@ export interface Api {
   app: Express;
   /** Background document indexing: resumed at startup, awaited in tests. */
   indexing: { resumePending(): Promise<number>; idle(): Promise<void> };
-  /** Daily due dates of invoices, on this API's event bus (HU-FAC-07). */
+  /** Daily due dates of invoices, on this API's event bus (US-INV-07). */
   runDueDates(): Promise<{ overdue: number; dueSoon: number }>;
 }
 

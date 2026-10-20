@@ -18,7 +18,7 @@ export type {
   VotingOpened,
 } from './application/events';
 
-/** Public interface of the assemblies module (requisitos/04). */
+/** Public interface of the assemblies module (docs/requirements/04-assemblies.md). */
 export function createAssembliesModule(deps: {
   prisma: PrismaClient;
   files: FileStorage;

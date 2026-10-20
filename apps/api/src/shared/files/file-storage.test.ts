@@ -4,31 +4,33 @@ import { inlineDisposition, newFileKey } from './file-storage';
 
 const COOP = '11111111-1111-4111-8111-111111111111';
 
-describe('claves de fichero (RNF-DOC-04, ADR-003)', () => {
-  it('agrupan por cooperativa y área y terminan en un UUID aleatorio', () => {
-    expect(newFileKey(COOP, 'comunicados')).toMatch(
-      new RegExp(`^cooperativas/${COOP}/comunicados/[0-9a-f-]{36}$`),
+describe('file keys (NFR-DOC-04, ADR-003)', () => {
+  it('group by cooperative and area and end in a random UUID', () => {
+    expect(newFileKey(COOP, 'announcements')).toMatch(
+      new RegExp(`^cooperatives/${COOP}/announcements/[0-9a-f-]{36}$`),
     );
   });
 
-  it('no se repiten', () => {
-    expect(newFileKey(COOP, 'documentos')).not.toBe(newFileKey(COOP, 'documentos'));
+  it('are never repeated', () => {
+    expect(newFileKey(COOP, 'documents')).not.toBe(newFileKey(COOP, 'documents'));
   });
 
-  it('rechazan áreas que podrían escapar del prefijo', () => {
-    expect(() => newFileKey(COOP, '../otra')).toThrow();
-    expect(() => newFileKey(COOP, 'Documentos')).toThrow();
+  it('reject areas that could escape the prefix', () => {
+    expect(() => newFileKey(COOP, '../other')).toThrow();
+    expect(() => newFileKey(COOP, 'Documents')).toThrow();
   });
 });
 
-describe('nombre de descarga', () => {
-  it('conserva el nombre en UTF-8 y da una alternativa ASCII', () => {
-    expect(inlineDisposition('Acta de la asamblea – junio.pdf')).toBe(
-      'inline; filename="Acta de la asamblea _ junio.pdf"; filename*=UTF-8\'\'Acta%20de%20la%20asamblea%20%E2%80%93%20junio.pdf',
+describe('download name', () => {
+  it('keeps the UTF-8 name and gives an ASCII fallback', () => {
+    expect(inlineDisposition('Assembly minutes – June.pdf')).toBe(
+      'inline; filename="Assembly minutes _ June.pdf"; filename*=UTF-8\'\'Assembly%20minutes%20%E2%80%93%20June.pdf',
     );
   });
 
-  it('quita tildes en la alternativa ASCII y neutraliza comillas', () => {
-    expect(inlineDisposition('Año "fiscal".pdf')).toMatch(/^inline; filename="Ano _fiscal_.pdf";/);
+  it('strips accents in the ASCII fallback and neutralizes quotes', () => {
+    expect(inlineDisposition('Caf\u00e9 "annual".pdf')).toMatch(
+      /^inline; filename="Cafe _annual_.pdf";/,
+    );
   });
 });

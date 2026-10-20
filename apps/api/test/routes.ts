@@ -35,7 +35,7 @@ export function listRoutes(app: Express): RegisteredRoute[] {
 export function fillPath(path: string, params: Record<string, string>): string {
   return path.replace(/:(\w+)/g, (_match, name: string) => {
     const value = params[name];
-    if (!value) throw new Error(`El test no sabe qué valor dar a :${name} en ${path}.`);
+    if (!value) throw new Error(`The test does not know which value to give :${name} in ${path}.`);
     return value;
   });
 }

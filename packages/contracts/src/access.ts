@@ -1,20 +1,20 @@
 import { z } from 'zod';
 
 export const moduleSchema = z.enum([
-  'comunicados',
-  'asambleas',
-  'documentos',
-  'facturas',
-  'area-socio',
-  'asistente',
-  'usuarios',
+  'announcements',
+  'assemblies',
+  'documents',
+  'invoicing',
+  'member-area',
+  'assistant',
+  'users',
 ]);
 
-export const accessLevelSchema = z.enum(['consulta', 'gestion']);
+export const accessLevelSchema = z.enum(['read', 'manage']);
 
-export const scopeSchema = z.enum(['propias', 'todas']);
+export const scopeSchema = z.enum(['own', 'all']);
 
-/** GET /me: datos del usuario y cooperativas en las que puede entrar (HU-ACC-05). */
+/** GET /me: the user and the cooperatives they can enter (US-ACC-05). */
 export const meResponseSchema = z.object({
   id: z.uuid(),
   email: z.string(),
@@ -31,8 +31,8 @@ export const meResponseSchema = z.object({
 });
 
 /**
- * GET /cooperativas/{id}/me/permisos: con esto la app construye la navegación
- * (HU-ACC-06). Un módulo ausente es «sin acceso».
+ * GET /cooperatives/{id}/me/permissions: the app builds its navigation from this
+ * (US-ACC-06). A missing module means "no access".
  */
 export const myPermissionsResponseSchema = z.object({
   cooperativeId: z.uuid(),
@@ -43,7 +43,7 @@ export const myPermissionsResponseSchema = z.object({
   ),
 });
 
-export const membershipStatusSchema = z.enum(['invitada', 'activa', 'suspendida', 'baja']);
+export const membershipStatusSchema = z.enum(['invited', 'active', 'suspended', 'removed']);
 
 export const memberSchema = z.object({
   membershipId: z.uuid(),
@@ -57,7 +57,7 @@ export const memberSchema = z.object({
   partnerNumber: z.string().nullable(),
 });
 
-/** GET /cooperativas/{id}/miembros: todos salvo los dados de baja (HU-ACC-10). */
+/** GET /cooperatives/{id}/members: everyone except removed members (US-ACC-10). */
 export const listMembersResponseSchema = z.object({ members: z.array(memberSchema) });
 
 export const profileSchema = z.object({
@@ -68,10 +68,10 @@ export const profileSchema = z.object({
 
 export const listProfilesResponseSchema = z.object({ profiles: z.array(profileSchema) });
 
-/** POST /cooperativas/{id}/miembros (HU-ACC-08). */
+/** POST /cooperatives/{id}/members (US-ACC-08). */
 export const inviteMemberRequestSchema = z.object({
   email: z.string().trim().pipe(z.email()),
-  /** Solo se usa si el email es nuevo en la plataforma. */
+  /** Only used if the email is new to the platform. */
   name: z.string().trim().min(1).max(200),
   profileId: z.uuid(),
   isPartner: z.boolean(),
@@ -80,23 +80,23 @@ export const inviteMemberRequestSchema = z.object({
 
 export const inviteMemberResponseSchema = z.object({ membershipId: z.uuid() });
 
-/** PATCH /cooperativas/{id}/miembros/{miembroId}: un cambio cada vez (HU-ACC-09, HU-ACC-10). */
+/** PATCH /cooperatives/{id}/members/{memberId}: one change at a time (US-ACC-09, US-ACC-10). */
 export const updateMemberRequestSchema = z.union([
   z.strictObject({ profileId: z.uuid() }),
-  z.strictObject({ status: z.enum(['activa', 'suspendida']) }),
+  z.strictObject({ status: z.enum(['active', 'suspended']) }),
 ]);
 
 export const auditEventSchema = z.object({
   id: z.uuid(),
   action: z.string(),
-  /** Nulo si lo hizo un script de plataforma. */
+  /** Null if a platform script did it. */
   actorUserId: z.uuid().nullable(),
   targetUserId: z.uuid(),
   detail: z.unknown(),
   createdAt: z.iso.datetime(),
 });
 
-/** GET /cooperativas/{id}/auditoria: los últimos eventos, del más reciente al más antiguo. */
+/** GET /cooperatives/{id}/audit: the latest events, newest first. */
 export const listAuditResponseSchema = z.object({ events: z.array(auditEventSchema) });
 
 export type Module = z.infer<typeof moduleSchema>;

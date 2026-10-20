@@ -18,19 +18,23 @@ export function createMeRouter(deps: {
   });
 
   // Any active membership may read its own permissions: no module permission required.
-  router.get('/cooperativas/:cooperativeId/me/permisos', deps.requireCooperative, (_req, res) => {
-    const context = getCooperativeContext(res);
-    res.json({
-      cooperativeId: context.cooperativeId,
-      profileName: context.profileName,
-      isPartner: context.isPartner,
-      permissions: context.permissions.map(({ module, level, scope }) => ({
-        module,
-        level,
-        scope,
-      })),
-    } satisfies MyPermissionsResponse);
-  });
+  router.get(
+    '/cooperatives/:cooperativeId/me/permissions',
+    deps.requireCooperative,
+    (_req, res) => {
+      const context = getCooperativeContext(res);
+      res.json({
+        cooperativeId: context.cooperativeId,
+        profileName: context.profileName,
+        isPartner: context.isPartner,
+        permissions: context.permissions.map(({ module, level, scope }) => ({
+          module,
+          level,
+          scope,
+        })),
+      } satisfies MyPermissionsResponse);
+    },
+  );
 
   return router;
 }

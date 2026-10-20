@@ -1,4 +1,4 @@
-/** Signs the short-lived access token. It carries identity only, never permissions (RNF-ACC-04). */
+/** Signs the short-lived access token. It carries identity only, never permissions (NFR-ACC-04). */
 export interface AccessTokenIssuer {
   issue(claims: { userId: string; sessionId: string }, now: Date): Promise<string>;
 }

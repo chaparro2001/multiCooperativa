@@ -10,14 +10,14 @@ export const BODY_MAX_LENGTH = 5000;
 export const MAX_ATTACHMENTS = 3;
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
-/** RN-COM-02: a published announcement is never deleted, it is withdrawn. */
-export const ANNOUNCEMENT_STATUSES = ['borrador', 'publicado', 'retirado'] as const;
+/** BR-ANN-02: a published announcement is never deleted, it is withdrawn. */
+export const ANNOUNCEMENT_STATUSES = ['draft', 'published', 'withdrawn'] as const;
 export type AnnouncementStatus = (typeof ANNOUNCEMENT_STATUSES)[number];
 
 export interface AnnouncementState {
   readonly status: AnnouncementStatus;
   readonly title: string;
-  /** Plain text: shown as is, never interpreted as HTML (RNF-COM-02). */
+  /** Plain text: shown as is, never interpreted as HTML (NFR-ANN-02). */
   readonly body: string;
   readonly pinned: boolean;
   readonly publishedAt: Date | null;
@@ -29,7 +29,7 @@ interface Content {
   body: string;
 }
 
-/** Lengths always; presence only when it has to be readable by everyone (RN-COM-04). */
+/** Lengths always; presence only when it has to be readable by everyone (BR-ANN-04). */
 function contentIssues(content: Content, complete: boolean): ContentIssue[] {
   const issues: ContentIssue[] = [];
   if (complete && content.title.length === 0) issues.push('title_missing');
@@ -49,69 +49,69 @@ const normalize = (content: Content): Content => ({
   body: content.body.trim(),
 });
 
-/** HU-COM-01: a draft may be incomplete; only publishing requires title and body. */
+/** US-ANN-01: a draft may be incomplete; only publishing requires title and body. */
 export function createDraft(content: Content): AnnouncementState {
   const normalized = normalize(content);
   assertContent(normalized, false);
-  return { status: 'borrador', ...normalized, pinned: false, publishedAt: null, editedAt: null };
+  return { status: 'draft', ...normalized, pinned: false, publishedAt: null, editedAt: null };
 }
 
-/** HU-COM-01. Only from draft: the notice is sent once (RN-COM-07). */
+/** US-ANN-01. Only from draft: the notice is sent once (BR-ANN-07). */
 export function publish<T extends AnnouncementState>(announcement: T, now: Date): T {
-  if (announcement.status !== 'borrador') {
-    throw new InvalidAnnouncementTransitionError('Solo se puede publicar un borrador.');
+  if (announcement.status !== 'draft') {
+    throw new InvalidAnnouncementTransitionError('Only a draft can be published.');
   }
   assertContent(announcement, true);
-  return { ...announcement, status: 'publicado', publishedAt: now };
+  return { ...announcement, status: 'published', publishedAt: now };
 }
 
-/** HU-COM-05: edits to a published announcement are visible as such and send no new push. */
+/** US-ANN-05: edits to a published announcement are visible as such and send no new push. */
 export function edit<T extends AnnouncementState>(
   announcement: T,
   changes: Partial<Content>,
   now: Date,
 ): T {
-  if (announcement.status === 'retirado') {
-    throw new InvalidAnnouncementTransitionError('Un comunicado retirado no se puede editar.');
+  if (announcement.status === 'withdrawn') {
+    throw new InvalidAnnouncementTransitionError('A withdrawn announcement cannot be edited.');
   }
   const content = normalize({
     title: changes.title ?? announcement.title,
     body: changes.body ?? announcement.body,
   });
-  const isPublished = announcement.status === 'publicado';
+  const isPublished = announcement.status === 'published';
   assertContent(content, isPublished);
   return { ...announcement, ...content, editedAt: isPublished ? now : announcement.editedAt };
 }
 
-/** HU-COM-05. */
+/** US-ANN-05. */
 export function withdraw<T extends AnnouncementState>(announcement: T): T {
-  if (announcement.status !== 'publicado') {
-    throw new InvalidAnnouncementTransitionError('Solo se puede retirar un comunicado publicado.');
+  if (announcement.status !== 'published') {
+    throw new InvalidAnnouncementTransitionError('Only a published announcement can be withdrawn.');
   }
-  return { ...announcement, status: 'retirado', pinned: false };
+  return { ...announcement, status: 'withdrawn', pinned: false };
 }
 
-/** HU-COM-06. */
+/** US-ANN-06. */
 export function setPinned<T extends AnnouncementState>(announcement: T, pinned: boolean): T {
-  if (announcement.status !== 'publicado') {
-    throw new InvalidAnnouncementTransitionError('Solo se puede fijar un comunicado publicado.');
+  if (announcement.status !== 'published') {
+    throw new InvalidAnnouncementTransitionError('Only a published announcement can be pinned.');
   }
   return { ...announcement, pinned };
 }
 
-/** RN-COM-03: with «consulta» only published announcements exist. */
+/** BR-ANN-03: with "read" only published announcements exist. */
 export function isVisible(status: AnnouncementStatus, canManage: boolean): boolean {
-  return canManage || status === 'publicado';
+  return canManage || status === 'published';
 }
 
-/** RN-COM-05: up to 3 PDF attachments of 10 MB each. */
+/** BR-ANN-05: up to 3 PDF attachments of 10 MB each. */
 export function assertCanAttach(
   announcement: AnnouncementState,
   currentCount: number,
   file: { size: number; isPdf: boolean },
 ): void {
-  if (announcement.status === 'retirado') {
-    throw new InvalidAnnouncementTransitionError('No se puede adjuntar a un comunicado retirado.');
+  if (announcement.status === 'withdrawn') {
+    throw new InvalidAnnouncementTransitionError('Cannot attach to a withdrawn announcement.');
   }
   if (currentCount >= MAX_ATTACHMENTS) throw new AttachmentRejectedError('too_many');
   if (!file.isPdf) throw new AttachmentRejectedError('not_pdf');

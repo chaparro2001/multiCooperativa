@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
@@ -8,8 +9,9 @@ import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
 
-/** HU-ACC-02. */
+/** US-ACC-02. */
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const { signIn } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +23,7 @@ export default function LoginScreen() {
     setSubmitting(true);
     try {
       await signIn(email.trim(), password);
-      // La guarda de sesión lleva a la cooperativa; no hay que navegar a mano.
+      // The session guard takes the user to the cooperative; no manual navigation is needed.
     } catch (failure) {
       setError(messageFor(failure));
       setSubmitting(false);
@@ -29,40 +31,38 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen testID="pantalla-login">
+    <Screen testID="login-screen">
       <Text style={styles.title}>multiCooperativa</Text>
-      <Text style={styles.subtitle}>Entra con el email y la contraseña de tu cooperativa.</Text>
+      <Text style={styles.subtitle}>{t('auth.login.subtitle')}</Text>
       <TextField
-        label="Email"
+        label={t('auth.fields.email')}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
         autoComplete="email"
         keyboardType="email-address"
         textContentType="username"
-        testID="campo-email"
+        testID="email-field"
       />
       <TextField
-        label="Contraseña"
+        label={t('auth.fields.password')}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
         autoComplete="current-password"
         textContentType="password"
         onSubmitEditing={submit}
-        testID="campo-contrasena"
+        testID="password-field"
       />
       {error && <ErrorText>{error}</ErrorText>}
       <Button
-        title="Entrar"
+        title={t('auth.login.submit')}
         onPress={submit}
         loading={submitting}
         disabled={!email || !password}
-        testID="boton-entrar"
+        testID="login-button"
       />
-      <Text style={styles.hint}>
-        ¿Te han invitado? Abre el enlace del correo de invitación desde este dispositivo.
-      </Text>
+      <Text style={styles.hint}>{t('auth.login.invitedHint')}</Text>
     </Screen>
   );
 }

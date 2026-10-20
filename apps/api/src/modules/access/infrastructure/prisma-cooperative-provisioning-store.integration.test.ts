@@ -20,11 +20,11 @@ afterAll(() => prisma.$disconnect());
 const input = {
   name: 'Cooperativa del Campo',
   cif: 'F12345678',
-  admin: { email: 'admin@campo.es', name: 'Ada', password: 'una-clave-larga' },
+  admin: { email: 'admin@campo.es', name: 'Ada', password: 'a-long-password' },
 };
 
-describe('alta de cooperativa', () => {
-  it('persiste los 4 perfiles predefinidos con la matriz de permisos de la especificación', async () => {
+describe('cooperative provisioning', () => {
+  it('persists the 4 predefined profiles with the permission matrix of the specification', async () => {
     const { cooperativeId } = await provisionCooperative(deps, input);
 
     const profiles = await prisma.profile.findMany({
@@ -38,7 +38,7 @@ describe('alta de cooperativa', () => {
       const permissions = stored.permissions.map(toDomainPermission);
       expect(stored.predefined).toBe(true);
       for (const module of MODULES) {
-        for (const level of ['consulta', 'gestion'] as const) {
+        for (const level of ['read', 'manage'] as const) {
           expect(resolveAccess(permissions, module, level)).toEqual(
             resolveAccess(expected.permissions, module, level),
           );
@@ -47,7 +47,7 @@ describe('alta de cooperativa', () => {
     }
   });
 
-  it('crea al administrador con membresía activa y contraseña en Argon2id', async () => {
+  it('creates the administrator with an active membership and an Argon2id password', async () => {
     const result = await provisionCooperative(deps, input);
 
     const membership = await prisma.membership.findUniqueOrThrow({
@@ -56,14 +56,14 @@ describe('alta de cooperativa', () => {
     });
     expect(membership).toMatchObject({
       cooperativeId: result.cooperativeId,
-      status: 'activa',
+      status: 'active',
       profile: { name: 'Administrador' },
       user: { email: 'admin@campo.es', name: 'Ada' },
     });
     expect(membership.user.passwordHash).toMatch(/^\$argon2id\$/);
   });
 
-  it('un usuario existente administra una segunda cooperativa sin duplicarse (ADR-003)', async () => {
+  it('an existing user administers a second cooperative without being duplicated (ADR-003)', async () => {
     const first = await provisionCooperative(deps, input);
 
     const second = await provisionCooperative(deps, {
@@ -77,12 +77,12 @@ describe('alta de cooperativa', () => {
     expect(await prisma.membership.count({ where: { userId: first.adminUserId } })).toBe(2);
   });
 
-  it('no deja nada a medias si el CIF ya existe', async () => {
+  it('leaves nothing half done if the tax id already exists', async () => {
     await provisionCooperative(deps, input);
 
     await expect(
-      provisionCooperative(deps, { ...input, admin: { ...input.admin, email: 'otro@campo.es' } }),
-    ).rejects.toThrow(/CIF/);
+      provisionCooperative(deps, { ...input, admin: { ...input.admin, email: 'other@campo.es' } }),
+    ).rejects.toThrow(/tax id/);
     expect(await prisma.cooperative.count()).toBe(1);
     expect(await prisma.user.count()).toBe(1);
   });

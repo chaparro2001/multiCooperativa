@@ -2,13 +2,13 @@ import type { DomainEvent } from '../../../shared/events';
 
 /** A document or a new version was uploaded: its current version must be indexed. */
 export type DocumentPublished = DomainEvent<
-  'DocumentoPublicado',
+  'DocumentPublished',
   { cooperativeId: string; documentId: string; versionId: string }
 >;
 
-/** Withdrawn: its fragments leave the index (RN-DOC-05). */
+/** Withdrawn: its fragments leave the index (BR-DOC-05). */
 export type DocumentWithdrawn = DomainEvent<
-  'DocumentoRetirado',
+  'DocumentWithdrawn',
   { cooperativeId: string; documentId: string }
 >;
 

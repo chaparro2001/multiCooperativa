@@ -64,14 +64,14 @@ export interface NoteToGroup {
   lines: Line[];
 }
 
-/** Every method is scoped to one cooperative (RN-FAC-01). */
+/** Every method is scoped to one cooperative (BR-INV-01). */
 export interface DeliveryNoteStore {
   list(
     cooperativeId: string,
     filter: DocumentFilter & { status?: DeliveryNoteStatus },
   ): Promise<DeliveryNoteRecord[]>;
   find(cooperativeId: string, id: string): Promise<DeliveryNoteRecord | null>;
-  /** 'duplicate' when the party already has a note with that number (RN-FAC-04). */
+  /** 'duplicate' when the party already has a note with that number (BR-INV-04). */
   create(
     cooperativeId: string,
     data: { thirdPartyId: string; state: DeliveryNoteState; file: StoredFile | null },
@@ -102,7 +102,7 @@ export interface InvoiceStore {
   /**
    * One transaction: locks the notes, lets `decide` validate the grouping and
    * reconcile, stores invoice, lines and discrepancies, and marks the notes
-   * as invoiced. 'duplicate' on a repeated number (RN-FAC-04); null if a note
+   * as invoiced. 'duplicate' on a repeated number (BR-INV-04); null if a note
    * does not exist in this cooperative.
    */
   create(
@@ -121,12 +121,12 @@ export interface InvoiceStore {
     id: string,
     decide: (current: InvoiceRecord) => InvoiceState,
   ): Promise<InvoiceRecord | null>;
-  /** Totals by operation and payment status, for the summary (HU-FAC-07). */
+  /** Totals by operation and payment status, for the summary (US-INV-07). */
   totals(cooperativeId: string, thirdPartyId?: string): Promise<InvoiceSummaryRow[]>;
   countOpenDiscrepancies(cooperativeId: string): Promise<number>;
 }
 
-/** HU-FAC-09: pending notes older than a date, per party. */
+/** US-INV-09: pending notes older than a date, per party. */
 export interface StaleNotesQuery {
   countPendingBefore(cooperativeId: string, day: string): Promise<number>;
 }

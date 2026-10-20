@@ -28,7 +28,7 @@ const modelReady = await fetch(`${env.OLLAMA_URL}/api/show`, {
 
 const embedder = new OllamaEmbedder({ url: env.OLLAMA_URL, model: env.EMBEDDING_MODEL });
 
-describe.skipIf(!modelReady)(`Ollama con ${env.EMBEDDING_MODEL} (ADR-006)`, () => {
+describe.skipIf(!modelReady)(`Ollama with ${env.EMBEDDING_MODEL} (ADR-006)`, () => {
   const prisma = createTestPrisma();
   const files = new S3FileStorage(s3SettingsFromEnv(env));
   const { app, indexing } = createApi({
@@ -51,48 +51,48 @@ describe.skipIf(!modelReady)(`Ollama con ${env.EMBEDDING_MODEL} (ADR-006)`, () =
       invitationSender: { send: async () => {} },
     });
     ({ cooperativeId } = await access.provisionCooperative({
-      name: 'Campo',
+      name: 'Farm',
       cif: 'F12345674',
-      admin: { email: 'admin@campo.test', name: 'Ana', password: 'una-clave-larga' },
+      admin: { email: 'admin@coop.test', name: 'Ana', password: 'una-clave-larga' },
     }));
     const login = await request(app)
       .post('/auth/login')
-      .send({ email: 'admin@campo.test', password: 'una-clave-larga' });
+      .send({ email: 'admin@coop.test', password: 'una-clave-larga' });
     token = authTokensSchema.parse(login.body).accessToken;
   });
   afterAll(() => prisma.$disconnect());
 
-  it('las frases con el mismo significado quedan más cerca que las que no', async () => {
-    const [asamblea, pregunta, tractor] = await embedder.embed([
-      'La asamblea general se celebra en junio.',
-      '¿Cuándo es la asamblea?',
-      'El tractor necesita gasóleo.',
+  it('sentences with the same meaning end up closer than those that do not', async () => {
+    const [assembly, question, tractor] = await embedder.embed([
+      'The general assembly is held in June.',
+      'When is the assembly?',
+      'The tractor needs diesel.',
     ]);
     const cosine = (a: number[], b: number[]) => a.reduce((sum, v, i) => sum + v * b[i]!, 0);
 
-    expect(cosine(asamblea!, pregunta!)).toBeGreaterThan(cosine(asamblea!, tractor!) + 0.1);
+    expect(cosine(assembly!, question!)).toBeGreaterThan(cosine(assembly!, tractor!) + 0.1);
   });
 
   it(
-    'RNF-DOC-01: un documento de 50 páginas queda indexado en menos de 60 segundos',
+    'NFR-DOC-01: a 50-page document is indexed in under 60 seconds',
     { timeout: 120_000 },
     async () => {
       const line = (page: number, n: number) =>
-        `Página ${page}, punto ${n}: la cooperativa acuerda el reparto de la cosecha de aceituna entre sus socios.`;
+        `Page ${page}, item ${n}: the cooperative agrees on sharing the olive harvest among its members.`;
       const pages = Array.from({ length: 50 }, (_, p) =>
         Array.from({ length: 14 }, (_, n) => line(p + 1, n + 1)),
       );
-      pages[36]!.push('El plazo para solicitar el riego por goteo termina el 15 de marzo.');
+      pages[36]!.push('The deadline to request drip irrigation ends on 15 March.');
       const pdf = Buffer.from(await buildPdf(pages));
 
       const started = Date.now();
       const uploaded = await request(app)
-        .post(`/cooperativas/${cooperativeId}/documentos`)
+        .post(`/cooperatives/${cooperativeId}/documents`)
         .set('Authorization', `Bearer ${token}`)
-        .field('title', 'Memoria anual')
-        .field('category', 'cuentas')
+        .field('title', 'Annual report')
+        .field('category', 'accounts')
         .field('documentDate', '2026-06-30')
-        .attach('fichero', pdf, 'Memoria anual.pdf');
+        .attach('file', pdf, 'Annual report.pdf');
       const document = documentSummarySchema.parse(uploaded.body);
       await indexing.idle();
       const elapsed = Date.now() - started;
@@ -100,16 +100,16 @@ describe.skipIf(!modelReady)(`Ollama con ${env.EMBEDDING_MODEL} (ADR-006)`, () =
       const version = await prisma.documentVersion.findFirstOrThrow({
         where: { documentId: document.id },
       });
-      expect(version.indexingStatus).toBe('indexado');
+      expect(version.indexingStatus).toBe('indexed');
       expect(
         await prisma.documentChunk.count({ where: { documentId: document.id } }),
       ).toBeGreaterThanOrEqual(50);
-      console.info(`50 páginas indexadas en ${(elapsed / 1000).toFixed(1)} s`);
+      console.info(`50 pages indexed in ${(elapsed / 1000).toFixed(1)} s`);
       expect(elapsed).toBeLessThan(60_000);
 
       const search = await request(app)
-        .get(`/cooperativas/${cooperativeId}/documentos/buscar`)
-        .query({ q: '¿hasta cuándo puedo pedir el riego?' })
+        .get(`/cooperatives/${cooperativeId}/documents/search`)
+        .query({ q: 'until when can I request irrigation?' })
         .set('Authorization', `Bearer ${token}`);
       const [best] = searchDocumentsResponseSchema.parse(search.body).items;
       expect(best?.page).toBe(37);

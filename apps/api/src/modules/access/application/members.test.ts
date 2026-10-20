@@ -74,9 +74,9 @@ const invite = (email: string, profile = 'Socio') =>
     isPartner: true,
   });
 
-describe('permisos de gestión de miembros (HU-ACC-07)', () => {
-  it('sin «Usuarios y perfiles · gestión» se deniega antes de leer nada', async () => {
-    const gestor = contextFor(store.addMember('gestor@campo.es', 'Gestor'));
+describe('member management permissions (US-ACC-07)', () => {
+  it('without "Users and profiles · manage" it is denied before reading anything', async () => {
+    const gestor = contextFor(store.addMember('manager@campo.es', 'Gestor'));
 
     await expect(listMembers(deps, gestor)).rejects.toThrow(ModuleAccessDeniedError);
     await expect(
@@ -91,12 +91,12 @@ describe('permisos de gestión de miembros (HU-ACC-07)', () => {
   });
 });
 
-describe('invitar (HU-ACC-08)', () => {
-  it('Dado un email sin membresía, cuando lo invito, entonces se crea una membresía invitada y se envía la invitación', async () => {
+describe('invite (US-ACC-08)', () => {
+  it('Given an email without a membership, when I invite it, then an invited membership is created and the invitation is sent', async () => {
     const { membershipId } = await invite(' Grace@Campo.ES ');
 
     const member = store.members.find((m) => m.membershipId === membershipId)!;
-    expect(member).toMatchObject({ email: 'grace@campo.es', status: 'invitada', isPartner: true });
+    expect(member).toMatchObject({ email: 'grace@campo.es', status: 'invited', isPartner: true });
     expect(store.invitations.get(membershipId)).toEqual({
       tokenHash: 'sha(token-1)',
       expiresAt: new Date('2026-10-17T10:00:00Z'),
@@ -119,7 +119,7 @@ describe('invitar (HU-ACC-08)', () => {
     ]);
   });
 
-  it('Dado un email que ya tiene membresía, cuando lo invito, entonces se me informa y no se duplica', async () => {
+  it('Given an email that already has a membership, when I invite it, then I am told and nothing is duplicated', async () => {
     await invite('grace@campo.es');
 
     await expect(invite('grace@campo.es')).rejects.toThrow(MemberAlreadyExistsError);
@@ -127,8 +127,8 @@ describe('invitar (HU-ACC-08)', () => {
     expect(sent).toHaveLength(1);
   });
 
-  it('Dado un miembro dado de baja, cuando se le vuelve a dar acceso, entonces se crea una membresía nueva', async () => {
-    const old = store.addMember('grace@campo.es', 'Socio', 'baja');
+  it('Given a removed member, when they are given access again, then a new membership is created', async () => {
+    const old = store.addMember('grace@campo.es', 'Socio', 'removed');
 
     const { membershipId } = await invite('grace@campo.es');
 
@@ -136,7 +136,7 @@ describe('invitar (HU-ACC-08)', () => {
     expect(store.members.find((m) => m.membershipId === membershipId)?.userId).toBe(old.userId);
   });
 
-  it('un perfil que no es de la cooperativa se rechaza', async () => {
+  it('a profile that does not belong to the cooperative is rejected', async () => {
     await expect(
       inviteMember(deps, ctx, {
         email: 'x@campo.es',
@@ -156,8 +156,8 @@ describe('invitar (HU-ACC-08)', () => {
   });
 });
 
-describe('reenviar invitación (HU-ACC-08)', () => {
-  it('Dado una invitación pendiente, cuando la reenvío, entonces la anterior queda invalidada y se emite una nueva', async () => {
+describe('resend invitation (US-ACC-08)', () => {
+  it('Given a pending invitation, when I resend it, then the previous one is invalidated and a new one is issued', async () => {
     const { membershipId } = await invite('grace@campo.es');
     clock.advanceMinutes(60);
 
@@ -171,7 +171,7 @@ describe('reenviar invitación (HU-ACC-08)', () => {
     expect(store.audit.at(-1)?.action).toBe('member.invitation_resent');
   });
 
-  it('no se reenvía a quien ya aceptó', async () => {
+  it('it is not resent to whoever already accepted', async () => {
     const member = store.addMember('grace@campo.es', 'Socio');
 
     await expect(resendInvitation(deps, ctx, member.membershipId)).rejects.toThrow(
@@ -181,8 +181,8 @@ describe('reenviar invitación (HU-ACC-08)', () => {
   });
 });
 
-describe('cambiar perfil (HU-ACC-09)', () => {
-  it('Dado un miembro activo, cuando le asigno otro perfil, entonces queda con el nuevo y se audita', async () => {
+describe('change profile (US-ACC-09)', () => {
+  it('Given an active member, when I assign them another profile, then they have the new one and it is audited', async () => {
     const member = store.addMember('grace@campo.es', 'Socio');
 
     const updated = await changeMember(deps, ctx, member.membershipId, {
@@ -198,26 +198,26 @@ describe('cambiar perfil (HU-ACC-09)', () => {
     });
   });
 
-  it('Dado mi propia membresía, cuando intento cambiar mi perfil, entonces se rechaza', async () => {
+  it('Given my own membership, when I try to change my profile, then it is rejected', async () => {
     await expect(
       changeMember(deps, ctx, admin.membershipId, { profileId: store.profile('Socio').id }),
     ).rejects.toThrow(SelfModificationError);
     expect(store.audit).toEqual([]);
   });
 
-  it('Dado un miembro de otra cooperativa (o inexistente), cuando lo modifico, entonces no se encuentra', async () => {
+  it('Given a member of another cooperative (or a nonexistent one), when I modify them, then they are not found', async () => {
     await expect(
       changeMember(deps, ctx, UNKNOWN, { profileId: store.profile('Socio').id }),
     ).rejects.toThrow(MemberNotFoundError);
-    await expect(changeMember(deps, ctx, 'abc', { status: 'suspendida' })).rejects.toThrow(
+    await expect(changeMember(deps, ctx, 'abc', { status: 'suspended' })).rejects.toThrow(
       MemberNotFoundError,
     );
   });
 
-  it('no deja la cooperativa sin administrador activo (RN-ACC-07)', async () => {
-    // Otro administrador quita el perfil al único administrador que quedaría activo.
-    const other = store.addMember('otro@campo.es', 'Administrador');
-    admin.status = 'suspendida';
+  it('does not leave the cooperative without an active administrator (BR-ACC-07)', async () => {
+    // Another administrator removes the profile of the only administrator who would remain active.
+    const other = store.addMember('other@campo.es', 'Administrador');
+    admin.status = 'suspended';
 
     await expect(
       changeMember(deps, contextFor(admin), other.membershipId, {
@@ -226,8 +226,8 @@ describe('cambiar perfil (HU-ACC-09)', () => {
     ).rejects.toThrow(LastAdminError);
   });
 
-  it('un miembro dado de baja no cambia de perfil', async () => {
-    const member = store.addMember('grace@campo.es', 'Socio', 'baja');
+  it('a removed member cannot change profile', async () => {
+    const member = store.addMember('grace@campo.es', 'Socio', 'removed');
 
     await expect(
       changeMember(deps, ctx, member.membershipId, { profileId: store.profile('Gestor').id }),
@@ -235,39 +235,39 @@ describe('cambiar perfil (HU-ACC-09)', () => {
   });
 });
 
-describe('suspender, reactivar y dar de baja (HU-ACC-10)', () => {
-  it('Dado un miembro activo, cuando lo suspendo, entonces queda suspendido', async () => {
+describe('suspend, reactivate and remove (US-ACC-10)', () => {
+  it('Given an active member, when I suspend them, then they are suspended', async () => {
     const member = store.addMember('grace@campo.es', 'Socio');
 
-    const updated = await changeMember(deps, ctx, member.membershipId, { status: 'suspendida' });
+    const updated = await changeMember(deps, ctx, member.membershipId, { status: 'suspended' });
 
-    expect(updated.status).toBe('suspendida');
+    expect(updated.status).toBe('suspended');
     expect(store.audit.at(-1)).toMatchObject({
       action: 'member.suspended',
-      detail: { before: { status: 'activa' }, after: { status: 'suspendida' } },
+      detail: { before: { status: 'active' }, after: { status: 'suspended' } },
     });
   });
 
-  it('Dado un miembro suspendido, cuando lo reactivo, entonces recupera el acceso con su perfil', async () => {
-    const member = store.addMember('grace@campo.es', 'Gestor', 'suspendida');
+  it('Given a suspended member, when I reactivate them, then they regain access with their profile', async () => {
+    const member = store.addMember('grace@campo.es', 'Gestor', 'suspended');
 
-    const updated = await changeMember(deps, ctx, member.membershipId, { status: 'activa' });
+    const updated = await changeMember(deps, ctx, member.membershipId, { status: 'active' });
 
-    expect(updated).toMatchObject({ status: 'activa', profileName: 'Gestor' });
+    expect(updated).toMatchObject({ status: 'active', profileName: 'Gestor' });
     expect(store.audit.at(-1)?.action).toBe('member.reactivated');
   });
 
-  it('no se puede reactivar a quien no está suspendido', async () => {
-    const member = store.addMember('grace@campo.es', 'Socio', 'invitada');
+  it('someone who is not suspended cannot be reactivated', async () => {
+    const member = store.addMember('grace@campo.es', 'Socio', 'invited');
 
     await expect(
-      changeMember(deps, ctx, member.membershipId, { status: 'activa' }),
+      changeMember(deps, ctx, member.membershipId, { status: 'active' }),
     ).rejects.toThrow(InvalidMembershipTransitionError);
   });
 
-  it('Dado un miembro activo o suspendido, cuando lo doy de baja, entonces deja de aparecer en el listado', async () => {
+  it('Given an active or suspended member, when I remove them, then they no longer appear in the list', async () => {
     const active = store.addMember('grace@campo.es', 'Socio');
-    const suspended = store.addMember('ada@campo.es', 'Socio', 'suspendida');
+    const suspended = store.addMember('ada@campo.es', 'Socio', 'suspended');
 
     await removeMember(deps, ctx, active.membershipId);
     await removeMember(deps, ctx, suspended.membershipId);
@@ -277,31 +277,31 @@ describe('suspender, reactivar y dar de baja (HU-ACC-10)', () => {
     expect(store.audit.map((a) => a.action)).toEqual(['member.removed', 'member.removed']);
   });
 
-  it('la baja es definitiva: no se puede reactivar', async () => {
+  it('removal is final: it cannot be reactivated', async () => {
     const member = store.addMember('grace@campo.es', 'Socio');
     await removeMember(deps, ctx, member.membershipId);
 
     await expect(
-      changeMember(deps, ctx, member.membershipId, { status: 'activa' }),
+      changeMember(deps, ctx, member.membershipId, { status: 'active' }),
     ).rejects.toThrow(InvalidMembershipTransitionError);
   });
 
-  it('Dado mi propia membresía, cuando intento suspenderme o darme de baja, entonces se rechaza', async () => {
+  it('Given my own membership, when I try to suspend or remove myself, then it is rejected', async () => {
     await expect(
-      changeMember(deps, ctx, admin.membershipId, { status: 'suspendida' }),
+      changeMember(deps, ctx, admin.membershipId, { status: 'suspended' }),
     ).rejects.toThrow(SelfModificationError);
     await expect(removeMember(deps, ctx, admin.membershipId)).rejects.toThrow(
       SelfModificationError,
     );
   });
 
-  it('no se suspende ni se da de baja al último administrador activo (RN-ACC-07)', async () => {
-    const other = store.addMember('otro@campo.es', 'Administrador');
-    admin.status = 'suspendida';
+  it('the last active administrator is neither suspended nor removed (BR-ACC-07)', async () => {
+    const other = store.addMember('other@campo.es', 'Administrador');
+    admin.status = 'suspended';
     const actor = contextFor(admin);
 
     await expect(
-      changeMember(deps, actor, other.membershipId, { status: 'suspendida' }),
+      changeMember(deps, actor, other.membershipId, { status: 'suspended' }),
     ).rejects.toThrow(LastAdminError);
     await expect(removeMember(deps, actor, other.membershipId)).rejects.toThrow(LastAdminError);
   });

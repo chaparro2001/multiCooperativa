@@ -5,7 +5,7 @@ export interface AssemblySettings {
   minNoticeDays: number;
 }
 
-/** RN-ASA-05/08/09: per cooperative, with the specification's defaults. */
+/** BR-ASM-05/08/09: per cooperative, with the specification's defaults. */
 export interface AssemblySettingsStore {
   get(cooperativeId: string): Promise<AssemblySettings>;
 }

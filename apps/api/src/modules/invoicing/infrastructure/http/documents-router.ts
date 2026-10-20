@@ -22,14 +22,14 @@ import { formatQuantity } from '../../domain/money';
 import { toAmounts, toDeliveryNote, toInvoice, toLine } from './mappers';
 import { toThirdParty } from './third-parties-router';
 
-/** multipart/form-data: the record as JSON in «datos», the original (PDF or photo) in «fichero». */
+/** multipart/form-data: the record as JSON in “data”, the original (PDF or photo) in “file”. */
 function multipartRecord<T extends z.ZodType>(
   req: Request,
   schema: T,
 ): { data: z.infer<T>; file: useCases.UploadedFile | null } {
   let raw: unknown;
   try {
-    raw = JSON.parse(String(req.body?.datos ?? ''));
+    raw = JSON.parse(String(req.body?.data ?? ''));
   } catch {
     throw new InvalidRequestError();
   }
@@ -41,7 +41,7 @@ function multipartRecord<T extends z.ZodType>(
             .split(/[\\/]/)
             .pop()
             ?.trim()
-            .slice(0, 150) || 'documento',
+            .slice(0, 150) || 'document',
         content: new Uint8Array(req.file.buffer),
       }
     : null;
@@ -54,36 +54,36 @@ function query<T extends z.ZodType>(schema: T, value: unknown): z.infer<T> {
   return parsed.data;
 }
 
-/** HU-FAC-02/03/06/07 (requisitos/05, section 8). */
+/** US-INV-02/03/06/07 (requirements/05, section 8). */
 export function createInvoicingDocumentsRouter(
   deps: useCases.InvoicingDeps,
   requireCooperative: RequestHandler,
 ): Router {
   const router = Router();
-  const coop = '/cooperativas/:cooperativeId';
-  const read = [requireCooperative, requirePermission('facturas', 'consulta')];
-  const manage = [requireCooperative, requirePermission('facturas', 'gestion')];
+  const coop = '/cooperatives/:cooperativeId';
+  const read = [requireCooperative, requirePermission('invoicing', 'read')];
+  const manage = [requireCooperative, requirePermission('invoicing', 'manage')];
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: useCases.MAX_FILE_BYTES, files: 1, fields: 1, fieldSize: 512 * 1024 },
-  }).single('fichero');
+  }).single('file');
   const id = (req: Request, name: string) => String(req.params[name]);
 
-  // ── Albaranes ──
+  // ── Delivery notes ──
 
-  router.get(`${coop}/albaranes`, ...read, async (req, res) => {
+  router.get(`${coop}/delivery-notes`, ...read, async (req, res) => {
     const q = query(listDeliveryNotesQuerySchema, req.query);
     const notes = await useCases.listDeliveryNotes(deps, getCooperativeContext(res), {
-      operation: q.operacion,
-      thirdPartyId: q.tercero,
-      from: q.desde,
-      to: q.hasta,
-      status: q.estado,
+      operation: q.operation,
+      thirdPartyId: q.thirdParty,
+      from: q.from,
+      to: q.to,
+      status: q.status,
     });
     res.json({ items: notes.map(toDeliveryNote) } satisfies ListDeliveryNotesResponse);
   });
 
-  router.get(`${coop}/albaranes/:noteId`, ...read, async (req, res) => {
+  router.get(`${coop}/delivery-notes/:noteId`, ...read, async (req, res) => {
     const note = await useCases.getDeliveryNote(
       deps,
       getCooperativeContext(res),
@@ -92,13 +92,13 @@ export function createInvoicingDocumentsRouter(
     res.json({ ...toDeliveryNote(note), fileUrl: note.fileUrl } satisfies DeliveryNoteDetail);
   });
 
-  router.post(`${coop}/albaranes`, ...manage, upload, async (req, res) => {
+  router.post(`${coop}/delivery-notes`, ...manage, upload, async (req, res) => {
     const { data, file } = multipartRecord(req, deliveryNoteInputSchema);
     const note = await useCases.registerDeliveryNote(deps, getCooperativeContext(res), data, file);
     res.status(201).json(toDeliveryNote(note));
   });
 
-  router.post(`${coop}/albaranes/:noteId/anular`, ...manage, async (req, res) => {
+  router.post(`${coop}/delivery-notes/:noteId/void`, ...manage, async (req, res) => {
     res.json(
       toDeliveryNote(
         await useCases.cancelNote(deps, getCooperativeContext(res), id(req, 'noteId')),
@@ -106,23 +106,23 @@ export function createInvoicingDocumentsRouter(
     );
   });
 
-  // ── Facturas ──
+  // ── Invoices ──
 
-  router.get(`${coop}/facturas`, ...read, async (req, res) => {
+  router.get(`${coop}/invoices`, ...read, async (req, res) => {
     const q = query(listInvoicesQuerySchema, req.query);
     const invoices = await useCases.listInvoices(deps, getCooperativeContext(res), {
-      operation: q.operacion,
-      thirdPartyId: q.tercero,
-      from: q.desde,
-      to: q.hasta,
-      paymentStatus: q.estado,
-      reconciliationStatus: q.conciliacion,
+      operation: q.operation,
+      thirdPartyId: q.thirdParty,
+      from: q.from,
+      to: q.to,
+      paymentStatus: q.status,
+      reconciliationStatus: q.reconciliation,
     });
     res.json({ items: invoices.map(toInvoice) } satisfies ListInvoicesResponse);
   });
 
-  // Before `/:invoiceId`, which would otherwise take «resumen» as an id.
-  router.get(`${coop}/facturas/resumen`, ...read, async (_req, res) => {
+  // Before `/:invoiceId`, which would otherwise take “summary” as an id.
+  router.get(`${coop}/invoices/summary`, ...read, async (_req, res) => {
     const result = await useCases.summary(deps, getCooperativeContext(res));
     res.json({
       toPay: toAmounts(result.toPay),
@@ -132,7 +132,7 @@ export function createInvoicingDocumentsRouter(
     } satisfies InvoicingSummary);
   });
 
-  router.get(`${coop}/facturas/:invoiceId`, ...read, async (req, res) => {
+  router.get(`${coop}/invoices/:invoiceId`, ...read, async (req, res) => {
     const invoice = await useCases.getInvoice(
       deps,
       getCooperativeContext(res),
@@ -154,13 +154,13 @@ export function createInvoicingDocumentsRouter(
     } satisfies InvoiceDetail);
   });
 
-  router.post(`${coop}/facturas`, ...manage, upload, async (req, res) => {
+  router.post(`${coop}/invoices`, ...manage, upload, async (req, res) => {
     const { data, file } = multipartRecord(req, invoiceInputSchema);
     const invoice = await useCases.registerInvoice(deps, getCooperativeContext(res), data, file);
     res.status(201).json(toInvoice(invoice));
   });
 
-  router.post(`${coop}/facturas/:invoiceId/liquidar`, ...manage, async (req, res) => {
+  router.post(`${coop}/invoices/:invoiceId/settle`, ...manage, async (req, res) => {
     const { date } = parseBody(settleInvoiceRequestSchema, req.body);
     res.json(
       toInvoice(
@@ -169,7 +169,7 @@ export function createInvoicingDocumentsRouter(
     );
   });
 
-  router.post(`${coop}/facturas/:invoiceId/anular`, ...manage, async (req, res) => {
+  router.post(`${coop}/invoices/:invoiceId/void`, ...manage, async (req, res) => {
     res.json(
       toInvoice(
         await useCases.cancelInvoiceById(deps, getCooperativeContext(res), id(req, 'invoiceId')),
@@ -177,9 +177,9 @@ export function createInvoicingDocumentsRouter(
     );
   });
 
-  // ── Ficha del tercero (HU-FAC-06) ──
+  // ── Third-party sheet (US-INV-06) ──
 
-  router.get(`${coop}/terceros/:thirdPartyId`, ...read, async (req, res) => {
+  router.get(`${coop}/third-parties/:thirdPartyId`, ...read, async (req, res) => {
     const sheet = await useCases.thirdPartySheet(
       deps,
       getCooperativeContext(res),

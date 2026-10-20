@@ -17,7 +17,7 @@ export function AppConfigProvider({
 export function useAppConfig(): AppConfig {
   const config = useContext(AppConfigContext);
   if (!config) {
-    throw new Error('useAppConfig debe usarse dentro de AppConfigProvider');
+    throw new Error('useAppConfig must be used inside AppConfigProvider');
   }
   return config;
 }

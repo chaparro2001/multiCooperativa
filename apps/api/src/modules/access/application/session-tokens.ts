@@ -19,7 +19,7 @@ export interface SessionDeps {
 
 /**
  * The refresh token is "<sessionId>.<secret>": the id locates the session, so a
- * replayed old secret can be told apart from an unknown token (HU-ACC-03).
+ * replayed old secret can be told apart from an unknown token (US-ACC-03).
  */
 export function formatRefreshToken(sessionId: string, secret: string): string {
   return `${sessionId}.${secret}`;

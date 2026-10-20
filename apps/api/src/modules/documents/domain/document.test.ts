@@ -16,22 +16,22 @@ import {
 } from './errors';
 
 const valid = {
-  title: 'Estatutos sociales',
-  category: 'estatutos',
+  title: 'Corporate bylaws',
+  category: 'bylaws',
   documentDate: '2026-03-15',
 } as const;
 
-describe('subir un documento (HU-DOC-01)', () => {
-  it('queda publicado con su título, categoría y fecha', () => {
-    expect(createDocument({ ...valid, title: '  Estatutos sociales ' })).toEqual({
-      status: 'publicado',
-      title: 'Estatutos sociales',
-      category: 'estatutos',
+describe('uploading a document (US-DOC-01)', () => {
+  it('is published with its title, category and date', () => {
+    expect(createDocument({ ...valid, title: '  Corporate bylaws ' })).toEqual({
+      status: 'published',
+      title: 'Corporate bylaws',
+      category: 'bylaws',
       documentDate: '2026-03-15',
     });
   });
 
-  it('exige título, de 150 caracteres como máximo', () => {
+  it('requires a title of at most 150 characters', () => {
     expect(() => createDocument({ ...valid, title: ' ' })).toThrow(InvalidDocumentError);
     expect(() => createDocument({ ...valid, title: 'x'.repeat(TITLE_MAX_LENGTH + 1) })).toThrow(
       InvalidDocumentError,
@@ -39,63 +39,63 @@ describe('subir un documento (HU-DOC-01)', () => {
     expect(() => createDocument({ ...valid, title: 'x'.repeat(TITLE_MAX_LENGTH) })).not.toThrow();
   });
 
-  it('exige una fecha de calendario válida', () => {
+  it('requires a valid calendar date', () => {
     for (const documentDate of ['2026-02-30', '15/03/2026', '2026-3-5', '']) {
       expect(() => createDocument({ ...valid, documentDate })).toThrow(InvalidDocumentError);
     }
   });
 
-  it('exige una categoría conocida', () => {
-    expect(() => createDocument({ ...valid, category: 'facturas' as never })).toThrow(
+  it('requires a known category', () => {
+    expect(() => createDocument({ ...valid, category: 'invoices' as never })).toThrow(
       InvalidDocumentError,
     );
   });
 });
 
-describe('fichero (RN-DOC-02)', () => {
-  it('Dado un PDF de hasta 20 MB, entonces se admite', () => {
+describe('file (BR-DOC-02)', () => {
+  it('Given a PDF of up to 20 MB, then it is accepted', () => {
     expect(() => assertValidFile({ isPdf: true, size: MAX_FILE_BYTES })).not.toThrow();
   });
 
-  it('Dado un fichero que no es PDF, entonces se rechaza indicando el motivo', () => {
+  it('Given a file that is not a PDF, then it is rejected stating the reason', () => {
     expect(() => assertValidFile({ isPdf: false, size: 10 })).toThrow(
       expect.objectContaining({ reason: 'not_pdf' }),
     );
   });
 
-  it('Dado un PDF de más de 20 MB, entonces se rechaza indicando el motivo', () => {
+  it('Given a PDF of more than 20 MB, then it is rejected stating the reason', () => {
     expect(() => assertValidFile({ isPdf: true, size: MAX_FILE_BYTES + 1 })).toThrow(
       expect.objectContaining({ reason: 'too_large' }),
     );
   });
 
-  it('un fichero vacío no es un documento', () => {
+  it('an empty file is not a document', () => {
     expect(() => assertValidFile({ isPdf: true, size: 0 })).toThrow(DocumentFileRejectedError);
   });
 });
 
-describe('versiones y retirada (HU-DOC-04, HU-DOC-05)', () => {
-  it('se añade una versión a un documento publicado', () => {
+describe('versions and withdrawal (US-DOC-04, US-DOC-05)', () => {
+  it('a version is added to a published document', () => {
     expect(() => assertCanAddVersion(createDocument(valid))).not.toThrow();
   });
 
-  it('un documento retirado no admite versiones', () => {
+  it('a withdrawn document accepts no versions', () => {
     expect(() => assertCanAddVersion(withdraw(createDocument(valid)))).toThrow(
       InvalidDocumentTransitionError,
     );
   });
 
-  it('retirar es definitivo', () => {
+  it('withdrawing is final', () => {
     const withdrawn = withdraw(createDocument(valid));
-    expect(withdrawn.status).toBe('retirado');
+    expect(withdrawn.status).toBe('withdrawn');
     expect(() => withdraw(withdrawn)).toThrow(InvalidDocumentTransitionError);
   });
 });
 
-describe('visibilidad (HU-DOC-03)', () => {
-  it('con consulta solo se ven los publicados; con gestión, todos', () => {
-    expect(isVisible('publicado', false)).toBe(true);
-    expect(isVisible('retirado', false)).toBe(false);
-    expect(isVisible('retirado', true)).toBe(true);
+describe('visibility (US-DOC-03)', () => {
+  it('with read access only published ones are visible; with manage access, all of them', () => {
+    expect(isVisible('published', false)).toBe(true);
+    expect(isVisible('withdrawn', false)).toBe(false);
+    expect(isVisible('withdrawn', true)).toBe(true);
   });
 });

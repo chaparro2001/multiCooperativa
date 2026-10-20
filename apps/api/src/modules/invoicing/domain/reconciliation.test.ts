@@ -9,8 +9,8 @@ const line = (concept: string, quantity: string, unit = 'kg') => ({
   unit,
 });
 
-describe('conciliación automática (HU-FAC-04, RN-FAC-08)', () => {
-  it('sin albaranes no se concilia', () => {
+describe('automatic reconciliation (US-INV-04, BR-INV-08)', () => {
+  it('without delivery notes it is not reconciled', () => {
     expect(
       reconcile({
         invoiceLines: [line('Servicio', '1', 'ud')],
@@ -18,68 +18,71 @@ describe('conciliación automática (HU-FAC-04, RN-FAC-08)', () => {
         toleranceBasisPoints: 100,
       }),
     ).toEqual({
-      status: 'sin_albaranes',
+      status: 'no_delivery_notes',
       discrepancies: [],
     });
   });
 
-  it('Dado cantidades por concepto que coinciden, sumando varios albaranes, entonces queda conciliada', () => {
+  it('Given quantities per concept that match, adding several delivery notes, then it is reconciled', () => {
     const result = reconcile({
-      invoiceLines: [line('Abono NPK', '1500')],
-      noteLines: [line('Abono NPK', '1000'), line('abono  npk ', '500')],
+      invoiceLines: [line('Fertilizer NPK', '1500')],
+      noteLines: [line('Fertilizer NPK', '1000'), line('fertilizer  npk ', '500')],
       toleranceBasisPoints: DEFAULT_TOLERANCE_BASIS_POINTS,
     });
-    expect(result).toEqual({ status: 'conciliada', discrepancies: [] });
+    expect(result).toEqual({ status: 'reconciled', discrepancies: [] });
   });
 
-  it('dentro de la tolerancia del 1 % sigue conciliada', () => {
+  it('within the 1 % tolerance it stays reconciled', () => {
     const result = reconcile({
-      invoiceLines: [line('Gasóleo', '1010', 'l')],
-      noteLines: [line('Gasoleo', '1000', 'l')],
+      invoiceLines: [line('Diesel', '1010', 'l')],
+      noteLines: [line('Diesel', '1000', 'l')],
       toleranceBasisPoints: 100,
     });
-    expect(result.status).toBe('conciliada');
+    expect(result.status).toBe('reconciled');
   });
 
-  it('Dado una diferencia superior a la tolerancia en un concepto, entonces queda con discrepancia y el detalle', () => {
+  it('Given a difference above the tolerance in a concept, then it is left with a discrepancy and the detail', () => {
     const result = reconcile({
-      invoiceLines: [line('Gasóleo', '1011', 'l'), line('Abono', '50')],
-      noteLines: [line('Gasóleo', '1000', 'l'), line('Abono', '50')],
+      invoiceLines: [line('Diesel', '1011', 'l'), line('Fertilizer', '50')],
+      noteLines: [line('Diesel', '1000', 'l'), line('Fertilizer', '50')],
       toleranceBasisPoints: 100,
     });
     expect(result).toEqual({
-      status: 'con_discrepancia',
+      status: 'with_discrepancy',
       discrepancies: [
-        { concept: 'Gasóleo', unit: 'l', deliveredQuantity: 1000000n, invoicedQuantity: 1011000n },
+        { concept: 'Diesel', unit: 'l', deliveredQuantity: 1000000n, invoicedQuantity: 1011000n },
       ],
     });
   });
 
-  it('un concepto que aparece solo en un lado es discrepancia', () => {
+  it('a concept that appears on one side only is a discrepancy', () => {
     const result = reconcile({
-      invoiceLines: [line('Abono', '50'), line('Transporte', '1', 'ud')],
-      noteLines: [line('Abono', '50'), line('Palés', '4', 'ud')],
+      invoiceLines: [line('Fertilizer', '50'), line('Transporte', '1', 'ud')],
+      noteLines: [line('Fertilizer', '50'), line('Pallets', '4', 'ud')],
       toleranceBasisPoints: 100,
     });
     expect(result.discrepancies).toEqual([
       { concept: 'Transporte', unit: 'ud', deliveredQuantity: 0n, invoicedQuantity: 1000n },
-      { concept: 'Palés', unit: 'ud', deliveredQuantity: 4000n, invoicedQuantity: 0n },
+      { concept: 'Pallets', unit: 'ud', deliveredQuantity: 4000n, invoicedQuantity: 0n },
     ]);
   });
 
-  it('el mismo concepto en otra unidad no se mezcla', () => {
+  it('the same concept in another unit is not mixed', () => {
     const result = reconcile({
-      invoiceLines: [line('Abono', '1', 't')],
-      noteLines: [line('Abono', '1000', 'kg')],
+      invoiceLines: [line('Fertilizer', '1', 't')],
+      noteLines: [line('Fertilizer', '1000', 'kg')],
       toleranceBasisPoints: 100,
     });
-    expect(result.status).toBe('con_discrepancia');
+    expect(result.status).toBe('with_discrepancy');
     expect(result.discrepancies).toHaveLength(2);
   });
 
-  it('la tolerancia es configurable por cooperativa', () => {
-    const lines = { invoiceLines: [line('Abono', '1030')], noteLines: [line('Abono', '1000')] };
-    expect(reconcile({ ...lines, toleranceBasisPoints: 100 }).status).toBe('con_discrepancia');
-    expect(reconcile({ ...lines, toleranceBasisPoints: 500 }).status).toBe('conciliada');
+  it('the tolerance is configurable per cooperative', () => {
+    const lines = {
+      invoiceLines: [line('Fertilizer', '1030')],
+      noteLines: [line('Fertilizer', '1000')],
+    };
+    expect(reconcile({ ...lines, toleranceBasisPoints: 100 }).status).toBe('with_discrepancy');
+    expect(reconcile({ ...lines, toleranceBasisPoints: 500 }).status).toBe('reconciled');
   });
 });

@@ -22,7 +22,7 @@ import type {
   StoredFile,
 } from '../application/ports/document-stores';
 
-/** Decimals cross the boundary as exact strings, never through `number` (RN-FAC-13). */
+/** Decimals cross the boundary as exact strings, never through `number` (BR-INV-13). */
 type DecimalLike = { toFixed(digits: number): string };
 const money = (value: DecimalLike) => parseMoney(value.toFixed(2));
 const quantity = (value: DecimalLike) => parseQuantity(value.toFixed(3));
@@ -63,7 +63,7 @@ function dateRange(filter: DocumentFilter, field: string) {
   };
 }
 
-// ── Albaranes ──
+// ── Delivery notes ──
 
 const noteSelect = {
   id: true,
@@ -189,12 +189,12 @@ export class PrismaDeliveryNoteStore implements DeliveryNoteStore, StaleNotesQue
 
   countPendingBefore(cooperativeId: string, before: string): Promise<number> {
     return this.prisma.deliveryNote.count({
-      where: { cooperativeId, status: 'pendiente_facturar', date: { lt: fromDay(before) } },
+      where: { cooperativeId, status: 'pending_invoicing', date: { lt: fromDay(before) } },
     });
   }
 }
 
-// ── Facturas ──
+// ── Invoices ──
 
 const invoiceSelect = {
   id: true,
@@ -329,7 +329,7 @@ export class PrismaInvoiceStore implements InvoiceStore {
   ): Promise<InvoiceRecord | 'duplicate' | null> {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        // RN-FAC-05: lock the notes so two invoices cannot take the same one.
+        // BR-INV-05: lock the notes so two invoices cannot take the same one.
         const ids = data.deliveryNoteIds;
         if (ids.length > 0) {
           await tx.$queryRaw`
@@ -383,7 +383,7 @@ export class PrismaInvoiceStore implements InvoiceStore {
         if (ids.length > 0) {
           await tx.deliveryNote.updateMany({
             where: { id: { in: ids } },
-            data: { status: 'facturado', invoiceId: invoice.id },
+            data: { status: 'invoiced', invoiceId: invoice.id },
           });
         }
         return toInvoice(
@@ -412,11 +412,11 @@ export class PrismaInvoiceStore implements InvoiceStore {
           settledAt: next.settledAt ? fromDay(next.settledAt) : null,
         },
       });
-      if (next.paymentStatus === 'anulada' && current.paymentStatus !== 'anulada') {
+      if (next.paymentStatus === 'voided' && current.paymentStatus !== 'voided') {
         // Its notes become available for the invoice that replaces it.
         await tx.deliveryNote.updateMany({
           where: { invoiceId: id },
-          data: { status: 'pendiente_facturar', invoiceId: null },
+          data: { status: 'pending_invoicing', invoiceId: null },
         });
       }
       return toInvoice(
@@ -431,7 +431,7 @@ export class PrismaInvoiceStore implements InvoiceStore {
       where: {
         cooperativeId,
         ...(thirdPartyId && { thirdPartyId }),
-        paymentStatus: { in: ['pendiente', 'vencida'] },
+        paymentStatus: { in: ['pending', 'overdue'] },
       },
       _sum: { total: true },
       _count: true,
@@ -448,8 +448,8 @@ export class PrismaInvoiceStore implements InvoiceStore {
     return this.prisma.invoice.count({
       where: {
         cooperativeId,
-        reconciliationStatus: 'con_discrepancia',
-        paymentStatus: { in: ['pendiente', 'vencida'] },
+        reconciliationStatus: 'with_discrepancy',
+        paymentStatus: { in: ['pending', 'overdue'] },
       },
     });
   }

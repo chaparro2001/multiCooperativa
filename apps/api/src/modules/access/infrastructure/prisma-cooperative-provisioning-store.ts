@@ -58,7 +58,7 @@ export class PrismaCooperativeProvisioningStore implements CooperativeProvisioni
           userId: adminUserId,
           cooperativeId: cooperative.id,
           profileId: profileIds.get(data.adminProfileName)!,
-          status: 'activa',
+          status: 'active',
         },
       });
 

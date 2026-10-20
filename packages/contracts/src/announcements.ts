@@ -1,38 +1,38 @@
 import { z } from 'zod';
 
-export const announcementStatusSchema = z.enum(['borrador', 'publicado', 'retirado']);
+export const announcementStatusSchema = z.enum(['draft', 'published', 'withdrawn']);
 
 const isoDate = z.iso.datetime();
 
-/** Lo que devuelven crear, editar, publicar y retirar. */
+/** What create, edit, publish and withdraw return. */
 export const announcementSchema = z.object({
   id: z.uuid(),
   title: z.string(),
-  /** Texto plano: la app lo muestra tal cual, sin interpretar HTML (RNF-COM-02). */
+  /** Plain text: the app shows it as is, without interpreting HTML (NFR-ANN-02). */
   body: z.string(),
   status: announcementStatusSchema,
   pinned: z.boolean(),
   createdAt: isoDate,
   publishedAt: isoDate.nullable(),
-  /** Si no es nulo, la app lo muestra como «editado» (HU-COM-05). */
+  /** If not null, the app shows it as "edited" (US-ANN-05). */
   editedAt: isoDate.nullable(),
 });
 
 export const announcementSummarySchema = announcementSchema.omit({ body: true }).extend({
   authorName: z.string().nullable(),
   attachmentCount: z.number().int().min(0),
-  /** HU-COM-02: leído por quien consulta. */
+  /** US-ANN-02: read by the requester. */
   read: z.boolean(),
 });
 
-/** GET /cooperativas/{id}/comunicados?offset=N: páginas de 20 (HU-COM-02). */
+/** GET /cooperatives/{id}/announcements?offset=N: pages of 20 (US-ANN-02). */
 export const listAnnouncementsQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
 export const listAnnouncementsResponseSchema = z.object({
   items: z.array(announcementSummarySchema),
-  /** Offset de la página siguiente, o nulo si no hay más. */
+  /** Offset of the next page, or null if there are no more. */
   nextOffset: z.number().int().nullable(),
 });
 
@@ -42,29 +42,29 @@ export const announcementAttachmentSchema = z.object({
   size: z.number().int(),
 });
 
-/** GET /cooperativas/{id}/comunicados/{comunicadoId}: registra la lectura (HU-COM-03). */
+/** GET /cooperatives/{id}/announcements/{announcementId}: records the read (US-ANN-03). */
 export const announcementDetailSchema = announcementSchema.extend({
   authorName: z.string().nullable(),
-  /** `url` firmada que caduca a los 5 minutos (RNF-COM-03): se pide de nuevo al abrir. */
+  /** Signed `url` that expires after 5 minutes (NFR-ANN-03): requested again on open. */
   attachments: z.array(announcementAttachmentSchema.extend({ url: z.url() })),
-  /** HU-COM-07: solo con gestión y una vez publicado. */
+  /** US-ANN-07: only with manage access and once published. */
   readStats: z.object({ readCount: z.number().int(), activeMembers: z.number().int() }).nullable(),
 });
 
-/** POST /cooperativas/{id}/comunicados: un borrador puede ir incompleto (RN-COM-04 se exige al publicar). */
+/** POST /cooperatives/{id}/announcements: a draft may be incomplete (BR-ANN-04 is enforced on publish). */
 export const createAnnouncementRequestSchema = z.object({
   title: z.string().max(120),
   body: z.string().max(5000),
 });
 
-/** PATCH /cooperativas/{id}/comunicados/{comunicadoId}: editar (HU-COM-05) y fijar (HU-COM-06). */
+/** PATCH /cooperatives/{id}/announcements/{announcementId}: edit (US-ANN-05) and pin (US-ANN-06). */
 export const updateAnnouncementRequestSchema = z
   .strictObject({
     title: z.string().max(120).optional(),
     body: z.string().max(5000).optional(),
     pinned: z.boolean().optional(),
   })
-  .refine((changes) => Object.keys(changes).length > 0, { message: 'Nada que cambiar' });
+  .refine((changes) => Object.keys(changes).length > 0, { message: 'Nothing to change' });
 
 export type AnnouncementStatus = z.infer<typeof announcementStatusSchema>;
 export type Announcement = z.infer<typeof announcementSchema>;

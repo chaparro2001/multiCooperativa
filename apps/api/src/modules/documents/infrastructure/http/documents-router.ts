@@ -29,13 +29,13 @@ import { MAX_FILE_BYTES } from '../../domain/document';
 function uploadedFile(req: Request): UploadedFile {
   if (!req.file) throw new InvalidRequestError();
   const decoded = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
-  const name = decoded.split(/[\\/]/).pop()?.trim().slice(0, 200) || 'documento.pdf';
+  const name = decoded.split(/[\\/]/).pop()?.trim().slice(0, 200) || 'document.pdf';
   return { name, content: new Uint8Array(req.file.buffer) };
 }
 
-/** The indexing state is a «gestión» concern (HU-DOC-06). */
+/** The indexing state is a “manage” concern (US-DOC-06). */
 function toSummary(document: DocumentWithCurrent, context: CooperativeContext): DocumentSummary {
-  const manager = hasAccess(context.permissions, 'documentos', 'gestion');
+  const manager = hasAccess(context.permissions, 'documents', 'manage');
   return {
     id: document.id,
     title: document.title,
@@ -47,27 +47,27 @@ function toSummary(document: DocumentWithCurrent, context: CooperativeContext): 
   };
 }
 
-/** HTTP adapter of the documents module (requisitos/03, section 8). */
+/** HTTP adapter of the documents module (requirements/03, section 8). */
 export function createDocumentsRouter(
   deps: DocumentDeps & IndexingDeps & { embedder: Embedder; index: FragmentIndex },
   requireCooperative: RequestHandler,
 ): Router {
   const router = Router();
-  const base = '/cooperativas/:cooperativeId/documentos';
-  const read = [requireCooperative, requirePermission('documentos', 'consulta')];
-  const manage = [requireCooperative, requirePermission('documentos', 'gestion')];
-  // In memory with a hard limit at 20 MB (RN-DOC-02).
+  const base = '/cooperatives/:cooperativeId/documents';
+  const read = [requireCooperative, requirePermission('documents', 'read')];
+  const manage = [requireCooperative, requirePermission('documents', 'manage')];
+  // In memory with a hard limit at 20 MB (BR-DOC-02).
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: MAX_FILE_BYTES, files: 1, fields: 3 },
-  }).single('fichero');
+  }).single('file');
 
   router.get(base, ...read, async (req, res) => {
     const query = listDocumentsQuerySchema.safeParse(req.query);
     if (!query.success) throw new InvalidRequestError();
     const context = getCooperativeContext(res);
     const documents = await useCases.listDocuments(deps, context, {
-      category: query.data.categoria,
+      category: query.data.category,
       search: query.data.q,
     });
     res.json({
@@ -75,8 +75,8 @@ export function createDocumentsRouter(
     } satisfies ListDocumentsResponse);
   });
 
-  // Before `/:documentId`, which would otherwise take «buscar» as an id.
-  router.get(`${base}/buscar`, ...read, async (req, res) => {
+  // Before `/:documentId`, which would otherwise take “search” as an id.
+  router.get(`${base}/search`, ...read, async (req, res) => {
     const query = searchDocumentsQuerySchema.safeParse(req.query);
     if (!query.success) throw new InvalidRequestError();
     const hits = await useCases.searchDocuments(deps, getCooperativeContext(res), query.data.q);
@@ -105,7 +105,7 @@ export function createDocumentsRouter(
     } satisfies DocumentDetail);
   });
 
-  // multipart/form-data: «title», «category», «documentDate» and the PDF in «fichero».
+  // multipart/form-data: “title”, “category”, “documentDate” and the PDF in “file”.
   router.post(base, ...manage, upload, async (req, res) => {
     const fields = parseBody(uploadDocumentFieldsSchema, req.body);
     const context = getCooperativeContext(res);
@@ -113,7 +113,7 @@ export function createDocumentsRouter(
     res.status(201).json(toSummary(document, context));
   });
 
-  router.post(`${base}/:documentId/versiones`, ...manage, upload, async (req, res) => {
+  router.post(`${base}/:documentId/versions`, ...manage, upload, async (req, res) => {
     const context = getCooperativeContext(res);
     const document = await useCases.addVersion(
       deps,
@@ -124,7 +124,7 @@ export function createDocumentsRouter(
     res.status(201).json(toSummary(document, context));
   });
 
-  router.get(`${base}/:documentId/versiones`, ...manage, async (req, res) => {
+  router.get(`${base}/:documentId/versions`, ...manage, async (req, res) => {
     const versions = await useCases.listVersions(
       deps,
       getCooperativeContext(res),
@@ -143,7 +143,7 @@ export function createDocumentsRouter(
     } satisfies ListDocumentVersionsResponse);
   });
 
-  router.post(`${base}/:documentId/retirar`, ...manage, async (req, res) => {
+  router.post(`${base}/:documentId/withdraw`, ...manage, async (req, res) => {
     await useCases.withdrawDocument(
       deps,
       getCooperativeContext(res),
@@ -152,8 +152,8 @@ export function createDocumentsRouter(
     res.status(204).end();
   });
 
-  // HU-DOC-06: answers at once; the indexing runs in the background.
-  router.post(`${base}/:documentId/reindexar`, ...manage, async (req, res) => {
+  // US-DOC-06: answers at once; the indexing runs in the background.
+  router.post(`${base}/:documentId/reindex`, ...manage, async (req, res) => {
     await useCases.reindexDocument(deps, getCooperativeContext(res), String(req.params.documentId));
     res.status(202).end();
   });

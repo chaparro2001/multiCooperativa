@@ -6,9 +6,9 @@ import {
 import { assertTotal, parseMoney, parseQuantity, parseVatRate } from './money';
 import { isValidNif, normalizeNif } from './nif';
 
-export type Operation = 'compra' | 'venta';
+export type Operation = 'purchase' | 'sale';
 
-/** A calendar day, AAAA-MM-DD: compared as text, never through time zones. */
+/** A calendar day, YYYY-MM-DD: compared as text, never through time zones. */
 export type Day = string;
 
 function assertDay(value: string, what: string): Day {
@@ -18,7 +18,7 @@ function assertDay(value: string, what: string): Day {
     Number.isNaN(date.getTime()) ||
     !date.toISOString().startsWith(value)
   ) {
-    throw new InvalidDocumentError(`${what} no es una fecha válida.`);
+    throw new InvalidDocumentError(`${what} is not a valid date.`);
   }
   return value;
 }
@@ -31,12 +31,12 @@ export function addDays(day: Day, days: number): Day {
 
 function text(value: string, max: number, what: string): string {
   const trimmed = value.trim();
-  if (!trimmed) throw new InvalidDocumentError(`Falta ${what}.`);
-  if (trimmed.length > max) throw new InvalidDocumentError(`${what} supera los ${max} caracteres.`);
+  if (!trimmed) throw new InvalidDocumentError(`${what} is missing.`);
+  if (trimmed.length > max) throw new InvalidDocumentError(`${what} exceeds ${max} characters.`);
   return trimmed;
 }
 
-// ── Terceros (HU-FAC-01) ──
+// ── Third parties (US-INV-01) ──
 
 export interface ThirdPartyState {
   readonly nif: string;
@@ -59,14 +59,14 @@ export interface ThirdPartyInput {
 
 function validThirdParty(input: Omit<ThirdPartyInput, 'nif'>) {
   const name = input.name.trim();
-  if (!name) throw new InvalidThirdPartyError('Falta la razón social.');
-  if (name.length > 200) throw new InvalidThirdPartyError('La razón social es demasiado larga.');
+  if (!name) throw new InvalidThirdPartyError('The company name is missing.');
+  if (name.length > 200) throw new InvalidThirdPartyError('The company name is too long.');
   if (!input.isSupplier && !input.isCustomer) {
-    throw new InvalidThirdPartyError('Indica si es proveedor, cliente o ambos.');
+    throw new InvalidThirdPartyError('Say whether it is a supplier, a customer or both.');
   }
   const email = input.email?.trim() || null;
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new InvalidThirdPartyError('El email no es válido.');
+    throw new InvalidThirdPartyError('The email is not valid.');
   }
   return {
     name,
@@ -80,13 +80,11 @@ function validThirdParty(input: Omit<ThirdPartyInput, 'nif'>) {
 export function createThirdParty(input: ThirdPartyInput): ThirdPartyState {
   const nif = normalizeNif(input.nif);
   if (!isValidNif(nif))
-    throw new InvalidThirdPartyError(
-      'El NIF no es válido: revisa la letra o el dígito de control.',
-    );
+    throw new InvalidThirdPartyError('The NIF is not valid: check the letter or the check digit.');
   return { nif, ...validThirdParty(input), active: true };
 }
 
-/** The NIF identifies the party in the cooperative (RN-FAC-02): it is not edited. */
+/** The NIF identifies the party in the cooperative (BR-INV-02): it is not edited. */
 export function editThirdParty<T extends ThirdPartyState>(
   party: T,
   input: Omit<ThirdPartyInput, 'nif'>,
@@ -94,26 +92,26 @@ export function editThirdParty<T extends ThirdPartyState>(
   return { ...party, ...validThirdParty(input) };
 }
 
-/** RN-FAC-14: never deleted; it stops being offered for new records. */
+/** BR-INV-14: never deleted; it stops being offered for new records. */
 export const deactivate = <T extends ThirdPartyState>(party: T): T => ({ ...party, active: false });
 export const reactivate = <T extends ThirdPartyState>(party: T): T => ({ ...party, active: true });
 
-/** RN-FAC-03. */
+/** BR-INV-03. */
 export function assertCanOperate(party: ThirdPartyState, operation: Operation): void {
-  if (!party.active) throw new InvalidThirdPartyError('El tercero está desactivado.');
-  if (operation === 'compra' && !party.isSupplier) {
-    throw new InvalidThirdPartyError('Una compra necesita un tercero dado de alta como proveedor.');
+  if (!party.active) throw new InvalidThirdPartyError('The third party is deactivated.');
+  if (operation === 'purchase' && !party.isSupplier) {
+    throw new InvalidThirdPartyError('A purchase needs a third party registered as a supplier.');
   }
-  if (operation === 'venta' && !party.isCustomer) {
-    throw new InvalidThirdPartyError('Una venta necesita un tercero dado de alta como cliente.');
+  if (operation === 'sale' && !party.isCustomer) {
+    throw new InvalidThirdPartyError('A sale needs a third party registered as a customer.');
   }
 }
 
-// ── Líneas ──
+// ── Lines ──
 
 export interface Line {
   readonly concept: string;
-  /** Thousandths (RN-FAC-13). */
+  /** Thousandths (BR-INV-13). */
   readonly quantity: bigint;
   readonly unit: string;
 }
@@ -128,18 +126,18 @@ function validLines(lines: LineInput[]): Line[] {
   return lines.map((line, i) => {
     const quantity = parseQuantity(line.quantity);
     if (quantity <= 0n)
-      throw new InvalidDocumentError(`Línea ${i + 1}: la cantidad debe ser mayor que cero.`);
+      throw new InvalidDocumentError(`Line ${i + 1}: the quantity must be greater than zero.`);
     return {
-      concept: text(line.concept, 200, `el concepto de la línea ${i + 1}`),
+      concept: text(line.concept, 200, `The concept of line ${i + 1}`),
       quantity,
-      unit: text(line.unit, 20, `la unidad de la línea ${i + 1}`),
+      unit: text(line.unit, 20, `The unit of line ${i + 1}`),
     };
   });
 }
 
-// ── Albaranes (HU-FAC-02) ──
+// ── Delivery notes (US-INV-02) ──
 
-export type DeliveryNoteStatus = 'pendiente_facturar' | 'facturado' | 'anulado';
+export type DeliveryNoteStatus = 'pending_invoicing' | 'invoiced' | 'voided';
 
 export interface DeliveryNoteState {
   readonly operation: Operation;
@@ -156,26 +154,29 @@ export function createDeliveryNote(input: {
   lines: LineInput[];
 }): DeliveryNoteState {
   const lines = validLines(input.lines);
-  if (lines.length === 0) throw new InvalidDocumentError('El albarán necesita al menos una línea.');
+  if (lines.length === 0)
+    throw new InvalidDocumentError('The delivery note needs at least one line.');
   return {
     operation: input.operation,
-    number: text(input.number, 50, 'el número de albarán'),
-    date: assertDay(input.date, 'La fecha del albarán'),
-    status: 'pendiente_facturar',
+    number: text(input.number, 50, 'The delivery note number'),
+    date: assertDay(input.date, 'The delivery note date'),
+    status: 'pending_invoicing',
     lines,
   };
 }
 
 export function cancelDeliveryNote<T extends { status: DeliveryNoteStatus }>(note: T): T {
-  if (note.status !== 'pendiente_facturar') {
-    throw new InvalidInvoiceTransitionError('Solo se anula un albarán pendiente de facturar.');
+  if (note.status !== 'pending_invoicing') {
+    throw new InvalidInvoiceTransitionError(
+      'Only a delivery note pending invoicing can be voided.',
+    );
   }
-  return { ...note, status: 'anulado' };
+  return { ...note, status: 'voided' };
 }
 
-// ── Facturas (HU-FAC-03, HU-FAC-07) ──
+// ── Invoices (US-INV-03, US-INV-07) ──
 
-export type PaymentStatus = 'pendiente' | 'vencida' | 'liquidada' | 'anulada';
+export type PaymentStatus = 'pending' | 'overdue' | 'settled' | 'voided';
 
 export interface InvoiceState {
   readonly operation: Operation;
@@ -205,71 +206,73 @@ export interface InvoiceInput {
 }
 
 export function createInvoice(input: InvoiceInput): InvoiceState {
-  const issueDate = assertDay(input.issueDate, 'La fecha de emisión');
-  const dueDate = assertDay(input.dueDate, 'La fecha de vencimiento');
+  const issueDate = assertDay(input.issueDate, 'The issue date');
+  const dueDate = assertDay(input.dueDate, 'The due date');
   if (dueDate < issueDate)
-    throw new InvalidDocumentError('El vencimiento no puede ser anterior a la emisión.');
+    throw new InvalidDocumentError('The due date cannot be earlier than the issue date.');
   const base = parseMoney(input.base);
   const vatRate = parseVatRate(input.vatRate);
   const total = parseMoney(input.total);
   assertTotal(base, vatRate, total);
   return {
     operation: input.operation,
-    number: text(input.number, 50, 'el número de factura'),
+    number: text(input.number, 50, 'The invoice number'),
     issueDate,
     dueDate,
     base,
     vatRate,
     total,
     lines: validLines(input.lines),
-    paymentStatus: 'pendiente',
+    paymentStatus: 'pending',
     settledAt: null,
   };
 }
 
-/** RN-FAC-05 and RN-FAC-06: pending notes of the same party and operation. */
+/** BR-INV-05 and BR-INV-06: pending notes of the same party and operation. */
 export function assertCanGroup(
   invoice: { operation: Operation; thirdPartyId: string; lines: readonly Line[] },
   notes: { thirdPartyId: string; operation: Operation; status: DeliveryNoteStatus }[],
 ): void {
   if (notes.length === 0) return;
   if (invoice.lines.length === 0) {
-    throw new InvalidDocumentError('Para conciliar con albaranes, indica las líneas facturadas.');
+    throw new InvalidDocumentError('To reconcile with delivery notes, provide the invoiced lines.');
   }
   for (const note of notes) {
     if (note.thirdPartyId !== invoice.thirdPartyId) {
-      throw new InvalidDocumentError('Hay un albarán de otro tercero.');
+      throw new InvalidDocumentError('There is a delivery note from another third party.');
     }
     if (note.operation !== invoice.operation)
-      throw new InvalidDocumentError('Hay un albarán de otra operación.');
-    if (note.status === 'facturado') throw new InvalidDocumentError('Hay un albarán ya facturado.');
-    if (note.status === 'anulado') throw new InvalidDocumentError('Hay un albarán anulado.');
+      throw new InvalidDocumentError('There is a delivery note of another operation.');
+    if (note.status === 'invoiced')
+      throw new InvalidDocumentError('There is an already invoiced delivery note.');
+    if (note.status === 'voided')
+      throw new InvalidDocumentError('There is a voided delivery note.');
   }
 }
 
-/** RN-FAC-09; RN-FAC-10: a settled invoice never goes back. */
+/** BR-INV-09; BR-INV-10: a settled invoice never goes back. */
 export function markOverdue<T extends { paymentStatus: PaymentStatus; dueDate: Day }>(
   invoice: T,
   today: Day,
 ): T {
-  return invoice.paymentStatus === 'pendiente' && invoice.dueDate < today
-    ? { ...invoice, paymentStatus: 'vencida' }
+  return invoice.paymentStatus === 'pending' && invoice.dueDate < today
+    ? { ...invoice, paymentStatus: 'overdue' }
     : invoice;
 }
 
 export const DUE_SOON_DAYS = 3;
 
 /**
- * HU-FAC-07: due within the next 3 days. A window rather than an exact day, so
+ * US-INV-07: due within the next 3 days. A window rather than an exact day, so
  * a day the daily process does not run loses no notice; the reminder record
- * keeps it from being sent twice (RNF-FAC-04).
+ * keeps it from being sent twice (NFR-INV-04).
  */
 export function isDueSoon(
   invoice: { paymentStatus: PaymentStatus; dueDate: Day },
   today: Day,
 ): boolean {
   return (
-    invoice.paymentStatus === 'pendiente' &&
+    invoice.paymentStatus === 'pending' &&
     invoice.dueDate >= today &&
     invoice.dueDate <= addDays(today, DUE_SOON_DAYS)
   );
@@ -280,16 +283,16 @@ export function settle<T extends { paymentStatus: PaymentStatus; settledAt: Day 
   invoice: T,
   on: string,
 ): T {
-  if (invoice.paymentStatus !== 'pendiente' && invoice.paymentStatus !== 'vencida') {
-    throw new InvalidInvoiceTransitionError('Solo se liquida una factura pendiente o vencida.');
+  if (invoice.paymentStatus !== 'pending' && invoice.paymentStatus !== 'overdue') {
+    throw new InvalidInvoiceTransitionError('Only a pending or overdue invoice can be settled.');
   }
-  return { ...invoice, paymentStatus: 'liquidada', settledAt: assertDay(on, 'La fecha de pago') };
+  return { ...invoice, paymentStatus: 'settled', settledAt: assertDay(on, 'The payment date') };
 }
 
-/** «Se registra la nueva y se anula la anterior»: its notes go back to pending. */
+/** “Register the new one and void the old one”: its notes go back to pending. */
 export function cancelInvoice<T extends { paymentStatus: PaymentStatus }>(invoice: T): T {
-  if (invoice.paymentStatus !== 'pendiente' && invoice.paymentStatus !== 'vencida') {
-    throw new InvalidInvoiceTransitionError('Solo se anula una factura pendiente o vencida.');
+  if (invoice.paymentStatus !== 'pending' && invoice.paymentStatus !== 'overdue') {
+    throw new InvalidInvoiceTransitionError('Only a pending or overdue invoice can be voided.');
   }
-  return { ...invoice, paymentStatus: 'anulada' };
+  return { ...invoice, paymentStatus: 'voided' };
 }

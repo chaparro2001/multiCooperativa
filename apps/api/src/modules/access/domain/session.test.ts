@@ -14,28 +14,28 @@ function session(overrides: Partial<Parameters<typeof checkRefresh>[0]> = {}) {
   };
 }
 
-describe('sesión (RNF-ACC-02)', () => {
-  it('el token de refresco vale 30 días', () => {
+describe('session (NFR-ACC-02)', () => {
+  it('the refresh token is valid for 30 days', () => {
     expect(sessionExpiry(now)).toEqual(new Date(now.getTime() + SESSION_TTL_DAYS * DAY_IN_MS));
   });
 
-  it('acepta el token de refresco vigente de una sesión no caducada', () => {
+  it('accepts the current refresh token of a non-expired session', () => {
     expect(checkRefresh(session(), 'hash-vigente', now)).toBe('valid');
   });
 
-  it('HU-ACC-03: Dado un token de refresco ya utilizado, cuando se usa de nuevo, entonces se detecta la reutilización', () => {
+  it('US-ACC-03: Given an already used refresh token, when it is used again, then the reuse is detected', () => {
     expect(checkRefresh(session(), 'hash-anterior', now)).toBe('reused');
   });
 
-  it('rechaza una sesión revocada aunque el token coincida', () => {
+  it('rejects a revoked session even if the token matches', () => {
     expect(checkRefresh(session({ revokedAt: now }), 'hash-vigente', now)).toBe('revoked');
   });
 
-  it('una sesión ya revocada no vuelve a contar como reutilización', () => {
+  it('an already revoked session does not count as reuse again', () => {
     expect(checkRefresh(session({ revokedAt: now }), 'hash-anterior', now)).toBe('revoked');
   });
 
-  it('rechaza una sesión caducada', () => {
+  it('rejects an expired session', () => {
     expect(checkRefresh(session({ expiresAt: now }), 'hash-vigente', now)).toBe('expired');
   });
 });

@@ -2,7 +2,7 @@ import type { IndexingStatus } from '../../domain/document';
 
 export interface VersionToIndex {
   fileKey: string;
-  /** Only the current version of a published document is indexed (RN-DOC-04). */
+  /** Only the current version of a published document is indexed (BR-DOC-04). */
   indexable: boolean;
 }
 
@@ -12,7 +12,7 @@ export interface PendingVersion {
   versionId: string;
 }
 
-/** Bookkeeping of the indexing state of each version (HU-DOC-06). */
+/** Bookkeeping of the indexing state of each version (US-DOC-06). */
 export interface IndexingStore {
   findVersion(
     cooperativeId: string,

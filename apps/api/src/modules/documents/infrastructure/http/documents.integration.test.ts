@@ -24,8 +24,8 @@ const prisma = createTestPrisma();
 const files = new S3FileStorage(s3SettingsFromEnv(env));
 const events: AppEvent[] = [];
 const bus = new InProcessEventBus<AppEvent>({ onHandlerError: () => {} });
-bus.subscribe('DocumentoPublicado', (event) => void events.push(event));
-bus.subscribe('DocumentoRetirado', (event) => void events.push(event));
+bus.subscribe('DocumentPublished', (event) => void events.push(event));
+bus.subscribe('DocumentWithdrawn', (event) => void events.push(event));
 const invitationSender = { send: async () => {} };
 const { app, indexing } = createApi({
   embedder: new HashingEmbedder(),
@@ -37,11 +37,11 @@ const { app, indexing } = createApi({
   authRateLimits: false,
 });
 
-let campo: string;
-let mar: string;
+let coop: string;
+let sea: string;
 let admin: string;
-let socio: string;
-let marAdmin: string;
+let member: string;
+let seaAdmin: string;
 
 const as = (token: string) => ({ Authorization: `Bearer ${token}` });
 const pdf = (text: string) => Buffer.from(`%PDF-1.4\n${text}\n%%EOF`);
@@ -57,41 +57,41 @@ beforeEach(async () => {
   await resetDatabase(prisma);
   events.length = 0;
   const access = createAccessModule({ prisma, jwtSecret: env.JWT_SECRET, invitationSender });
-  campo = (
+  coop = (
     await access.provisionCooperative({
-      name: 'Campo',
+      name: 'Farm',
       cif: 'F12345674',
-      admin: { email: 'admin@campo.test', name: 'Ana', password: PASSWORD },
+      admin: { email: 'admin@coop.test', name: 'Ana', password: PASSWORD },
     })
   ).cooperativeId;
-  mar = (
+  sea = (
     await access.provisionCooperative({
-      name: 'Mar',
+      name: 'Sea',
       cif: 'F76543214',
-      admin: { email: 'admin@mar.test', name: 'Rosa', password: PASSWORD },
+      admin: { email: 'admin@sea.test', name: 'Rosa', password: PASSWORD },
     })
   ).cooperativeId;
   const { passwordHash } = await prisma.user.findUniqueOrThrow({
-    where: { email: 'admin@campo.test' },
+    where: { email: 'admin@coop.test' },
   });
   const profile = await prisma.profile.findFirstOrThrow({
-    where: { cooperativeId: campo, name: 'Socio' },
+    where: { cooperativeId: coop, name: 'Socio' },
   });
   const user = await prisma.user.create({
-    data: { email: 'socio@campo.test', name: 'Javier', passwordHash },
+    data: { email: 'member@coop.test', name: 'Javier', passwordHash },
   });
   await prisma.membership.create({
-    data: { userId: user.id, cooperativeId: campo, profileId: profile.id, status: 'activa' },
+    data: { userId: user.id, cooperativeId: coop, profileId: profile.id, status: 'active' },
   });
-  [admin, socio, marAdmin] = await Promise.all([
-    login('admin@campo.test'),
-    login('socio@campo.test'),
-    login('admin@mar.test'),
+  [admin, member, seaAdmin] = await Promise.all([
+    login('admin@coop.test'),
+    login('member@coop.test'),
+    login('admin@sea.test'),
   ]);
 });
 afterAll(() => prisma.$disconnect());
 
-const base = () => `/cooperativas/${campo}/documentos`;
+const base = () => `/cooperatives/${coop}/documents`;
 
 async function upload(
   title: string,
@@ -99,89 +99,87 @@ async function upload(
   documentDate: string,
   content: Uint8Array = pdf(title),
   token = admin,
-  cooperativeId = campo,
+  cooperativeId = coop,
 ) {
   return request(app)
-    .post(`/cooperativas/${cooperativeId}/documentos`)
+    .post(`/cooperatives/${cooperativeId}/documents`)
     .set(as(token))
     .field('title', title)
     .field('category', category)
     .field('documentDate', documentDate)
-    .attach('fichero', Buffer.from(content), `${title}.pdf`);
+    .attach('file', Buffer.from(content), `${title}.pdf`);
 }
 
-describe('documentos por HTTP (HU-DOC-01..05)', () => {
-  it('subir → listar y filtrar → abrir y descargar → nueva versión → historial → retirar', async () => {
-    const created = await upload('Estatutos sociales', 'estatutos', '2024-05-10');
+describe('documents over HTTP (US-DOC-01..05)', () => {
+  it('upload → list and filter → open and download → new version → history → withdraw', async () => {
+    const created = await upload('Corporate bylaws', 'bylaws', '2024-05-10');
     expect(created.status).toBe(201);
     const document = documentSummarySchema.parse(created.body);
-    expect(document).toMatchObject({ status: 'publicado', indexingStatus: 'pendiente' });
-    await upload('Acta de marzo', 'actas', '2026-03-31');
+    expect(document).toMatchObject({ status: 'published', indexingStatus: 'pending' });
+    await upload('March minutes', 'minutes', '2026-03-31');
 
     const all = listDocumentsResponseSchema.parse(
-      (await request(app).get(base()).set(as(socio))).body,
+      (await request(app).get(base()).set(as(member))).body,
     );
-    expect(all.items.map((d) => d.title)).toEqual(['Acta de marzo', 'Estatutos sociales']);
+    expect(all.items.map((d) => d.title)).toEqual(['March minutes', 'Corporate bylaws']);
     expect(all.items[0]?.indexingStatus).toBeNull();
     const actas = listDocumentsResponseSchema.parse(
-      (await request(app).get(base()).query({ categoria: 'actas' }).set(as(socio))).body,
+      (await request(app).get(base()).query({ category: 'minutes' }).set(as(member))).body,
     );
-    expect(actas.items.map((d) => d.title)).toEqual(['Acta de marzo']);
+    expect(actas.items.map((d) => d.title)).toEqual(['March minutes']);
     const search = listDocumentsResponseSchema.parse(
-      (await request(app).get(base()).query({ q: 'ESTATUTOS' }).set(as(socio))).body,
+      (await request(app).get(base()).query({ q: 'BYLAWS' }).set(as(member))).body,
     );
-    expect(search.items.map((d) => d.title)).toEqual(['Estatutos sociales']);
+    expect(search.items.map((d) => d.title)).toEqual(['Corporate bylaws']);
 
     const detail = documentDetailSchema.parse(
-      (await request(app).get(`${base()}/${document.id}`).set(as(socio))).body,
+      (await request(app).get(`${base()}/${document.id}`).set(as(member))).body,
     );
     const download = await fetch(detail.url);
-    expect(Buffer.from(await download.arrayBuffer())).toEqual(pdf('Estatutos sociales'));
+    expect(Buffer.from(await download.arrayBuffer())).toEqual(pdf('Corporate bylaws'));
 
     const versioned = await request(app)
-      .post(`${base()}/${document.id}/versiones`)
+      .post(`${base()}/${document.id}/versions`)
       .set(as(admin))
-      .attach('fichero', pdf('Estatutos 2026'), 'Estatutos 2026.pdf');
+      .attach('file', pdf('Bylaws 2026'), 'Bylaws 2026.pdf');
     expect(versioned.status).toBe(201);
     const current = documentDetailSchema.parse(
-      (await request(app).get(`${base()}/${document.id}`).set(as(socio))).body,
+      (await request(app).get(`${base()}/${document.id}`).set(as(member))).body,
     );
-    expect(Buffer.from(await (await fetch(current.url)).arrayBuffer())).toEqual(
-      pdf('Estatutos 2026'),
-    );
+    expect(Buffer.from(await (await fetch(current.url)).arrayBuffer())).toEqual(pdf('Bylaws 2026'));
 
     const history = listDocumentVersionsResponseSchema.parse(
-      (await request(app).get(`${base()}/${document.id}/versiones`).set(as(admin))).body,
+      (await request(app).get(`${base()}/${document.id}/versions`).set(as(admin))).body,
     );
     expect(history.versions.map((v) => [v.fileName, v.isCurrent, v.uploadedByName])).toEqual([
-      ['Estatutos 2026.pdf', true, 'Ana'],
-      ['Estatutos sociales.pdf', false, 'Ana'],
+      ['Bylaws 2026.pdf', true, 'Ana'],
+      ['Corporate bylaws.pdf', false, 'Ana'],
     ]);
 
     expect(
-      (await request(app).post(`${base()}/${document.id}/retirar`).set(as(admin))).status,
+      (await request(app).post(`${base()}/${document.id}/withdraw`).set(as(admin))).status,
     ).toBe(204);
-    expect((await request(app).get(`${base()}/${document.id}`).set(as(socio))).status).toBe(404);
+    expect((await request(app).get(`${base()}/${document.id}`).set(as(member))).status).toBe(404);
 
     expect(events.map((e) => e.type)).toEqual([
-      'DocumentoPublicado',
-      'DocumentoPublicado',
-      'DocumentoPublicado',
-      'DocumentoRetirado',
+      'DocumentPublished',
+      'DocumentPublished',
+      'DocumentPublished',
+      'DocumentWithdrawn',
     ]);
   });
 
-  it('dos versiones simultáneas dejan una sola vigente (RN-DOC-03)', async () => {
+  it('two simultaneous versions leave a single current one (BR-DOC-03)', async () => {
     const document = documentSummarySchema.parse(
-      (await upload('Reglamento', 'reglamento', '2025-01-01')).body,
+      (await upload('Reglamento', 'regulations', '2025-01-01')).body,
     );
 
     await Promise.all(
       ['a', 'b', 'c'].map((v) =>
         request(app)
-          .post(`${base()}/${document.id}/versiones`)
+          .post(`${base()}/${document.id}/versions`)
           .set(as(admin))
-          .attach('fichero', pdf(v), `${v}.pdf`),
+          .attach('file', pdf(v), `${v}.pdf`),
       ),
     );
 
@@ -191,11 +189,11 @@ describe('documentos por HTTP (HU-DOC-01..05)', () => {
     ).toBe(1);
   });
 
-  it('Dado un fichero que no es PDF o de más de 20 MB, entonces se rechaza indicando el motivo', async () => {
-    const notPdf = await upload('Falso', 'otros', '2026-01-01', Buffer.from('<html>'));
+  it('Given a file that is not a PDF or is larger than 20 MB, then it is rejected stating the reason', async () => {
+    const notPdf = await upload('Falso', 'other', '2026-01-01', Buffer.from('<html>'));
     const big = await upload(
       'Grande',
-      'otros',
+      'other',
       '2026-01-01',
       Buffer.concat([pdf('x'), Buffer.alloc(20 * 1024 * 1024)]),
     );
@@ -207,138 +205,135 @@ describe('documentos por HTTP (HU-DOC-01..05)', () => {
     expect(await prisma.document.count()).toBe(0);
   });
 
-  it('campos inválidos responden 400', async () => {
-    const response = await upload('Acta', 'facturas', '2026-02-30');
+  it('invalid fields respond 400', async () => {
+    const response = await upload('Acta', 'invoices', '2026-02-30');
 
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('invalid_request');
   });
 
-  it('con consulta, subir, versionar, ver el historial y retirar responden 403', async () => {
+  it('with read access, uploading, versioning, viewing the history and withdrawing respond 403', async () => {
     const document = documentSummarySchema.parse(
-      (await upload('Acta', 'actas', '2026-01-01')).body,
+      (await upload('Acta', 'minutes', '2026-01-01')).body,
     );
 
     const responses = await Promise.all([
       request(app)
         .post(base())
-        .set(as(socio))
+        .set(as(member))
         .field('title', 'x')
-        .field('category', 'otros')
+        .field('category', 'other')
         .field('documentDate', '2026-01-01')
-        .attach('fichero', pdf('x'), 'x.pdf'),
+        .attach('file', pdf('x'), 'x.pdf'),
       request(app)
-        .post(`${base()}/${document.id}/versiones`)
-        .set(as(socio))
-        .attach('fichero', pdf('x'), 'x.pdf'),
-      request(app).get(`${base()}/${document.id}/versiones`).set(as(socio)),
-      request(app).post(`${base()}/${document.id}/retirar`).set(as(socio)),
+        .post(`${base()}/${document.id}/versions`)
+        .set(as(member))
+        .attach('file', pdf('x'), 'x.pdf'),
+      request(app).get(`${base()}/${document.id}/versions`).set(as(member)),
+      request(app).post(`${base()}/${document.id}/withdraw`).set(as(member)),
     ]);
 
     expect(responses.map((r) => r.status)).toEqual([403, 403, 403, 403]);
   });
 });
 
-describe('indexación y búsqueda (requisitos/03, apartado 4; HU-DOC-06, HU-DOC-07)', () => {
-  const estatutos = () =>
+describe('indexing and search (requirements/03, section 4; US-DOC-06, US-DOC-07)', () => {
+  const bylawsPdf = () =>
     buildPdf([
-      ['Artículo 1. Denominación.', 'La cooperativa se denomina San Isidro.'],
-      ['Artículo 12. Asamblea general.', 'La asamblea general ordinaria se celebra en junio.'],
+      ['Article 1. Name.', 'The cooperative is named San Isidro.'],
+      ['Article 12. General assembly.', 'The ordinary general assembly is held in June.'],
     ]);
 
-  const search = (q: string, token = socio, cooperativeId = campo) =>
-    request(app)
-      .get(`/cooperativas/${cooperativeId}/documentos/buscar`)
-      .query({ q })
-      .set(as(token));
+  const search = (q: string, token = member, cooperativeId = coop) =>
+    request(app).get(`/cooperatives/${cooperativeId}/documents/search`).query({ q }).set(as(token));
 
-  it('un PDF real queda indexado por páginas con su cooperativa y se encuentra por contenido', async () => {
+  it('a real PDF is indexed per page with its cooperative and is found by content', async () => {
     const document = documentSummarySchema.parse(
-      (await upload('Estatutos', 'estatutos', '2026-01-01', await estatutos())).body,
+      (await upload('Bylaws', 'bylaws', '2026-01-01', await bylawsPdf())).body,
     );
     await indexing.idle();
 
     const detail = documentDetailSchema.parse(
       (await request(app).get(`${base()}/${document.id}`).set(as(admin))).body,
     );
-    expect(detail.indexingStatus).toBe('indexado');
+    expect(detail.indexingStatus).toBe('indexed');
     const chunks = await prisma.documentChunk.findMany({ orderBy: { position: 'asc' } });
     expect(chunks.map((c) => [c.cooperativeId, c.documentId, c.page])).toEqual([
-      [campo, document.id, 1],
-      [campo, document.id, 2],
+      [coop, document.id, 1],
+      [coop, document.id, 2],
     ]);
 
     const results = searchDocumentsResponseSchema.parse(
-      (await search('asamblea general junio')).body,
+      (await search('general assembly june')).body,
     );
     expect(results.items[0]).toMatchObject({
       documentId: document.id,
       page: 2,
-      title: 'Estatutos',
+      title: 'Bylaws',
     });
-    expect(results.items[0]?.excerpt).toContain('se celebra en junio');
+    expect(results.items[0]?.excerpt).toContain('is held in June');
   });
 
-  it('la búsqueda nunca devuelve fragmentos de otra cooperativa, aunque el texto coincida exactamente', async () => {
-    await upload('Estatutos del Mar', 'estatutos', '2026-01-01', await estatutos(), marAdmin, mar);
+  it('search never returns fragments of another cooperative, even if the text matches exactly', async () => {
+    await upload('Sea bylaws', 'bylaws', '2026-01-01', await bylawsPdf(), seaAdmin, sea);
     await indexing.idle();
 
     const results = searchDocumentsResponseSchema.parse(
-      (await search('La asamblea general ordinaria se celebra en junio.')).body,
+      (await search('The ordinary general assembly is held in June.')).body,
     );
 
     expect(results.items).toEqual([]);
   });
 
-  it('retirar elimina los fragmentos; una versión nueva sustituye los anteriores (RN-DOC-05)', async () => {
+  it('withdrawing removes the fragments; a new version replaces the previous ones (BR-DOC-05)', async () => {
     const document = documentSummarySchema.parse(
-      (await upload('Estatutos', 'estatutos', '2026-01-01', await estatutos())).body,
+      (await upload('Bylaws', 'bylaws', '2026-01-01', await bylawsPdf())).body,
     );
     await indexing.idle();
 
     await request(app)
-      .post(`${base()}/${document.id}/versiones`)
+      .post(`${base()}/${document.id}/versions`)
       .set(as(admin))
-      .attach('fichero', Buffer.from(await buildPdf([['Reglamento nuevo de riego.']])), 'v2.pdf');
+      .attach('file', Buffer.from(await buildPdf([['New irrigation regulation.']])), 'v2.pdf');
     await indexing.idle();
     expect((await prisma.documentChunk.findMany()).map((c) => c.content)).toEqual([
-      'Reglamento nuevo de riego.',
+      'New irrigation regulation.',
     ]);
 
-    await request(app).post(`${base()}/${document.id}/retirar`).set(as(admin));
+    await request(app).post(`${base()}/${document.id}/withdraw`).set(as(admin));
     await indexing.idle();
     expect(await prisma.documentChunk.count()).toBe(0);
   });
 
-  it('un PDF sin texto queda como no indexable con el motivo, y sigue siendo consultable', async () => {
+  it('a PDF without text is marked not indexable with the reason, and can still be viewed', async () => {
     const document = documentSummarySchema.parse(
-      (await upload('Escaneado', 'actas', '2026-01-01', await buildPdf([[]]))).body,
+      (await upload('Escaneado', 'minutes', '2026-01-01', await buildPdf([[]]))).body,
     );
     await indexing.idle();
 
     const detail = documentDetailSchema.parse(
       (await request(app).get(`${base()}/${document.id}`).set(as(admin))).body,
     );
-    expect(detail).toMatchObject({ indexingStatus: 'no_indexable' });
-    expect(detail.indexingError).toMatch(/escaneado/);
-    expect((await request(app).get(`${base()}/${document.id}`).set(as(socio))).status).toBe(200);
+    expect(detail).toMatchObject({ indexingStatus: 'not_indexable' });
+    expect(detail.indexingError).toMatch(/scanned/);
+    expect((await request(app).get(`${base()}/${document.id}`).set(as(member))).status).toBe(200);
   });
 
-  it('reindexar responde 202 y vuelve a indexar', async () => {
+  it('reindex responds 202 and indexes again', async () => {
     const document = documentSummarySchema.parse(
-      (await upload('Estatutos', 'estatutos', '2026-01-01', await estatutos())).body,
+      (await upload('Bylaws', 'bylaws', '2026-01-01', await bylawsPdf())).body,
     );
     await indexing.idle();
     await prisma.documentChunk.deleteMany();
 
-    const response = await request(app).post(`${base()}/${document.id}/reindexar`).set(as(admin));
+    const response = await request(app).post(`${base()}/${document.id}/reindex`).set(as(admin));
     await indexing.idle();
 
     expect(response.status).toBe(202);
     expect(await prisma.documentChunk.count()).toBe(2);
   });
 
-  it('una consulta demasiado corta responde 400', async () => {
+  it('a query that is too short responds 400', async () => {
     expect((await search('ab')).status).toBe(400);
   });
 });

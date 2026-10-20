@@ -8,11 +8,11 @@ export abstract class DocumentApplicationError extends Error {
   }
 }
 
-/** Missing, from another cooperative, or withdrawn and asked with only «consulta». */
+/** Missing, from another cooperative, or withdrawn and asked with only “read”. */
 export class DocumentNotFoundError extends DocumentApplicationError {
   readonly code = 'not_found';
 
   constructor() {
-    super('No encontrado.');
+    super('Not found.');
   }
 }

@@ -16,12 +16,12 @@ import { InMemoryFileStorage } from '../../../../shared/files/in-memory-file-sto
 import { createAccessModule } from '../../../access';
 import { HashingEmbedder } from '../../../documents';
 
-const PASSWORD = 'una-clave-larga';
+const PASSWORD = 'a-long-password';
 const env = loadEnv(process.env);
 const prisma = createTestPrisma();
 const events: AppEvent[] = [];
 const bus = new InProcessEventBus<AppEvent>({ onHandlerError: () => {} });
-for (const type of ['AsambleaConvocada', 'VotacionAbierta', 'VotacionCerrada'] as const) {
+for (const type of ['AssemblyConvened', 'VotingOpened', 'VotingClosed'] as const) {
   bus.subscribe(type, (event) => void events.push(event));
 }
 const invitationSender = { send: async () => {} };
@@ -35,28 +35,28 @@ const { app } = createApi({
   authRateLimits: false,
 });
 
-let campo: string;
-const tokens: Record<'consejo' | 'socio' | 'gestor', string> = {
-  consejo: '',
-  socio: '',
-  gestor: '',
+let fieldCoop: string;
+const tokens: Record<'board' | 'member' | 'manager', string> = {
+  board: '',
+  member: '',
+  manager: '',
 };
 const as = (who: keyof typeof tokens) => ({ Authorization: `Bearer ${tokens[who]}` });
 
 async function addMember(email: string, profileName: string, isPartner: boolean) {
   const { passwordHash } = await prisma.user.findUniqueOrThrow({
-    where: { email: 'admin@campo.test' },
+    where: { email: 'admin@field.test' },
   });
   const profile = await prisma.profile.findFirstOrThrow({
-    where: { cooperativeId: campo, name: profileName },
+    where: { cooperativeId: fieldCoop, name: profileName },
   });
   const user = await prisma.user.create({ data: { email, name: profileName, passwordHash } });
   await prisma.membership.create({
     data: {
       userId: user.id,
-      cooperativeId: campo,
+      cooperativeId: fieldCoop,
       profileId: profile.id,
-      status: 'activa',
+      status: 'active',
       isPartner,
     },
   });
@@ -68,35 +68,35 @@ beforeEach(async () => {
   await resetDatabase(prisma);
   events.length = 0;
   const access = createAccessModule({ prisma, jwtSecret: env.JWT_SECRET, invitationSender });
-  campo = (
+  fieldCoop = (
     await access.provisionCooperative({
       name: 'Campo',
       cif: 'F12345674',
-      admin: { email: 'admin@campo.test', name: 'Ana', password: PASSWORD },
+      admin: { email: 'admin@field.test', name: 'Ana', password: PASSWORD },
     })
   ).cooperativeId;
-  tokens.consejo = await addMember('consejo@campo.test', 'Consejo rector', true);
-  tokens.socio = await addMember('socio@campo.test', 'Socio', true);
-  tokens.gestor = await addMember('gestor@campo.test', 'Gestor', false);
+  tokens.board = await addMember('board@field.test', 'Consejo rector', true);
+  tokens.member = await addMember('member@field.test', 'Socio', true);
+  tokens.manager = await addMember('manager@field.test', 'Gestor', false);
 });
 afterAll(() => prisma.$disconnect());
 
-const base = () => `/cooperativas/${campo}/asambleas`;
-const point = (id: string) => `/cooperativas/${campo}/puntos/${id}`;
+const base = () => `/cooperatives/${fieldCoop}/assemblies`;
+const point = (id: string) => `/cooperatives/${fieldCoop}/points/${id}`;
 const inDays = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
 async function convened() {
   const created = await request(app)
     .post(base())
-    .set(as('consejo'))
+    .set(as('board'))
     .send({
-      type: 'ordinaria',
+      type: 'ordinary',
       firstCallAt: inDays(20),
       secondCallAt: null,
-      place: 'Salón social',
+      place: 'Social hall',
       points: [
         {
-          title: 'Aprobación de cuentas',
+          title: 'Approval of accounts',
           description: 'Ejercicio 2025',
           votable: true,
           majority: 'simple',
@@ -105,133 +105,129 @@ async function convened() {
       ],
     });
   const { id } = assemblySummarySchema.parse(created.body);
-  await request(app).post(`${base()}/${id}/convocar`).set(as('consejo'));
+  await request(app).post(`${base()}/${id}/convene`).set(as('board'));
   const detail = assemblyDetailSchema.parse(
-    (await request(app).get(`${base()}/${id}`).set(as('socio'))).body,
+    (await request(app).get(`${base()}/${id}`).set(as('member'))).body,
   );
   return { id, pointId: detail.points[0]!.id, detail };
 }
 
-describe('asambleas por HTTP (HU-ASA-01..06)', () => {
-  it('convocar → abrir → votar → cerrar, con los eventos de la especificación', async () => {
+describe('assemblies over HTTP (US-ASM-01..06)', () => {
+  it('convene -> open -> vote -> close, with the events of the specification', async () => {
     const { id, pointId, detail } = await convened();
     expect(detail.points.map((p) => [p.position, p.title, p.voting?.status ?? null])).toEqual([
-      [1, 'Aprobación de cuentas', 'pendiente'],
+      [1, 'Approval of accounts', 'pending'],
       [2, 'Informe del presidente', null],
     ]);
 
     const opened = votingViewSchema.parse(
       (
         await request(app)
-          .post(`${point(pointId)}/votacion/abrir`)
-          .set(as('consejo'))
+          .post(`${point(pointId)}/voting/open`)
+          .set(as('board'))
       ).body,
     );
-    // Censo: consejero y socio; el gestor no es socio y el administrador del alta tampoco.
-    expect(opened).toMatchObject({ status: 'abierta', censusSize: 2 });
+    // Census: board member and member; the manager is not a partner and neither is the sign-up administrator.
+    expect(opened).toMatchObject({ status: 'open', censusSize: 2 });
 
     const vote = await request(app)
-      .post(`${point(pointId)}/votacion/votos`)
-      .set(as('socio'))
-      .send({ choice: 'a_favor' });
+      .post(`${point(pointId)}/voting/votes`)
+      .set(as('member'))
+      .send({ choice: 'in_favor' });
     expect(vote.status).toBe(201);
     expect(votingViewSchema.parse(vote.body)).toMatchObject({
-      myVote: 'a_favor',
+      myVote: 'in_favor',
       canVote: false,
       tally: null,
     });
 
     const again = await request(app)
-      .post(`${point(pointId)}/votacion/votos`)
-      .set(as('socio'))
-      .send({ choice: 'en_contra' });
+      .post(`${point(pointId)}/voting/votes`)
+      .set(as('member'))
+      .send({ choice: 'against' });
     expect(again.status).toBe(409);
-    expect(again.body).toMatchObject({ error: 'already_voted', details: { choice: 'a_favor' } });
+    expect(again.body).toMatchObject({ error: 'already_voted', details: { choice: 'in_favor' } });
 
     const closed = votingViewSchema.parse(
       (
         await request(app)
-          .post(`${point(pointId)}/votacion/cerrar`)
-          .set(as('consejo'))
+          .post(`${point(pointId)}/voting/close`)
+          .set(as('board'))
       ).body,
     );
     expect(closed.result).toMatchObject({
-      outcome: 'aprobado',
+      outcome: 'approved',
       quorumReached: true,
       votesCast: 1,
       census: 2,
     });
 
-    await request(app).post(`${base()}/${id}/cerrar`).set(as('consejo'));
+    await request(app).post(`${base()}/${id}/close`).set(as('board'));
     const list = listAssembliesResponseSchema.parse(
-      (await request(app).get(base()).set(as('socio'))).body,
+      (await request(app).get(base()).set(as('member'))).body,
     );
-    expect(list.items.map((a) => a.status)).toEqual(['celebrada']);
-    expect(events.map((e) => e.type)).toEqual([
-      'AsambleaConvocada',
-      'VotacionAbierta',
-      'VotacionCerrada',
-    ]);
+    expect(list.items.map((a) => a.status)).toEqual(['held']);
+    expect(events.map((e) => e.type)).toEqual(['AssemblyConvened', 'VotingOpened', 'VotingClosed']);
   });
 
-  it('RN-ASA-11: con consulta, mientras está abierta solo se ve la participación', async () => {
+  it('BR-ASM-11: with read access, while open only participation is visible', async () => {
     const { pointId } = await convened();
     await request(app)
-      .post(`${point(pointId)}/votacion/abrir`)
-      .set(as('consejo'));
+      .post(`${point(pointId)}/voting/open`)
+      .set(as('board'));
     await request(app)
-      .post(`${point(pointId)}/votacion/votos`)
-      .set(as('consejo'))
-      .send({ choice: 'en_contra' });
+      .post(`${point(pointId)}/voting/votes`)
+      .set(as('board'))
+      .send({ choice: 'against' });
 
-    const asSocio = votingViewSchema.parse(
+    const asMember = votingViewSchema.parse(
       (
         await request(app)
-          .get(`${point(pointId)}/votacion`)
-          .set(as('socio'))
+          .get(`${point(pointId)}/voting`)
+          .set(as('member'))
       ).body,
     );
     const asConsejo = votingViewSchema.parse(
       (
         await request(app)
-          .get(`${point(pointId)}/votacion`)
-          .set(as('consejo'))
+          .get(`${point(pointId)}/voting`)
+          .set(as('board'))
       ).body,
     );
 
-    expect(asSocio).toMatchObject({ votesCast: 1, tally: null, canVote: true });
+    expect(asMember).toMatchObject({ votesCast: 1, tally: null, canVote: true });
     expect(asConsejo.tally).toEqual({ inFavor: 0, against: 1, abstentions: 0 });
   });
 
-  it('Dado un gestor sin condición de socio, cuando intenta votar, entonces recibe 403', async () => {
+  it('Given a manager who is not a partner, when they try to vote, then they get 403', async () => {
     const { pointId } = await convened();
     await request(app)
-      .post(`${point(pointId)}/votacion/abrir`)
-      .set(as('consejo'));
+      .post(`${point(pointId)}/voting/open`)
+      .set(as('board'));
 
     const response = await request(app)
-      .post(`${point(pointId)}/votacion/votos`)
-      .set(as('gestor'))
-      .send({ choice: 'a_favor' });
+      .post(`${point(pointId)}/voting/votes`)
+      .set(as('manager'))
+      .send({ choice: 'in_favor' });
 
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('not_in_census');
   });
 
-  it('con poca antelación, convocar responde 400 con la antelación mínima', async () => {
+  it('with too little notice, convening answers 400 with the minimum notice', async () => {
     const created = await request(app)
       .post(base())
-      .set(as('consejo'))
+      .set(as('board'))
       .send({
-        type: 'extraordinaria',
+        type: 'extraordinary',
         firstCallAt: inDays(3),
         secondCallAt: null,
-        place: 'Salón',
+        place: 'Hall',
         points: [{ title: 'X', votable: false, majority: null }],
       });
     const response = await request(app)
-      .post(`${base()}/${created.body.id}/convocar`)
-      .set(as('consejo'));
+      .post(`${base()}/${created.body.id}/convene`)
+      .set(as('board'));
 
     expect(response.status).toBe(400);
     expect(response.body).toMatchObject({
@@ -240,50 +236,50 @@ describe('asambleas por HTTP (HU-ASA-01..06)', () => {
     });
   });
 
-  it('los borradores no existen para quien solo consulta', async () => {
+  it('drafts do not exist for someone with read access only', async () => {
     const created = await request(app)
       .post(base())
-      .set(as('consejo'))
+      .set(as('board'))
       .send({
-        type: 'ordinaria',
+        type: 'ordinary',
         firstCallAt: inDays(30),
         secondCallAt: null,
-        place: 'Salón',
+        place: 'Hall',
         points: [],
       });
 
-    expect((await request(app).get(`${base()}/${created.body.id}`).set(as('socio'))).status).toBe(
+    expect((await request(app).get(`${base()}/${created.body.id}`).set(as('member'))).status).toBe(
       404,
     );
     expect(
-      listAssembliesResponseSchema.parse((await request(app).get(base()).set(as('socio'))).body)
+      listAssembliesResponseSchema.parse((await request(app).get(base()).set(as('member'))).body)
         .items,
     ).toEqual([]);
   });
 
-  it('con consulta, crear, convocar y abrir votaciones responden 403', async () => {
+  it('with read access, creating, convening and opening votings answer 403', async () => {
     const { id, pointId } = await convened();
 
     const responses = await Promise.all([
-      request(app).post(base()).set(as('socio')).send({}),
-      request(app).post(`${base()}/${id}/cancelar`).set(as('socio')),
+      request(app).post(base()).set(as('member')).send({}),
+      request(app).post(`${base()}/${id}/cancel`).set(as('member')),
       request(app)
-        .post(`${point(pointId)}/votacion/abrir`)
-        .set(as('socio')),
+        .post(`${point(pointId)}/voting/open`)
+        .set(as('member')),
     ]);
 
     expect(responses.map((r) => r.status)).toEqual([403, 403, 403]);
   });
 
-  it('un punto votable sin mayoría responde 400', async () => {
+  it('a votable item without majority answers 400', async () => {
     const response = await request(app)
       .post(base())
-      .set(as('consejo'))
+      .set(as('board'))
       .send({
-        type: 'ordinaria',
+        type: 'ordinary',
         firstCallAt: inDays(20),
         secondCallAt: null,
-        place: 'Salón',
+        place: 'Hall',
         points: [{ title: 'Cuentas', votable: true, majority: null }],
       });
 

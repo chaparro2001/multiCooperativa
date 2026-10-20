@@ -23,7 +23,11 @@ const prisma = createTestPrisma();
 const files = new InMemoryFileStorage();
 const events: AppEvent[] = [];
 const bus = new InProcessEventBus<AppEvent>({ onHandlerError: () => {} });
-for (const type of ['AlbaranRegistrado', 'FacturaRegistrada', 'DiscrepanciaDetectada'] as const) {
+for (const type of [
+  'DeliveryNoteRegistered',
+  'InvoiceRegistered',
+  'DiscrepancyDetected',
+] as const) {
   bus.subscribe(type, (event) => void events.push(event));
 }
 const invitationSender = { send: async () => {} };
@@ -37,15 +41,15 @@ const { app } = createApi({
   authRateLimits: false,
 });
 
-let campo: string;
-let gestor: string;
-let consejo: string;
+let coop: string;
+let manager: string;
+let board: string;
 let supplier: string;
 let otherSupplier: string;
 let customer: string;
 let otherCustomer: string;
 const as = (token: string) => ({ Authorization: `Bearer ${token}` });
-const base = () => `/cooperativas/${campo}`;
+const base = () => `/cooperatives/${coop}`;
 
 async function party(
   nif: string,
@@ -53,32 +57,32 @@ async function party(
   roles: { isSupplier: boolean; isCustomer: boolean },
 ) {
   const response = await request(app)
-    .post(`${base()}/terceros`)
-    .set(as(gestor))
+    .post(`${base()}/third-parties`)
+    .set(as(manager))
     .send({ nif, name, ...roles });
   return thirdPartySchema.parse(response.body).id;
 }
 
-/** multipart: the record in «datos», optionally the original in «fichero». */
+/** multipart: the record in “data”, optionally the original in “file”. */
 function post(path: string, data: unknown, file?: { content: Buffer; name: string }) {
   const call = request(app)
     .post(`${base()}${path}`)
-    .set(as(gestor))
-    .field('datos', JSON.stringify(data));
-  return file ? call.attach('fichero', file.content, file.name) : call;
+    .set(as(manager))
+    .field('data', JSON.stringify(data));
+  return file ? call.attach('file', file.content, file.name) : call;
 }
 
 const note = (
   number: string,
   lines: { concept: string; quantity: string; unit: string }[],
   thirdPartyId = supplier,
-  operation = 'compra',
-) => post('/albaranes', { thirdPartyId, operation, number, date: '2026-10-01', lines });
+  operation = 'purchase',
+) => post('/delivery-notes', { thirdPartyId, operation, number, date: '2026-10-01', lines });
 
 const invoice = (overrides: Record<string, unknown> = {}) =>
-  post('/facturas', {
+  post('/invoices', {
     thirdPartyId: supplier,
-    operation: 'compra',
+    operation: 'purchase',
     number: 'F-001',
     issueDate: '2026-10-05',
     dueDate: '2026-11-05',
@@ -94,58 +98,61 @@ beforeEach(async () => {
   await resetDatabase(prisma);
   events.length = 0;
   const access = createAccessModule({ prisma, jwtSecret: env.JWT_SECRET, invitationSender });
-  campo = (
+  coop = (
     await access.provisionCooperative({
-      name: 'Campo',
+      name: 'Farm',
       cif: 'F12345674',
-      admin: { email: 'admin@campo.test', name: 'Ana', password: TEST_PASSWORD },
+      admin: { email: 'admin@coop.test', name: 'Ana', password: TEST_PASSWORD },
     })
   ).cooperativeId;
-  const common = { passwordOf: 'admin@campo.test', cooperativeId: campo };
-  gestor = await memberToken(
+  const common = { passwordOf: 'admin@coop.test', cooperativeId: coop };
+  manager = await memberToken(
     { prisma, app },
-    { ...common, email: 'gestor@campo.test', profileName: 'Gestor', isPartner: false },
+    { ...common, email: 'manager@coop.test', profileName: 'Gestor', isPartner: false },
   );
-  consejo = await memberToken(
+  board = await memberToken(
     { prisma, app },
-    { ...common, email: 'consejo@campo.test', profileName: 'Consejo rector', isPartner: true },
+    { ...common, email: 'board@coop.test', profileName: 'Consejo rector', isPartner: true },
   );
-  supplier = await party('B12345674', 'Abonos del Sur', { isSupplier: true, isCustomer: false });
-  otherSupplier = await party('A58818501', 'Gasóleos Norte', {
+  supplier = await party('B12345674', 'Southern Fertilizers', {
     isSupplier: true,
     isCustomer: false,
   });
-  customer = await party('12345678Z', 'Almazara Este', { isSupplier: false, isCustomer: true });
-  otherCustomer = await party('00000000T', 'Aceites Oeste', {
+  otherSupplier = await party('A58818501', 'North Diesel', {
+    isSupplier: true,
+    isCustomer: false,
+  });
+  customer = await party('12345678Z', 'Eastern Oil Mill', { isSupplier: false, isCustomer: true });
+  otherCustomer = await party('00000000T', 'Western Oils', {
     isSupplier: false,
     isCustomer: true,
   });
 });
 afterAll(() => prisma.$disconnect());
 
-describe('albaranes (HU-FAC-02)', () => {
-  it('Dado un proveedor activo y una línea válida, entonces queda pendiente de facturar y se emite AlbaranRegistrado', async () => {
+describe('delivery notes (US-INV-02)', () => {
+  it('Given an active supplier and a valid line, then it is pending invoicing and DeliveryNoteRegistered is emitted', async () => {
     const response = await note('A-001', [
-      { concept: 'Abono NPK', quantity: '1250.5', unit: 'kg' },
+      { concept: 'Fertilizer NPK', quantity: '1250.5', unit: 'kg' },
     ]);
 
     expect(response.status).toBe(201);
     expect(deliveryNoteSchema.parse(response.body)).toMatchObject({
-      status: 'pendiente_facturar',
+      status: 'pending_invoicing',
       lines: [{ quantity: '1250.5' }],
     });
-    expect(events.map((e) => e.type)).toEqual(['AlbaranRegistrado']);
+    expect(events.map((e) => e.type)).toEqual(['DeliveryNoteRegistered']);
   });
 
-  it('RN-FAC-04: un número repetido para el mismo tercero se rechaza; para otro tercero, no', async () => {
-    const lines = [{ concept: 'Abono', quantity: '1', unit: 'kg' }];
+  it('BR-INV-04: a repeated number for the same third party is rejected; for another third party, it is not', async () => {
+    const lines = [{ concept: 'Fertilizer', quantity: '1', unit: 'kg' }];
     await note('A-001', lines);
 
     expect((await note('A-001', lines)).status).toBe(409);
     expect((await note('A-001', lines, otherSupplier)).status).toBe(201);
   });
 
-  it('RN-FAC-03: una compra con un cliente se rechaza; una línea con cantidad cero también', async () => {
+  it('BR-INV-03: a purchase with a customer is rejected; so is a line with zero quantity', async () => {
     const wrongParty = await note('A-1', [{ concept: 'X', quantity: '1', unit: 'kg' }], customer);
     const zero = await note('A-2', [{ concept: 'X', quantity: '0', unit: 'kg' }]);
 
@@ -154,86 +161,86 @@ describe('albaranes (HU-FAC-02)', () => {
     expect(zero.status).toBe(400);
   });
 
-  it('guarda el original adjunto si es PDF o foto; otra cosa se rechaza', async () => {
-    const lines = [{ concept: 'Abono', quantity: '1', unit: 'kg' }];
+  it('stores the attached original if it is a PDF or photo; anything else is rejected', async () => {
+    const lines = [{ concept: 'Fertilizer', quantity: '1', unit: 'kg' }];
     const photo = await note('A-1', lines).field('x', '');
-    expect(photo.status).toBe(400); // un campo de más no es un registro válido
+    expect(photo.status).toBe(400); // an extra field is not a valid record
 
     const jpeg = await post(
-      '/albaranes',
-      { thirdPartyId: supplier, operation: 'compra', number: 'A-2', date: '2026-10-01', lines },
-      { content: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2]), name: 'foto albarán.jpeg' },
+      '/delivery-notes',
+      { thirdPartyId: supplier, operation: 'purchase', number: 'A-2', date: '2026-10-01', lines },
+      { content: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2]), name: 'delivery note photo.jpeg' },
     );
-    expect(deliveryNoteSchema.parse(jpeg.body).fileName).toBe('foto albarán.jpg');
+    expect(deliveryNoteSchema.parse(jpeg.body).fileName).toBe('delivery note photo.jpg');
 
     const html = await post(
-      '/albaranes',
-      { thirdPartyId: supplier, operation: 'compra', number: 'A-3', date: '2026-10-01', lines },
+      '/delivery-notes',
+      { thirdPartyId: supplier, operation: 'purchase', number: 'A-3', date: '2026-10-01', lines },
       { content: Buffer.from('<html>'), name: 'x.pdf' },
     );
     expect(html.status).toBe(400);
   });
 });
 
-describe('facturas y conciliación (HU-FAC-03, HU-FAC-04)', () => {
-  it('Dado albaranes pendientes del mismo tercero, cuando la registro, entonces los factura y concilia', async () => {
+describe('invoices and reconciliation (US-INV-03, US-INV-04)', () => {
+  it('Given pending delivery notes of the same third party, when I register it, then it invoices and reconciles them', async () => {
     const a = deliveryNoteSchema.parse(
-      (await note('A-1', [{ concept: 'Abono NPK', quantity: '600', unit: 'kg' }])).body,
+      (await note('A-1', [{ concept: 'Fertilizer NPK', quantity: '600', unit: 'kg' }])).body,
     );
     const b = deliveryNoteSchema.parse(
-      (await note('A-2', [{ concept: 'abono npk', quantity: '400', unit: 'kg' }])).body,
+      (await note('A-2', [{ concept: 'fertilizer npk', quantity: '400', unit: 'kg' }])).body,
     );
 
     const response = await invoice({
-      lines: [{ concept: 'Abono NPK', quantity: '1000', unit: 'kg' }],
+      lines: [{ concept: 'Fertilizer NPK', quantity: '1000', unit: 'kg' }],
       deliveryNoteIds: [a.id, b.id],
     });
 
     expect(response.status).toBe(201);
     expect(invoiceSchema.parse(response.body)).toMatchObject({
-      paymentStatus: 'pendiente',
-      reconciliationStatus: 'conciliada',
+      paymentStatus: 'pending',
+      reconciliationStatus: 'reconciled',
       total: '1210.00',
     });
-    expect(await prisma.deliveryNote.count({ where: { status: 'facturado' } })).toBe(2);
+    expect(await prisma.deliveryNote.count({ where: { status: 'invoiced' } })).toBe(2);
     expect(events.map((e) => e.type)).toEqual([
-      'AlbaranRegistrado',
-      'AlbaranRegistrado',
-      'FacturaRegistrada',
+      'DeliveryNoteRegistered',
+      'DeliveryNoteRegistered',
+      'InvoiceRegistered',
     ]);
   });
 
-  it('Dado una diferencia superior a la tolerancia, entonces queda con discrepancia, con el detalle, y se emite DiscrepanciaDetectada', async () => {
+  it('Given a difference above the tolerance, then it is left with a discrepancy, with the detail, and DiscrepancyDetected is emitted', async () => {
     const a = deliveryNoteSchema.parse(
-      (await note('A-1', [{ concept: 'Gasóleo', quantity: '1000', unit: 'l' }])).body,
+      (await note('A-1', [{ concept: 'Diesel', quantity: '1000', unit: 'l' }])).body,
     );
 
     const created = invoiceSchema.parse(
       (
         await invoice({
-          lines: [{ concept: 'Gasóleo', quantity: '1050', unit: 'l' }],
+          lines: [{ concept: 'Diesel', quantity: '1050', unit: 'l' }],
           deliveryNoteIds: [a.id],
         })
       ).body,
     );
     const detail = invoiceDetailSchema.parse(
-      (await request(app).get(`${base()}/facturas/${created.id}`).set(as(consejo))).body,
+      (await request(app).get(`${base()}/invoices/${created.id}`).set(as(board))).body,
     );
 
-    expect(detail.reconciliationStatus).toBe('con_discrepancia');
+    expect(detail.reconciliationStatus).toBe('with_discrepancy');
     expect(detail.discrepancies).toEqual([
       expect.objectContaining({
-        concept: 'Gasóleo',
+        concept: 'Diesel',
         unit: 'l',
         deliveredQuantity: '1000',
         invoicedQuantity: '1050',
         explanation: null,
       }),
     ]);
-    expect(events.at(-1)?.type).toBe('DiscrepanciaDetectada');
+    expect(events.at(-1)?.type).toBe('DiscrepancyDetected');
   });
 
-  it('Dado un total que no coincide con base más IVA, entonces se rechaza indicando la diferencia', async () => {
+  it('Given a total that does not match base plus VAT, then it is rejected stating the difference', async () => {
     const response = await invoice({ total: '1200.00' });
 
     expect(response.status).toBe(400);
@@ -243,26 +250,28 @@ describe('facturas y conciliación (HU-FAC-03, HU-FAC-04)', () => {
     });
   });
 
-  it('una factura sin albaranes queda «sin albaranes»', async () => {
-    expect(invoiceSchema.parse((await invoice()).body).reconciliationStatus).toBe('sin_albaranes');
+  it('an invoice without delivery notes is left as “no delivery notes”', async () => {
+    expect(invoiceSchema.parse((await invoice()).body).reconciliationStatus).toBe(
+      'no_delivery_notes',
+    );
   });
 
-  it('Dado un albarán de otro tercero o ya facturado, cuando intento vincularlo, entonces se rechaza', async () => {
-    const lines = [{ concept: 'Abono', quantity: '1', unit: 'kg' }];
+  it('Given a delivery note of another third party or already invoiced, when I try to link it, then it is rejected', async () => {
+    const lines = [{ concept: 'Fertilizer', quantity: '1', unit: 'kg' }];
     const other = deliveryNoteSchema.parse((await note('A-1', lines, otherSupplier)).body);
     const mine = deliveryNoteSchema.parse((await note('A-2', lines)).body);
     await invoice({ number: 'F-1', lines, deliveryNoteIds: [mine.id] });
 
     expect(
       (await invoice({ number: 'F-2', lines, deliveryNoteIds: [other.id] })).body.message,
-    ).toMatch(/otro tercero/);
+    ).toMatch(/another third party/);
     expect(
       (await invoice({ number: 'F-3', lines, deliveryNoteIds: [mine.id] })).body.message,
-    ).toMatch(/ya facturado/);
+    ).toMatch(/already invoiced/);
   });
 
-  it('RN-FAC-05: dos facturas a la vez con el mismo albarán, solo una lo factura', async () => {
-    const lines = [{ concept: 'Abono', quantity: '1', unit: 'kg' }];
+  it('BR-INV-05: two invoices at once with the same delivery note, only one invoices it', async () => {
+    const lines = [{ concept: 'Fertilizer', quantity: '1', unit: 'kg' }];
     const a = deliveryNoteSchema.parse((await note('A-1', lines)).body);
 
     const responses = await Promise.all(
@@ -273,49 +282,49 @@ describe('facturas y conciliación (HU-FAC-03, HU-FAC-04)', () => {
     expect(await prisma.invoice.count()).toBe(1);
   });
 
-  it('RN-FAC-04: recibidas únicas por proveedor; emitidas únicas por cooperativa', async () => {
+  it('BR-INV-04: received ones unique per supplier; issued ones unique per cooperative', async () => {
     await invoice({ number: 'F-9' });
     expect((await invoice({ number: 'F-9' })).status).toBe(409);
     expect((await invoice({ number: 'F-9', thirdPartyId: otherSupplier })).status).toBe(201);
 
-    const sale = { operation: 'venta', number: 'V-1' };
+    const sale = { operation: 'sale', number: 'V-1' };
     expect((await invoice({ ...sale, thirdPartyId: customer })).status).toBe(201);
     expect((await invoice({ ...sale, thirdPartyId: otherCustomer })).status).toBe(409);
   });
 
-  it('anular una factura devuelve sus albaranes a pendientes', async () => {
-    const lines = [{ concept: 'Abono', quantity: '1', unit: 'kg' }];
+  it('voiding an invoice returns its delivery notes to pending', async () => {
+    const lines = [{ concept: 'Fertilizer', quantity: '1', unit: 'kg' }];
     const a = deliveryNoteSchema.parse((await note('A-1', lines)).body);
     const created = invoiceSchema.parse((await invoice({ lines, deliveryNoteIds: [a.id] })).body);
 
     const cancelled = await request(app)
-      .post(`${base()}/facturas/${created.id}/anular`)
-      .set(as(gestor));
+      .post(`${base()}/invoices/${created.id}/void`)
+      .set(as(manager));
 
-    expect(invoiceSchema.parse(cancelled.body).paymentStatus).toBe('anulada');
+    expect(invoiceSchema.parse(cancelled.body).paymentStatus).toBe('voided');
     expect((await prisma.deliveryNote.findUniqueOrThrow({ where: { id: a.id } })).status).toBe(
-      'pendiente_facturar',
+      'pending_invoicing',
     );
   });
 });
 
-describe('pagos, cobros y resumen (HU-FAC-06, HU-FAC-07)', () => {
-  it('el resumen suma con exactitud lo pendiente y lo vencido de pagos y cobros', async () => {
+describe('payments, collections and summary (US-INV-06, US-INV-07)', () => {
+  it('the summary exactly adds up what is pending and overdue of payments and collections', async () => {
     const f1 = invoiceSchema.parse(
       (await invoice({ number: 'F-1', base: '0.10', total: '0.12' })).body,
     );
     await invoice({ number: 'F-2', base: '0.20', total: '0.24' });
     await invoice({
       number: 'V-1',
-      operation: 'venta',
+      operation: 'sale',
       thirdPartyId: customer,
       base: '100.00',
       total: '121.00',
     });
-    await prisma.invoice.update({ where: { id: f1.id }, data: { paymentStatus: 'vencida' } });
+    await prisma.invoice.update({ where: { id: f1.id }, data: { paymentStatus: 'overdue' } });
 
     const summary = invoicingSummarySchema.parse(
-      (await request(app).get(`${base()}/facturas/resumen`).set(as(consejo))).body,
+      (await request(app).get(`${base()}/invoices/summary`).set(as(board))).body,
     );
 
     expect(summary.toPay).toEqual({
@@ -332,35 +341,35 @@ describe('pagos, cobros y resumen (HU-FAC-06, HU-FAC-07)', () => {
     });
   });
 
-  it('marcar pagada saca la factura de lo pendiente; no se liquida dos veces (RN-FAC-10)', async () => {
+  it('marking as paid takes the invoice out of pending; it is not settled twice (BR-INV-10)', async () => {
     const created = invoiceSchema.parse((await invoice()).body);
 
     const paid = await request(app)
-      .post(`${base()}/facturas/${created.id}/liquidar`)
-      .set(as(gestor))
+      .post(`${base()}/invoices/${created.id}/settle`)
+      .set(as(manager))
       .send({ date: '2026-10-20' });
     const again = await request(app)
-      .post(`${base()}/facturas/${created.id}/liquidar`)
-      .set(as(gestor))
+      .post(`${base()}/invoices/${created.id}/settle`)
+      .set(as(manager))
       .send({ date: '2026-10-21' });
 
     expect(invoiceSchema.parse(paid.body)).toMatchObject({
-      paymentStatus: 'liquidada',
+      paymentStatus: 'settled',
       settledAt: '2026-10-20',
     });
     expect(again.status).toBe(409);
     const summary = invoicingSummarySchema.parse(
-      (await request(app).get(`${base()}/facturas/resumen`).set(as(gestor))).body,
+      (await request(app).get(`${base()}/invoices/summary`).set(as(manager))).body,
     );
     expect(summary.toPay.pending).toBe('0.00');
   });
 
-  it('la ficha del tercero muestra sus documentos y su saldo pendiente', async () => {
-    await note('A-1', [{ concept: 'Abono', quantity: '1', unit: 'kg' }]);
+  it('the third-party sheet shows its documents and its pending balance', async () => {
+    await note('A-1', [{ concept: 'Fertilizer', quantity: '1', unit: 'kg' }]);
     await invoice();
 
     const sheet = thirdPartySheetSchema.parse(
-      (await request(app).get(`${base()}/terceros/${supplier}`).set(as(consejo))).body,
+      (await request(app).get(`${base()}/third-parties/${supplier}`).set(as(board))).body,
     );
 
     expect(sheet.deliveryNotes).toHaveLength(1);
@@ -368,11 +377,11 @@ describe('pagos, cobros y resumen (HU-FAC-06, HU-FAC-07)', () => {
     expect(sheet.balance.toPay.pending).toBe('1210.00');
   });
 
-  it('el consejo rector consulta pero no registra (requisitos/05, apartado 10)', async () => {
+  it('the board can read but cannot register (requirements/05, section 10)', async () => {
     const response = await request(app)
-      .post(`${base()}/facturas`)
-      .set(as(consejo))
-      .field('datos', '{}');
+      .post(`${base()}/invoices`)
+      .set(as(board))
+      .field('data', '{}');
 
     expect(response.status).toBe(403);
   });

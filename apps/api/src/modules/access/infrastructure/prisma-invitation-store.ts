@@ -49,8 +49,8 @@ export class PrismaInvitationStore implements InvitationStore {
           data: { usedAt: data.usedAt },
         });
         const activated = await tx.membership.updateMany({
-          where: { id: data.membershipId, status: 'invitada' },
-          data: { status: 'activa' },
+          where: { id: data.membershipId, status: 'invited' },
+          data: { status: 'active' },
         });
         if (used.count !== 1 || activated.count !== 1) throw new LostRace();
 

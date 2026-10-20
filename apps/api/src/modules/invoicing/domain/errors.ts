@@ -12,7 +12,7 @@ export class InvalidAmountError extends InvoicingDomainError {
   readonly code = 'invalid_amount';
 }
 
-/** RN-FAC-07: tells the expected total and the difference (HU-FAC-03). */
+/** BR-INV-07: tells the expected total and the difference (US-INV-03). */
 export class TotalMismatchError extends InvoicingDomainError {
   readonly code = 'total_mismatch';
 
@@ -21,7 +21,7 @@ export class TotalMismatchError extends InvoicingDomainError {
     readonly difference: string,
   ) {
     super(
-      `El total no cuadra con base más IVA: debería ser ${expected} € (diferencia ${difference.replace('-', '')} €).`,
+      `The total does not match base plus VAT: it should be ${expected} € (difference ${difference.replace('-', '')} €).`,
     );
   }
 }

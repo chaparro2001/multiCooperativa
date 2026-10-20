@@ -1,5 +1,5 @@
-// Esquema de datos del backend. Cada módulo añade aquí sus modelos;
-// ningún módulo consulta las tablas de otro (ADR-002).
+// Backend data schema. Each module adds its models here;
+// no module queries another module's tables (ADR-002).
 
 generator client {
   provider        = "prisma-client"
@@ -11,40 +11,40 @@ datasource db {
   provider = "postgresql"
 }
 
-// ───────────── Acceso y perfiles (requisitos/01) ─────────────
+// ───────────── Access and profiles (requirements/01) ─────────────
 
 enum MembershipStatus {
-  invitada
-  activa
-  suspendida
-  baja
+  invited
+  active
+  suspended
+  removed
 }
 
 enum PermissionModule {
-  comunicados
-  asambleas
-  documentos
-  facturas
-  area_socio
-  asistente
-  usuarios
+  announcements
+  assemblies
+  documents
+  invoicing
+  member_area
+  assistant
+  users
 }
 
 enum AccessLevel {
-  consulta
-  gestion
+  read
+  manage
 }
 
 enum PermissionScope {
-  propias
-  todas
+  own
+  all
 }
 
 model User {
   id           String   @id @default(uuid()) @db.Uuid
-  /// Normalizado en minúsculas (RN-ACC-01).
+  /// Normalized to lowercase (BR-ACC-01).
   email        String   @unique
-  /// Nulo mientras el usuario no haya aceptado su primera invitación.
+  /// Null until the user has accepted their first invitation.
   passwordHash String?
   name         String
   createdAt    DateTime @default(now())
@@ -70,7 +70,7 @@ model Profile {
   id            String  @id @default(uuid()) @db.Uuid
   cooperativeId String  @db.Uuid
   name          String
-  /// Los perfiles predefinidos no se editan ni se borran (RN-ACC-13).
+  /// Predefined profiles are neither edited nor deleted (BR-ACC-13).
   predefined    Boolean @default(false)
 
   cooperative Cooperative  @relation(fields: [cooperativeId], references: [id])
@@ -78,7 +78,7 @@ model Profile {
   memberships Membership[]
 
   @@unique([cooperativeId, name])
-  // Destino de la clave compuesta de Membership (RN-ACC-03).
+  // Target of Membership's composite key (BR-ACC-03).
   @@unique([id, cooperativeId])
 }
 
@@ -86,7 +86,7 @@ model Permission {
   profileId String           @db.Uuid
   module    PermissionModule
   level     AccessLevel
-  scope     PermissionScope  @default(todas)
+  scope     PermissionScope  @default(all)
 
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
@@ -98,7 +98,7 @@ model Membership {
   userId        String           @db.Uuid
   cooperativeId String           @db.Uuid
   profileId     String           @db.Uuid
-  status        MembershipStatus @default(invitada)
+  status        MembershipStatus @default(invited)
   isPartner     Boolean          @default(false)
   partnerNumber String?
   createdAt     DateTime         @default(now())
@@ -106,13 +106,13 @@ model Membership {
 
   user        User        @relation(fields: [userId], references: [id])
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id])
-  /// Clave compuesta: el perfil pertenece a la misma cooperativa (RN-ACC-03).
+  /// Composite key: the profile belongs to the same cooperative (BR-ACC-03).
   profile     Profile     @relation(fields: [profileId, cooperativeId], references: [id, cooperativeId])
   invitation  Invitation?
 
-  // RN-ACC-02 con RN-ACC-14: una membresía viva por usuario y cooperativa;
-  // las de baja se conservan y no impiden una membresía nueva.
-  @@unique([userId, cooperativeId], where: raw("status <> 'baja'"))
+  // BR-ACC-02 with BR-ACC-14: one live membership per user and cooperative;
+  // removed ones are kept and do not prevent a new membership.
+  @@unique([userId, cooperativeId], where: raw("status <> 'removed'"))
   @@index([cooperativeId, status])
 }
 
@@ -130,7 +130,7 @@ model Invitation {
 model Session {
   id               String    @id @default(uuid()) @db.Uuid
   userId           String    @db.Uuid
-  /// Hash del token de refresco vigente; rota en cada renovación (RNF-ACC-02).
+  /// Hash of the current refresh token; rotates on every renewal (NFR-ACC-02).
   refreshTokenHash String
   expiresAt        DateTime
   revokedAt        DateTime?
@@ -141,7 +141,7 @@ model Session {
   @@index([userId])
 }
 
-/// Intentos fallidos de inicio de sesión para el bloqueo temporal (RN-ACC-11).
+/// Failed login attempts for the temporary lockout (BR-ACC-11).
 model FailedLoginAttempt {
   id         String   @id @default(uuid()) @db.Uuid
   email      String
@@ -153,7 +153,7 @@ model FailedLoginAttempt {
 model AuditEvent {
   id            String   @id @default(uuid()) @db.Uuid
   cooperativeId String   @db.Uuid
-  /// Nulo cuando la acción la ejecuta un script de plataforma.
+  /// Null when the action is run by a platform script.
   actorUserId   String?  @db.Uuid
   targetUserId  String   @db.Uuid
   action        String
@@ -167,13 +167,13 @@ model AuditEvent {
   @@index([cooperativeId, createdAt])
 }
 
-// ───────────── Comunicados (requisitos/02) ─────────────
-// Sin relaciones de Prisma hacia las tablas de acceso: solo sus ids (ADR-002).
+// ───────────── Announcements (requirements/02) ─────────────
+// No Prisma relations towards the access tables: only their ids (ADR-002).
 
 enum AnnouncementStatus {
-  borrador
-  publicado
-  retirado
+  draft
+  published
+  withdrawn
 }
 
 model Announcement {
@@ -181,9 +181,9 @@ model Announcement {
   cooperativeId      String             @db.Uuid
   authorMembershipId String             @db.Uuid
   title              String             @db.VarChar(120)
-  /// Texto plano (RNF-COM-02).
+  /// Plain text (NFR-ANN-02).
   body               String
-  status             AnnouncementStatus @default(borrador)
+  status             AnnouncementStatus @default(draft)
   pinned             Boolean            @default(false)
   createdAt          DateTime           @default(now())
   publishedAt        DateTime?
@@ -192,16 +192,16 @@ model Announcement {
   attachments AnnouncementAttachment[]
   reads       AnnouncementRead[]
 
-  // Listado: fijados primero y del más reciente al más antiguo (RNF-COM-01).
+  // Listing: pinned first, then newest to oldest (NFR-ANN-01).
   @@index([cooperativeId, status, pinned, publishedAt])
 }
 
 model AnnouncementAttachment {
   id             String   @id @default(uuid()) @db.Uuid
   announcementId String   @db.Uuid
-  /// Nombre original, para mostrarlo y para la descarga.
+  /// Original name, to display it and for the download.
   name           String
-  /// Clave en el almacenamiento de ficheros (ADR-005).
+  /// Key in the file storage (ADR-005).
   fileKey        String   @unique
   size           Int
   createdAt      DateTime @default(now())
@@ -211,7 +211,7 @@ model AnnouncementAttachment {
   @@index([announcementId])
 }
 
-/// RN-COM-06: una lectura por miembro y comunicado.
+/// BR-ANN-06: one read per member and announcement.
 model AnnouncementRead {
   announcementId String   @db.Uuid
   membershipId   String   @db.Uuid
@@ -222,26 +222,26 @@ model AnnouncementRead {
   @@id([announcementId, membershipId])
 }
 
-// ───────────── Documentos (requisitos/03) ─────────────
+// ───────────── Documents (requirements/03) ─────────────
 
 enum DocumentCategory {
-  estatutos
-  reglamento
-  actas
-  cuentas
-  otros
+  bylaws
+  regulations
+  minutes
+  accounts
+  other
 }
 
 enum DocumentStatus {
-  publicado
-  retirado
+  published
+  withdrawn
 }
 
 enum IndexingStatus {
-  pendiente
-  indexado
+  pending
+  indexed
   error
-  no_indexable
+  not_indexable
 }
 
 model Document {
@@ -250,7 +250,7 @@ model Document {
   title         String           @db.VarChar(150)
   category      DocumentCategory
   documentDate  DateTime         @db.Date
-  status        DocumentStatus   @default(publicado)
+  status        DocumentStatus   @default(published)
   createdAt     DateTime         @default(now())
 
   versions DocumentVersion[]
@@ -262,86 +262,86 @@ model Document {
 model DocumentVersion {
   id                     String         @id @default(uuid()) @db.Uuid
   documentId             String         @db.Uuid
-  /// Clave en el almacenamiento de ficheros (ADR-005).
+  /// Key in the file storage (ADR-005).
   fileKey                String         @unique
-  /// Nombre original, para la descarga.
+  /// Original name, for the download.
   fileName               String
   size                   Int
   isCurrent              Boolean
-  indexingStatus         IndexingStatus @default(pendiente)
+  indexingStatus         IndexingStatus @default(pending)
   indexingError          String?
   uploadedByMembershipId String         @db.Uuid
   uploadedAt             DateTime       @default(now())
 
   document Document @relation(fields: [documentId], references: [id])
 
-  // RN-DOC-03: exactamente una versión vigente por documento.
+  // BR-DOC-03: exactly one current version per document.
   @@unique([documentId], where: raw("\"isCurrent\""))
   @@index([documentId, uploadedAt])
 }
 
-/// Fragmento indexado para el RAG (RN-DOC-06). El embedding se escribe y se consulta con SQL (ADR-006).
+/// Indexed chunk for RAG (BR-DOC-06). The embedding is written and queried with SQL (ADR-006).
 model DocumentChunk {
   id            String                      @id @default(uuid()) @db.Uuid
   cooperativeId String                      @db.Uuid
   documentId    String                      @db.Uuid
   versionId     String                      @db.Uuid
   page          Int
-  /// Orden del fragmento dentro del documento.
+  /// Order of the chunk within the document.
   position      Int
   content       String
   embedding     Unsupported("vector(1024)")
 
   document Document @relation(fields: [documentId], references: [id])
 
-  // RNF-DOC-03: la búsqueda filtra por cooperativa antes de ordenar por similitud.
+  // NFR-DOC-03: the search filters by cooperative before sorting by similarity.
   @@index([cooperativeId])
   @@index([documentId])
 }
 
-// ───────────── Asambleas (requisitos/04) ─────────────
+// ───────────── Assemblies (requirements/04) ─────────────
 
 enum AssemblyType {
-  ordinaria
-  extraordinaria
+  ordinary
+  extraordinary
 }
 
 enum AssemblyStatus {
-  borrador
-  convocada
-  celebrada
-  cancelada
+  draft
+  convened
+  held
+  cancelled
 }
 
 enum Majority {
   simple
-  reforzada
+  reinforced
 }
 
-/// «Pendiente» no tiene fila: la votación nace al abrirse.
+/// "Pending" has no row: the voting is born when it is opened.
 enum VotingStatus {
-  abierta
-  cerrada
+  open
+  closed
 }
 
 enum VoteChoice {
-  a_favor
-  en_contra
-  abstencion
+  in_favor
+  against
+  abstention
 }
 
 enum CallApplied {
-  primera
-  segunda
+  first
+  second
 }
 
 enum VotingOutcome {
-  aprobado
-  rechazado
-  sin_quorum
+  approved
+  rejected
+  no_quorum
 }
 
-/// Reglas configurables por cooperativa (RN-ASA-05, RN-ASA-08, RN-ASA-09). Sin fila, valen los valores por defecto.
+/// Rules configurable per cooperative (BR-ASM-05, BR-ASM-08, BR-ASM-09). Without a row, the defaults apply.
 model AssemblySettings {
   cooperativeId           String @id @db.Uuid
   firstCallQuorumPercent  Int    @default(50)
@@ -355,7 +355,7 @@ model Assembly {
   id            String         @id @default(uuid()) @db.Uuid
   cooperativeId String         @db.Uuid
   type          AssemblyType
-  status        AssemblyStatus @default(borrador)
+  status        AssemblyStatus @default(draft)
   firstCallAt   DateTime
   secondCallAt  DateTime?
   place         String         @db.VarChar(200)
@@ -369,7 +369,7 @@ model Assembly {
 model AssemblyPoint {
   id          String    @id @default(uuid()) @db.Uuid
   assemblyId  String    @db.Uuid
-  /// Orden en el orden del día, desde 1.
+  /// Position in the agenda, starting at 1.
   position    Int
   title       String    @db.VarChar(200)
   description String
@@ -387,7 +387,7 @@ model PointAttachment {
   id        String   @id @default(uuid()) @db.Uuid
   pointId   String   @db.Uuid
   name      String
-  /// Clave en el almacenamiento de ficheros (ADR-005).
+  /// Key in the file storage (ADR-005).
   fileKey   String   @unique
   size      Int
   createdAt DateTime @default(now())
@@ -397,11 +397,11 @@ model PointAttachment {
   @@index([pointId])
 }
 
-/// Copia las reglas al abrir: cambiar los ajustes después no altera una votación en curso.
+/// Copies the rules on opening: changing the settings afterwards does not alter a voting in progress.
 model Voting {
   id                      String        @id @default(uuid()) @db.Uuid
   pointId                 String        @unique @db.Uuid
-  status                  VotingStatus  @default(abierta)
+  status                  VotingStatus  @default(open)
   majority                Majority
   firstCallQuorumPercent  Int
   secondCallQuorumPercent Int
@@ -410,7 +410,7 @@ model Voting {
   secondCallAvailable     Boolean
   openedAt                DateTime
   closedAt                DateTime?
-  /// Resultado al cerrar (HU-ASA-06).
+  /// Result on closing (US-ASM-06).
   inFavor                 Int?
   against                 Int?
   abstentions             Int?
@@ -423,7 +423,7 @@ model Voting {
   votes  Vote[]
 }
 
-/// RN-ASA-02: socios activos al abrir la votación.
+/// BR-ASM-02: active partners when the voting opens.
 model VotingCensus {
   votingId     String @db.Uuid
   membershipId String @db.Uuid
@@ -434,14 +434,14 @@ model VotingCensus {
   @@id([votingId, membershipId])
 }
 
-/// RNF-ASA-01: un voto por censado y votación, garantizado por la clave única
-/// y por la clave foránea al censo (solo vota quien estaba al abrir).
+/// NFR-ASM-01: one vote per census member and voting, guaranteed by the unique key
+/// and by the foreign key to the census (only those present at opening can vote).
 model Vote {
   id           String     @id @default(uuid()) @db.Uuid
   votingId     String     @db.Uuid
   membershipId String     @db.Uuid
   choice       VoteChoice
-  /// RNF-ASA-03: hora del servidor.
+  /// NFR-ASM-03: server time.
   castAt       DateTime   @default(now())
 
   voting       Voting       @relation(fields: [votingId], references: [id])
@@ -450,39 +450,39 @@ model Vote {
   @@unique([votingId, membershipId])
 }
 
-// ───────────── Facturas y albaranes (requisitos/05) ─────────────
-// Importes y cantidades en Decimal: nunca coma flotante (RN-FAC-13).
+// ───────────── Invoices and delivery notes (requirements/05) ─────────────
+// Amounts and quantities as Decimal: never floating point (BR-INV-13).
 
 enum Operation {
-  compra
-  venta
+  purchase
+  sale
 }
 
 enum DeliveryNoteStatus {
-  pendiente_facturar
-  facturado
-  anulado
+  pending_invoicing
+  invoiced
+  voided
 }
 
 enum PaymentStatus {
-  pendiente
-  vencida
-  liquidada
-  anulada
+  pending
+  overdue
+  settled
+  voided
 }
 
 enum ReconciliationStatus {
-  sin_albaranes
-  conciliada
-  con_discrepancia
+  no_delivery_notes
+  reconciled
+  with_discrepancy
 }
 
 enum ReminderKind {
-  proxima_a_vencer
-  vencida
+  due_soon
+  overdue
 }
 
-/// Tolerancia de conciliación por cooperativa (RN-FAC-08). Sin fila, 1 %.
+/// Reconciliation tolerance per cooperative (BR-INV-08). Without a row, 1 %.
 model InvoicingSettings {
   cooperativeId        String @id @db.Uuid
   toleranceBasisPoints Int    @default(100)
@@ -491,7 +491,7 @@ model InvoicingSettings {
 model ThirdParty {
   id            String   @id @default(uuid()) @db.Uuid
   cooperativeId String   @db.Uuid
-  /// Normalizado: mayúsculas, sin espacios ni guiones.
+  /// Normalized: uppercase, no spaces or hyphens.
   nif           String   @db.VarChar(9)
   name          String   @db.VarChar(200)
   isSupplier    Boolean
@@ -504,7 +504,7 @@ model ThirdParty {
   deliveryNotes DeliveryNote[]
   invoices      Invoice[]
 
-  /// RN-FAC-02: único por cooperativa; otra cooperativa puede tener el mismo NIF.
+  /// BR-INV-02: unique per cooperative; another cooperative may have the same tax ID.
   @@unique([cooperativeId, nif])
   @@index([cooperativeId, name])
 }
@@ -516,7 +516,7 @@ model DeliveryNote {
   operation     Operation
   number        String             @db.VarChar(50)
   date          DateTime           @db.Date
-  status        DeliveryNoteStatus @default(pendiente_facturar)
+  status        DeliveryNoteStatus @default(pending_invoicing)
   invoiceId     String?            @db.Uuid
   fileKey       String?            @unique
   fileName      String?
@@ -526,7 +526,7 @@ model DeliveryNote {
   invoice    Invoice?           @relation(fields: [invoiceId], references: [id])
   lines      DeliveryNoteLine[]
 
-  /// RN-FAC-04: número de albarán único por tercero.
+  /// BR-INV-04: delivery note number unique per third party.
   @@unique([thirdPartyId, number])
   @@index([cooperativeId, operation, status])
   @@index([invoiceId])
@@ -556,7 +556,7 @@ model Invoice {
   base                 Decimal              @db.Decimal(12, 2)
   vatRate              Decimal              @db.Decimal(5, 2)
   total                Decimal              @db.Decimal(12, 2)
-  paymentStatus        PaymentStatus        @default(pendiente)
+  paymentStatus        PaymentStatus        @default(pending)
   reconciliationStatus ReconciliationStatus
   settledAt            DateTime?            @db.Date
   fileKey              String?              @unique
@@ -569,9 +569,9 @@ model Invoice {
   discrepancies Discrepancy[]
   reminders     InvoiceReminder[]
 
-  /// RN-FAC-04: las recibidas, únicas por proveedor; las emitidas, por cooperativa.
-  @@unique([thirdPartyId, number], map: "Invoice_received_number_key", where: raw("operation = 'compra'"))
-  @@unique([cooperativeId, number], map: "Invoice_issued_number_key", where: raw("operation = 'venta'"))
+  /// BR-INV-04: received ones unique per supplier; issued ones per cooperative.
+  @@unique([thirdPartyId, number], map: "Invoice_received_number_key", where: raw("operation = 'purchase'"))
+  @@unique([cooperativeId, number], map: "Invoice_issued_number_key", where: raw("operation = 'sale'"))
   @@index([cooperativeId, operation, paymentStatus, dueDate])
 }
 
@@ -588,7 +588,7 @@ model InvoiceLine {
   @@index([invoiceId])
 }
 
-/// Detalle por concepto de una conciliación con diferencias (HU-FAC-04).
+/// Per-concept detail of a reconciliation with differences (US-INV-04).
 model Discrepancy {
   id                String  @id @default(uuid()) @db.Uuid
   invoiceId         String  @db.Uuid
@@ -596,7 +596,7 @@ model Discrepancy {
   unit              String  @db.VarChar(20)
   deliveredQuantity Decimal @db.Decimal(14, 3)
   invoicedQuantity  Decimal @db.Decimal(14, 3)
-  /// Redactada por IA; el detalle numérico es el que manda (RN-FAC-12).
+  /// Drafted by the AI; the numeric detail is authoritative (BR-INV-12).
   explanation       String?
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -604,7 +604,7 @@ model Discrepancy {
   @@index([invoiceId])
 }
 
-/// RNF-FAC-04: un aviso de cada tipo por factura, aunque el proceso diario se repita.
+/// NFR-INV-04: one notice of each kind per invoice, even if the daily process repeats.
 model InvoiceReminder {
   invoiceId String       @db.Uuid
   kind      ReminderKind

@@ -24,7 +24,7 @@ export interface CooperativeContext extends SessionContext {
 }
 
 /**
- * HU-ACC-07: a valid signature is not enough. The session must still be open,
+ * US-ACC-07: a valid signature is not enough. The session must still be open,
  * so a logout or a detected token replay cuts access at once, not when the JWT expires.
  */
 export async function authenticateRequest(
@@ -51,7 +51,7 @@ export async function authenticateRequest(
 
 /**
  * Permissions are read from the membership on every request, never from the
- * token, so a profile change or a suspension applies to the next request (RNF-ACC-04).
+ * token, so a profile change or a suspension applies to the next request (NFR-ACC-04).
  */
 export async function resolveCooperativeContext(
   deps: { contexts: AccessContextStore },
@@ -66,7 +66,7 @@ export async function resolveCooperativeContext(
   return { ...session, cooperativeId, ...membership };
 }
 
-/** GET /me: the user's data and the cooperatives they can enter (HU-ACC-05). */
+/** GET /me: the user's data and the cooperatives they can enter (US-ACC-05). */
 export async function getMe(
   deps: { contexts: AccessContextStore },
   session: SessionContext,

@@ -1,7 +1,7 @@
 const DNI_LETTERS = 'TRWAGMYFPDXBNJZSQVHLCKE';
 const CIF_CONTROL_LETTERS = 'JABCDEFGHI';
 
-/** Uppercase, without spaces, hyphens or dots: how a NIF is stored and compared (RN-FAC-02). */
+/** Uppercase, without spaces, hyphens or dots: how a NIF is stored and compared (BR-INV-02). */
 export function normalizeNif(nif: string): string {
   return nif.toUpperCase().replace(/[\s.-]/g, '');
 }
@@ -36,7 +36,7 @@ function validCif(nif: string): boolean {
   return control === String(value) || control === letter;
 }
 
-/** RNF-FAC-06: DNI, NIE or CIF with a correct control character. */
+/** NFR-INV-06: DNI, NIE or CIF with a correct control character. */
 export function isValidNif(nif: string): boolean {
   const normalized = normalizeNif(nif);
   return validDniOrNie(normalized) || validCif(normalized);

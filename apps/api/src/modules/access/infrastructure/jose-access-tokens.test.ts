@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest';
 
 import { JoseAccessTokens, JWT_AUDIENCE, JWT_ISSUER } from './jose-access-tokens';
 
-const SECRET = 'un-secreto-de-pruebas-de-al-menos-32-caracteres';
+const SECRET = 'a-test-secret-of-at-least-32-characters';
 const now = new Date('2026-10-10T10:00:00Z');
 
-describe('JoseAccessTokens (RNF-ACC-02)', () => {
-  it('firma un JWT de 15 minutos con el usuario y la sesión, sin permisos', async () => {
+describe('JoseAccessTokens (NFR-ACC-02)', () => {
+  it('signs a 15-minute JWT with the user and the session, without permissions', async () => {
     const token = await new JoseAccessTokens(SECRET).issue(
       { userId: 'user-1', sessionId: 'session-1' },
       now,
@@ -28,7 +28,7 @@ describe('JoseAccessTokens (RNF-ACC-02)', () => {
     });
   });
 
-  it('otra clave no valida la firma', async () => {
+  it('another key does not validate the signature', async () => {
     const token = await new JoseAccessTokens(SECRET).issue({ userId: 'u', sessionId: 's' }, now);
 
     await expect(
@@ -42,13 +42,13 @@ describe('JoseAccessTokens.verify', () => {
   const tokens = new JoseAccessTokens(SECRET);
   const claims = { userId: 'user-1', sessionId: 'session-1' };
 
-  it('devuelve el usuario y la sesión de un token válido', async () => {
+  it('returns the user and the session of a valid token', async () => {
     const token = await tokens.issue(claims, now);
 
     await expect(tokens.verify(token, now)).resolves.toEqual(claims);
   });
 
-  it('rechaza un token caducado', async () => {
+  it('rejects an expired token', async () => {
     const token = await tokens.issue(claims, now);
 
     await expect(
@@ -56,13 +56,13 @@ describe('JoseAccessTokens.verify', () => {
     ).resolves.toBeNull();
   });
 
-  it('rechaza un token firmado con otra clave', async () => {
+  it('rejects a token signed with another key', async () => {
     const token = await new JoseAccessTokens(`${SECRET}-otra`).issue(claims, now);
 
     await expect(tokens.verify(token, now)).resolves.toBeNull();
   });
 
-  it('rechaza un token sin firma (alg none)', async () => {
+  it('rejects an unsigned token (alg none)', async () => {
     const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
     const unsigned = `${encode({ alg: 'none' })}.${encode({
       sub: 'user-1',
@@ -75,7 +75,7 @@ describe('JoseAccessTokens.verify', () => {
     await expect(tokens.verify(unsigned, now)).resolves.toBeNull();
   });
 
-  it('rechaza basura', async () => {
-    await expect(tokens.verify('no-es-un-jwt', now)).resolves.toBeNull();
+  it('rejects garbage', async () => {
+    await expect(tokens.verify('not-a-jwt', now)).resolves.toBeNull();
   });
 });

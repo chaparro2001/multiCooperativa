@@ -23,20 +23,20 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
-    /** Firma de los JWT de acceso (HS256): al menos 256 bits. */
+    /** Signing secret of the access JWTs (HS256): at least 256 bits. */
     JWT_SECRET: z.string().min(32),
-    /** Vacío para AWS S3; la URL del servicio para cualquier otro compatible. */
+    /** Empty for AWS S3; the service URL for any other compatible one. */
     S3_ENDPOINT: z.url({ protocol: /^https?$/ }).optional(),
     S3_REGION: z.string().min(1).default('us-east-1'),
     S3_BUCKET: z.string().min(3).optional(),
     S3_ACCESS_KEY_ID: z.string().min(1).optional(),
     S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
-    /** Rutas `endpoint/bucket/clave` en vez de subdominios: lo piden RustFS y la mayoría de compatibles. */
+    /** `endpoint/bucket/key` paths instead of subdomains: required by RustFS and most compatible services. */
     S3_FORCE_PATH_STYLE: z
       .enum(['true', 'false'])
       .default('true')
       .transform((value) => value === 'true'),
-    /** Servicio de Ollama que calcula los embeddings (ADR-006). */
+    /** Ollama service that computes the embeddings (ADR-006). */
     OLLAMA_URL: z.url({ protocol: /^https?$/ }).optional(),
     EMBEDDING_MODEL: z.string().min(1).default('bge-m3'),
   })
@@ -44,7 +44,7 @@ const envSchema = z
     if (env.NODE_ENV !== 'production') return;
     for (const name of REQUIRED_IN_PRODUCTION) {
       if (!env[name]) {
-        context.addIssue({ code: 'custom', path: [name], message: 'obligatoria en producción' });
+        context.addIssue({ code: 'custom', path: [name], message: 'required in production' });
       }
     }
   })
@@ -71,7 +71,7 @@ export function loadEnv(source: Record<string, string | undefined>): Env {
     const details = result.error.issues
       .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
       .join('; ');
-    throw new Error(`Configuración de entorno inválida. ${details}`);
+    throw new Error(`Invalid environment configuration. ${details}`);
   }
   return result.data;
 }

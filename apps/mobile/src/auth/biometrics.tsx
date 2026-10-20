@@ -9,7 +9,10 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
+
+import { i18n } from '@/i18n';
 
 import { useServices } from '../app-services';
 import { useSession } from '../session/session-context';
@@ -29,11 +32,11 @@ const BiometricsContext = createContext<BiometricsValue | null>(null);
 
 const authenticate = () =>
   LocalAuthentication.authenticateAsync({
-    promptMessage: 'Desbloquea multiCooperativa',
-    cancelLabel: 'Cancelar',
+    promptMessage: i18n.t('auth.lock.prompt'),
+    cancelLabel: i18n.t('common.actions.cancel'),
   });
 
-/** HU-ACC-04: biometric unlock, hiding every screen until it succeeds. */
+/** US-ACC-04: biometric unlock, hiding every screen until it succeeds. */
 export function BiometricsProvider({ children }: { children: ReactNode }) {
   const { deviceStore } = useServices();
   const { status, signOut } = useSession();
@@ -133,6 +136,7 @@ function LockScreen({
   onUnlock(): void;
   onUsePassword(): Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [message, setMessage] = useState<string | null>(null);
 
   const tryUnlock = useCallback(async () => {
@@ -141,28 +145,24 @@ function LockScreen({
       onUnlock();
       return;
     }
-    setMessage(
-      result.error === 'lockout'
-        ? 'Demasiados intentos. Entra con tu contraseña.'
-        : 'No se ha podido verificar tu identidad.',
-    );
-  }, [onUnlock]);
+    setMessage(result.error === 'lockout' ? t('auth.lock.lockedOut') : t('auth.lock.failed'));
+  }, [onUnlock, t]);
 
   useEffect(() => {
     tryUnlock();
   }, [tryUnlock]);
 
   return (
-    <View style={styles.lock} testID="pantalla-bloqueo">
-      <Text style={styles.title}>multiCooperativa está bloqueada</Text>
+    <View style={styles.lock} testID="lock-screen">
+      <Text style={styles.title}>{t('auth.lock.title')}</Text>
       {message && <Text style={styles.message}>{message}</Text>}
-      <Button title="Desbloquear" onPress={tryUnlock} testID="desbloquear" />
-      {/* HU-ACC-04: when biometrics fail, the password is always a way in. */}
+      <Button title={t('auth.lock.unlock')} onPress={tryUnlock} testID="unlock" />
+      {/* US-ACC-04: when biometrics fail, the password is always a way in. */}
       <Button
-        title="Entrar con contraseña"
+        title={t('auth.lock.usePassword')}
         variant="secondary"
         onPress={onUsePassword}
-        testID="entrar-con-contrasena"
+        testID="use-password"
       />
     </View>
   );
@@ -170,7 +170,7 @@ function LockScreen({
 
 export function useBiometrics(): BiometricsValue {
   const value = useContext(BiometricsContext);
-  if (!value) throw new Error('useBiometrics debe usarse dentro de BiometricsProvider');
+  if (!value) throw new Error('useBiometrics must be used inside BiometricsProvider');
   return value;
 }
 

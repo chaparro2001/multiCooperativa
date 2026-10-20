@@ -6,11 +6,11 @@ export interface ThirdPartyRecord extends ThirdPartyState {
   createdAt: Date;
 }
 
-/** Every method is scoped to one cooperative (RN-FAC-01). */
+/** Every method is scoped to one cooperative (BR-INV-01). */
 export interface ThirdPartyStore {
   list(
     cooperativeId: string,
-    query: { role?: 'proveedor' | 'cliente'; search?: string; includeInactive: boolean },
+    query: { role?: 'supplier' | 'customer'; search?: string; includeInactive: boolean },
   ): Promise<ThirdPartyRecord[]>;
   find(cooperativeId: string, id: string): Promise<ThirdPartyRecord | null>;
   findByNif(cooperativeId: string, nif: string): Promise<ThirdPartyRecord | null>;

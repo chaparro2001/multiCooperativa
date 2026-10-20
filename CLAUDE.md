@@ -1,80 +1,82 @@
 # multiCooperativa
 
-TFM del Máster en Desarrollo con IA (BIG school). App móvil multi-cooperativa para iOS y Android que conecta a cada cooperativa con sus socios (comunicados, documentos, asambleas con votación, área del socio) y le da control de albaranes y facturas con sus proveedores y clientes, con un asistente de IA que respeta los permisos de cada usuario.
+Master's thesis (TFM) of the Master's in AI-Driven Development (BIG school). Multi-cooperative mobile app for iOS and Android that connects each cooperative with its members (announcements, documents, assemblies with voting, member area) and gives it control of delivery notes and invoices with its suppliers and customers, with an AI assistant that respects each user's permissions.
 
-Entrega: 26/10/2026. Cierre de funcionalidad: 22/10/2026.
+Delivery: 26/10/2026. Feature freeze: 22/10/2026.
 
-## Documentación (fuente de verdad)
+## Documentation (source of truth)
 
-Leer antes de implementar cualquier módulo:
+Read before implementing any module:
 
-- Visión y alcance: `Documentacion/01-vision-y-alcance.md`
-- Stack y arquitectura: `Documentacion/02-stack-y-arquitectura.md`
-- Plan por hitos (marcar tareas al completarlas): `Documentacion/03-plan-de-implementacion.md`
-- Decisiones: `Documentacion/adr/`
-- Especificación de cada módulo: `Documentacion/requisitos/`
+- Vision and scope: `docs/01-vision-and-scope.md`
+- Stack and architecture: `docs/02-stack-and-architecture.md`
+- Plan by milestones (tick tasks when completed): `docs/03-implementation-plan.md`
+- Decisions: `docs/adr/`
+- Specification of each module: `docs/requirements/`
 
-Si el código y la documentación no coinciden, se para y se pregunta. Si una decisión cambia, se actualiza la documentación en el mismo commit; un cambio de arquitectura crea un ADR nuevo, nunca edita uno aceptado.
+If the code and the documentation do not match, stop and ask. If a decision changes, the documentation is updated in the same commit; an architecture change creates a new ADR, never edits an accepted one.
 
 ## Stack
 
-- App: Expo + React Native + TypeScript, Expo Router, TanStack Query.
-- Backend: Node + TypeScript, monolito modular con Clean Architecture.
-- Datos: PostgreSQL, Prisma, pgvector.
-- Contratos: esquemas Zod en `packages/contracts`, usados por app y backend.
+- App: Expo + React Native + TypeScript, Expo Router, TanStack Query, i18next + react-i18next + expo-localization.
+- Backend: Node + TypeScript, modular monolith with Clean Architecture.
+- Data: PostgreSQL, Prisma, pgvector.
+- Contracts: Zod schemas in `packages/contracts`, used by app and backend.
 - Tests: Vitest, React Native Testing Library, Maestro.
-- Entrega: GitHub Actions, EAS Build, Railway, Sentry.
+- Delivery: GitHub Actions, EAS Build, Railway, Sentry.
 
-## Estructura
+## Structure
 
 ```
-apps/mobile          App Expo
+apps/mobile          Expo app
 apps/api             Backend
-packages/contracts   Esquemas y tipos compartidos
-Documentacion/       Especificaciones, ADR y plan
+packages/contracts   Shared schemas and types
+docs/                Specifications, ADRs and plan
 ```
 
-Cada módulo del backend vive en `apps/api/src/modules/<modulo>/` con las capas `domain/`, `application/`, `infrastructure/` y un `index.ts` como única interfaz pública.
+Each backend module lives in `apps/api/src/modules/<module>/` with the `domain/`, `application/`, `infrastructure/` layers and an `index.ts` as the only public interface.
 
-## Reglas no negociables
+## Non-negotiable rules
 
-1. **El backend es la autoridad de permisos.** Todo caso de uso recibe el contexto (usuario, cooperativa, permisos) y deniega por defecto. La app solo oculta.
-2. **Aislamiento por cooperativa.** Todo repositorio exige `cooperativaId`. No existen lecturas sin él. Un recurso de otra cooperativa o fuera del alcance responde 404; un módulo sin permiso, 403.
-3. **Dominio puro.** `domain/` no importa Prisma, el framework HTTP ni ningún SDK externo.
-4. **Entre módulos**: solo por su `index.ts` o por eventos internos. Nunca tablas de otro módulo.
-5. **Importes** con decimal exacto, nunca `number` en coma flotante.
-6. **IA**: las claves solo en el backend; ningún dato extraído por IA se persiste sin confirmación humana; las herramientas del asistente son de solo lectura y reutilizan los casos de uso con los permisos del usuario.
-7. **Secretos** fuera del repositorio. Solo `.env.example` versionado.
+1. **The backend is the permissions authority.** Every use case receives the context (user, cooperative, permissions) and denies by default. The app only hides.
+2. **Isolation per cooperative.** Every repository requires `cooperativeId`. Reads without it do not exist. A resource from another cooperative or outside the scope answers 404; a module without permission, 403.
+3. **Pure domain.** `domain/` does not import Prisma, the HTTP framework or any external SDK.
+4. **Between modules**: only through its `index.ts` or through internal events. Never the tables of another module.
+5. **Amounts** with exact decimals, never floating-point `number`.
+6. **AI**: keys only in the backend; no data extracted by AI is persisted without human confirmation; the assistant's tools are read-only and reuse the use cases with the user's permissions.
+7. **Secrets** outside the repository. Only `.env.example` is versioned.
+8. **Language**: everything in the repository is in English (code, identifiers, files, paths, enum values, API routes, docs and commit messages). Only the texts shown to end users in the app are localized (see below). Decision in `docs/adr/ADR-008-english-codebase-and-localized-ui.md`.
+9. **No hardcoded user-facing texts.** They go through i18n (`t('key')`) with catalogs in `apps/mobile/src/i18n/locales/` (`es` is the default and fallback locale). The API returns stable error codes plus English developer messages; the app maps the codes to localized text. Text generated on the server (push notifications) goes through the server-side message catalog.
 
-## Forma de trabajar
+## Way of working
 
-- TDD en el dominio: test primero con los criterios Dado/Cuando/Entonces de la especificación.
-- Usar los identificadores de la especificación (`HU-ACC-02`, `RN-FAC-06`) en nombres de tests y mensajes de commit.
-- Commits pequeños con Conventional Commits en español: `feat(acceso): login con bloqueo por intentos (HU-ACC-02)`.
-- Antes de dar una tarea por terminada: lint, typecheck y tests en verde.
-- Código e identificadores en inglés; documentación, commits y textos de la app en español.
+- TDD in the domain: test first with the Given/When/Then criteria of the specification.
+- Use the specification identifiers (`US-ACC-02`, `BR-INV-06`, `NFR-ANN-03`) in test names and commit messages. Prefixes: `US-` user story, `BR-` business rule, `NFR-` non-functional requirement. Module codes: `ACC`, `ANN`, `DOC`, `ASM`, `INV`, `MEM`, `AI`.
+- Small commits with Conventional Commits in English: `feat(access): login lockout after failed attempts (US-ACC-02)`.
+- Before considering a task done: lint, typecheck and tests green.
+- Code, identifiers, documentation and commit messages in English; app texts localized through i18n (Spanish by default).
 
-## Comandos
+## Commands
 
-Requisitos: Node 24 (`.nvmrc`), pnpm y Docker.
+Requirements: Node 24 (`.nvmrc`), pnpm and Docker.
 
 ```bash
-pnpm install                 # instala y genera el cliente de Prisma
-pnpm db:up                   # PostgreSQL con pgvector, almacenamiento S3 (RustFS) y Ollama con Docker Compose
-pnpm ai:pull                 # descarga el modelo de embeddings bge-m3 en Ollama (una vez)
-pnpm --filter @multicooperativa/api db:migrate   # aplica o crea migraciones
-pnpm --filter @multicooperativa/api db:seed      # datos de ejemplo (Documentacion/datos-de-ejemplo.md)
-pnpm --filter @multicooperativa/api jobs:due-dates  # vencimientos de facturas (el API ya lo ejecuta cada hora)
-pnpm --filter @multicooperativa/api dev          # API en http://localhost:3000
-pnpm --filter @multicooperativa/mobile start     # app Expo
+pnpm install                 # installs and generates the Prisma client
+pnpm db:up                   # PostgreSQL with pgvector, S3 storage (RustFS) and Ollama with Docker Compose
+pnpm ai:pull                 # downloads the bge-m3 embeddings model into Ollama (once)
+pnpm --filter @multicooperativa/api db:migrate   # applies or creates migrations
+pnpm --filter @multicooperativa/api db:seed      # sample data (docs/sample-data.md)
+pnpm --filter @multicooperativa/api jobs:due-dates  # invoice due dates (the API already runs it every hour)
+pnpm --filter @multicooperativa/api dev          # API at http://localhost:3000
+pnpm --filter @multicooperativa/mobile start     # Expo app
 
-pnpm lint                    # ESLint (incluye las fronteras entre módulos)
+pnpm lint                    # ESLint (includes the boundaries between modules)
 pnpm format                  # Prettier
 pnpm typecheck
-pnpm test                    # tests unitarios (sin base de datos)
-pnpm test:integration        # tests *.integration.test.ts contra la BD multicooperativa_test y el bucket multicooperativa-test (necesitan pnpm db:up; los de Ollama se saltan si no hay modelo)
+pnpm test                    # unit tests (no database)
+pnpm test:integration        # *.integration.test.ts tests against the multicooperativa_test DB and the multicooperativa-test bucket (need pnpm db:up; the Ollama ones are skipped if there is no model)
 ```
 
-Variables de entorno: copiar `apps/api/.env.example` y `apps/mobile/.env.example` a `.env`.
+Environment variables: copy `apps/api/.env.example` and `apps/mobile/.env.example` to `.env`.
 
-En `apps/mobile` las dependencias se añaden con `pnpm exec expo install <paquete>` para que casen con el SDK de Expo.
+In `apps/mobile`, dependencies are added with `pnpm exec expo install <package>` so that they match the Expo SDK.

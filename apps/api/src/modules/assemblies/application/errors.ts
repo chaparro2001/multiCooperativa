@@ -8,11 +8,11 @@ export abstract class AssemblyApplicationError extends Error {
   }
 }
 
-/** Missing, from another cooperative, or a draft asked for without «gestión». */
+/** Missing, from another cooperative, or a draft asked for without "manage". */
 export class AssemblyNotFoundError extends AssemblyApplicationError {
   readonly code = 'not_found';
 
   constructor() {
-    super('No encontrado.');
+    super('Not found.');
   }
 }

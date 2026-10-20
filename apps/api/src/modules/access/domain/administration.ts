@@ -1,6 +1,6 @@
 import { LastAdminError, SelfModificationError } from './errors';
 
-/** RN-ACC-08: an administrator cannot modify or suspend their own membership. */
+/** BR-ACC-08: an administrator cannot modify or suspend their own membership. */
 export function assertNotSelf(actorMembershipId: string, targetMembershipId: string): void {
   if (actorMembershipId === targetMembershipId) {
     throw new SelfModificationError();
@@ -8,7 +8,7 @@ export function assertNotSelf(actorMembershipId: string, targetMembershipId: str
 }
 
 /**
- * RN-ACC-07: guards any change that takes admin rights away from a member
+ * BR-ACC-07: guards any change that takes admin rights away from a member
  * (profile change, suspension or removal).
  */
 export function assertKeepsAnAdmin(input: {

@@ -46,6 +46,6 @@ export function ServicesProvider({
 
 export function useServices(): AppServices {
   const services = useContext(ServicesContext);
-  if (!services) throw new Error('useServices debe usarse dentro de ServicesProvider');
+  if (!services) throw new Error('useServices must be used inside ServicesProvider');
   return services;
 }

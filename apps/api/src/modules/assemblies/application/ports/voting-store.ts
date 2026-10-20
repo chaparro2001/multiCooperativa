@@ -13,7 +13,7 @@ export interface VotingSnapshot {
 export interface VotingRecord extends VotingSnapshot {
   id: string;
   pointId: string;
-  status: Exclude<VotingStatus, 'pendiente'>;
+  status: Exclude<VotingStatus, 'pending'>;
   openedAt: Date;
   closedAt: Date | null;
   censusSize: number;
@@ -39,7 +39,7 @@ export interface OpenCheck {
 export interface VotingStore {
   /**
    * Locked on the item. `decide` validates and returns the frozen rules; the
-   * census rows are written in the same transaction (RN-ASA-02). Null if the item does not exist here.
+   * census rows are written in the same transaction (BR-ASM-02). Null if the item does not exist here.
    */
   open(
     cooperativeId: string,
@@ -56,7 +56,7 @@ export interface VotingStore {
     decide: (voting: VotingRecord) => VotingResult,
   ): Promise<VotingRecord | null>;
   /**
-   * RN-ASA-03: the unique key settles races; `check` sees the state and may refuse.
+   * BR-ASM-03: the unique key settles races; `check` sees the state and may refuse.
    * Null if the item does not exist here.
    */
   castVote(
@@ -70,7 +70,7 @@ export interface VotingStore {
       previousVote: VoteChoice | null;
     }) => void,
   ): Promise<MemberVotingView | null>;
-  /** Null when the item has no voting yet («pendiente»). */
+  /** Null when the item has no voting yet ("pending"). */
   find(
     cooperativeId: string,
     pointId: string,

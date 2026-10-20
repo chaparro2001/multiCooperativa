@@ -7,7 +7,7 @@ const JWT_SECRET = 'x'.repeat(32);
 const required = { DATABASE_URL, JWT_SECRET };
 
 describe('loadEnv', () => {
-  it('aplica los valores por defecto, con el almacenamiento local de docker-compose', () => {
+  it('applies the defaults, with the local docker-compose storage', () => {
     expect(loadEnv(required)).toEqual({
       NODE_ENV: 'development',
       PORT: 3000,
@@ -24,40 +24,40 @@ describe('loadEnv', () => {
     });
   });
 
-  it('convierte el puerto a número', () => {
+  it('converts the port to a number', () => {
     expect(loadEnv({ ...required, PORT: '8080' }).PORT).toBe(8080);
   });
 
-  it('rechaza un puerto no numérico indicando la variable', () => {
+  it('rejects a non-numeric port naming the variable', () => {
     expect(() => loadEnv({ ...required, PORT: 'abc' })).toThrow(/PORT/);
   });
 
-  it('rechaza un entorno desconocido', () => {
+  it('rejects an unknown environment', () => {
     expect(() => loadEnv({ ...required, NODE_ENV: 'staging' })).toThrow(/NODE_ENV/);
   });
 
-  it('exige DATABASE_URL', () => {
+  it('requires DATABASE_URL', () => {
     expect(() => loadEnv({ JWT_SECRET })).toThrow(/DATABASE_URL/);
   });
 
-  it('rechaza una DATABASE_URL que no es de PostgreSQL', () => {
+  it('rejects a DATABASE_URL that is not PostgreSQL', () => {
     expect(() => loadEnv({ JWT_SECRET, DATABASE_URL: 'mysql://localhost/db' })).toThrow(
       /DATABASE_URL/,
     );
   });
 
-  it('exige un JWT_SECRET de al menos 32 caracteres', () => {
+  it('requires a JWT_SECRET of at least 32 characters', () => {
     expect(() => loadEnv({ DATABASE_URL })).toThrow(/JWT_SECRET/);
-    expect(() => loadEnv({ DATABASE_URL, JWT_SECRET: 'corto' })).toThrow(/JWT_SECRET/);
+    expect(() => loadEnv({ DATABASE_URL, JWT_SECRET: 'short' })).toThrow(/JWT_SECRET/);
   });
 
-  it('en producción exige el almacenamiento (ADR-005) y Ollama (ADR-006)', () => {
+  it('in production requires storage (ADR-005) and Ollama (ADR-006)', () => {
     expect(() => loadEnv({ ...required, NODE_ENV: 'production' })).toThrow(
       /S3_BUCKET.*S3_ACCESS_KEY_ID.*S3_SECRET_ACCESS_KEY.*OLLAMA_URL/,
     );
   });
 
-  it('en producción sin S3_ENDPOINT usa AWS S3', () => {
+  it('in production without S3_ENDPOINT uses AWS S3', () => {
     const env = loadEnv({
       ...required,
       NODE_ENV: 'production',

@@ -3,57 +3,57 @@ import type { PredefinedProfileName } from '../domain/predefined-profiles';
 
 /** Test data shared by the domain and the HTTP tests of the access matrix. */
 
-export type Cell = 'sin acceso' | AccessLevel | `${AccessLevel}·${Scope}`;
+export type Cell = 'no access' | AccessLevel | `${AccessLevel}·${Scope}`;
 
-// Matriz del apartado 3 de la especificación, copiada tal cual.
+// Matrix of section 3 of the specification, copied as is.
 export const SPEC_MATRIX: Record<Module, Record<PredefinedProfileName, Cell>> = {
-  comunicados: {
-    Socio: 'consulta',
-    'Consejo rector': 'gestion',
-    Gestor: 'consulta',
-    Administrador: 'gestion',
+  announcements: {
+    Socio: 'read',
+    'Consejo rector': 'manage',
+    Gestor: 'read',
+    Administrador: 'manage',
   },
-  asambleas: {
-    Socio: 'consulta',
-    'Consejo rector': 'gestion',
-    Gestor: 'sin acceso',
-    Administrador: 'gestion',
+  assemblies: {
+    Socio: 'read',
+    'Consejo rector': 'manage',
+    Gestor: 'no access',
+    Administrador: 'manage',
   },
-  documentos: {
-    Socio: 'consulta',
-    'Consejo rector': 'gestion',
-    Gestor: 'consulta',
-    Administrador: 'gestion',
+  documents: {
+    Socio: 'read',
+    'Consejo rector': 'manage',
+    Gestor: 'read',
+    Administrador: 'manage',
   },
-  facturas: {
-    Socio: 'sin acceso',
-    'Consejo rector': 'consulta',
-    Gestor: 'gestion',
-    Administrador: 'gestion',
+  invoicing: {
+    Socio: 'no access',
+    'Consejo rector': 'read',
+    Gestor: 'manage',
+    Administrador: 'manage',
   },
-  'area-socio': {
-    Socio: 'consulta·propias',
-    'Consejo rector': 'consulta·todas',
-    Gestor: 'gestion·todas',
-    Administrador: 'gestion·todas',
+  'member-area': {
+    Socio: 'read·own',
+    'Consejo rector': 'read·all',
+    Gestor: 'manage·all',
+    Administrador: 'manage·all',
   },
-  asistente: {
-    Socio: 'consulta',
-    'Consejo rector': 'consulta',
-    Gestor: 'consulta',
-    Administrador: 'consulta',
+  assistant: {
+    Socio: 'read',
+    'Consejo rector': 'read',
+    Gestor: 'read',
+    Administrador: 'read',
   },
-  usuarios: {
-    Socio: 'sin acceso',
-    'Consejo rector': 'sin acceso',
-    Gestor: 'sin acceso',
-    Administrador: 'gestion',
+  users: {
+    Socio: 'no access',
+    'Consejo rector': 'no access',
+    Gestor: 'no access',
+    Administrador: 'manage',
   },
 };
 
 /** Splits a cell into what it grants: null for no access. */
 export function parseCell(cell: Cell): { level: AccessLevel; scope: Scope } | null {
-  if (cell === 'sin acceso') return null;
-  const [level, scope = 'todas'] = cell.split('·') as [AccessLevel, Scope?];
+  if (cell === 'no access') return null;
+  const [level, scope = 'all'] = cell.split('·') as [AccessLevel, Scope?];
   return { level, scope };
 }

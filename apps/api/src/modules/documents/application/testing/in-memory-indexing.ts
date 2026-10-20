@@ -33,7 +33,7 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
       return null;
     return {
       fileKey: found.version.fileKey,
-      indexable: found.version.isCurrent && found.row.status === 'publicado',
+      indexable: found.version.isCurrent && found.row.status === 'published',
     };
   }
 
@@ -44,10 +44,10 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
 
   async listPending(): Promise<PendingVersion[]> {
     return this.documents.rows.flatMap((row) =>
-      row.status !== 'publicado'
+      row.status !== 'published'
         ? []
         : row.versions
-            .filter((v) => v.isCurrent && v.indexingStatus === 'pendiente')
+            .filter((v) => v.isCurrent && v.indexingStatus === 'pending')
             .map((v) => ({
               cooperativeId: row.cooperativeId,
               documentId: row.id,
@@ -79,7 +79,7 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
       .filter((f) => f.cooperativeId === cooperativeId)
       .flatMap((f) => {
         const row = this.documents.rows.find((r) => r.id === f.documentId);
-        if (!row || row.status !== 'publicado') return [];
+        if (!row || row.status !== 'published') return [];
         return [
           {
             documentId: f.documentId,

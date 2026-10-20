@@ -25,11 +25,11 @@ export { OllamaEmbedder } from './infrastructure/ollama-embedder';
 /** Deterministic embedder for tests and CI, where there is no Ollama (ADR-006). */
 export { HashingEmbedder } from './application/testing/hashing-embedder';
 
-/** Public interface of the documents module (requisitos/03), including RAG indexing. */
+/** Public interface of the documents module (requirements/03), including RAG indexing. */
 export function createDocumentsModule(deps: {
   prisma: PrismaClient;
   files: FileStorage;
-  /** Publishes its events and listens to them to index (DocumentoPublicado, DocumentoRetirado). */
+  /** Publishes its events and listens to them to index (DocumentPublished, DocumentWithdrawn). */
   events: EventPublisher<DocumentEvent> & EventSubscriber<DocumentEvent>;
   members: MemberDirectory;
   requireCooperative: RequestHandler;
@@ -47,13 +47,13 @@ export function createDocumentsModule(deps: {
     embedder: deps.embedder,
     onError: (error, job) =>
       console.error(
-        `Fallo al indexar la versión ${job.versionId}:`,
+        `Failed to index version ${job.versionId}:`,
         error instanceof Error ? error.message : error,
       ),
   });
 
-  deps.events.subscribe('DocumentoPublicado', (event) => indexer.enqueue(event.payload));
-  deps.events.subscribe('DocumentoRetirado', (event) =>
+  deps.events.subscribe('DocumentPublished', (event) => indexer.enqueue(event.payload));
+  deps.events.subscribe('DocumentWithdrawn', (event) =>
     indexer.remove(event.payload.cooperativeId, event.payload.documentId),
   );
 
@@ -73,7 +73,7 @@ export function createDocumentsModule(deps: {
     errorHandler: documentErrorHandler,
     /** Background indexing: resume what a restart interrupted; wait for it in tests. */
     indexing: { resumePending: indexer.resumePending, idle: indexer.idle },
-    /** For the assistant's RAG (requisitos/07), with the caller's permissions. */
+    /** For the assistant's RAG (requirements/07), with the caller's permissions. */
     search: (context: CooperativeContext, query: string) =>
       searchDocuments({ embedder: deps.embedder, index }, context, query),
   };

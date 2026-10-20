@@ -20,27 +20,27 @@ async function seed() {
   return { coopA, coopB, profileA, profileB, user };
 }
 
-describe('restricciones del esquema de acceso', () => {
-  it('RN-ACC-01: el email es único en toda la plataforma', async () => {
+describe('access schema constraints', () => {
+  it('BR-ACC-01: the email is unique across the platform', async () => {
     const { user } = await seed();
 
     await expect(
-      prisma.user.create({ data: { email: user.email, name: 'Otra Ana' } }),
+      prisma.user.create({ data: { email: user.email, name: 'Another Ana' } }),
     ).rejects.toThrow();
   });
 
-  it('RN-ACC-02: un usuario no puede tener dos membresías vivas en la misma cooperativa', async () => {
+  it('BR-ACC-02: a user cannot have two live memberships in the same cooperative', async () => {
     const { coopA, profileA, user } = await seed();
     const data = { userId: user.id, cooperativeId: coopA.id, profileId: profileA.id };
-    await prisma.membership.create({ data: { ...data, status: 'activa' } });
+    await prisma.membership.create({ data: { ...data, status: 'active' } });
 
     await expect(prisma.membership.create({ data })).rejects.toThrow();
   });
 
-  it('RN-ACC-14: tras una baja se puede crear una membresía nueva y la antigua se conserva', async () => {
+  it('BR-ACC-14: after a removal a new membership can be created and the old one is kept', async () => {
     const { coopA, profileA, user } = await seed();
     const data = { userId: user.id, cooperativeId: coopA.id, profileId: profileA.id };
-    await prisma.membership.create({ data: { ...data, status: 'baja' } });
+    await prisma.membership.create({ data: { ...data, status: 'removed' } });
 
     await prisma.membership.create({ data });
 
@@ -49,10 +49,10 @@ describe('restricciones del esquema de acceso', () => {
       select: { status: true },
       orderBy: { createdAt: 'asc' },
     });
-    expect(statuses.map(({ status }) => status).sort()).toEqual(['baja', 'invitada']);
+    expect(statuses.map(({ status }) => status).sort()).toEqual(['invited', 'removed']);
   });
 
-  it('RN-ACC-03: el perfil de una membresía debe ser de su misma cooperativa', async () => {
+  it('BR-ACC-03: the profile of a membership must belong to the same cooperative', async () => {
     const { coopA, profileB, user } = await seed();
 
     await expect(
@@ -62,7 +62,7 @@ describe('restricciones del esquema de acceso', () => {
     ).rejects.toThrow();
   });
 
-  it('un mismo usuario puede pertenecer a varias cooperativas (ADR-003)', async () => {
+  it('the same user can belong to several cooperatives (ADR-003)', async () => {
     const { coopA, coopB, profileA, profileB, user } = await seed();
 
     await prisma.membership.create({

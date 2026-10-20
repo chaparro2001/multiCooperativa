@@ -34,7 +34,7 @@ export interface AnnouncementDeps {
 }
 
 const canManage = (context: CooperativeContext) =>
-  hasAccess(context.permissions, 'comunicados', 'gestion');
+  hasAccess(context.permissions, 'announcements', 'manage');
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -66,13 +66,13 @@ export interface AnnouncementPage {
   nextOffset: number | null;
 }
 
-/** HU-COM-02. */
+/** US-ANN-02. */
 export async function listAnnouncements(
   deps: AnnouncementDeps,
   context: CooperativeContext,
   offset: number,
 ): Promise<AnnouncementPage> {
-  requireAccess(context.permissions, 'comunicados', 'consulta');
+  requireAccess(context.permissions, 'announcements', 'read');
   // One extra row tells whether there is a next page.
   const rows = await deps.announcements.list(context.cooperativeId, {
     onlyPublished: !canManage(context),
@@ -94,20 +94,20 @@ export async function listAnnouncements(
 export interface AnnouncementDetail extends AnnouncementRecord {
   authorName: string | null;
   attachments: (Omit<AttachmentRecord, 'fileKey'> & { url: string })[];
-  /** HU-COM-07, only for «gestión» and once published. */
+  /** US-ANN-07, only for "manage" and once published. */
   readStats: { readCount: number; activeMembers: number } | null;
 }
 
-/** HU-COM-03: opening a published announcement marks it as read. */
+/** US-ANN-03: opening a published announcement marks it as read. */
 export async function getAnnouncement(
   deps: AnnouncementDeps,
   context: CooperativeContext,
   id: string,
 ): Promise<AnnouncementDetail> {
-  requireAccess(context.permissions, 'comunicados', 'consulta');
+  requireAccess(context.permissions, 'announcements', 'read');
   const announcement = await findVisible(deps, context, id);
 
-  if (announcement.status === 'publicado') {
+  if (announcement.status === 'published') {
     await deps.announcements.recordRead(announcement.id, context.membershipId, deps.now());
   }
 
@@ -122,7 +122,7 @@ export async function getAnnouncement(
         }),
       })),
     ),
-    canManage(context) && announcement.status !== 'borrador'
+    canManage(context) && announcement.status !== 'draft'
       ? Promise.all([
           deps.announcements.countReads(announcement.id),
           deps.members.countActiveMembers(context.cooperativeId),
@@ -139,27 +139,27 @@ export async function getAnnouncement(
   };
 }
 
-/** HU-COM-01: saving creates a draft visible only with «gestión». */
+/** US-ANN-01: saving creates a draft visible only with "manage". */
 export async function createAnnouncement(
   deps: AnnouncementDeps,
   context: CooperativeContext,
   input: { title: string; body: string },
 ): Promise<AnnouncementRecord> {
-  requireAccess(context.permissions, 'comunicados', 'gestion');
+  requireAccess(context.permissions, 'announcements', 'manage');
   return deps.announcements.create(context.cooperativeId, {
     authorMembershipId: context.membershipId,
     state: createDraft(input),
   });
 }
 
-/** HU-COM-05 (edit) and HU-COM-06 (pin). */
+/** US-ANN-05 (edit) and US-ANN-06 (pin). */
 export async function updateAnnouncement(
   deps: AnnouncementDeps,
   context: CooperativeContext,
   id: string,
   changes: { title?: string; body?: string; pinned?: boolean },
 ): Promise<AnnouncementRecord> {
-  requireAccess(context.permissions, 'comunicados', 'gestion');
+  requireAccess(context.permissions, 'announcements', 'manage');
   return updateOrFail(deps, context, id, (current) => {
     let next: AnnouncementState = current;
     if (changes.title !== undefined || changes.body !== undefined) {
@@ -170,19 +170,19 @@ export async function updateAnnouncement(
   });
 }
 
-/** HU-COM-01: publishes and emits `ComunicadoPublicado` once (RN-COM-07). */
+/** US-ANN-01: publishes and emits `AnnouncementPublished` once (BR-ANN-07). */
 export async function publishAnnouncement(
   deps: AnnouncementDeps,
   context: CooperativeContext,
   id: string,
 ): Promise<AnnouncementRecord> {
-  requireAccess(context.permissions, 'comunicados', 'gestion');
+  requireAccess(context.permissions, 'announcements', 'manage');
   const now = deps.now();
   const published = await updateOrFail(deps, context, id, (current) => publish(current, now));
 
   // After the commit: a subscriber never sees an announcement that is not stored yet.
   await deps.events.publish({
-    type: 'ComunicadoPublicado',
+    type: 'AnnouncementPublished',
     occurredAt: now,
     payload: {
       cooperativeId: context.cooperativeId,
@@ -193,30 +193,30 @@ export async function publishAnnouncement(
   return published;
 }
 
-/** HU-COM-05. */
+/** US-ANN-05. */
 export async function withdrawAnnouncement(
   deps: AnnouncementDeps,
   context: CooperativeContext,
   id: string,
 ): Promise<AnnouncementRecord> {
-  requireAccess(context.permissions, 'comunicados', 'gestion');
+  requireAccess(context.permissions, 'announcements', 'manage');
   return updateOrFail(deps, context, id, (current) => withdraw(current));
 }
 
-/** RN-COM-05: up to 3 PDF of 10 MB, checked by content before and again under lock. */
+/** BR-ANN-05: up to 3 PDF of 10 MB, checked by content before and again under lock. */
 export async function addAttachment(
   deps: AnnouncementDeps,
   context: CooperativeContext,
   id: string,
   file: { name: string; content: Uint8Array },
 ): Promise<Omit<AttachmentRecord, 'fileKey'>> {
-  requireAccess(context.permissions, 'comunicados', 'gestion');
+  requireAccess(context.permissions, 'announcements', 'manage');
   const announcement = await findVisible(deps, context, id);
   const facts = { size: file.content.byteLength, isPdf: isPdf(file.content) };
   // Early, so a refused file is never uploaded.
   assertCanAttach(announcement, announcement.attachments.length, facts);
 
-  const fileKey = newFileKey(context.cooperativeId, 'comunicados');
+  const fileKey = newFileKey(context.cooperativeId, 'announcements');
   await deps.files.put(fileKey, file.content, PDF);
   try {
     const stored = await deps.announcements.addAttachment(

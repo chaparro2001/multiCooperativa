@@ -12,8 +12,8 @@ const cases = MODULES.flatMap((module) =>
   })),
 );
 
-describe('perfiles predefinidos (matriz del apartado 3)', () => {
-  it('son exactamente los cuatro de la especificación', () => {
+describe('predefined profiles (matrix of section 3)', () => {
+  it('are exactly the four of the specification', () => {
     expect(PREDEFINED_PROFILES.map((profile) => profile.name)).toEqual([
       'Socio',
       'Consejo rector',
@@ -25,19 +25,19 @@ describe('perfiles predefinidos (matriz del apartado 3)', () => {
   it.each(cases)('$profile en $module: $cell', ({ module, profile, cell }) => {
     const { permissions } = PREDEFINED_PROFILES.find((candidate) => candidate.name === profile)!;
     const grant = parseCell(cell);
-    const read = resolveAccess(permissions, module, 'consulta');
-    const manage = resolveAccess(permissions, module, 'gestion');
+    const read = resolveAccess(permissions, module, 'read');
+    const manage = resolveAccess(permissions, module, 'manage');
 
     if (!grant) {
       expect(read).toEqual({ granted: false });
       expect(manage).toEqual({ granted: false });
     } else {
       expect(read).toEqual({ granted: true, scope: grant.scope });
-      expect(manage.granted).toBe(grant.level === 'gestion');
+      expect(manage.granted).toBe(grant.level === 'manage');
     }
   });
 
-  it('solo el Administrador es perfil administrador (gestión de usuarios y perfiles)', () => {
+  it('only the Administrador is an administrator profile (users and profiles management)', () => {
     expect(
       PREDEFINED_PROFILES.filter((profile) => isAdminProfile(profile.permissions)).map(
         (profile) => profile.name,

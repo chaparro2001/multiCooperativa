@@ -15,7 +15,7 @@ export interface Chunk {
   content: string;
 }
 
-/** HU-DOC-06: a scanned PDF without a text layer cannot be indexed. */
+/** US-DOC-06: a scanned PDF without a text layer cannot be indexed. */
 export function hasExtractableText(pages: readonly PageText[]): boolean {
   return pages.some((page) => page.text.trim().length > 0);
 }
@@ -79,7 +79,7 @@ function tail(text: string, size: number): string {
 
 /**
  * Deterministic chunking for the RAG. Fragments never span two pages, so each
- * one carries the page it cites (RN-DOC-06); paragraphs that fit are kept whole.
+ * one carries the page it cites (BR-DOC-06); paragraphs that fit are kept whole.
  */
 export function chunkPages(
   pages: readonly PageText[],

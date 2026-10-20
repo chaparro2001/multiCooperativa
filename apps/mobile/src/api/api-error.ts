@@ -1,5 +1,8 @@
 import { apiErrorSchema } from '@multicooperativa/contracts';
 
+import { i18n } from '../i18n';
+import { joinList } from '../i18n/format';
+
 /** An answer of the API other than 2xx, with the `error` code of its body. */
 export class ApiError extends Error {
   constructor(
@@ -31,31 +34,55 @@ export class ApiError extends Error {
 /** The request never reached the API (no network, server down). */
 export class NetworkError extends Error {
   constructor(cause: unknown) {
-    super('No se puede conectar con el servidor.', { cause });
+    super('Cannot connect to the server.', { cause });
     this.name = 'NetworkError';
   }
 }
 
-const MESSAGES: Record<string, string> = {
-  invalid_request: 'Revisa los datos introducidos.',
-  invalid_credentials: 'Email o contraseña incorrectos.',
-  login_locked: 'Demasiados intentos fallidos. Espera unos minutos y vuelve a intentarlo.',
-  too_many_requests: 'Demasiadas peticiones. Espera unos minutos y vuelve a intentarlo.',
-  no_active_membership: 'No tienes acceso a ninguna cooperativa.',
-  invitation_not_usable:
-    'La invitación ha caducado o ya se ha usado. Pide una nueva a tu cooperativa.',
-  weak_password: 'La contraseña debe tener al menos 10 caracteres.',
-  unauthenticated: 'Tu sesión ha terminado. Vuelve a iniciar sesión.',
-  invalid_refresh_token: 'Tu sesión ha terminado. Vuelve a iniciar sesión.',
-  forbidden: 'Tu perfil no tiene acceso a esta sección.',
-  not_found: 'No encontrado.',
-};
+/** Free-form lookup: API error codes are data, so they cannot be checked against the catalog. */
+const lookup = i18n.t as unknown as (key: string, options?: Record<string, unknown>) => string;
 
-/** The text to show the user for any failure. */
-export function messageFor(error: unknown): string {
-  if (error instanceof NetworkError) return error.message;
-  if (error instanceof ApiError) {
-    return MESSAGES[error.code] ?? (error.message || 'Ha ocurrido un error. Inténtalo de nuevo.');
+/** Error codes whose text depends on the extra data (`details`) the API sends with them. */
+function detailedMessage(error: ApiError): string | null {
+  const reason = error.details.reason;
+  switch (error.code) {
+    case 'invalid_announcement': {
+      const issues = Array.isArray(error.details.issues) ? error.details.issues : [];
+      const texts = issues
+        .map((issue) => String(issue))
+        .filter((issue) => i18n.exists(`errors.announcementIssues.${issue}`));
+      if (texts.length === 0) return null;
+      return i18n.t('errors.codes.invalid_announcement', {
+        issues: joinList(texts.map((issue) => lookup(`errors.announcementIssues.${issue}`))),
+      });
+    }
+    case 'attachment_rejected':
+    case 'file_rejected': {
+      const key = `errors.rejections.${error.code}.${String(reason)}`;
+      return i18n.exists(key) ? lookup(key) : null;
+    }
+    case 'insufficient_notice': {
+      const days = Number(error.details.minNoticeDays);
+      return Number.isFinite(days)
+        ? i18n.t('errors.codes.insufficient_notice', { count: days })
+        : null;
+    }
+    default:
+      return null;
   }
-  return 'Ha ocurrido un error. Inténtalo de nuevo.';
+}
+
+/**
+ * The localized text to show the user for any failure. The `message` the API sends is for
+ * developers (English) and is never shown: the stable `error` code selects the text.
+ */
+export function messageFor(error: unknown): string {
+  if (error instanceof NetworkError) return i18n.t('errors.network');
+  if (error instanceof ApiError) {
+    const detailed = detailedMessage(error);
+    if (detailed) return detailed;
+    const key = `errors.codes.${error.code}`;
+    if (i18n.exists(key)) return lookup(key);
+  }
+  return i18n.t('errors.generic');
 }

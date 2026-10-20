@@ -10,12 +10,12 @@ export abstract class AnnouncementApplicationError extends Error {
 
 /**
  * Does not exist, belongs to another cooperative, or is a draft or withdrawn
- * one asked for with only «consulta»: all look the same (HU-COM-03, ADR-003).
+ * one asked for with only "read": all look the same (US-ANN-03, ADR-003).
  */
 export class AnnouncementNotFoundError extends AnnouncementApplicationError {
   readonly code = 'not_found';
 
   constructor() {
-    super('No encontrado.');
+    super('Not found.');
   }
 }

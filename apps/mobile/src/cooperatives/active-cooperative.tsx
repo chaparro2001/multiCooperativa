@@ -21,7 +21,7 @@ import { LAST_COOPERATIVE_KEY } from '../session/storage-keys';
 import { initialCooperative } from './selection';
 
 /** Every query of a cooperative lives under this key, so switching drops them all. */
-export const cooperativeKey = (cooperativeId: string) => ['cooperativa', cooperativeId] as const;
+export const cooperativeKey = (cooperativeId: string) => ['cooperative', cooperativeId] as const;
 
 interface ActiveCooperativeValue {
   me: MeResponse | undefined;
@@ -35,7 +35,7 @@ interface ActiveCooperativeValue {
 
 const ActiveCooperativeContext = createContext<ActiveCooperativeValue | null>(null);
 
-/** HU-ACC-05 and HU-ACC-06: the cooperative being used and its permissions. */
+/** US-ACC-05 and US-ACC-06: the cooperative being used and its permissions. */
 export function ActiveCooperativeProvider({ children }: { children: ReactNode }) {
   const { api, deviceStore } = useServices();
   const queryClient = useQueryClient();
@@ -62,12 +62,12 @@ export function ActiveCooperativeProvider({ children }: { children: ReactNode })
   }, [me, cooperativeId, deviceStore]);
 
   const permissionsQuery = useQuery({
-    queryKey: [...cooperativeKey(cooperativeId ?? ''), 'permisos'],
+    queryKey: [...cooperativeKey(cooperativeId ?? ''), 'permissions'],
     enabled: Boolean(cooperativeId),
-    // Always fresh: a profile change must show on the next request (HU-ACC-06).
+    // Always fresh: a profile change must show on the next request (US-ACC-06).
     staleTime: 0,
     queryFn: () =>
-      api.request(`/cooperativas/${cooperativeId}/me/permisos`, {
+      api.request(`/cooperatives/${cooperativeId}/me/permissions`, {
         schema: myPermissionsResponseSchema,
       }),
   });
@@ -109,7 +109,6 @@ export function ActiveCooperativeProvider({ children }: { children: ReactNode })
 
 export function useActiveCooperative(): ActiveCooperativeValue {
   const value = useContext(ActiveCooperativeContext);
-  if (!value)
-    throw new Error('useActiveCooperative debe usarse dentro de ActiveCooperativeProvider');
+  if (!value) throw new Error('useActiveCooperative must be used inside ActiveCooperativeProvider');
   return value;
 }

@@ -36,7 +36,7 @@ export async function memberToken(
       userId: user.id,
       cooperativeId: input.cooperativeId,
       profileId: profile.id,
-      status: 'activa',
+      status: 'active',
       isPartner: input.isPartner,
     },
   });

@@ -32,9 +32,9 @@ export interface MemberDeps {
 
 export const AUDIT_PAGE_SIZE = 100;
 
-/** Every member operation requires «Usuarios y perfiles · gestión». */
+/** Every member operation requires "Users and profiles · manage". */
 function requireUserManagement(context: CooperativeContext): void {
-  requireAccess(context.permissions, 'usuarios', 'gestion');
+  requireAccess(context.permissions, 'users', 'manage');
 }
 
 async function findProfileOrFail(
@@ -49,8 +49,8 @@ async function findProfileOrFail(
   return profile;
 }
 
-/** An active administrator is what RN-ACC-07 protects. */
-const isActiveAdmin = (member: MemberRecord) => member.status === 'activa' && member.isAdmin;
+/** An active administrator is what BR-ACC-07 protects. */
+const isActiveAdmin = (member: MemberRecord) => member.status === 'active' && member.isAdmin;
 
 async function updateOrFail(
   deps: Pick<MemberDeps, 'members'>,
@@ -63,7 +63,7 @@ async function updateOrFail(
     context.cooperativeId,
     membershipId,
     (snapshot) => {
-      // RN-ACC-08, checked first: nobody modifies their own membership.
+      // BR-ACC-08, checked first: nobody modifies their own membership.
       assertNotSelf(context.membershipId, snapshot.member.membershipId);
       return decide(snapshot);
     },
@@ -97,7 +97,7 @@ export interface InviteMemberInput {
   partnerNumber?: string | null;
 }
 
-/** HU-ACC-08. */
+/** US-ACC-08. */
 export async function inviteMember(
   deps: MemberDeps,
   context: CooperativeContext,
@@ -134,9 +134,9 @@ export async function inviteMember(
   return { membershipId: created.membershipId };
 }
 
-export type MemberChange = { profileId: string } | { status: 'activa' | 'suspendida' };
+export type MemberChange = { profileId: string } | { status: 'active' | 'suspended' };
 
-/** HU-ACC-09 (profile) and HU-ACC-10 (suspend, reactivate). */
+/** US-ACC-09 (profile) and US-ACC-10 (suspend, reactivate). */
 export async function changeMember(
   deps: Pick<MemberDeps, 'members'>,
   context: CooperativeContext,
@@ -155,9 +155,9 @@ export async function changeMember(
     });
 
     if (newProfile) {
-      if (member.status === 'baja') {
+      if (member.status === 'removed') {
         throw new InvalidMembershipTransitionError(
-          'No se puede cambiar el perfil de una membresía dada de baja.',
+          'The profile of a removed membership cannot be changed.',
         );
       }
       assertKeepsAnAdmin({
@@ -174,24 +174,24 @@ export async function changeMember(
       };
     }
 
-    if ('status' in change && change.status === 'suspendida') {
+    if ('status' in change && change.status === 'suspended') {
       suspend(member);
       assertKeepsAnAdmin({ targetIsActiveAdmin: isActiveAdmin(member), activeAdminCount });
       return {
-        status: 'suspendida',
-        audit: audit('member.suspended', { status: member.status }, { status: 'suspendida' }),
+        status: 'suspended',
+        audit: audit('member.suspended', { status: member.status }, { status: 'suspended' }),
       };
     }
 
     reactivate(member);
     return {
-      status: 'activa',
-      audit: audit('member.reactivated', { status: member.status }, { status: 'activa' }),
+      status: 'active',
+      audit: audit('member.reactivated', { status: member.status }, { status: 'active' }),
     };
   });
 }
 
-/** HU-ACC-10: definitive; the membership stays as "baja" and keeps its history (RN-ACC-14). */
+/** US-ACC-10: definitive; the membership stays as "removed" and keeps its history (BR-ACC-14). */
 export async function removeMember(
   deps: Pick<MemberDeps, 'members'>,
   context: CooperativeContext,
@@ -202,17 +202,17 @@ export async function removeMember(
     remove(member);
     assertKeepsAnAdmin({ targetIsActiveAdmin: isActiveAdmin(member), activeAdminCount });
     return {
-      status: 'baja',
+      status: 'removed',
       audit: {
         actorUserId: context.userId,
         action: 'member.removed',
-        detail: { before: { status: member.status }, after: { status: 'baja' } },
+        detail: { before: { status: member.status }, after: { status: 'removed' } },
       },
     };
   });
 }
 
-/** HU-ACC-08: a new single-use link; the previous one stops working. */
+/** US-ACC-08: a new single-use link; the previous one stops working. */
 export async function resendInvitation(
   deps: MemberDeps,
   context: CooperativeContext,
@@ -223,7 +223,7 @@ export async function resendInvitation(
   const { expiresAt } = issueInvitation(deps.now());
 
   const member = await updateOrFail(deps, context, membershipId, ({ member }) => {
-    if (member.status !== 'invitada') throw new InvitationNotPendingError();
+    if (member.status !== 'invited') throw new InvitationNotPendingError();
     return {
       invitation: { tokenHash: deps.secrets.hash(token), expiresAt },
       audit: { actorUserId: context.userId, action: 'member.invitation_resent', detail: {} },
@@ -238,7 +238,7 @@ export async function resendInvitation(
   });
 }
 
-/** HU-ACC-12: only this cooperative's events, newest first. */
+/** US-ACC-12: only this cooperative's events, newest first. */
 export async function listAudit(
   deps: Pick<MemberDeps, 'members'>,
   context: CooperativeContext,

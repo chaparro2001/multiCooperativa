@@ -1,17 +1,17 @@
 import { z } from 'zod';
 
-/** Importes en euros como cadena con 2 decimales como máximo: nunca number (RN-FAC-13). */
-export const moneySchema = z.string().regex(/^-?\d+(\.\d{1,2})?$/, 'Importe con hasta 2 decimales');
-/** Cantidades con hasta 3 decimales, como cadena. */
+/** Amounts in euros as a string with at most 2 decimals: never a number (BR-INV-13). */
+export const moneySchema = z.string().regex(/^-?\d+(\.\d{1,2})?$/, 'Amount with up to 2 decimals');
+/** Quantities with up to 3 decimals, as a string. */
 export const quantitySchema = z
   .string()
-  .regex(/^\d+(\.\d{1,3})?$/, 'Cantidad con hasta 3 decimales');
-export const vatRateSchema = z.string().regex(/^\d{1,3}(\.\d{1,2})?$/, 'Tipo de IVA');
+  .regex(/^\d+(\.\d{1,3})?$/, 'Quantity with up to 3 decimals');
+export const vatRateSchema = z.string().regex(/^\d{1,3}(\.\d{1,2})?$/, 'VAT rate');
 const day = z.iso.date();
 
-export const operationSchema = z.enum(['compra', 'venta']);
+export const operationSchema = z.enum(['purchase', 'sale']);
 
-// ── Terceros (HU-FAC-01) ──
+// ── Third parties (US-INV-01) ──
 
 export const thirdPartySchema = z.object({
   id: z.uuid(),
@@ -33,16 +33,16 @@ export const thirdPartyInputSchema = z.object({
   phone: z.string().trim().max(30).nullable().default(null),
 });
 
-/** PATCH /terceros/{id}: el NIF no se edita; `active: false` lo desactiva (RN-FAC-14). */
+/** PATCH /third-parties/{id}: the tax ID is not editable; `active: false` deactivates it (BR-INV-14). */
 export const thirdPartyUpdateSchema = thirdPartyInputSchema.omit({ nif: true }).extend({
   active: z.boolean(),
 });
 
-/** GET /terceros?tipo=proveedor|cliente&q=…&inactivos=true */
+/** GET /third-parties?type=supplier|customer&q=…&inactive=true */
 export const listThirdPartiesQuerySchema = z.object({
-  tipo: z.enum(['proveedor', 'cliente']).optional(),
+  type: z.enum(['supplier', 'customer']).optional(),
   q: z.string().max(100).optional(),
-  inactivos: z
+  inactive: z
     .enum(['true', 'false'])
     .optional()
     .transform((value) => value === 'true'),
@@ -57,14 +57,14 @@ export type ThirdPartyUpdate = z.infer<typeof thirdPartyUpdateSchema>;
 export type ListThirdPartiesResponse = z.infer<typeof listThirdPartiesResponseSchema>;
 export { day as daySchema };
 
-// ── Albaranes y facturas (HU-FAC-02, HU-FAC-03, HU-FAC-06, HU-FAC-07) ──
+// ── Delivery notes and invoices (US-INV-02, US-INV-03, US-INV-06, US-INV-07) ──
 
-export const deliveryNoteStatusSchema = z.enum(['pendiente_facturar', 'facturado', 'anulado']);
-export const paymentStatusSchema = z.enum(['pendiente', 'vencida', 'liquidada', 'anulada']);
+export const deliveryNoteStatusSchema = z.enum(['pending_invoicing', 'invoiced', 'voided']);
+export const paymentStatusSchema = z.enum(['pending', 'overdue', 'settled', 'voided']);
 export const reconciliationStatusSchema = z.enum([
-  'sin_albaranes',
-  'conciliada',
-  'con_discrepancia',
+  'no_delivery_notes',
+  'reconciled',
+  'with_discrepancy',
 ]);
 
 export const lineSchema = z.object({
@@ -75,7 +75,7 @@ export const lineSchema = z.object({
 
 const partyRefSchema = z.object({ id: z.uuid(), name: z.string(), nif: z.string() });
 
-/** Campo `datos` (JSON) de POST /albaranes, junto al fichero opcional en `fichero`. */
+/** `data` field (JSON) of POST /delivery-notes, next to the optional file in `file`. */
 export const deliveryNoteInputSchema = z.object({
   thirdPartyId: z.uuid(),
   operation: operationSchema,
@@ -97,11 +97,11 @@ export const deliveryNoteSchema = z.object({
 });
 
 export const deliveryNoteDetailSchema = deliveryNoteSchema.extend({
-  /** Original (foto o PDF) con URL firmada de 5 minutos (RNF-FAC-02). */
+  /** Original (photo or PDF) with a signed 5-minute URL (NFR-INV-02). */
   fileUrl: z.url().nullable(),
 });
 
-/** Campo `datos` (JSON) de POST /facturas, junto al PDF opcional en `fichero`. */
+/** `data` field (JSON) of POST /invoices, next to the optional PDF in `file`. */
 export const invoiceInputSchema = z.object({
   thirdPartyId: z.uuid(),
   operation: operationSchema,
@@ -111,7 +111,7 @@ export const invoiceInputSchema = z.object({
   base: moneySchema,
   vatRate: vatRateSchema,
   total: moneySchema,
-  /** Necesarias si agrupa albaranes, para conciliar por concepto (RN-FAC-08). */
+  /** Required if it groups delivery notes, to reconcile by concept (BR-INV-08). */
   lines: z.array(lineSchema).max(100).default([]),
   deliveryNoteIds: z.array(z.uuid()).max(100).default([]),
 });
@@ -135,7 +135,7 @@ export const invoiceSchema = z.object({
 export const invoiceDetailSchema = invoiceSchema.extend({
   lines: z.array(lineSchema),
   deliveryNotes: z.array(z.object({ id: z.uuid(), number: z.string(), date: day })),
-  /** Detalle numérico por concepto, que es el que manda; la explicación la redacta la IA (RN-FAC-12). */
+  /** Numeric detail per concept, which is authoritative; the explanation is drafted by the AI (BR-INV-12). */
   discrepancies: z.array(
     z.object({
       id: z.uuid(),
@@ -149,30 +149,30 @@ export const invoiceDetailSchema = invoiceSchema.extend({
   fileUrl: z.url().nullable(),
 });
 
-/** POST /facturas/{id}/liquidar: pagada (compra) o cobrada (venta) en una fecha. */
+/** POST /invoices/{id}/settle: paid (purchase) or collected (sale) on a date. */
 export const settleInvoiceRequestSchema = z.object({ date: day });
 
-/** Filtros de los listados: ?operacion=&tercero=&estado=&conciliacion=&desde=&hasta= */
+/** List filters: ?operation=&thirdParty=&status=&reconciliation=&from=&to= */
 export const documentFilterQuerySchema = z.object({
-  operacion: operationSchema.optional(),
-  tercero: z.uuid().optional(),
-  desde: day.optional(),
-  hasta: day.optional(),
+  operation: operationSchema.optional(),
+  thirdParty: z.uuid().optional(),
+  from: day.optional(),
+  to: day.optional(),
 });
 
 export const listDeliveryNotesQuerySchema = documentFilterQuerySchema.extend({
-  estado: deliveryNoteStatusSchema.optional(),
+  status: deliveryNoteStatusSchema.optional(),
 });
 
 export const listInvoicesQuerySchema = documentFilterQuerySchema.extend({
-  estado: paymentStatusSchema.optional(),
-  conciliacion: reconciliationStatusSchema.optional(),
+  status: paymentStatusSchema.optional(),
+  reconciliation: reconciliationStatusSchema.optional(),
 });
 
 export const listDeliveryNotesResponseSchema = z.object({ items: z.array(deliveryNoteSchema) });
 export const listInvoicesResponseSchema = z.object({ items: z.array(invoiceSchema) });
 
-/** «Pendiente» incluye lo vencido: todo lo que queda por pagar o cobrar. */
+/** "Pending" includes what is overdue: everything still to be paid or collected. */
 export const amountsSchema = z.object({
   pending: moneySchema,
   overdue: moneySchema,
@@ -180,16 +180,16 @@ export const amountsSchema = z.object({
   overdueCount: z.number().int(),
 });
 
-/** GET /facturas/resumen (HU-FAC-07, HU-FAC-09). */
+/** GET /invoices/summary (US-INV-07, US-INV-09). */
 export const invoicingSummarySchema = z.object({
   toPay: amountsSchema,
   toCollect: amountsSchema,
   openDiscrepancies: z.number().int(),
-  /** Albaranes pendientes de facturar con más de 30 días. */
+  /** Delivery notes pending invoicing for more than 30 days. */
   staleDeliveryNotes: z.number().int(),
 });
 
-/** GET /terceros/{id}: ficha con documentos y saldo (HU-FAC-06). */
+/** GET /third-parties/{id}: record with documents and balance (US-INV-06). */
 export const thirdPartySheetSchema = thirdPartySchema.extend({
   deliveryNotes: z.array(deliveryNoteSchema),
   invoices: z.array(invoiceSchema),
@@ -210,3 +210,47 @@ export type ReconciliationStatus = z.infer<typeof reconciliationStatusSchema>;
 export type DeliveryNoteStatus = z.infer<typeof deliveryNoteStatusSchema>;
 export type ListDeliveryNotesResponse = z.infer<typeof listDeliveryNotesResponseSchema>;
 export type ListInvoicesResponse = z.infer<typeof listInvoicesResponseSchema>;
+
+// ── Vision extraction (US-INV-05) ──
+
+export const extractionFieldSchema = z.enum([
+  'documentType',
+  'thirdParty',
+  'number',
+  'date',
+  'dueDate',
+  'base',
+  'vatRate',
+  'total',
+  'lines',
+]);
+
+/**
+ * POST /extractions (multipart, photo or PDF in `file`): a proposal to review.
+ * Nothing is saved until it is confirmed through the normal registration (BR-INV-11).
+ */
+export const extractionResponseSchema = z.object({
+  /** `no_data`: it could not be read; the form is filled in by hand. */
+  status: z.enum(['proposal', 'no_data']),
+  documentType: z.enum(['delivery_note', 'invoice']).nullable(),
+  /** Deduced from the tax ID: if the cooperative itself issues it, it is a sale. */
+  operation: operationSchema.nullable(),
+  thirdParty: z.object({
+    nif: z.string().nullable(),
+    name: z.string().nullable(),
+    /** Third party of this cooperative with that tax ID, preselected; if null, offer to create it. */
+    match: thirdPartySchema.nullable(),
+  }),
+  number: z.string().nullable(),
+  date: day.nullable(),
+  dueDate: day.nullable(),
+  base: moneySchema.nullable(),
+  vatRate: vatRateSchema.nullable(),
+  total: moneySchema.nullable(),
+  lines: z.array(lineSchema),
+  /** Fields to review: doubtful for the model or failing validation. */
+  lowConfidence: z.array(extractionFieldSchema),
+});
+
+export type ExtractionResponse = z.infer<typeof extractionResponseSchema>;
+export type ExtractionField = z.infer<typeof extractionFieldSchema>;

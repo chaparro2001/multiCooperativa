@@ -3,23 +3,23 @@ import { describe, expect, it } from 'vitest';
 import { parseAppConfig } from './app-config';
 
 describe('parseAppConfig', () => {
-  it('acepta una URL http(s) del API', () => {
+  it('accepts an http(s) API URL', () => {
     expect(parseAppConfig({ apiUrl: 'https://api.example.com' })).toEqual({
       apiUrl: 'https://api.example.com',
     });
   });
 
-  it('quita la barra final para componer rutas sin duplicarla', () => {
+  it('strips the trailing slash so paths are not duplicated', () => {
     expect(parseAppConfig({ apiUrl: 'http://localhost:3000/' }).apiUrl).toBe(
       'http://localhost:3000',
     );
   });
 
-  it('falla si falta la URL del API', () => {
+  it('fails if the API URL is missing', () => {
     expect(() => parseAppConfig({ apiUrl: undefined })).toThrow(/apiUrl/);
   });
 
-  it('falla si la URL no es http(s)', () => {
+  it('fails if the URL is not http(s)', () => {
     expect(() => parseAppConfig({ apiUrl: 'ftp://api.example.com' })).toThrow(/apiUrl/);
   });
 });

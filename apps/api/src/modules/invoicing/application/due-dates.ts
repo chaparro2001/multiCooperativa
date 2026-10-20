@@ -4,7 +4,7 @@ import type { InvoicingEvent } from './events';
 import type { DueDatesStore, DueInvoice } from './ports/due-dates-store';
 
 /**
- * HU-FAC-07, daily process. Idempotent (RNF-FAC-04): running it twice the
+ * US-INV-07, daily process. Idempotent (NFR-INV-04): running it twice the
  * same day changes nothing and emits nothing the second time.
  */
 export async function runDueDates(
@@ -23,14 +23,14 @@ export async function runDueDates(
   });
   for (const invoice of overdue) {
     await deps.events.publish({
-      type: 'FacturaVencida',
+      type: 'InvoiceOverdue',
       occurredAt: deps.now(),
       payload: payload(invoice),
     });
   }
   for (const invoice of dueSoon) {
     await deps.events.publish({
-      type: 'FacturaProximaAVencer',
+      type: 'InvoiceDueSoon',
       occurredAt: deps.now(),
       payload: payload(invoice),
     });

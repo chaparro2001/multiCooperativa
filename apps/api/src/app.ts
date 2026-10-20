@@ -10,7 +10,7 @@ import { MulterError } from 'multer';
 
 import { InvalidRequestError } from './shared/infrastructure/http/validation';
 
-/** Last resort: never leaks internals to the client (RNF-ACC-08 keeps tokens out of logs too). */
+/** Last resort: never leaks internals to the client (NFR-ACC-08 keeps tokens out of logs too). */
 // Express tells error handlers apart by their four parameters, so `_next` must stay.
 const unhandledErrors: ErrorRequestHandler = (error, _req, res, _next) => {
   // A body that breaks its contract, malformed JSON rejected by express.json(), or a

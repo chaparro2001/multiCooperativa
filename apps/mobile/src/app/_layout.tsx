@@ -2,6 +2,7 @@ import { focusManager, QueryCache, QueryClient, QueryClientProvider } from '@tan
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppState, Platform } from 'react-native';
 
 import { ApiError } from '@/api/api-error';
@@ -9,17 +10,21 @@ import { createAppServices, ServicesProvider } from '@/app-services';
 import { BiometricsProvider } from '@/auth/biometrics';
 import { parseAppConfig } from '@/config/app-config';
 import { AppConfigProvider } from '@/config/app-config-context';
+import { applyDeviceLanguage } from '@/i18n/device-language';
 import { SessionProvider, useSession } from '@/session/session-context';
 import { createDeviceStore } from '@/storage/secure-key-value-store';
 
-// Único punto donde la app lee su entorno: el resto recibe la configuración inyectada.
+// The UI language follows the device (Spanish is the default and the fallback).
+applyDeviceLanguage();
+
+// The only place where the app reads its environment: the rest gets the configuration injected.
 const appConfig = parseAppConfig({ apiUrl: process.env.EXPO_PUBLIC_API_URL });
 const services = createAppServices(appConfig.apiUrl, createDeviceStore());
 
-// La pantalla de carga sigue visible hasta saber si hay sesión: nunca se ve una pantalla equivocada.
+// The splash screen stays visible until it is known whether there is a session: a wrong screen is never shown.
 SplashScreen.preventAutoHideAsync();
 
-// Volver a la app cuenta como «foco»: las consultas se refrescan (HU-ACC-06).
+// Coming back to the app counts as "focus": queries are refreshed (US-ACC-06).
 focusManager.setEventListener((setFocused) => {
   if (Platform.OS === 'web') return undefined;
   const subscription = AppState.addEventListener('change', (state) =>
@@ -32,19 +37,19 @@ function createQueryClient(): QueryClient {
   const client: QueryClient = new QueryClient({
     queryCache: new QueryCache({
       onError: (error) => {
-        // Un 403/404 dentro de una cooperativa suele significar que cambió el perfil o la
-        // membresía: se vuelven a pedir los permisos para ajustar la navegación.
+        // A 403/404 inside a cooperative usually means the profile or the membership changed:
+        // the permissions are requested again to adjust the navigation.
         if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
           client.invalidateQueries({
             predicate: (query) =>
-              query.queryKey[0] === 'cooperativa' && query.queryKey[2] === 'permisos',
+              query.queryKey[0] === 'cooperative' && query.queryKey[2] === 'permissions',
           });
         }
       },
     }),
     defaultOptions: {
       queries: {
-        // Sin sesión o sin permiso no tiene sentido reintentar.
+        // Without a session or permission there is no point in retrying.
         retry: (failureCount, error) =>
           !(error instanceof ApiError && error.status < 500) && failureCount < 2,
       },
@@ -72,6 +77,7 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
+  const { t } = useTranslation();
   const { status } = useSession();
 
   useEffect(() => {
@@ -86,10 +92,13 @@ function RootNavigator() {
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
       </Stack.Protected>
       <Stack.Protected guard={status === 'signedOut'}>
-        <Stack.Screen name="login" options={{ title: 'Iniciar sesión', headerShown: false }} />
+        <Stack.Screen
+          name="login"
+          options={{ title: t('auth.login.screenTitle'), headerShown: false }}
+        />
       </Stack.Protected>
-      {/* Abierta desde el enlace del correo, con o sin sesión (HU-ACC-01). */}
-      <Stack.Screen name="invitacion" options={{ title: 'Activar acceso' }} />
+      {/* Opened from the email link, with or without a session (US-ACC-01). */}
+      <Stack.Screen name="invitation" options={{ title: t('auth.invitation.screenTitle') }} />
     </Stack>
   );
 }

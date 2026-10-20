@@ -12,8 +12,8 @@ import type {
 
 type Transaction = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
 
-/** A profile is an administrator profile when it manages users and profiles (RN-ACC-07). */
-const MANAGES_USERS = { module: 'usuarios', level: 'gestion' } as const;
+/** A profile is an administrator profile when it manages users and profiles (BR-ACC-07). */
+const MANAGES_USERS = { module: 'users', level: 'manage' } as const;
 
 const memberSelect = {
   id: true,
@@ -66,7 +66,7 @@ export class PrismaMemberStore implements MemberStore {
 
   async listMembers(cooperativeId: string): Promise<MemberRecord[]> {
     const rows = await this.prisma.membership.findMany({
-      where: { cooperativeId, status: { not: 'baja' } },
+      where: { cooperativeId, status: { not: 'removed' } },
       orderBy: { user: { name: 'asc' } },
       select: memberSelect,
     });
@@ -117,7 +117,7 @@ export class PrismaMemberStore implements MemberStore {
           select: { id: true },
         });
         const live = await tx.membership.count({
-          where: { userId: user.id, cooperativeId, status: { not: 'baja' } },
+          where: { userId: user.id, cooperativeId, status: { not: 'removed' } },
         });
         if (live > 0) throw new AlreadyMember();
 
@@ -136,7 +136,7 @@ export class PrismaMemberStore implements MemberStore {
         return { membershipId: membership.id, userId: user.id };
       });
     } catch (error) {
-      // The partial unique index (RN-ACC-02) settles two simultaneous invitations.
+      // The partial unique index (BR-ACC-02) settles two simultaneous invitations.
       if (error instanceof AlreadyMember || isUniqueViolation(error)) return 'already_member';
       throw error;
     }
@@ -149,7 +149,7 @@ export class PrismaMemberStore implements MemberStore {
   ): Promise<MemberRecord | null> {
     return this.prisma.$transaction(async (tx) => {
       // Serializes membership changes per cooperative: the admin count read below
-      // cannot go stale before the update commits (RN-ACC-07).
+      // cannot go stale before the update commits (BR-ACC-07).
       await tx.$queryRaw`SELECT id FROM "Cooperative" WHERE id = ${cooperativeId}::uuid FOR UPDATE`;
 
       const row = await tx.membership.findFirst({
@@ -161,7 +161,7 @@ export class PrismaMemberStore implements MemberStore {
       const activeAdminCount = await tx.membership.count({
         where: {
           cooperativeId,
-          status: 'activa',
+          status: 'active',
           profile: { permissions: { some: MANAGES_USERS } },
         },
       });

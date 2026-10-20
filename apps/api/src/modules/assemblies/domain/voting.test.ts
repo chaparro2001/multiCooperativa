@@ -9,79 +9,79 @@ import {
 import { assertCanClose, assertCanOpen, assertCanVote, visibleTally } from './voting';
 
 const open = {
-  assemblyStatus: 'convocada',
+  assemblyStatus: 'convened',
   votable: true,
-  votingStatus: 'pendiente',
+  votingStatus: 'pending',
   censusSize: 10,
 } as const;
 
-describe('abrir y cerrar una votación (HU-ASA-04)', () => {
-  it('se abre un punto votable de una asamblea convocada', () => {
+describe('open and close a voting (US-ASM-04)', () => {
+  it('a votable item of a convened assembly is opened', () => {
     expect(() => assertCanOpen(open)).not.toThrow();
   });
 
   it.each([
-    [{ ...open, assemblyStatus: 'borrador' }, 'asamblea no convocada'],
-    [{ ...open, votable: false }, 'punto informativo'],
-    [{ ...open, votingStatus: 'abierta' }, 'ya abierta'],
-    [{ ...open, votingStatus: 'cerrada' }, 'ya cerrada'],
-    [{ ...open, censusSize: 0 }, 'sin socios en el censo'],
-  ] as const)('no se abre: %o (%s)', (input, _reason) => {
+    [{ ...open, assemblyStatus: 'draft' }, 'assembly not convened'],
+    [{ ...open, votable: false }, 'informative item'],
+    [{ ...open, votingStatus: 'open' }, 'already open'],
+    [{ ...open, votingStatus: 'closed' }, 'already closed'],
+    [{ ...open, censusSize: 0 }, 'no members in the census'],
+  ] as const)('is not opened: %o (%s)', (input, _reason) => {
     expect(() => assertCanOpen(input)).toThrow(InvalidVotingTransitionError);
   });
 
-  it('solo se cierra una votación abierta', () => {
-    expect(() => assertCanClose('abierta')).not.toThrow();
-    expect(() => assertCanClose('pendiente')).toThrow(InvalidVotingTransitionError);
-    expect(() => assertCanClose('cerrada')).toThrow(InvalidVotingTransitionError);
+  it('only an open voting is closed', () => {
+    expect(() => assertCanClose('open')).not.toThrow();
+    expect(() => assertCanClose('pending')).toThrow(InvalidVotingTransitionError);
+    expect(() => assertCanClose('closed')).toThrow(InvalidVotingTransitionError);
   });
 });
 
-describe('votar (HU-ASA-05)', () => {
-  it('Dado que estoy en el censo y no he votado, entonces puedo votar', () => {
+describe('vote (US-ASM-05)', () => {
+  it('Given I am in the census and have not voted, then I can vote', () => {
     expect(() =>
-      assertCanVote({ votingStatus: 'abierta', inCensus: true, previousVote: null }),
+      assertCanVote({ votingStatus: 'open', inCensus: true, previousVote: null }),
     ).not.toThrow();
   });
 
-  it('Dado que ya he votado, entonces se rechaza y se indica el voto emitido', () => {
+  it('Given I have already voted, then it is rejected and the cast vote is reported', () => {
     try {
-      assertCanVote({ votingStatus: 'abierta', inCensus: true, previousVote: 'en_contra' });
+      assertCanVote({ votingStatus: 'open', inCensus: true, previousVote: 'against' });
       expect.unreachable();
     } catch (error) {
       expect(error).toBeInstanceOf(AlreadyVotedError);
-      expect((error as AlreadyVotedError).choice).toBe('en_contra');
+      expect((error as AlreadyVotedError).choice).toBe('against');
     }
   });
 
-  it('Dado que no estaba en el censo, entonces se rechaza', () => {
+  it('Given I was not in the census, then it is rejected', () => {
     expect(() =>
-      assertCanVote({ votingStatus: 'abierta', inCensus: false, previousVote: null }),
+      assertCanVote({ votingStatus: 'open', inCensus: false, previousVote: null }),
     ).toThrow(NotInCensusError);
   });
 
-  it('una votación que aún no se ha abierto no admite votos', () => {
+  it('a voting that has not been opened accepts no votes', () => {
     expect(() =>
-      assertCanVote({ votingStatus: 'pendiente', inCensus: false, previousVote: null }),
+      assertCanVote({ votingStatus: 'pending', inCensus: false, previousVote: null }),
     ).toThrow(VotingClosedError);
   });
 
-  it('Dado una votación cerrada, entonces se rechaza', () => {
+  it('Given a closed voting, then it is rejected', () => {
     expect(() =>
-      assertCanVote({ votingStatus: 'cerrada', inCensus: true, previousVote: null }),
+      assertCanVote({ votingStatus: 'closed', inCensus: true, previousVote: null }),
     ).toThrow(VotingClosedError);
   });
 });
 
-describe('qué se ve del recuento (RN-ASA-11)', () => {
+describe('what is visible of the tally (BR-ASM-11)', () => {
   const tally = { inFavor: 3, against: 1, abstentions: 0 };
 
-  it('abierta y sin gestión: no se ve el sentido de los votos', () => {
-    expect(visibleTally('abierta', false, tally)).toBeNull();
+  it('open and without manage access: how people voted is not visible', () => {
+    expect(visibleTally('open', false, tally)).toBeNull();
   });
 
-  it('abierta con gestión, o cerrada para todos: se ve', () => {
-    expect(visibleTally('abierta', true, tally)).toEqual(tally);
-    expect(visibleTally('cerrada', false, tally)).toEqual(tally);
+  it('open with manage access, or closed for everyone: visible', () => {
+    expect(visibleTally('open', true, tally)).toEqual(tally);
+    expect(visibleTally('closed', false, tally)).toEqual(tally);
   });
 });

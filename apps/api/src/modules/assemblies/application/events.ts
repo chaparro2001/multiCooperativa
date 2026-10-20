@@ -1,19 +1,19 @@
 import type { DomainEvent } from '../../../shared/events';
 import type { Outcome } from '../domain/voting-result';
 
-/** Notifications tell the members (requisitos/04, section 6). */
+/** Notifications tell the members (docs/requirements/04-assemblies.md, section 6). */
 export type AssemblyConvened = DomainEvent<
-  'AsambleaConvocada',
+  'AssemblyConvened',
   { cooperativeId: string; assemblyId: string; firstCallAt: string }
 >;
 
 export type VotingOpened = DomainEvent<
-  'VotacionAbierta',
+  'VotingOpened',
   { cooperativeId: string; assemblyId: string; pointId: string; title: string }
 >;
 
 export type VotingClosed = DomainEvent<
-  'VotacionCerrada',
+  'VotingClosed',
   { cooperativeId: string; assemblyId: string; pointId: string; title: string; outcome: Outcome }
 >;
 

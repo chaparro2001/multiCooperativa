@@ -36,7 +36,7 @@ const votingSelect = {
 type VotingRow = {
   id: string;
   pointId: string;
-  status: 'abierta' | 'cerrada';
+  status: 'open' | 'closed';
   majority: Majority;
   firstCallQuorumPercent: number;
   secondCallQuorumPercent: number;
@@ -48,7 +48,7 @@ type VotingRow = {
   inFavor: number | null;
   against: number | null;
   abstentions: number | null;
-  callApplied: 'primera' | 'segunda' | null;
+  callApplied: 'first' | 'second' | null;
   quorumReached: boolean | null;
   outcome: VotingResult['outcome'] | null;
   _count: { census: number };
@@ -62,15 +62,15 @@ async function tallyOf(db: Transaction | PrismaClient, votingId: string) {
   const groups = await db.vote.groupBy({ by: ['choice'], where: { votingId }, _count: true });
   const count = (choice: VoteChoice) => groups.find((g) => g.choice === choice)?._count ?? 0;
   return {
-    inFavor: count('a_favor'),
-    against: count('en_contra'),
-    abstentions: count('abstencion'),
+    inFavor: count('in_favor'),
+    against: count('against'),
+    abstentions: count('abstention'),
   };
 }
 
 async function toRecord(db: Transaction | PrismaClient, row: VotingRow): Promise<VotingRecord> {
   const tally =
-    row.status === 'cerrada'
+    row.status === 'closed'
       ? { inFavor: row.inFavor ?? 0, against: row.against ?? 0, abstentions: row.abstentions ?? 0 }
       : await tallyOf(db, row.id);
   const censusSize = row._count.census;
@@ -80,7 +80,7 @@ async function toRecord(db: Transaction | PrismaClient, row: VotingRow): Promise
     status: row.status,
     majority: row.majority,
     policy: {
-      quorumPercent: { primera: row.firstCallQuorumPercent, segunda: row.secondCallQuorumPercent },
+      quorumPercent: { first: row.firstCallQuorumPercent, second: row.secondCallQuorumPercent },
       reinforced: { numerator: row.reinforcedNumerator, denominator: row.reinforcedDenominator },
     },
     secondCallAvailable: row.secondCallAvailable,
@@ -89,7 +89,7 @@ async function toRecord(db: Transaction | PrismaClient, row: VotingRow): Promise
     censusSize,
     tally,
     result:
-      row.status === 'cerrada' && row.callApplied && row.outcome
+      row.status === 'closed' && row.callApplied && row.outcome
         ? {
             census: censusSize,
             ...tally,
@@ -134,7 +134,7 @@ export class PrismaVotingStore implements VotingStore {
         assemblyStatus: row.status,
         votable: row.votable,
         majority: row.majority,
-        votingStatus: existing?.status ?? 'pendiente',
+        votingStatus: existing?.status ?? 'pending',
         secondCallAvailable: row.secondCallAt !== null,
       });
 
@@ -142,8 +142,8 @@ export class PrismaVotingStore implements VotingStore {
         data: {
           pointId,
           majority: snapshot.majority,
-          firstCallQuorumPercent: snapshot.policy.quorumPercent.primera,
-          secondCallQuorumPercent: snapshot.policy.quorumPercent.segunda,
+          firstCallQuorumPercent: snapshot.policy.quorumPercent.first,
+          secondCallQuorumPercent: snapshot.policy.quorumPercent.second,
           reinforcedNumerator: snapshot.policy.reinforced.numerator,
           reinforcedDenominator: snapshot.policy.reinforced.denominator,
           secondCallAvailable: snapshot.secondCallAvailable,
@@ -151,7 +151,7 @@ export class PrismaVotingStore implements VotingStore {
         },
         select: { id: true },
       });
-      // RN-ASA-02: the census is frozen now; later changes do not alter it.
+      // BR-ASM-02: the census is frozen now; later changes do not alter it.
       await tx.votingCensus.createMany({
         data: census.map((membershipId) => ({ votingId: voting.id, membershipId })),
       });
@@ -187,7 +187,7 @@ export class PrismaVotingStore implements VotingStore {
       await tx.voting.update({
         where: { id: votingId },
         data: {
-          status: 'cerrada',
+          status: 'closed',
           closedAt: at,
           inFavor: result.inFavor,
           against: result.against,
@@ -210,7 +210,7 @@ export class PrismaVotingStore implements VotingStore {
     membershipId: string,
     choice: VoteChoice,
     check: (state: {
-      votingStatus: 'pendiente' | 'abierta' | 'cerrada';
+      votingStatus: 'pending' | 'open' | 'closed';
       inCensus: boolean;
       previousVote: VoteChoice | null;
     }) => void,
@@ -224,7 +224,7 @@ export class PrismaVotingStore implements VotingStore {
         if (!point) throw new PointNotFound();
 
         // FOR SHARE: votes run in parallel, but never while the voting is being closed.
-        const locked = await tx.$queryRaw<{ id: string; status: 'abierta' | 'cerrada' }[]>`
+        const locked = await tx.$queryRaw<{ id: string; status: 'open' | 'closed' }[]>`
           SELECT id, status FROM "Voting" WHERE "pointId" = ${pointId}::uuid FOR SHARE`;
         const voting = locked[0];
         const [entry, previous] = voting
@@ -240,11 +240,11 @@ export class PrismaVotingStore implements VotingStore {
           : [null, null];
 
         check({
-          votingStatus: voting?.status ?? 'pendiente',
+          votingStatus: voting?.status ?? 'pending',
           inCensus: entry !== null,
           previousVote: previous?.choice ?? null,
         });
-        // RNF-ASA-01: the unique key and the census foreign key are the last word.
+        // NFR-ASM-01: the unique key and the census foreign key are the last word.
         await tx.vote.create({ data: { votingId: voting!.id, membershipId, choice } });
       });
     } catch (error) {

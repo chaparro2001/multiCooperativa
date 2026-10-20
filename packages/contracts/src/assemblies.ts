@@ -1,25 +1,25 @@
 import { z } from 'zod';
 
-export const assemblyTypeSchema = z.enum(['ordinaria', 'extraordinaria']);
-export const assemblyStatusSchema = z.enum(['borrador', 'convocada', 'celebrada', 'cancelada']);
-export const majoritySchema = z.enum(['simple', 'reforzada']);
-export const votingStatusSchema = z.enum(['pendiente', 'abierta', 'cerrada']);
-export const voteChoiceSchema = z.enum(['a_favor', 'en_contra', 'abstencion']);
-export const votingOutcomeSchema = z.enum(['aprobado', 'rechazado', 'sin_quorum']);
+export const assemblyTypeSchema = z.enum(['ordinary', 'extraordinary']);
+export const assemblyStatusSchema = z.enum(['draft', 'convened', 'held', 'cancelled']);
+export const majoritySchema = z.enum(['simple', 'reinforced']);
+export const votingStatusSchema = z.enum(['pending', 'open', 'closed']);
+export const voteChoiceSchema = z.enum(['in_favor', 'against', 'abstention']);
+export const votingOutcomeSchema = z.enum(['approved', 'rejected', 'no_quorum']);
 
 const instant = z.iso.datetime({ offset: true });
 
-/** Un punto del orden del día; `id` para conservar uno existente al editar el borrador. */
+/** An agenda point; `id` keeps an existing one when editing the draft. */
 export const pointInputSchema = z.object({
   id: z.uuid().optional(),
   title: z.string().max(200),
   description: z.string().max(5000).default(''),
   votable: z.boolean(),
-  /** Obligatoria si es votable (HU-ASA-02). */
+  /** Required if votable (US-ASM-02). */
   majority: majoritySchema.nullable(),
 });
 
-/** POST /asambleas y PATCH /asambleas/{id}: el borrador completo, puntos en su orden. */
+/** POST /assemblies and PATCH /assemblies/{id}: the whole draft, points in order. */
 export const assemblyInputSchema = z.object({
   type: assemblyTypeSchema,
   firstCallAt: instant,
@@ -39,7 +39,7 @@ export const assemblySummarySchema = z.object({
   openVotings: z.number().int(),
 });
 
-/** GET /asambleas: próximas primero, después celebradas (HU-ASA-03). */
+/** GET /assemblies: upcoming first, then held (US-ASM-03). */
 export const listAssembliesResponseSchema = z.object({ items: z.array(assemblySummarySchema) });
 
 const tallySchema = z.object({
@@ -48,20 +48,20 @@ const tallySchema = z.object({
   abstentions: z.number().int(),
 });
 
-/** Lo que ve un miembro de una votación (HU-ASA-06). */
+/** What a member sees of a voting (US-ASM-06). */
 export const votingViewSchema = z.object({
   status: votingStatusSchema,
-  /** Socios del censo, fijado al abrir; nulo mientras está pendiente. */
+  /** Partners in the census, fixed on opening; null while pending. */
   censusSize: z.number().int().nullable(),
   votesCast: z.number().int(),
-  /** Nulo mientras está abierta y no se tiene gestión (RN-ASA-11). */
+  /** Null while open and without manage access (BR-ASM-11). */
   tally: tallySchema.nullable(),
   result: tallySchema
     .extend({
       census: z.number().int(),
       votesCast: z.number().int(),
       quorumReached: z.boolean(),
-      call: z.enum(['primera', 'segunda']),
+      call: z.enum(['first', 'second']),
       outcome: votingOutcomeSchema,
     })
     .nullable(),
@@ -75,7 +75,7 @@ export const pointAttachmentSchema = z.object({
   size: z.number().int(),
 });
 
-/** GET /asambleas/{id}: orden del día con documentación y estado de cada votación. */
+/** GET /assemblies/{id}: agenda with documentation and the state of each voting. */
 export const assemblyDetailSchema = assemblySummarySchema
   .omit({ pointCount: true, openVotings: true })
   .extend({
@@ -87,14 +87,14 @@ export const assemblyDetailSchema = assemblySummarySchema
         description: z.string(),
         votable: z.boolean(),
         majority: majoritySchema.nullable(),
-        /** `url` firmada de 5 minutos: se vuelve a pedir el detalle al abrir. */
+        /** Signed 5-minute `url`: the detail is requested again on open. */
         attachments: z.array(pointAttachmentSchema.extend({ url: z.url() })),
         voting: votingViewSchema.nullable(),
       }),
     ),
   });
 
-/** POST /puntos/{puntoId}/votacion/votos (HU-ASA-05). */
+/** POST /points/{pointId}/voting/votes (US-ASM-05). */
 export const castVoteRequestSchema = z.object({ choice: voteChoiceSchema });
 
 export type AssemblyType = z.infer<typeof assemblyTypeSchema>;

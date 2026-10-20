@@ -13,9 +13,9 @@ export class PrismaAccessContextStore implements AccessContextStore {
     userId: string,
     cooperativeId: string,
   ): Promise<ActiveMembership | null> {
-    // One indexed query per request (RNF-ACC-07): membership, profile and permissions together.
+    // One indexed query per request (NFR-ACC-07): membership, profile and permissions together.
     const membership = await this.prisma.membership.findFirst({
-      where: { userId, cooperativeId, status: 'activa' },
+      where: { userId, cooperativeId, status: 'active' },
       select: {
         id: true,
         isPartner: true,
@@ -45,7 +45,7 @@ export class PrismaAccessContextStore implements AccessContextStore {
         email: true,
         name: true,
         memberships: {
-          where: { status: 'activa' },
+          where: { status: 'active' },
           orderBy: { cooperative: { name: 'asc' } },
           select: {
             id: true,

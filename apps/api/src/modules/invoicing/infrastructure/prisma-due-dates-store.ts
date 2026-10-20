@@ -15,14 +15,14 @@ export class PrismaDueDatesStore implements DueDatesStore {
     return this.prisma.$transaction(async (tx) => {
       // RETURNING gives only the rows that actually changed now.
       const changed = await tx.$queryRaw<Row[]>`
-        UPDATE "Invoice" SET "paymentStatus" = 'vencida'
-        WHERE "paymentStatus" = 'pendiente' AND "dueDate" < ${today}::date
+        UPDATE "Invoice" SET "paymentStatus" = 'overdue'
+        WHERE "paymentStatus" = 'pending' AND "dueDate" < ${today}::date
         RETURNING id AS "invoiceId", "cooperativeId", "thirdPartyId", operation::text AS operation, "dueDate"`;
       if (changed.length > 0) {
         await tx.invoiceReminder.createMany({
           data: changed.map((row) => ({
             invoiceId: row.invoiceId,
-            kind: 'vencida',
+            kind: 'overdue',
             sentOn: new Date(`${today}T00:00:00Z`),
           })),
           skipDuplicates: true,
@@ -37,8 +37,8 @@ export class PrismaDueDatesStore implements DueDatesStore {
     const claimed = await this.prisma.$queryRaw<Row[]>`
       WITH claimed AS (
         INSERT INTO "InvoiceReminder" ("invoiceId", kind, "sentOn")
-        SELECT id, 'proxima_a_vencer', ${from}::date FROM "Invoice"
-        WHERE "paymentStatus" = 'pendiente' AND "dueDate" BETWEEN ${from}::date AND ${until}::date
+        SELECT id, 'due_soon', ${from}::date FROM "Invoice"
+        WHERE "paymentStatus" = 'pending' AND "dueDate" BETWEEN ${from}::date AND ${until}::date
         ON CONFLICT DO NOTHING
         RETURNING "invoiceId"
       )

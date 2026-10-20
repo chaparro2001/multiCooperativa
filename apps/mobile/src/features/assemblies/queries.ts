@@ -15,34 +15,34 @@ import { appendPdf, type PickedPdf } from '@/features/shared/pdf-upload';
 
 function useScope() {
   const { cooperativeId } = useActiveCooperative();
-  if (!cooperativeId) throw new Error('Sin cooperativa activa');
+  if (!cooperativeId) throw new Error('No active cooperative');
   return {
-    base: `/cooperativas/${cooperativeId}/asambleas`,
-    points: `/cooperativas/${cooperativeId}/puntos`,
-    key: [...cooperativeKey(cooperativeId), 'asambleas'] as const,
+    base: `/cooperatives/${cooperativeId}/assemblies`,
+    points: `/cooperatives/${cooperativeId}/points`,
+    key: [...cooperativeKey(cooperativeId), 'assemblies'] as const,
   };
 }
 
-/** HU-ASA-03. */
+/** US-ASM-03. */
 export function useAssemblyList() {
   const { api } = useServices();
   const { base, key } = useScope();
   return useQuery({
-    queryKey: [...key, 'lista'],
+    queryKey: [...key, 'list'],
     queryFn: () => api.request(base, { schema: listAssembliesResponseSchema }),
   });
 }
 
-/** HU-ASA-03 and HU-ASA-06. While a voting is open, participation is refreshed on screen. */
+/** US-ASM-03 and US-ASM-06. While a voting is open, participation is refreshed on screen. */
 export function useAssembly(id: string | undefined) {
   const { api } = useServices();
   const { base, key } = useScope();
   return useQuery({
-    queryKey: [...key, 'detalle', id],
+    queryKey: [...key, 'detail', id],
     enabled: Boolean(id),
     queryFn: () => api.request(`${base}/${id}`, { schema: assemblyDetailSchema }),
     refetchInterval: (query) =>
-      query.state.data?.points.some((point) => point.voting?.status === 'abierta') ? 5000 : false,
+      query.state.data?.points.some((point) => point.voting?.status === 'open') ? 5000 : false,
   });
 }
 
@@ -55,7 +55,7 @@ function useAssemblyMutation<TInput, TResult>(run: (input: TInput) => Promise<TR
   });
 }
 
-/** Creates the draft, or replaces it whole when editing (HU-ASA-01). */
+/** Creates the draft, or replaces it whole when editing (US-ASM-01). */
 export function useSaveAssembly() {
   const { api } = useServices();
   const { base } = useScope();
@@ -72,30 +72,29 @@ export function useAssemblyAction() {
   const { api } = useServices();
   const { base } = useScope();
   return useAssemblyMutation(
-    ({ id, action }: { id: string; action: 'convocar' | 'cancelar' | 'cerrar' }) =>
+    ({ id, action }: { id: string; action: 'convene' | 'cancel' | 'close' }) =>
       api.request(`${base}/${id}/${action}`, { method: 'POST', schema: assemblySummarySchema }),
   );
 }
 
-/** HU-ASA-04. */
+/** US-ASM-04. */
 export function useVotingControl() {
   const { api } = useServices();
   const { points } = useScope();
-  return useAssemblyMutation(
-    ({ pointId, action }: { pointId: string; action: 'abrir' | 'cerrar' }) =>
-      api.request(`${points}/${pointId}/votacion/${action}`, {
-        method: 'POST',
-        schema: votingViewSchema,
-      }),
+  return useAssemblyMutation(({ pointId, action }: { pointId: string; action: 'open' | 'close' }) =>
+    api.request(`${points}/${pointId}/voting/${action}`, {
+      method: 'POST',
+      schema: votingViewSchema,
+    }),
   );
 }
 
-/** HU-ASA-05. */
+/** US-ASM-05. */
 export function useCastVote() {
   const { api } = useServices();
   const { points } = useScope();
   return useAssemblyMutation(({ pointId, choice }: { pointId: string; choice: VoteChoice }) =>
-    api.request(`${points}/${pointId}/votacion/votos`, {
+    api.request(`${points}/${pointId}/voting/votes`, {
       method: 'POST',
       body: { choice },
       schema: votingViewSchema,
@@ -103,14 +102,14 @@ export function useCastVote() {
   );
 }
 
-/** HU-ASA-02. */
+/** US-ASM-02. */
 export function useAddPointDocument() {
   const { api } = useServices();
   const { points } = useScope();
   return useAssemblyMutation(({ pointId, pdf }: { pointId: string; pdf: PickedPdf }) => {
     const form = new FormData();
-    appendPdf(form, 'fichero', pdf);
-    return api.request(`${points}/${pointId}/documentos`, {
+    appendPdf(form, 'file', pdf);
+    return api.request(`${points}/${pointId}/documents`, {
       method: 'POST',
       body: form,
       schema: pointAttachmentSchema,

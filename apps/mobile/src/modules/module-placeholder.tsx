@@ -1,25 +1,29 @@
 import type { Module } from '@multicooperativa/contracts';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text } from 'react-native';
 
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
-import { MODULE_ENTRIES } from '@/navigation/modules';
 import { Screen } from '@/ui/screen';
 import { colors } from '@/ui/theme';
 
 /** Stand-in until each module is built in its milestone. */
 export function ModulePlaceholder({ module }: { module: Module }) {
+  const { t } = useTranslation();
   const { permissions } = useActiveCooperative();
   const permission = permissions?.permissions.find((p) => p.module === module);
-  const entry = MODULE_ENTRIES.find((candidate) => candidate.module === module)!;
 
   return (
-    <Screen testID={`pantalla-${module}`}>
-      <Text style={styles.title}>{entry.title}</Text>
-      <Text style={styles.text}>Esta sección llegará en un próximo hito.</Text>
-      <Text style={styles.text}>
-        Tu acceso: {permission?.level === 'gestion' ? 'gestión' : 'consulta'}
-        {permission?.scope === 'propias' ? ' (solo tus datos)' : ''}.
-      </Text>
+    <Screen testID={`screen-${module}`}>
+      <Text style={styles.title}>{t(`enums.module.${module}`)}</Text>
+      <Text style={styles.text}>{t('modulePlaceholder.comingSoon')}</Text>
+      {permission && (
+        <Text style={styles.text}>
+          {t('modulePlaceholder.access', {
+            level: t(`enums.accessLevel.${permission.level}`),
+            scope: permission.scope === 'own' ? t('modulePlaceholder.ownDataOnly') : '',
+          })}
+        </Text>
+      )}
     </Screen>
   );
 }

@@ -1,21 +1,25 @@
 import type { DocumentCategory, DocumentSummary } from '@multicooperativa/contracts';
 
-export const CATEGORY_TITLES: Record<DocumentCategory, string> = {
-  estatutos: 'Estatutos',
-  reglamento: 'Reglamento interno',
-  actas: 'Actas',
-  cuentas: 'Cuentas anuales',
-  otros: 'Otros',
-};
+import { i18n } from '@/i18n';
 
-const ORDER = Object.keys(CATEGORY_TITLES) as DocumentCategory[];
+/** Fixed display order of the categories. */
+export const DOCUMENT_CATEGORIES: readonly DocumentCategory[] = [
+  'bylaws',
+  'regulations',
+  'minutes',
+  'accounts',
+  'other',
+];
 
-/** HU-DOC-02: grouped by category (in a fixed order), each group keeps the server's date order. */
+export const categoryTitle = (category: DocumentCategory): string =>
+  i18n.t(`enums.documentCategory.${category}`);
+
+/** US-DOC-02: grouped by category (in a fixed order), each group keeps the server's date order. */
 export function groupByCategory(
   documents: DocumentSummary[],
 ): { category: DocumentCategory; title: string; data: DocumentSummary[] }[] {
-  return ORDER.flatMap((category) => {
+  return DOCUMENT_CATEGORIES.flatMap((category) => {
     const data = documents.filter((document) => document.category === category);
-    return data.length > 0 ? [{ category, title: CATEGORY_TITLES[category], data }] : [];
+    return data.length > 0 ? [{ category, title: categoryTitle(category), data }] : [];
   });
 }

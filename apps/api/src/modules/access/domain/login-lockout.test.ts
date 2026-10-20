@@ -5,37 +5,37 @@ import { lockedUntil, relevantAttemptsSince } from './login-lockout';
 const start = new Date('2026-10-05T10:00:00Z');
 const minutes = (n: number) => new Date(start.getTime() + n * 60 * 1000);
 
-describe('bloqueo por intentos (RN-ACC-11)', () => {
-  it('sin intentos fallidos no hay bloqueo', () => {
+describe('attempt lockout (BR-ACC-11)', () => {
+  it('without failed attempts there is no lockout', () => {
     expect(lockedUntil([], minutes(0))).toBeNull();
   });
 
-  it('cuatro intentos fallidos no bloquean', () => {
+  it('four failed attempts do not lock', () => {
     expect(lockedUntil([0, 1, 2, 3].map(minutes), minutes(4))).toBeNull();
   });
 
-  it('cinco intentos fallidos en 15 minutos bloquean 15 minutos desde el quinto', () => {
+  it('five failed attempts in 15 minutes lock for 15 minutes from the fifth', () => {
     expect(lockedUntil([0, 3, 6, 9, 12].map(minutes), minutes(13))).toEqual(minutes(27));
   });
 
-  it('cinco intentos repartidos en más de 15 minutos no bloquean', () => {
+  it('five attempts spread over more than 15 minutes do not lock', () => {
     expect(lockedUntil([0, 4, 8, 12, 16].map(minutes), minutes(17))).toBeNull();
   });
 
-  it('el bloqueo termina a los 15 minutos', () => {
+  it('the lockout ends after 15 minutes', () => {
     const failures = [0, 1, 2, 3, 4].map(minutes);
 
     expect(lockedUntil(failures, minutes(18))).toEqual(minutes(19));
     expect(lockedUntil(failures, minutes(19))).toBeNull();
   });
 
-  it('no depende del orden de los intentos', () => {
+  it('does not depend on the order of the attempts', () => {
     expect(lockedUntil([4, 2, 0, 3, 1].map(minutes), minutes(5))).toEqual(minutes(19));
   });
 
-  it('basta con los intentos de los últimos 30 minutos para decidir el bloqueo', () => {
-    // El quinto fallo más antiguo que aún bloquea ocurrió hace casi 15 minutos
-    // y su primer fallo, 15 minutos antes.
+  it('the attempts of the last 30 minutes are enough to decide the lockout', () => {
+    // The oldest fifth failure that still locks happened almost 15 minutes ago
+    // and its first failure, 15 minutes before that.
     expect(relevantAttemptsSince(minutes(30))).toEqual(minutes(0));
   });
 });

@@ -43,7 +43,7 @@ export interface UploadedFile {
 }
 
 const canManage = (context: CooperativeContext) =>
-  hasAccess(context.permissions, 'documentos', 'gestion');
+  hasAccess(context.permissions, 'documents', 'manage');
 
 async function findVisible(
   deps: DocumentDeps,
@@ -68,7 +68,7 @@ async function storeFile<T>(
   save: (version: NewVersion) => Promise<T>,
 ): Promise<T> {
   assertValidFile({ isPdf: isPdf(file.content), size: file.content.byteLength });
-  const fileKey = newFileKey(context.cooperativeId, 'documentos');
+  const fileKey = newFileKey(context.cooperativeId, 'documents');
   await deps.files.put(fileKey, file.content, PDF);
   try {
     return await save({
@@ -85,7 +85,7 @@ async function storeFile<T>(
 
 async function announcePublished(deps: DocumentDeps, document: DocumentWithCurrent) {
   await deps.events.publish({
-    type: 'DocumentoPublicado',
+    type: 'DocumentPublished',
     occurredAt: deps.now(),
     payload: {
       cooperativeId: document.cooperativeId,
@@ -95,13 +95,13 @@ async function announcePublished(deps: DocumentDeps, document: DocumentWithCurre
   });
 }
 
-/** HU-DOC-02. */
+/** US-DOC-02. */
 export async function listDocuments(
   deps: DocumentDeps,
   context: CooperativeContext,
   filter: { category?: DocumentCategory; search?: string },
 ): Promise<DocumentWithCurrent[]> {
-  requireAccess(context.permissions, 'documentos', 'consulta');
+  requireAccess(context.permissions, 'documents', 'read');
   return deps.documents.list(context.cooperativeId, {
     onlyPublished: !canManage(context),
     category: filter.category,
@@ -110,17 +110,17 @@ export async function listDocuments(
 }
 
 export interface DocumentDetail extends DocumentWithCurrent {
-  /** Signed link to the current version, 5 minutes (RNF-DOC-02). */
+  /** Signed link to the current version, 5 minutes (NFR-DOC-02). */
   url: string;
 }
 
-/** HU-DOC-03. */
+/** US-DOC-03. */
 export async function getDocument(
   deps: DocumentDeps,
   context: CooperativeContext,
   id: string,
 ): Promise<DocumentDetail> {
-  requireAccess(context.permissions, 'documentos', 'consulta');
+  requireAccess(context.permissions, 'documents', 'read');
   const document = await findVisible(deps, context, id);
   const url = await deps.files.signedDownloadUrl(document.current.fileKey, {
     fileName: document.current.fileName,
@@ -129,14 +129,14 @@ export async function getDocument(
   return { ...document, url };
 }
 
-/** HU-DOC-01: published at once and sent to indexing. */
+/** US-DOC-01: published at once and sent to indexing. */
 export async function uploadDocument(
   deps: DocumentDeps,
   context: CooperativeContext,
   input: { title: string; category: DocumentCategory; documentDate: string },
   file: UploadedFile,
 ): Promise<DocumentWithCurrent> {
-  requireAccess(context.permissions, 'documentos', 'gestion');
+  requireAccess(context.permissions, 'documents', 'manage');
   const state = createDocument(input);
   const document = await storeFile(deps, context, file, (version) =>
     deps.documents.create(context.cooperativeId, { state, version }),
@@ -145,14 +145,14 @@ export async function uploadDocument(
   return document;
 }
 
-/** HU-DOC-04: the new version becomes current; only it gets indexed. */
+/** US-DOC-04: the new version becomes current; only it gets indexed. */
 export async function addVersion(
   deps: DocumentDeps,
   context: CooperativeContext,
   id: string,
   file: UploadedFile,
 ): Promise<DocumentWithCurrent> {
-  requireAccess(context.permissions, 'documentos', 'gestion');
+  requireAccess(context.permissions, 'documents', 'manage');
   // Early: a missing or withdrawn document never gets a file uploaded.
   assertCanAddVersion(await findVisible(deps, context, id));
   const document = await storeFile(deps, context, file, async (version) => {
@@ -173,13 +173,13 @@ export interface VersionEntry extends VersionRecord {
   uploadedByName: string | null;
 }
 
-/** HU-DOC-04: the whole history, with date and author. */
+/** US-DOC-04: the whole history, with date and author. */
 export async function listVersions(
   deps: DocumentDeps,
   context: CooperativeContext,
   id: string,
 ): Promise<VersionEntry[]> {
-  requireAccess(context.permissions, 'documentos', 'gestion');
+  requireAccess(context.permissions, 'documents', 'manage');
   const versions = UUID.test(id)
     ? await deps.documents.listVersions(context.cooperativeId, id)
     : null;
@@ -194,19 +194,19 @@ export async function listVersions(
   }));
 }
 
-/** HU-DOC-05: hidden from «consulta» and removed from the index. */
+/** US-DOC-05: hidden from “read” and removed from the index. */
 export async function withdrawDocument(
   deps: DocumentDeps,
   context: CooperativeContext,
   id: string,
 ): Promise<DocumentRecord> {
-  requireAccess(context.permissions, 'documentos', 'gestion');
+  requireAccess(context.permissions, 'documents', 'manage');
   const withdrawn = UUID.test(id)
     ? await deps.documents.update(context.cooperativeId, id, (current) => withdraw(current))
     : null;
   if (!withdrawn) throw new DocumentNotFoundError();
   await deps.events.publish({
-    type: 'DocumentoRetirado',
+    type: 'DocumentWithdrawn',
     occurredAt: deps.now(),
     payload: { cooperativeId: context.cooperativeId, documentId: withdrawn.id },
   });
@@ -218,18 +218,18 @@ export interface IndexingDeps {
   indexer: Pick<Indexer, 'enqueue'>;
 }
 
-/** HU-DOC-06: retry. Answers at once; the indexing runs in the background. */
+/** US-DOC-06: retry. Answers at once; the indexing runs in the background. */
 export async function reindexDocument(
   deps: DocumentDeps & IndexingDeps,
   context: CooperativeContext,
   id: string,
 ): Promise<void> {
-  requireAccess(context.permissions, 'documentos', 'gestion');
+  requireAccess(context.permissions, 'documents', 'manage');
   const document = await findVisible(deps, context, id);
-  if (document.status !== 'publicado') {
-    throw new InvalidDocumentTransitionError('Un documento retirado no se indexa.');
+  if (document.status !== 'published') {
+    throw new InvalidDocumentTransitionError('A withdrawn document is not indexed.');
   }
-  await deps.indexingStore.setStatus(document.current.id, 'pendiente', null);
+  await deps.indexingStore.setStatus(document.current.id, 'pending', null);
   deps.indexer.enqueue({
     cooperativeId: context.cooperativeId,
     documentId: document.id,
@@ -239,13 +239,13 @@ export async function reindexDocument(
 
 export const SEARCH_RESULTS = 10;
 
-/** HU-DOC-07: the most relevant fragments of this cooperative's published documents. */
+/** US-DOC-07: the most relevant fragments of this cooperative's published documents. */
 export async function searchDocuments(
   deps: { embedder: Embedder; index: FragmentIndex },
   context: CooperativeContext,
   query: string,
 ): Promise<FragmentHit[]> {
-  requireAccess(context.permissions, 'documentos', 'consulta');
+  requireAccess(context.permissions, 'documents', 'read');
   const [embedding] = await deps.embedder.embed([query.trim()]);
   return deps.index.search(context.cooperativeId, embedding!, SEARCH_RESULTS);
 }

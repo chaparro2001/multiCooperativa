@@ -2,21 +2,21 @@ import { describe, expect, it } from 'vitest';
 
 import { acceptInvitationRequestSchema, loginRequestSchema } from './auth';
 
-describe('contratos de autenticación', () => {
-  it('el login exige email y contraseña', () => {
-    expect(loginRequestSchema.safeParse({ email: 'ada@campo.es' }).success).toBe(false);
+describe('authentication contracts', () => {
+  it('login requires email and password', () => {
+    expect(loginRequestSchema.safeParse({ email: 'ada@field.test' }).success).toBe(false);
     expect(
-      loginRequestSchema.parse({ email: ' ada@campo.es ', password: 'una-clave-larga' }),
-    ).toEqual({ email: 'ada@campo.es', password: 'una-clave-larga' });
+      loginRequestSchema.parse({ email: ' ada@field.test ', password: 'a-long-password' }),
+    ).toEqual({ email: 'ada@field.test', password: 'a-long-password' });
   });
 
-  it('rechaza contraseñas desmesuradas', () => {
+  it('rejects oversized passwords', () => {
     expect(
-      loginRequestSchema.safeParse({ email: 'ada@campo.es', password: 'x'.repeat(257) }).success,
+      loginRequestSchema.safeParse({ email: 'ada@field.test', password: 'x'.repeat(257) }).success,
     ).toBe(false);
   });
 
-  it('la contraseña es opcional al aceptar una invitación', () => {
+  it('the password is optional when accepting an invitation', () => {
     expect(acceptInvitationRequestSchema.parse({ token: 'abc' })).toEqual({ token: 'abc' });
   });
 });

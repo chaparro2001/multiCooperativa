@@ -30,14 +30,14 @@ export class PrismaThirdPartyStore implements ThirdPartyStore {
 
   list(
     cooperativeId: string,
-    query: { role?: 'proveedor' | 'cliente'; search?: string; includeInactive: boolean },
+    query: { role?: 'supplier' | 'customer'; search?: string; includeInactive: boolean },
   ): Promise<ThirdPartyRecord[]> {
     return this.prisma.thirdParty.findMany({
       where: {
         cooperativeId,
         ...(!query.includeInactive && { active: true }),
-        ...(query.role === 'proveedor' && { isSupplier: true }),
-        ...(query.role === 'cliente' && { isCustomer: true }),
+        ...(query.role === 'supplier' && { isSupplier: true }),
+        ...(query.role === 'customer' && { isCustomer: true }),
         ...(query.search && {
           OR: [
             { name: { contains: query.search, mode: 'insensitive' } },

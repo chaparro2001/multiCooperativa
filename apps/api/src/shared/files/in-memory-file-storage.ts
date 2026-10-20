@@ -19,7 +19,7 @@ export class InMemoryFileStorage implements FileStorage {
     options: { fileName: string; contentType: string; expiresInSeconds?: number },
   ) {
     const expires = options.expiresInSeconds ?? SIGNED_URL_TTL_SECONDS;
-    return `https://ficheros.test/${key}?expires=${expires}&name=${encodeURIComponent(options.fileName)}`;
+    return `https://files.test/${key}?expires=${expires}&name=${encodeURIComponent(options.fileName)}`;
   }
 
   async delete(key: string) {

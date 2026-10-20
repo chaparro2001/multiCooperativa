@@ -12,49 +12,49 @@ export const PREDEFINED_PROFILES: readonly PredefinedProfile[] = [
   {
     name: 'Socio',
     permissions: [
-      createPermission('comunicados', 'consulta'),
-      createPermission('asambleas', 'consulta'),
-      createPermission('documentos', 'consulta'),
-      createPermission('area-socio', 'consulta', 'propias'),
-      createPermission('asistente', 'consulta'),
+      createPermission('announcements', 'read'),
+      createPermission('assemblies', 'read'),
+      createPermission('documents', 'read'),
+      createPermission('member-area', 'read', 'own'),
+      createPermission('assistant', 'read'),
     ],
   },
   {
     name: 'Consejo rector',
     permissions: [
-      createPermission('comunicados', 'gestion'),
-      createPermission('asambleas', 'gestion'),
-      createPermission('documentos', 'gestion'),
-      createPermission('facturas', 'consulta'),
-      createPermission('area-socio', 'consulta'),
-      createPermission('asistente', 'consulta'),
+      createPermission('announcements', 'manage'),
+      createPermission('assemblies', 'manage'),
+      createPermission('documents', 'manage'),
+      createPermission('invoicing', 'read'),
+      createPermission('member-area', 'read'),
+      createPermission('assistant', 'read'),
     ],
   },
   {
     name: 'Gestor',
     permissions: [
-      createPermission('comunicados', 'consulta'),
-      createPermission('documentos', 'consulta'),
-      createPermission('facturas', 'gestion'),
-      createPermission('area-socio', 'gestion'),
-      createPermission('asistente', 'consulta'),
+      createPermission('announcements', 'read'),
+      createPermission('documents', 'read'),
+      createPermission('invoicing', 'manage'),
+      createPermission('member-area', 'manage'),
+      createPermission('assistant', 'read'),
     ],
   },
   {
     name: 'Administrador',
     permissions: [
-      createPermission('comunicados', 'gestion'),
-      createPermission('asambleas', 'gestion'),
-      createPermission('documentos', 'gestion'),
-      createPermission('facturas', 'gestion'),
-      createPermission('area-socio', 'gestion'),
-      createPermission('asistente', 'consulta'),
-      createPermission('usuarios', 'gestion'),
+      createPermission('announcements', 'manage'),
+      createPermission('assemblies', 'manage'),
+      createPermission('documents', 'manage'),
+      createPermission('invoicing', 'manage'),
+      createPermission('member-area', 'manage'),
+      createPermission('assistant', 'read'),
+      createPermission('users', 'manage'),
     ],
   },
 ];
 
-/** An administrator is whoever manages the "Usuarios y perfiles" module (section 2). */
+/** An administrator is whoever manages the "Users and profiles" module (section 2). */
 export function isAdminProfile(permissions: readonly Permission[]): boolean {
-  return resolveAccess(permissions, 'usuarios', 'gestion').granted;
+  return resolveAccess(permissions, 'users', 'manage').granted;
 }

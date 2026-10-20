@@ -2,8 +2,7 @@ import type { Module, MyPermissionsResponse } from '@multicooperativa/contracts'
 
 export interface ModuleEntry {
   module: Module;
-  title: string;
-  /** Shown in the home grid; decorative, screen readers read the title. */
+  /** Shown in the home grid; decorative, screen readers read the title (`enums.module.<module>`). */
   emoji: string;
   /** Screen of the module inside the cooperative. */
   route: `/${string}`;
@@ -11,28 +10,28 @@ export interface ModuleEntry {
 
 /** Order of the home grid. */
 export const MODULE_ENTRIES: readonly ModuleEntry[] = [
-  { module: 'comunicados', title: 'Comunicados', emoji: '📢', route: '/comunicados' },
-  { module: 'asambleas', title: 'Asambleas', emoji: '🗳️', route: '/asambleas' },
-  { module: 'documentos', title: 'Documentos', emoji: '📄', route: '/documentos' },
-  { module: 'facturas', title: 'Facturas y albaranes', emoji: '🧾', route: '/facturas' },
-  { module: 'area-socio', title: 'Área del socio', emoji: '👤', route: '/area-socio' },
-  { module: 'asistente', title: 'Asistente', emoji: '🤖', route: '/asistente' },
-  { module: 'usuarios', title: 'Miembros', emoji: '👥', route: '/miembros' },
+  { module: 'announcements', emoji: '📢', route: '/announcements' },
+  { module: 'assemblies', emoji: '🗳️', route: '/assemblies' },
+  { module: 'documents', emoji: '📄', route: '/documents' },
+  { module: 'invoicing', emoji: '🧾', route: '/invoices' },
+  { module: 'member-area', emoji: '👤', route: '/member-area' },
+  { module: 'assistant', emoji: '🤖', route: '/assistant' },
+  { module: 'users', emoji: '👥', route: '/members' },
 ];
 
 export interface VisibleModule extends ModuleEntry {
-  /** «Gestión»: the screen shows create, edit and delete actions (HU-ACC-06). */
+  /** "Manage" level: the screen shows create, edit and delete actions (US-ACC-06). */
   canManage: boolean;
 }
 
 /**
- * HU-ACC-06: only the modules the profile can at least read. The server is
+ * US-ACC-06: only the modules the profile can at least read. The server is
  * still the authority; this only hides what would answer 403.
  */
 export function visibleModules(permissions: MyPermissionsResponse['permissions']): VisibleModule[] {
   return MODULE_ENTRIES.flatMap((entry) => {
     const permission = permissions.find((candidate) => candidate.module === entry.module);
-    return permission ? [{ ...entry, canManage: permission.level === 'gestion' }] : [];
+    return permission ? [{ ...entry, canManage: permission.level === 'manage' }] : [];
   });
 }
 
@@ -43,10 +42,10 @@ export function canAccess(
   return permissions?.some((permission) => permission.module === module) ?? false;
 }
 
-/** «Gestión» on the module: create, edit and delete screens exist only then. */
+/** "Manage" level on the module: create, edit and delete screens exist only then. */
 export function canManage(
   permissions: MyPermissionsResponse['permissions'] | undefined,
   module: Module,
 ): boolean {
-  return permissions?.some((p) => p.module === module && p.level === 'gestion') ?? false;
+  return permissions?.some((p) => p.module === module && p.level === 'manage') ?? false;
 }

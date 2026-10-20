@@ -16,7 +16,7 @@ export function parseAppConfig(raw: { apiUrl: string | undefined }): AppConfig {
     const details = result.error.issues
       .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
       .join('; ');
-    throw new Error(`Configuración de la app inválida. ${details}`);
+    throw new Error(`Invalid app configuration. ${details}`);
   }
   return result.data;
 }

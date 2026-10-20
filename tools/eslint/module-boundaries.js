@@ -21,12 +21,12 @@ export default {
   meta: {
     type: 'problem',
     docs: {
-      description: 'Un módulo del backend solo se importa a través de su index.ts',
+      description: 'A backend module may only be imported through its index.ts',
     },
     schema: [],
     messages: {
       internalImport:
-        "Importación del interior del módulo '{{target}}'. Usa su interfaz pública: modules/{{target}}/index.ts.",
+        "Import from inside module '{{target}}'. Use its public interface: modules/{{target}}/index.ts.",
     },
   },
   create(context) {

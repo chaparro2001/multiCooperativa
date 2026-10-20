@@ -1,4 +1,6 @@
-import type { Majority, PointInput } from '@multicooperativa/contracts';
+import type { AssemblyType, Majority, PointInput } from '@multicooperativa/contracts';
+
+import { i18n } from '@/i18n';
 
 /** A point being edited; `key` identifies it on screen, `id` only once saved. */
 export interface EditablePoint {
@@ -12,14 +14,14 @@ export interface EditablePoint {
 
 let counter = 0;
 export const newPoint = (): EditablePoint => ({
-  key: `nuevo-${++counter}`,
+  key: `new-${++counter}`,
   title: '',
   description: '',
   votable: false,
   majority: null,
 });
 
-/** HU-ASA-01: reorder the agenda. Out-of-range moves leave it unchanged. */
+/** US-ASM-01: reorder the agenda. Out-of-range moves leave it unchanged. */
 export function movePoint<T>(points: readonly T[], index: number, delta: -1 | 1): T[] {
   const target = index + delta;
   if (index < 0 || index >= points.length || target < 0 || target >= points.length) {
@@ -41,33 +43,19 @@ export function toPointInputs(points: readonly EditablePoint[]): PointInput[] {
   }));
 }
 
-export const OUTCOME_LABEL = {
-  aprobado: 'Aprobado',
-  rechazado: 'Rechazado',
-  sin_quorum: 'Sin quórum',
-} as const;
-
-export const CHOICE_LABEL = {
-  a_favor: 'A favor',
-  en_contra: 'En contra',
-  abstencion: 'Abstención',
-} as const;
-
-/** «2 de 4 (50 %)». */
+/** "2 of 4 (50 %)". */
 export function participation(votesCast: number, censusSize: number | null): string {
-  if (!censusSize) return `${votesCast} votos`;
+  if (!censusSize) return i18n.t('assemblies.participation.votes', { count: votesCast });
   const percent = Math.round((votesCast / censusSize) * 100);
-  return `${votesCast} de ${censusSize} (${percent} %)`;
+  return i18n.t('assemblies.participation.ofCensus', { votesCast, censusSize, percent });
 }
 
-export const ASSEMBLY_STATUS = {
-  borrador: { label: 'Borrador', tone: 'warning' },
-  convocada: { label: 'Convocada', tone: 'info' },
-  celebrada: { label: 'Celebrada', tone: 'neutral' },
-  cancelada: { label: 'Cancelada', tone: 'danger' },
+export const ASSEMBLY_STATUS_TONE = {
+  draft: 'warning',
+  convened: 'info',
+  held: 'neutral',
+  cancelled: 'danger',
 } as const;
 
-export const ASSEMBLY_TYPE_LABEL = {
-  ordinaria: 'Asamblea ordinaria',
-  extraordinaria: 'Asamblea extraordinaria',
-} as const;
+export const ASSEMBLY_TYPES: readonly AssemblyType[] = ['ordinary', 'extraordinary'];
+export const MAJORITIES: readonly Majority[] = ['simple', 'reinforced'];

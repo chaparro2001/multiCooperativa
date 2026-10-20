@@ -13,7 +13,7 @@ export class PrismaLoginStore implements LoginStore {
   }
 
   countActiveMemberships(userId: string): Promise<number> {
-    return this.prisma.membership.count({ where: { userId, status: 'activa' } });
+    return this.prisma.membership.count({ where: { userId, status: 'active' } });
   }
 
   async failedAttemptsSince(email: string, since: Date): Promise<Date[]> {

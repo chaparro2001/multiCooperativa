@@ -1,10 +1,10 @@
 /**
- * Proceso diario de vencimientos (HU-FAC-07), para lanzarlo desde un cron:
+ * Daily due-dates process (US-INV-07), to run from a cron:
  *
  *   pnpm --filter @multicooperativa/api jobs:due-dates
  *
- * Idempotente (RNF-FAC-04): se puede repetir sin duplicar avisos. El API
- * también lo ejecuta al arrancar y cada hora.
+ * Idempotent (NFR-INV-04): it can be repeated without duplicating notices. The
+ * API also runs it on startup and every hour.
  */
 import { loadEnv } from '../src/config/env';
 import { runDueDatesJob } from '../src/modules/invoicing';
@@ -14,12 +14,12 @@ import { createPrismaClient } from '../src/shared/infrastructure/prisma';
 const env = loadEnv(process.env);
 const prisma = createPrismaClient(env.DATABASE_URL);
 try {
-  // Sin suscriptores aquí: las notificaciones (Hito 6) se engancharán al bus del API.
+  // No subscribers here: notifications (Milestone 6) will hook into the API bus.
   const result = await runDueDatesJob({
     prisma,
     events: new InProcessEventBus({ onHandlerError: () => {} }),
   });
-  console.log(`Vencidas: ${result.overdue}. Avisos de próximo vencimiento: ${result.dueSoon}.`);
+  console.log(`Overdue: ${result.overdue}. Due-soon notices: ${result.dueSoon}.`);
 } finally {
   await prisma.$disconnect();
 }

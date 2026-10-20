@@ -1,7 +1,7 @@
 import { parseRefreshToken, type SessionDeps } from './session-tokens';
 
 /**
- * HU-ACC-03: revokes the session on the server. Idempotent and silent: an
+ * US-ACC-03: revokes the session on the server. Idempotent and silent: an
  * unknown or stale token is simply ignored, so the client can always clear its tokens.
  */
 export async function logout(

@@ -11,7 +11,7 @@ import { PrismaAnnouncementStore } from './infrastructure/prisma-announcement-st
 
 export type { AnnouncementEvent, AnnouncementPublished } from './application/events';
 
-/** Public interface of the announcements module (requisitos/02). */
+/** Public interface of the announcements module (docs/requirements/02-announcements.md). */
 export function createAnnouncementsModule(deps: {
   prisma: PrismaClient;
   files: FileStorage;

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Límite superior para no gastar CPU de Argon2 en entradas desmesuradas.
+// Upper bound so Argon2 CPU is not spent on oversized inputs.
 const password = z.string().min(1).max(256);
 const opaqueToken = z.string().min(1).max(512);
 
@@ -15,27 +15,27 @@ export const logoutRequestSchema = refreshRequestSchema;
 
 export const acceptInvitationRequestSchema = z.object({
   token: opaqueToken,
-  /** Solo para un usuario nuevo; un usuario con cuenta no la necesita. */
+  /** Only for a new user; a user who already has an account does not need it. */
   password: password.optional(),
 });
 
 export const authTokensSchema = z.object({
   accessToken: z.string(),
-  /** Segundos hasta que caduca el token de acceso. */
+  /** Seconds until the access token expires. */
   accessTokenExpiresIn: z.number().int().positive(),
   refreshToken: z.string(),
 });
 
 export const acceptInvitationResponseSchema = z.object({
   cooperativeId: z.uuid(),
-  /** Nulo si el usuario ya tenía cuenta: debe iniciar sesión con su contraseña. */
+  /** Null if the user already had an account: they must log in with their password. */
   tokens: authTokensSchema.nullable(),
 });
 
 export const apiErrorSchema = z.object({
   error: z.string(),
   message: z.string().optional(),
-  /** Datos del error para la interfaz, p. ej. qué campos faltan al publicar un comunicado. */
+  /** Error data for the UI, e.g. which fields are missing when publishing an announcement. */
   details: z.record(z.string(), z.unknown()).optional(),
 });
 

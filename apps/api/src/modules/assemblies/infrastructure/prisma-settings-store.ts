@@ -12,8 +12,8 @@ export class PrismaSettingsStore implements AssemblySettingsStore {
     return {
       policy: {
         quorumPercent: {
-          primera: row.firstCallQuorumPercent,
-          segunda: row.secondCallQuorumPercent,
+          first: row.firstCallQuorumPercent,
+          second: row.secondCallQuorumPercent,
         },
         reinforced: { numerator: row.reinforcedNumerator, denominator: row.reinforcedDenominator },
       },

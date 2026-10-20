@@ -22,7 +22,7 @@ export interface AcceptInvitationResult {
   tokens: AuthTokens | null;
 }
 
-/** HU-ACC-01. */
+/** US-ACC-01. */
 export async function acceptInvitation(
   deps: SessionDeps & { invitations: InvitationStore; hasher: PasswordHasher },
   input: AcceptInvitationInput,
@@ -31,7 +31,7 @@ export async function acceptInvitation(
   const invitation = await deps.invitations.findByTokenHash(deps.secrets.hash(input.token));
   if (!invitation) throw new InvitationNotFoundError();
 
-  // Both throw when the invitation or the membership no longer allow it (RN-ACC-10).
+  // Both throw when the invitation or the membership no longer allow it (BR-ACC-10).
   useInvitation(invitation, now);
   activate({ status: invitation.membershipStatus });
 

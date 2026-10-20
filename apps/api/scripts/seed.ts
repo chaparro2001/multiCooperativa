@@ -1,11 +1,11 @@
 /**
- * Datos de ejemplo: dos cooperativas con usuarios de cada perfil.
+ * Sample data: two cooperatives with users of every profile.
  *
  *   pnpm --filter @multicooperativa/api db:seed
  *
- * Todos los usuarios tienen la contraseña de SEED_PASSWORD o, si no se define,
- * la de demostración que se imprime al final. Es idempotente: una cooperativa
- * que ya existe no se toca. Se niega a ejecutarse en producción.
+ * All users get the password from SEED_PASSWORD or, if it is not set, the
+ * demo password printed at the end. It is idempotent: a cooperative that
+ * already exists is left untouched. It refuses to run in production.
  */
 import { seedDemoData } from '../src/dev/demo-seed';
 import { loadEnv } from '../src/config/env';
@@ -20,7 +20,7 @@ const DEMO_PASSWORD = 'demo-cooperativa-2026';
 
 const env = loadEnv(process.env);
 if (env.NODE_ENV === 'production') {
-  console.error('Los datos de ejemplo no se cargan en producción.');
+  console.error('Sample data is not loaded in production.');
   process.exit(1);
 }
 
@@ -36,17 +36,17 @@ try {
   const result = await seedDemoData({ prisma, access }, password);
 
   for (const cooperative of result.cooperatives) {
-    const state = cooperative.created ? 'creada' : 'ya existía, sin cambios';
+    const state = cooperative.created ? 'created' : 'already existed, unchanged';
     console.log(`${cooperative.name} (${cooperative.id}): ${state}`);
   }
   for (const invitation of result.invitations) {
-    console.log(`Invitación pendiente de ${invitation.email}: ${invitationLink(invitation.token)}`);
+    console.log(`Pending invitation for ${invitation.email}: ${invitationLink(invitation.token)}`);
   }
   if (result.cooperatives.some((cooperative) => cooperative.created)) {
     console.log(
-      `Contraseña de todos los usuarios: ${process.env.SEED_PASSWORD ? '(SEED_PASSWORD)' : password}`,
+      `Password of all users: ${process.env.SEED_PASSWORD ? '(SEED_PASSWORD)' : password}`,
     );
-    console.log('Usuarios: Documentacion/datos-de-ejemplo.md');
+    console.log('Users: docs/sample-data.md');
   }
 } finally {
   await prisma.$disconnect();

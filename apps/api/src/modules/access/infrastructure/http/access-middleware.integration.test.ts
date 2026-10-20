@@ -30,20 +30,20 @@ function buildApp(authRateLimits: AuthRateLimits | false = false) {
   });
 
   // Stand-in for another module's router, wired the way real modules will be.
-  const facturas = Router();
-  facturas.get(
-    '/cooperativas/:cooperativeId/facturas',
+  const invoices = Router();
+  invoices.get(
+    '/cooperatives/:cooperativeId/invoices',
     access.requireCooperative,
-    requirePermission('facturas', 'consulta'),
+    requirePermission('invoicing', 'read'),
     (_req, res) => {
       const context = getCooperativeContext(res);
-      const scope = requireAccess(context.permissions, 'facturas', 'consulta');
+      const scope = requireAccess(context.permissions, 'invoicing', 'read');
       res.json({ cooperativeId: context.cooperativeId, scope });
     },
   );
 
   const app = createApp({
-    routers: [access.router, facturas],
+    routers: [access.router, invoices],
     errorHandlers: [access.errorHandler],
     // As behind Railway's proxy: X-Forwarded-For decides the client IP.
     trustProxy: 1,
@@ -53,22 +53,22 @@ function buildApp(authRateLimits: AuthRateLimits | false = false) {
 
 let app: ReturnType<typeof buildApp>['app'];
 let access: ReturnType<typeof buildApp>['access'];
-let campo: string;
-let mar: string;
+let fieldCoop: string;
+let seaCoop: string;
 
-const PASSWORD = 'una-clave-larga';
+const PASSWORD = 'a-long-password';
 
 beforeEach(async () => {
   await resetDatabase(prisma);
   ({ app, access } = buildApp());
-  campo = (
+  fieldCoop = (
     await access.provisionCooperative({
       name: 'Cooperativa del Campo',
       cif: 'F12345678',
       admin: { email: 'admin@campo.es', name: 'Ada', password: PASSWORD },
     })
   ).cooperativeId;
-  mar = (
+  seaCoop = (
     await access.provisionCooperative({
       name: 'Cooperativa del Mar',
       cif: 'F87654321',
@@ -97,7 +97,7 @@ async function addMember(email: string, cooperativeId: string, profileName: stri
       userId: user.id,
       cooperativeId,
       profileId: profile.id,
-      status: 'activa',
+      status: 'active',
       isPartner: true,
     },
   });
@@ -110,9 +110,9 @@ async function loginAs(email: string) {
 
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 
-describe('GET /me (HU-ACC-05)', () => {
-  it('devuelve el usuario y sus membresías activas', async () => {
-    await addMember('admin@campo.es', mar, 'Socio');
+describe('GET /me (US-ACC-05)', () => {
+  it('returns the user and their active memberships', async () => {
+    await addMember('admin@campo.es', seaCoop, 'Socio');
     const { accessToken } = await loginAs('admin@campo.es');
 
     const response = await request(app).get('/me').set(bearer(accessToken));
@@ -126,11 +126,11 @@ describe('GET /me (HU-ACC-05)', () => {
     ]);
   });
 
-  it('no incluye membresías suspendidas', async () => {
-    const membership = await addMember('admin@campo.es', mar, 'Socio');
+  it('does not include suspended memberships', async () => {
+    const membership = await addMember('admin@campo.es', seaCoop, 'Socio');
     await prisma.membership.update({
       where: { id: membership.id },
-      data: { status: 'suspendida' },
+      data: { status: 'suspended' },
     });
     const { accessToken } = await loginAs('admin@campo.es');
 
@@ -138,115 +138,123 @@ describe('GET /me (HU-ACC-05)', () => {
       (await request(app).get('/me').set(bearer(accessToken))).body,
     );
 
-    expect(me.memberships.map((m) => m.cooperativeId)).toEqual([campo]);
+    expect(me.memberships.map((m) => m.cooperativeId)).toEqual([fieldCoop]);
   });
 });
 
-describe('GET /cooperativas/{id}/me/permisos (HU-ACC-06)', () => {
-  it('devuelve el perfil, la condición de socio y los permisos efectivos', async () => {
-    await addMember('socio@campo.es', campo, 'Socio');
-    const { accessToken } = await loginAs('socio@campo.es');
+describe('GET /cooperatives/{id}/me/permissions (US-ACC-06)', () => {
+  it('returns the profile, the partner condition and the effective permissions', async () => {
+    await addMember('member@campo.es', fieldCoop, 'Socio');
+    const { accessToken } = await loginAs('member@campo.es');
 
     const response = await request(app)
-      .get(`/cooperativas/${campo}/me/permisos`)
+      .get(`/cooperatives/${fieldCoop}/me/permissions`)
       .set(bearer(accessToken));
 
     expect(response.status).toBe(200);
     const body = myPermissionsResponseSchema.parse(response.body);
-    expect(body).toMatchObject({ cooperativeId: campo, profileName: 'Socio', isPartner: true });
+    expect(body).toMatchObject({ cooperativeId: fieldCoop, profileName: 'Socio', isPartner: true });
     expect(body.permissions).toContainEqual({
-      module: 'area-socio',
-      level: 'consulta',
-      scope: 'propias',
+      module: 'member-area',
+      level: 'read',
+      scope: 'own',
     });
-    expect(body.permissions.map((p) => p.module)).not.toContain('facturas');
+    expect(body.permissions.map((p) => p.module)).not.toContain('invoicing');
   });
 });
 
-describe('denegar por defecto (HU-ACC-07)', () => {
-  it('Dado una petición sin sesión válida, cuando llega a un endpoint protegido, entonces recibe 401', async () => {
-    for (const headers of [{}, bearer('no-es-un-jwt'), { Authorization: 'Basic abc' }]) {
-      const response = await request(app).get(`/cooperativas/${campo}/me/permisos`).set(headers);
+describe('deny by default (US-ACC-07)', () => {
+  it('Given a request without a valid session, when it reaches a protected endpoint, then it gets 401', async () => {
+    for (const headers of [{}, bearer('not-a-jwt'), { Authorization: 'Basic abc' }]) {
+      const response = await request(app)
+        .get(`/cooperatives/${fieldCoop}/me/permissions`)
+        .set(headers);
       expect(response.status).toBe(401);
       expect(response.body.error).toBe('unauthenticated');
     }
     expect((await request(app).get('/me')).status).toBe(401);
   });
 
-  it('Dado un usuario sin membresía en una cooperativa, cuando pide un recurso de ella, entonces recibe 404', async () => {
+  it('Given a user without a membership in a cooperative, when they request one of its resources, then they get 404', async () => {
     const { accessToken } = await loginAs('admin@campo.es');
 
-    for (const path of [`/cooperativas/${mar}/me/permisos`, `/cooperativas/${mar}/facturas`]) {
+    for (const path of [
+      `/cooperatives/${seaCoop}/me/permissions`,
+      `/cooperatives/${seaCoop}/invoices`,
+    ]) {
       const response = await request(app).get(path).set(bearer(accessToken));
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('not_found');
     }
   });
 
-  it('una cooperativa inexistente o un id mal formado responden igual que una ajena', async () => {
+  it('a nonexistent cooperative or a malformed id answer the same as those of another cooperative', async () => {
     const { accessToken } = await loginAs('admin@campo.es');
 
-    for (const id of ['00000000-0000-4000-8000-000000000000', 'no-es-un-uuid']) {
+    for (const id of ['00000000-0000-4000-8000-000000000000', 'not-a-uuid']) {
       const response = await request(app)
-        .get(`/cooperativas/${id}/me/permisos`)
+        .get(`/cooperatives/${id}/me/permissions`)
         .set(bearer(accessToken));
       expect(response.status).toBe(404);
     }
   });
 
-  it('Dado un miembro sin acceso a un módulo, cuando llama a su API, entonces recibe 403', async () => {
-    await addMember('socio@campo.es', campo, 'Socio');
-    const { accessToken } = await loginAs('socio@campo.es');
+  it('Given a member without access to a module, when they call its API, then they get 403', async () => {
+    await addMember('member@campo.es', fieldCoop, 'Socio');
+    const { accessToken } = await loginAs('member@campo.es');
 
     const response = await request(app)
-      .get(`/cooperativas/${campo}/facturas`)
+      .get(`/cooperatives/${fieldCoop}/invoices`)
       .set(bearer(accessToken));
 
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('forbidden');
   });
 
-  it('con permiso, el caso de uso recibe el contexto y el alcance', async () => {
+  it('with permission, the use case receives the context and the scope', async () => {
     const { accessToken } = await loginAs('admin@campo.es');
 
     const response = await request(app)
-      .get(`/cooperativas/${campo}/facturas`)
+      .get(`/cooperatives/${fieldCoop}/invoices`)
       .set(bearer(accessToken));
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ cooperativeId: campo, scope: 'todas' });
+    expect(response.body).toEqual({ cooperativeId: fieldCoop, scope: 'all' });
   });
 
-  it('una suspensión tiene efecto en la siguiente petición (RN-ACC-09)', async () => {
-    const membership = await addMember('gestor@campo.es', campo, 'Gestor');
-    const { accessToken } = await loginAs('gestor@campo.es');
+  it('a suspension takes effect on the next request (BR-ACC-09)', async () => {
+    const membership = await addMember('manager@campo.es', fieldCoop, 'Gestor');
+    const { accessToken } = await loginAs('manager@campo.es');
     await prisma.membership.update({
       where: { id: membership.id },
-      data: { status: 'suspendida' },
+      data: { status: 'suspended' },
     });
 
     const response = await request(app)
-      .get(`/cooperativas/${campo}/facturas`)
+      .get(`/cooperatives/${fieldCoop}/invoices`)
       .set(bearer(accessToken));
 
     expect(response.status).toBe(404);
   });
 
-  it('un cambio de perfil tiene efecto en la siguiente petición, sin cerrar sesión (HU-ACC-09)', async () => {
-    const membership = await addMember('gestor@campo.es', campo, 'Gestor');
-    const { accessToken } = await loginAs('gestor@campo.es');
-    const path = `/cooperativas/${campo}/facturas`;
+  it('a profile change takes effect on the next request, without logging out (US-ACC-09)', async () => {
+    const membership = await addMember('manager@campo.es', fieldCoop, 'Gestor');
+    const { accessToken } = await loginAs('manager@campo.es');
+    const path = `/cooperatives/${fieldCoop}/invoices`;
     expect((await request(app).get(path).set(bearer(accessToken))).status).toBe(200);
 
-    const socio = await prisma.profile.findFirstOrThrow({
-      where: { cooperativeId: campo, name: 'Socio' },
+    const memberProfile = await prisma.profile.findFirstOrThrow({
+      where: { cooperativeId: fieldCoop, name: 'Socio' },
     });
-    await prisma.membership.update({ where: { id: membership.id }, data: { profileId: socio.id } });
+    await prisma.membership.update({
+      where: { id: membership.id },
+      data: { profileId: memberProfile.id },
+    });
 
     expect((await request(app).get(path).set(bearer(accessToken))).status).toBe(403);
   });
 
-  it('tras cerrar sesión, el token de acceso deja de valer al momento', async () => {
+  it('after logging out, the access token stops being valid immediately', async () => {
     const { accessToken, refreshToken } = await loginAs('admin@campo.es');
     await request(app).post('/auth/logout').send({ refreshToken });
 
@@ -256,8 +264,8 @@ describe('denegar por defecto (HU-ACC-07)', () => {
   });
 });
 
-describe('límite de peticiones (RNF-ACC-09)', () => {
-  it('limita el login por email aunque cambie la IP', async () => {
+describe('rate limiting (NFR-ACC-09)', () => {
+  it('limits login per email even if the IP changes', async () => {
     ({ app } = buildApp({ windowMs: 60_000, perIp: 100, perEmail: 2 }));
     const attempt = (ip: string) =>
       request(app)
@@ -273,7 +281,7 @@ describe('límite de peticiones (RNF-ACC-09)', () => {
     expect(limited.body).toEqual({ error: 'too_many_requests' });
   });
 
-  it('limita todas las peticiones de autenticación por IP', async () => {
+  it('limits all authentication requests per IP', async () => {
     ({ app } = buildApp({ windowMs: 60_000, perIp: 2, perEmail: 100 }));
 
     await request(app).post('/auth/refresh').send({ refreshToken: 'x' });

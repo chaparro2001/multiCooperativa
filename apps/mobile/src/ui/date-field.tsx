@@ -1,19 +1,19 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from './theme';
+import { currentLocale, formatDate, formatTime } from '@/i18n/format';
 
-const DAY = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-const TIME = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' });
+import { colors } from './theme';
 
 export interface DateFieldProps {
   label: string;
   value: Date | null;
   onChange(value: Date | null): void;
-  /** «date» for a calendar day, «datetime» for a meeting time. */
+  /** "date" for a calendar day, "datetime" for a meeting time. */
   mode: 'date' | 'datetime';
   minimumDate?: Date;
-  /** Shows «Añadir» while empty and lets the user remove the value. */
+  /** Shows "Add" while empty and lets the user remove the value. */
   optional?: boolean;
   /** Value proposed when an optional field is added. */
   suggested?: () => Date;
@@ -34,6 +34,7 @@ export function DateField({
   suggested,
   testID,
 }: DateFieldProps) {
+  const { t } = useTranslation();
   const initial = () => suggested?.() ?? minimumDate ?? new Date();
 
   return (
@@ -45,7 +46,7 @@ export function DateField({
           onPress={() => onChange(initial())}
           style={styles.add}
         >
-          <Text style={styles.addText}>Añadir</Text>
+          <Text style={styles.addText}>{t('common.actions.add')}</Text>
         </Pressable>
       ) : (
         <View style={styles.row}>
@@ -54,7 +55,7 @@ export function DateField({
               value={value}
               mode={mode}
               display="compact"
-              locale="es-ES"
+              locale={currentLocale()}
               minimumDate={minimumDate}
               minuteInterval={mode === 'datetime' ? 5 : undefined}
               onValueChange={(_event, date) => onChange(date)}
@@ -70,7 +71,7 @@ export function DateField({
           )}
           {optional && (
             <Pressable accessibilityRole="button" onPress={() => onChange(null)} hitSlop={8}>
-              <Text style={styles.remove}>Quitar</Text>
+              <Text style={styles.remove}>{t('common.actions.remove')}</Text>
             </Pressable>
           )}
         </View>
@@ -110,8 +111,8 @@ function AndroidPicker({
   return (
     <Pressable accessibilityRole="button" onPress={openDate} style={styles.android}>
       <Text style={styles.androidText}>
-        {DAY.format(value)}
-        {mode === 'datetime' ? ` · ${TIME.format(value)}` : ''}
+        {formatDate(value)}
+        {mode === 'datetime' ? ` · ${formatTime(value)}` : ''}
       </Text>
     </Pressable>
   );

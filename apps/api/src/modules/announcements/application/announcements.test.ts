@@ -25,11 +25,11 @@ import { InMemoryAnnouncementStore } from './testing/in-memory-announcement-stor
 
 const COOP = '40000000-0000-4000-8000-000000000001';
 const OTHER_COOP = '40000000-0000-4000-8000-000000000002';
-const pdf = (text = 'contenido') => new TextEncoder().encode(`%PDF-1.4 ${text}`);
+const pdf = (text = 'content') => new TextEncoder().encode(`%PDF-1.4 ${text}`);
 
 function context(
   membershipId: string,
-  level: 'consulta' | 'gestion' | null,
+  level: 'read' | 'manage' | null,
   cooperativeId = COOP,
 ): CooperativeContext {
   return {
@@ -39,12 +39,12 @@ function context(
     membershipId,
     profileName: 'x',
     isPartner: true,
-    permissions: level ? [{ module: 'comunicados', level, scope: 'todas' }] : [],
+    permissions: level ? [{ module: 'announcements', level, scope: 'all' }] : [],
   };
 }
 
-const manager = context('mem-gestor', 'gestion');
-const reader = context('mem-socio', 'consulta');
+const manager = context('mem-manager', 'manage');
+const reader = context('mem-member', 'read');
 
 let store: InMemoryAnnouncementStore;
 let files: InMemoryFileStorage;
@@ -58,7 +58,7 @@ beforeEach(() => {
   published = [];
   now = new Date('2026-10-10T10:00:00Z');
   const events = new InProcessEventBus<AnnouncementEvent>({ onHandlerError: () => {} });
-  events.subscribe('ComunicadoPublicado', (event) => void published.push(event));
+  events.subscribe('AnnouncementPublished', (event) => void published.push(event));
   deps = {
     announcements: store,
     files,
@@ -66,44 +66,44 @@ beforeEach(() => {
     now: () => now,
     members: {
       countActiveMembers: async () => 10,
-      displayNames: async (_coop, ids) => new Map(ids.map((id) => [id, `Nombre de ${id}`])),
+      displayNames: async (_coop, ids) => new Map(ids.map((id) => [id, `Name of ${id}`])),
     },
   };
 });
 
-const draft = (title = 'Asamblea', body = 'Se convoca la asamblea.') =>
+const draft = (title = 'Assembly', body = 'The assembly is convened.') =>
   createAnnouncement(deps, manager, { title, body });
 
-async function publishedAnnouncement(title = 'Asamblea') {
+async function publishedAnnouncement(title = 'Assembly') {
   const created = await draft(title);
   now = new Date(now.getTime() + 60_000);
   return publishAnnouncement(deps, manager, created.id);
 }
 
-describe('publicar (HU-COM-01)', () => {
-  it('Dado un título y un cuerpo válidos, cuando lo guardo, entonces queda como borrador visible solo con gestión', async () => {
+describe('publish (US-ANN-01)', () => {
+  it('Given a valid title and body, when I save, then it is a draft visible only with manage access', async () => {
     const created = await draft();
 
-    expect(created).toMatchObject({ status: 'borrador', authorMembershipId: 'mem-gestor' });
+    expect(created).toMatchObject({ status: 'draft', authorMembershipId: 'mem-manager' });
     expect((await listAnnouncements(deps, reader, 0)).items).toEqual([]);
     expect((await listAnnouncements(deps, manager, 0)).items).toHaveLength(1);
   });
 
-  it('Dado un borrador, cuando lo publico, entonces lo ven todos y se emite ComunicadoPublicado', async () => {
+  it('Given a draft, when I publish it, then everyone sees it and AnnouncementPublished is emitted', async () => {
     const result = await publishedAnnouncement();
 
-    expect(result.status).toBe('publicado');
+    expect(result.status).toBe('published');
     expect((await listAnnouncements(deps, reader, 0)).items.map((i) => i.id)).toEqual([result.id]);
     expect(published).toEqual([
       {
-        type: 'ComunicadoPublicado',
+        type: 'AnnouncementPublished',
         occurredAt: now,
-        payload: { cooperativeId: COOP, announcementId: result.id, title: 'Asamblea' },
+        payload: { cooperativeId: COOP, announcementId: result.id, title: 'Assembly' },
       },
     ]);
   });
 
-  it('publicar dos veces falla y no emite un segundo evento (RN-COM-07)', async () => {
+  it('publishing twice fails and emits no second event (BR-ANN-07)', async () => {
     const result = await publishedAnnouncement();
 
     await expect(publishAnnouncement(deps, manager, result.id)).rejects.toThrow(
@@ -112,8 +112,8 @@ describe('publicar (HU-COM-01)', () => {
     expect(published).toHaveLength(1);
   });
 
-  it('Dado un comunicado sin cuerpo, cuando intento publicarlo, entonces no se publica ni se emite nada', async () => {
-    const created = await createAnnouncement(deps, manager, { title: 'Solo título', body: '' });
+  it('Given an announcement without body, when I try to publish it, then nothing is published or emitted', async () => {
+    const created = await createAnnouncement(deps, manager, { title: 'Title only', body: '' });
 
     await expect(publishAnnouncement(deps, manager, created.id)).rejects.toThrow(
       InvalidAnnouncementError,
@@ -122,8 +122,8 @@ describe('publicar (HU-COM-01)', () => {
   });
 });
 
-describe('permisos (HU-ACC-07)', () => {
-  it('con consulta no se crea, edita, publica, retira ni adjunta', async () => {
+describe('permissions (US-ACC-07)', () => {
+  it('with read access one cannot create, edit, publish, withdraw or attach', async () => {
     const created = await draft();
     const attempts = [
       createAnnouncement(deps, reader, { title: 'x', body: 'y' }),
@@ -137,26 +137,26 @@ describe('permisos (HU-ACC-07)', () => {
     }
   });
 
-  it('sin el módulo no se consulta nada', async () => {
+  it('without the module nothing can be read', async () => {
     await expect(listAnnouncements(deps, context('m', null), 0)).rejects.toMatchObject({
       code: 'forbidden',
     });
   });
 });
 
-describe('consultar (HU-COM-02)', () => {
-  it('Dado comunicados publicados, entonces se ordenan del más reciente al más antiguo con los fijados primero', async () => {
-    const first = await publishedAnnouncement('Primero');
-    await publishedAnnouncement('Segundo');
-    await publishedAnnouncement('Tercero');
+describe('list (US-ANN-02)', () => {
+  it('Given published announcements, then they are ordered newest first with pinned ones first', async () => {
+    const first = await publishedAnnouncement('First');
+    await publishedAnnouncement('Second');
+    await publishedAnnouncement('Third');
     await updateAnnouncement(deps, manager, first.id, { pinned: true });
 
     const titles = (await listAnnouncements(deps, reader, 0)).items.map((i) => i.title);
 
-    expect(titles).toEqual(['Primero', 'Tercero', 'Segundo']);
+    expect(titles).toEqual(['First', 'Third', 'Second']);
   });
 
-  it('Dado comunicados que no he abierto, entonces aparecen como no leídos', async () => {
+  it('Given announcements I have not opened, then they appear as unread', async () => {
     const a = await publishedAnnouncement('A');
     await publishedAnnouncement('B');
     await getAnnouncement(deps, reader, a.id);
@@ -169,7 +169,7 @@ describe('consultar (HU-COM-02)', () => {
     ]);
   });
 
-  it('Dado más de 20 comunicados, cuando llego al final, entonces se cargan los siguientes', async () => {
+  it('Given more than 20 announcements, when I reach the end, then the next ones are loaded', async () => {
     for (let i = 0; i < PAGE_SIZE + 3; i++) await publishedAnnouncement(`C${i}`);
 
     const first = await listAnnouncements(deps, reader, 0);
@@ -181,17 +181,17 @@ describe('consultar (HU-COM-02)', () => {
     expect(second.nextOffset).toBeNull();
   });
 
-  it('incluye el nombre del autor', async () => {
+  it('includes the author name', async () => {
     await publishedAnnouncement();
 
     expect((await listAnnouncements(deps, reader, 0)).items[0]?.authorName).toBe(
-      'Nombre de mem-gestor',
+      'Name of mem-manager',
     );
   });
 });
 
-describe('leer (HU-COM-03)', () => {
-  it('Dado un comunicado publicado, cuando lo abro, entonces veo sus datos y queda leído una sola vez', async () => {
+describe('read (US-ANN-03)', () => {
+  it('Given a published announcement, when I open it, then I see its data and it is marked read once', async () => {
     const result = await publishedAnnouncement();
     const firstOpen = now;
 
@@ -200,30 +200,30 @@ describe('leer (HU-COM-03)', () => {
     await getAnnouncement(deps, reader, result.id);
 
     expect(detail).toMatchObject({
-      title: 'Asamblea',
-      authorName: 'Nombre de mem-gestor',
+      title: 'Assembly',
+      authorName: 'Name of mem-manager',
       readStats: null,
     });
-    expect(store.reads.get(`${result.id}:mem-socio`)).toEqual(firstOpen);
+    expect(store.reads.get(`${result.id}:mem-member`)).toEqual(firstOpen);
     expect(store.reads.size).toBe(1);
   });
 
-  it('Dado un adjunto, cuando lo abro, entonces se descarga con una URL firmada de 5 minutos', async () => {
+  it('Given an attachment, when I open it, then it downloads through a 5-minute signed URL', async () => {
     const result = await publishedAnnouncement();
-    await addAttachment(deps, manager, result.id, { name: 'Orden del día.pdf', content: pdf() });
+    await addAttachment(deps, manager, result.id, { name: 'Agenda.pdf', content: pdf() });
 
     const detail = await getAnnouncement(deps, reader, result.id);
 
     expect(detail.attachments).toEqual([
       expect.objectContaining({
-        name: 'Orden del día.pdf',
+        name: 'Agenda.pdf',
         url: expect.stringContaining('expires=300'),
       }),
     ]);
     expect(detail.attachments[0]).not.toHaveProperty('fileKey');
   });
 
-  it('Dado un comunicado retirado o en borrador, cuando lo abro sin gestión, entonces no existe', async () => {
+  it('Given a withdrawn or draft announcement, when I open it without manage access, then it does not exist', async () => {
     const created = await draft();
     const withdrawn = await publishedAnnouncement();
     await withdrawAnnouncement(deps, manager, withdrawn.id);
@@ -233,15 +233,15 @@ describe('leer (HU-COM-03)', () => {
     }
   });
 
-  it('un comunicado de otra cooperativa no existe (ADR-003)', async () => {
+  it('an announcement of another cooperative does not exist (ADR-003)', async () => {
     const result = await publishedAnnouncement();
 
     await expect(
-      getAnnouncement(deps, context('mem-x', 'gestion', OTHER_COOP), result.id),
+      getAnnouncement(deps, context('mem-x', 'manage', OTHER_COOP), result.id),
     ).rejects.toThrow(AnnouncementNotFoundError);
   });
 
-  it('abrir un borrador con gestión no cuenta como lectura', async () => {
+  it('opening a draft with manage access does not count as a read', async () => {
     const created = await draft();
 
     await getAnnouncement(deps, manager, created.id);
@@ -250,42 +250,42 @@ describe('leer (HU-COM-03)', () => {
   });
 });
 
-describe('editar y retirar (HU-COM-05)', () => {
-  it('Dado un comunicado publicado, cuando lo edito, entonces queda marcado como editado y no se reenvía el aviso', async () => {
+describe('edit and withdraw (US-ANN-05)', () => {
+  it('Given a published announcement, when I edit it, then it is marked as edited and the notice is not sent again', async () => {
     const result = await publishedAnnouncement();
     now = new Date('2026-10-12T09:00:00Z');
 
-    const edited = await updateAnnouncement(deps, manager, result.id, { body: 'Corregido' });
+    const edited = await updateAnnouncement(deps, manager, result.id, { body: 'Fixed' });
 
-    expect(edited).toMatchObject({ body: 'Corregido', editedAt: now });
+    expect(edited).toMatchObject({ body: 'Fixed', editedAt: now });
     expect(published).toHaveLength(1);
   });
 
-  it('Dado un comunicado publicado, cuando lo retiro, entonces deja de verse con consulta', async () => {
+  it('Given a published announcement, when I withdraw it, then it is no longer visible with read access', async () => {
     const result = await publishedAnnouncement();
 
     await withdrawAnnouncement(deps, manager, result.id);
 
     expect((await listAnnouncements(deps, reader, 0)).items).toEqual([]);
-    expect((await listAnnouncements(deps, manager, 0)).items[0]?.status).toBe('retirado');
+    expect((await listAnnouncements(deps, manager, 0)).items[0]?.status).toBe('withdrawn');
   });
 });
 
-describe('cuántos lo han leído (HU-COM-07)', () => {
-  it('con gestión se ven las lecturas sobre los miembros activos', async () => {
+describe('read counts (US-ANN-07)', () => {
+  it('with manage access the reads over active members are visible', async () => {
     const result = await publishedAnnouncement();
     await getAnnouncement(deps, reader, result.id);
-    await getAnnouncement(deps, context('mem-otro', 'consulta'), result.id);
+    await getAnnouncement(deps, context('mem-other', 'read'), result.id);
 
     const detail = await getAnnouncement(deps, manager, result.id);
 
-    // También cuenta la lectura del propio gestor al abrirlo.
+    // The manager's own read when opening it also counts.
     expect(detail.readStats).toEqual({ readCount: 3, activeMembers: 10 });
   });
 });
 
-describe('adjuntos (RN-COM-05)', () => {
-  it('guarda el PDF en el almacenamiento con una clave de la cooperativa', async () => {
+describe('attachments (BR-ANN-05)', () => {
+  it('stores the PDF in storage under a cooperative key', async () => {
     const created = await draft();
 
     const attachment = await addAttachment(deps, manager, created.id, {
@@ -295,23 +295,23 @@ describe('adjuntos (RN-COM-05)', () => {
 
     expect(attachment).toMatchObject({ name: 'a.pdf', size: pdf().byteLength });
     expect([...files.files.keys()]).toEqual([
-      expect.stringMatching(new RegExp(`^cooperativas/${COOP}/comunicados/`)),
+      expect.stringMatching(new RegExp(`^cooperatives/${COOP}/announcements/`)),
     ]);
   });
 
-  it('rechaza por contenido un fichero que no es PDF, sin subirlo', async () => {
+  it('rejects by content a file that is not a PDF, without uploading it', async () => {
     const created = await draft();
 
     await expect(
       addAttachment(deps, manager, created.id, {
-        name: 'falso.pdf',
+        name: 'fake.pdf',
         content: new TextEncoder().encode('<html>'),
       }),
     ).rejects.toThrow(AttachmentRejectedError);
     expect(files.files.size).toBe(0);
   });
 
-  it('un cuarto adjunto se rechaza', async () => {
+  it('a fourth attachment is rejected', async () => {
     const created = await draft();
     for (let i = 0; i < 3; i++) {
       await addAttachment(deps, manager, created.id, { name: `${i}.pdf`, content: pdf() });
@@ -323,11 +323,11 @@ describe('adjuntos (RN-COM-05)', () => {
     expect(files.files.size).toBe(3);
   });
 
-  it('si se rechaza bajo bloqueo, borra el fichero ya subido', async () => {
+  it('if rejected under lock, deletes the already uploaded file', async () => {
     const created = await draft();
     const original = store.addAttachment.bind(store);
     store.addAttachment = async (coop, id, check, attachment) => {
-      // Otra subida simultánea ocupó las plazas mientras esta subía el fichero.
+      // A parallel upload took the slots while this one was uploading the file.
       return original(coop, id, (current) => check(current, 3), attachment);
     };
 

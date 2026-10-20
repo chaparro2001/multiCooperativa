@@ -5,7 +5,7 @@ export const LOCKOUT_MINUTES = 15;
 const MINUTE_IN_MS = 60 * 1000;
 
 /**
- * RN-ACC-11: five failed attempts within 15 minutes lock the login for
+ * BR-ACC-11: five failed attempts within 15 minutes lock the login for
  * 15 minutes, counted from the fifth failure. Returns when the lock ends,
  * or null if the login is not locked at `now`.
  */

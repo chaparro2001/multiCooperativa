@@ -21,7 +21,7 @@ export function checkInvitation(invitation: InvitationState, now: Date): Invitat
   return 'valid';
 }
 
-/** Single use (RN-ACC-10). */
+/** Single use (BR-ACC-10). */
 export function useInvitation<T extends InvitationState>(invitation: T, now: Date): T {
   const check = checkInvitation(invitation, now);
   if (check !== 'valid') {

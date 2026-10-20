@@ -21,33 +21,33 @@ import {
 const now = new Date('2026-10-10T10:00:00Z');
 const later = new Date('2026-10-11T10:00:00Z');
 
-const draft = () => createDraft({ title: 'Asamblea general', body: 'Se convoca la asamblea.' });
+const draft = () => createDraft({ title: 'General assembly', body: 'The assembly is convened.' });
 const published = () => publish(draft(), now);
 
-describe('borrador (HU-COM-01)', () => {
-  it('Dado un título y un cuerpo válidos, cuando lo guardo sin publicar, entonces queda como borrador', () => {
+describe('draft (US-ANN-01)', () => {
+  it('Given a valid title and body, when I save without publishing, then it is a draft', () => {
     expect(draft()).toEqual({
-      status: 'borrador',
-      title: 'Asamblea general',
-      body: 'Se convoca la asamblea.',
+      status: 'draft',
+      title: 'General assembly',
+      body: 'The assembly is convened.',
       pinned: false,
       publishedAt: null,
       editedAt: null,
     });
   });
 
-  it('un borrador puede estar incompleto: se exige al publicar', () => {
-    expect(createDraft({ title: '', body: '' }).status).toBe('borrador');
+  it('a draft may be incomplete: completeness is required on publish', () => {
+    expect(createDraft({ title: '', body: '' }).status).toBe('draft');
   });
 
-  it('quita los espacios de los extremos', () => {
-    expect(createDraft({ title: '  Hola ', body: ' Texto\n' })).toMatchObject({
-      title: 'Hola',
-      body: 'Texto',
+  it('trims surrounding whitespace', () => {
+    expect(createDraft({ title: '  Hello ', body: ' Text\n' })).toMatchObject({
+      title: 'Hello',
+      body: 'Text',
     });
   });
 
-  it('RN-COM-04: rechaza un título o un cuerpo demasiado largos, incluso en borrador', () => {
+  it('BR-ANN-04: rejects a title or body that is too long, even as a draft', () => {
     const error = (() => {
       try {
         createDraft({
@@ -62,19 +62,19 @@ describe('borrador (HU-COM-01)', () => {
     expect((error as InvalidAnnouncementError).issues).toEqual(['title_too_long', 'body_too_long']);
   });
 
-  it('admite exactamente los máximos', () => {
+  it('accepts exactly the maximums', () => {
     expect(() =>
       createDraft({ title: 'x'.repeat(TITLE_MAX_LENGTH), body: 'y'.repeat(BODY_MAX_LENGTH) }),
     ).not.toThrow();
   });
 });
 
-describe('publicar (HU-COM-01)', () => {
-  it('Dado un borrador, cuando lo publico, entonces pasa a publicado con su fecha', () => {
-    expect(published()).toMatchObject({ status: 'publicado', publishedAt: now, editedAt: null });
+describe('publish (US-ANN-01)', () => {
+  it('Given a draft, when I publish it, then it becomes published with its date', () => {
+    expect(published()).toMatchObject({ status: 'published', publishedAt: now, editedAt: null });
   });
 
-  it('Dado un comunicado sin título o sin cuerpo, cuando intento publicarlo, entonces se indica qué falta', () => {
+  it('Given an announcement without title or body, when I try to publish it, then what is missing is reported', () => {
     try {
       publish(createDraft({ title: ' ', body: '' }), now);
       expect.unreachable();
@@ -84,97 +84,97 @@ describe('publicar (HU-COM-01)', () => {
     }
   });
 
-  it('solo se publica una vez (RN-COM-07: el aviso sale una sola vez)', () => {
+  it('is published only once (BR-ANN-07: the notice goes out once)', () => {
     expect(() => publish(published(), later)).toThrow(InvalidAnnouncementTransitionError);
   });
 
-  it('un comunicado retirado no se vuelve a publicar', () => {
+  it('a withdrawn announcement is not published again', () => {
     expect(() => publish(withdraw(published()), later)).toThrow(InvalidAnnouncementTransitionError);
   });
 });
 
-describe('editar (HU-COM-05)', () => {
-  it('editar un borrador no lo marca como editado', () => {
-    expect(edit(draft(), { title: 'Otro' }, later)).toMatchObject({
-      title: 'Otro',
+describe('edit (US-ANN-05)', () => {
+  it('editing a draft does not mark it as edited', () => {
+    expect(edit(draft(), { title: 'Other' }, later)).toMatchObject({
+      title: 'Other',
       editedAt: null,
     });
   });
 
-  it('Dado un comunicado publicado, cuando lo edito, entonces se marca como editado con la fecha', () => {
-    expect(edit(published(), { body: 'Corregido' }, later)).toMatchObject({
-      status: 'publicado',
-      body: 'Corregido',
+  it('Given a published announcement, when I edit it, then it is marked as edited with the date', () => {
+    expect(edit(published(), { body: 'Fixed' }, later)).toMatchObject({
+      status: 'published',
+      body: 'Fixed',
       publishedAt: now,
       editedAt: later,
     });
   });
 
-  it('un comunicado publicado no puede quedarse sin título ni cuerpo', () => {
+  it('a published announcement cannot end up without title or body', () => {
     expect(() => edit(published(), { body: '' }, later)).toThrow(InvalidAnnouncementError);
   });
 
-  it('un comunicado retirado no se edita', () => {
+  it('a withdrawn announcement cannot be edited', () => {
     expect(() => edit(withdraw(published()), { title: 'x' }, later)).toThrow(
       InvalidAnnouncementTransitionError,
     );
   });
 });
 
-describe('retirar y fijar (HU-COM-05, HU-COM-06)', () => {
-  it('RN-COM-02: un comunicado publicado se retira, no se borra', () => {
-    expect(withdraw(published()).status).toBe('retirado');
+describe('withdraw and pin (US-ANN-05, US-ANN-06)', () => {
+  it('BR-ANN-02: a published announcement is withdrawn, not deleted', () => {
+    expect(withdraw(published()).status).toBe('withdrawn');
   });
 
-  it('solo se retira lo publicado', () => {
+  it('only published announcements are withdrawn', () => {
     expect(() => withdraw(draft())).toThrow(InvalidAnnouncementTransitionError);
   });
 
-  it('se fija y se desfija un comunicado publicado', () => {
+  it('a published announcement is pinned and unpinned', () => {
     const pinned = setPinned(published(), true);
     expect(pinned.pinned).toBe(true);
     expect(setPinned(pinned, false).pinned).toBe(false);
   });
 
-  it('un borrador no se fija', () => {
+  it('a draft cannot be pinned', () => {
     expect(() => setPinned(draft(), true)).toThrow(InvalidAnnouncementTransitionError);
   });
 
-  it('retirar quita el fijado', () => {
+  it('withdrawing removes the pin', () => {
     expect(withdraw(setPinned(published(), true)).pinned).toBe(false);
   });
 });
 
-describe('visibilidad (RN-COM-03)', () => {
-  it('con consulta solo se ven los publicados', () => {
-    expect(isVisible('publicado', false)).toBe(true);
-    expect(isVisible('borrador', false)).toBe(false);
-    expect(isVisible('retirado', false)).toBe(false);
+describe('visibility (BR-ANN-03)', () => {
+  it('with read access only published ones are visible', () => {
+    expect(isVisible('published', false)).toBe(true);
+    expect(isVisible('draft', false)).toBe(false);
+    expect(isVisible('withdrawn', false)).toBe(false);
   });
 
-  it('con gestión se ven todos', () => {
-    expect(isVisible('borrador', true)).toBe(true);
-    expect(isVisible('retirado', true)).toBe(true);
+  it('with manage access all are visible', () => {
+    expect(isVisible('draft', true)).toBe(true);
+    expect(isVisible('withdrawn', true)).toBe(true);
   });
 });
 
-describe('adjuntos (RN-COM-05)', () => {
+describe('attachments (BR-ANN-05)', () => {
   const pdf = { size: 1000, isPdf: true };
 
-  it('admite hasta 3 PDF', () => {
+  it('accepts up to 3 PDFs', () => {
     expect(() => assertCanAttach(draft(), 2, pdf)).not.toThrow();
     expect(() => assertCanAttach(draft(), 3, pdf)).toThrow(
       expect.objectContaining({ reason: 'too_many' }),
     );
   });
 
-  it('solo PDF', () => {
+  it('PDF only', () => {
     expect(() => assertCanAttach(draft(), 0, { size: 1000, isPdf: false })).toThrow(
       expect.objectContaining({ reason: 'not_pdf' }),
     );
   });
 
-  it('de 10 MB como máximo', () => {
+  it('10 MB at most', () => {
     expect(() =>
       assertCanAttach(draft(), 0, { size: MAX_ATTACHMENT_BYTES, isPdf: true }),
     ).not.toThrow();
@@ -183,7 +183,7 @@ describe('adjuntos (RN-COM-05)', () => {
     ).toThrow(AttachmentRejectedError);
   });
 
-  it('no se adjunta a un comunicado retirado', () => {
+  it('cannot attach to a withdrawn announcement', () => {
     expect(() => assertCanAttach(withdraw(published()), 0, pdf)).toThrow(
       InvalidAnnouncementTransitionError,
     );

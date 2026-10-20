@@ -15,18 +15,18 @@ import { appendPdf, type PickedPdf } from '@/features/shared/pdf-upload';
 
 function useScope() {
   const { cooperativeId } = useActiveCooperative();
-  if (!cooperativeId) throw new Error('Sin cooperativa activa');
-  const base = `/cooperativas/${cooperativeId}/comunicados`;
-  const key = [...cooperativeKey(cooperativeId), 'comunicados'] as const;
+  if (!cooperativeId) throw new Error('No active cooperative');
+  const base = `/cooperatives/${cooperativeId}/announcements`;
+  const key = [...cooperativeKey(cooperativeId), 'announcements'] as const;
   return { base, key };
 }
 
-/** HU-COM-02: pages of 20, loaded as the list scrolls. */
+/** US-ANN-02: pages of 20, loaded as the list scrolls. */
 export function useAnnouncementList() {
   const { api } = useServices();
   const { base, key } = useScope();
   return useInfiniteQuery({
-    queryKey: [...key, 'lista'],
+    queryKey: [...key, 'list'],
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       api.request(`${base}?offset=${pageParam}`, { schema: listAnnouncementsResponseSchema }),
@@ -34,21 +34,21 @@ export function useAnnouncementList() {
   });
 }
 
-/** HU-COM-03: opening it marks it as read on the server. */
+/** US-ANN-03: opening it marks it as read on the server. */
 export function useAnnouncement(id: string | undefined) {
   const { api } = useServices();
   const queryClient = useQueryClient();
   const { base, key } = useScope();
   return useQuery({
-    queryKey: [...key, 'detalle', id],
+    queryKey: [...key, 'detail', id],
     // A new announcement in the editor has no id yet: nothing to load.
     enabled: Boolean(id),
-    // Attachment links last 5 minutes (RNF-COM-03): refreshed well before.
+    // Attachment links last 5 minutes (NFR-ANN-03): refreshed well before.
     staleTime: 60_000,
     queryFn: async () => {
       const detail = await api.request(`${base}/${id}`, { schema: announcementDetailSchema });
       // The list shows it as read from now on.
-      queryClient.invalidateQueries({ queryKey: [...key, 'lista'] });
+      queryClient.invalidateQueries({ queryKey: [...key, 'list'] });
       return detail;
     },
   });
@@ -84,7 +84,7 @@ export function useUpdateAnnouncement() {
 export function useAnnouncementAction() {
   const { api } = useServices();
   return useAnnouncementMutation(
-    ({ id, action }: { id: string; action: 'publicar' | 'retirar' }, base) =>
+    ({ id, action }: { id: string; action: 'publish' | 'withdraw' }, base) =>
       api.request(`${base}/${id}/${action}`, { method: 'POST', schema: announcementSchema }),
   );
 }
@@ -93,8 +93,8 @@ export function useAddAttachment() {
   const { api } = useServices();
   return useAnnouncementMutation(({ id, pdf }: { id: string; pdf: PickedPdf }, base) => {
     const form = new FormData();
-    appendPdf(form, 'fichero', pdf);
-    return api.request(`${base}/${id}/adjuntos`, {
+    appendPdf(form, 'file', pdf);
+    return api.request(`${base}/${id}/attachments`, {
       method: 'POST',
       body: form,
       schema: announcementAttachmentSchema,

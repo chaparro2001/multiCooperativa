@@ -20,24 +20,24 @@ import { InMemoryDocumentStore } from './testing/in-memory-document-store';
 const COOP = '40000000-0000-4000-8000-000000000001';
 const OTHER_COOP = '40000000-0000-4000-8000-000000000002';
 const pdf = (text = 'v1') => ({
-  name: 'Estatutos.pdf',
+  name: 'Bylaws.pdf',
   content: new TextEncoder().encode(`%PDF-1.4 ${text}`),
 });
 
-function context(level: 'consulta' | 'gestion' | null, cooperativeId = COOP): CooperativeContext {
+function context(level: 'read' | 'manage' | null, cooperativeId = COOP): CooperativeContext {
   return {
     userId: 'user',
     sessionId: 'session',
     cooperativeId,
-    membershipId: level === 'gestion' ? 'mem-gestor' : 'mem-socio',
+    membershipId: level === 'manage' ? 'mem-manager' : 'mem-member',
     profileName: 'x',
     isPartner: true,
-    permissions: level ? [{ module: 'documentos', level, scope: 'todas' }] : [],
+    permissions: level ? [{ module: 'documents', level, scope: 'all' }] : [],
   };
 }
 
-const manager = context('gestion');
-const reader = context('consulta');
+const manager = context('manage');
+const reader = context('read');
 
 let store: InMemoryDocumentStore;
 let files: InMemoryFileStorage;
@@ -49,50 +49,50 @@ beforeEach(() => {
   files = new InMemoryFileStorage();
   events = [];
   const bus = new InProcessEventBus<DocumentEvent>({ onHandlerError: () => {} });
-  bus.subscribe('DocumentoPublicado', (event) => void events.push(event));
-  bus.subscribe('DocumentoRetirado', (event) => void events.push(event));
+  bus.subscribe('DocumentPublished', (event) => void events.push(event));
+  bus.subscribe('DocumentWithdrawn', (event) => void events.push(event));
   deps = {
     documents: store,
     files,
     events: bus,
     now: () => new Date('2026-10-10T10:00:00Z'),
-    members: { displayNames: async (_c, ids) => new Map(ids.map((id) => [id, `Nombre ${id}`])) },
+    members: { displayNames: async (_c, ids) => new Map(ids.map((id) => [id, `Name ${id}`])) },
   };
 });
 
 const upload = (
-  title = 'Estatutos sociales',
-  category: 'estatutos' | 'actas' = 'estatutos',
+  title = 'Corporate bylaws',
+  category: 'bylaws' | 'minutes' = 'bylaws',
   documentDate = '2026-03-15',
 ) => uploadDocument(deps, manager, { title, category, documentDate }, pdf());
 
-describe('subir (HU-DOC-01)', () => {
-  it('Dado un PDF válido, cuando lo subo, entonces queda publicado y se emite DocumentoPublicado', async () => {
+describe('upload (US-DOC-01)', () => {
+  it('Given a valid PDF, when I upload it, then it is published and DocumentPublished is emitted', async () => {
     const document = await upload();
 
-    expect(document).toMatchObject({ status: 'publicado', title: 'Estatutos sociales' });
+    expect(document).toMatchObject({ status: 'published', title: 'Corporate bylaws' });
     expect(document.current).toMatchObject({
       isCurrent: true,
-      indexingStatus: 'pendiente',
-      fileName: 'Estatutos.pdf',
+      indexingStatus: 'pending',
+      fileName: 'Bylaws.pdf',
     });
     expect(events).toEqual([
       expect.objectContaining({
-        type: 'DocumentoPublicado',
+        type: 'DocumentPublished',
         payload: { cooperativeId: COOP, documentId: document.id, versionId: document.current.id },
       }),
     ]);
     expect([...files.files.keys()]).toEqual([
-      expect.stringMatching(`^cooperativas/${COOP}/documentos/`),
+      expect.stringMatching(`^cooperatives/${COOP}/documents/`),
     ]);
   });
 
-  it('Dado un fichero que no es PDF, entonces se rechaza sin guardar nada', async () => {
+  it('Given a file that is not a PDF, then it is rejected without storing anything', async () => {
     await expect(
       uploadDocument(
         deps,
         manager,
-        { title: 'x', category: 'otros', documentDate: '2026-01-01' },
+        { title: 'x', category: 'other', documentDate: '2026-01-01' },
         { name: 'x.pdf', content: new TextEncoder().encode('PK zip') },
       ),
     ).rejects.toMatchObject({ reason: 'not_pdf' });
@@ -101,49 +101,45 @@ describe('subir (HU-DOC-01)', () => {
     expect(events).toEqual([]);
   });
 
-  it('si guardar falla, el fichero subido se borra', async () => {
+  it('if saving fails, the uploaded file is deleted', async () => {
     store.create = async () => {
-      throw new Error('base de datos caída');
+      throw new Error('database down');
     };
 
-    await expect(upload()).rejects.toThrow('base de datos caída');
+    await expect(upload()).rejects.toThrow('database down');
     expect(files.files.size).toBe(0);
   });
 
-  it('con consulta no se sube (HU-ACC-07)', async () => {
+  it('with read access nothing can be uploaded (US-ACC-07)', async () => {
     await expect(
       uploadDocument(
         deps,
         reader,
-        { title: 'x', category: 'otros', documentDate: '2026-01-01' },
+        { title: 'x', category: 'other', documentDate: '2026-01-01' },
         pdf(),
       ),
     ).rejects.toMatchObject({ code: 'forbidden' });
   });
 });
 
-describe('consultar (HU-DOC-02)', () => {
-  it('ordena por fecha descendente y filtra por categoría y por título', async () => {
-    await upload('Estatutos sociales', 'estatutos', '2024-01-10');
-    await upload('Acta de marzo', 'actas', '2026-03-31');
-    await upload('Acta de junio', 'actas', '2026-06-30');
+describe('list (US-DOC-02)', () => {
+  it('sorts by date descending and filters by category and by title', async () => {
+    await upload('Corporate bylaws', 'bylaws', '2024-01-10');
+    await upload('March minutes', 'minutes', '2026-03-31');
+    await upload('June minutes', 'minutes', '2026-06-30');
 
     const all = await listDocuments(deps, reader, {});
-    const actas = await listDocuments(deps, reader, { category: 'actas' });
-    const search = await listDocuments(deps, reader, { search: '  MARZO ' });
+    const minutes = await listDocuments(deps, reader, { category: 'minutes' });
+    const found = await listDocuments(deps, reader, { search: '  MARCH ' });
 
-    expect(all.map((d) => d.title)).toEqual([
-      'Acta de junio',
-      'Acta de marzo',
-      'Estatutos sociales',
-    ]);
-    expect(actas.map((d) => d.title)).toEqual(['Acta de junio', 'Acta de marzo']);
-    expect(search.map((d) => d.title)).toEqual(['Acta de marzo']);
+    expect(all.map((d) => d.title)).toEqual(['June minutes', 'March minutes', 'Corporate bylaws']);
+    expect(minutes.map((d) => d.title)).toEqual(['June minutes', 'March minutes']);
+    expect(found.map((d) => d.title)).toEqual(['March minutes']);
   });
 });
 
-describe('abrir (HU-DOC-03)', () => {
-  it('Dado un documento publicado, cuando lo abro, entonces recibo la versión vigente con URL firmada', async () => {
+describe('open (US-DOC-03)', () => {
+  it('Given a published document, when I open it, then I get the current version with a signed URL', async () => {
     const document = await upload();
 
     const detail = await getDocument(deps, reader, document.id);
@@ -152,27 +148,27 @@ describe('abrir (HU-DOC-03)', () => {
     expect(detail.url).toContain('expires=300');
   });
 
-  it('Dado un documento retirado, cuando lo abro sin gestión, entonces no existe', async () => {
+  it('Given a withdrawn document, when I open it without manage access, then it does not exist', async () => {
     const document = await upload();
     await withdrawDocument(deps, manager, document.id);
 
     await expect(getDocument(deps, reader, document.id)).rejects.toThrow(DocumentNotFoundError);
     await expect(getDocument(deps, manager, document.id)).resolves.toMatchObject({
-      status: 'retirado',
+      status: 'withdrawn',
     });
   });
 
-  it('un documento de otra cooperativa no existe (ADR-003)', async () => {
+  it('a document of another cooperative does not exist (ADR-003)', async () => {
     const document = await upload();
 
-    await expect(getDocument(deps, context('gestion', OTHER_COOP), document.id)).rejects.toThrow(
+    await expect(getDocument(deps, context('manage', OTHER_COOP), document.id)).rejects.toThrow(
       DocumentNotFoundError,
     );
   });
 });
 
-describe('versiones (HU-DOC-04)', () => {
-  it('Dado un documento publicado, cuando subo una versión nueva, entonces pasa a vigente, la anterior queda en el historial y se indexa la nueva', async () => {
+describe('versions (US-DOC-04)', () => {
+  it('Given a published document, when I upload a new version, then it becomes current, the previous one stays in the history and the new one is indexed', async () => {
     const document = await upload();
     const original = document.current;
 
@@ -184,11 +180,11 @@ describe('versiones (HU-DOC-04)', () => {
       [updated.current.id, true],
       [original.id, false],
     ]);
-    expect(history[0]?.uploadedByName).toBe('Nombre mem-gestor');
+    expect(history[0]?.uploadedByName).toBe('Name mem-manager');
     expect(events.at(-1)?.payload).toMatchObject({ versionId: updated.current.id });
   });
 
-  it('el historial solo se consulta con gestión', async () => {
+  it('the history can only be read with manage access', async () => {
     const document = await upload();
 
     await expect(listVersions(deps, reader, document.id)).rejects.toMatchObject({
@@ -196,7 +192,7 @@ describe('versiones (HU-DOC-04)', () => {
     });
   });
 
-  it('un documento retirado no admite versiones y no sube el fichero', async () => {
+  it('a withdrawn document accepts no versions and the file is not uploaded', async () => {
     const document = await upload();
     await withdrawDocument(deps, manager, document.id);
     const stored = files.files.size;
@@ -207,7 +203,7 @@ describe('versiones (HU-DOC-04)', () => {
     expect(files.files.size).toBe(stored);
   });
 
-  it('una versión que no es PDF se rechaza', async () => {
+  it('a version that is not a PDF is rejected', async () => {
     const document = await upload();
 
     await expect(
@@ -216,26 +212,26 @@ describe('versiones (HU-DOC-04)', () => {
   });
 });
 
-describe('retirar (HU-DOC-05)', () => {
-  it('Dado un documento publicado, cuando lo retiro, entonces deja de verse con consulta y se emite DocumentoRetirado', async () => {
+describe('withdraw (US-DOC-05)', () => {
+  it('Given a published document, when I withdraw it, then it is no longer visible with read access and DocumentWithdrawn is emitted', async () => {
     const document = await upload();
 
     await withdrawDocument(deps, manager, document.id);
 
     expect(await listDocuments(deps, reader, {})).toEqual([]);
     expect(events.at(-1)).toMatchObject({
-      type: 'DocumentoRetirado',
+      type: 'DocumentWithdrawn',
       payload: { cooperativeId: COOP, documentId: document.id },
     });
   });
 
-  it('retirar dos veces falla y no emite otro evento', async () => {
+  it('withdrawing twice fails and emits no other event', async () => {
     const document = await upload();
     await withdrawDocument(deps, manager, document.id);
 
     await expect(withdrawDocument(deps, manager, document.id)).rejects.toThrow(
       InvalidDocumentTransitionError,
     );
-    expect(events.filter((e) => e.type === 'DocumentoRetirado')).toHaveLength(1);
+    expect(events.filter((e) => e.type === 'DocumentWithdrawn')).toHaveLength(1);
   });
 });

@@ -8,17 +8,17 @@ const doc = (title: string, category: DocumentSummary['category']): DocumentSumm
   title,
   category,
   documentDate: '2026-01-01',
-  status: 'publicado',
+  status: 'published',
   size: 1,
   indexingStatus: null,
 });
 
-describe('agrupar documentos (HU-DOC-02)', () => {
-  it('agrupa por categoría en orden fijo y conserva el orden de cada grupo', () => {
+describe('group documents (US-DOC-02)', () => {
+  it('groups by category in a fixed order and keeps the order within each group', () => {
     const groups = groupByCategory([
-      doc('Acta junio', 'actas'),
-      doc('Estatutos', 'estatutos'),
-      doc('Acta marzo', 'actas'),
+      doc('Acta junio', 'minutes'),
+      doc('Estatutos', 'bylaws'),
+      doc('Acta marzo', 'minutes'),
     ]);
 
     expect(groups.map((g) => [g.title, g.data.map((d) => d.title)])).toEqual([
@@ -27,7 +27,7 @@ describe('agrupar documentos (HU-DOC-02)', () => {
     ]);
   });
 
-  it('omite las categorías vacías', () => {
+  it('omits empty categories', () => {
     expect(groupByCategory([])).toEqual([]);
   });
 });

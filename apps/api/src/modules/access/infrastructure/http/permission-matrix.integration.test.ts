@@ -22,7 +22,7 @@ import { parseCell, SPEC_MATRIX } from '../../testing/spec-permission-matrix';
  */
 
 const PROFILES: PredefinedProfileName[] = ['Socio', 'Consejo rector', 'Gestor', 'Administrador'];
-const PASSWORD = 'una-clave-larga';
+const PASSWORD = 'a-long-password';
 
 const prisma = createTestPrisma();
 const access = createAccessModule({
@@ -37,7 +37,7 @@ const probes = Router();
 for (const module of MODULES) {
   for (const level of ACCESS_LEVELS) {
     probes.get(
-      `/cooperativas/:cooperativeId/sonda/${module}/${level}`,
+      `/cooperatives/:cooperativeId/probe/${module}/${level}`,
       access.requireCooperative,
       requirePermission(module, level),
       (_req, res) => {
@@ -72,7 +72,7 @@ beforeAll(async () => {
           name: profileName,
           passwordHash,
           memberships: {
-            create: { cooperativeId, profileId: profile.id, status: 'activa', isPartner: true },
+            create: { cooperativeId, profileId: profile.id, status: 'active', isPartner: true },
           },
         },
       });
@@ -87,10 +87,10 @@ const as = (profile: PredefinedProfileName) => ({
   Authorization: `Bearer ${tokens.get(profile)}`,
 });
 
-describe('matriz perfiles × módulos por HTTP (ADR-004)', () => {
-  it.each(PROFILES)('GET /me/permisos de %s coincide con la matriz', async (profile) => {
+describe('profiles × modules matrix over HTTP (ADR-004)', () => {
+  it.each(PROFILES)('GET /me/permissions of %s matches the matrix', async (profile) => {
     const response = await request(app)
-      .get(`/cooperativas/${cooperativeId}/me/permisos`)
+      .get(`/cooperatives/${cooperativeId}/me/permissions`)
       .set(as(profile));
 
     const expected = MODULES.flatMap((module) => {
@@ -126,26 +126,26 @@ describe('matriz perfiles × módulos por HTTP (ADR-004)', () => {
       level: AccessLevel;
     }) => {
       const grant = parseCell(SPEC_MATRIX[module][profile]);
-      const allowed = grant !== null && (level === 'consulta' || grant.level === 'gestion');
+      const allowed = grant !== null && (level === 'read' || grant.level === 'manage');
 
       const response = await request(app)
-        .get(`/cooperativas/${cooperativeId}/sonda/${module}/${level}`)
+        .get(`/cooperatives/${cooperativeId}/probe/${module}/${level}`)
         .set(as(profile));
 
       if (allowed) {
         expect(response.status).toBe(200);
         expect(response.body).toEqual({ scope: grant.scope });
       } else {
-        // HU-ACC-07: denied before any logic, with no hint of the data.
+        // US-ACC-07: denied before any logic, with no hint of the data.
         expect(response.status).toBe(403);
         expect(response.body.error).toBe('forbidden');
       }
     },
   );
 
-  it.each(PROFILES)('el endpoint real de miembros respeta la matriz para %s', async (profile) => {
+  it.each(PROFILES)('the real members endpoint respects the matrix for %s', async (profile) => {
     const response = await request(app)
-      .get(`/cooperativas/${cooperativeId}/miembros`)
+      .get(`/cooperatives/${cooperativeId}/members`)
       .set(as(profile));
 
     expect(response.status).toBe(profile === 'Administrador' ? 200 : 403);

@@ -35,14 +35,14 @@ const assemblySelect = {
 } as const;
 
 const openVotingsOf = (tx: Transaction | PrismaClient, assemblyId: string) =>
-  tx.voting.count({ where: { status: 'abierta', point: { assemblyId } } });
+  tx.voting.count({ where: { status: 'open', point: { assemblyId } } });
 
 export class PrismaAssemblyStore implements AssemblyStore {
   constructor(private readonly prisma: PrismaClient) {}
 
   async list(cooperativeId: string, query: { includeDrafts: boolean }): Promise<AssemblySummary[]> {
     const rows = await this.prisma.assembly.findMany({
-      where: { cooperativeId, ...(!query.includeDrafts && { status: { not: 'borrador' } }) },
+      where: { cooperativeId, ...(!query.includeDrafts && { status: { not: 'draft' } }) },
       select: {
         id: true,
         type: true,
@@ -57,7 +57,7 @@ export class PrismaAssemblyStore implements AssemblyStore {
     return rows.map(({ _count, points, ...row }) => ({
       ...row,
       pointCount: _count.points,
-      openVotings: points.filter((point) => point.voting?.status === 'abierta').length,
+      openVotings: points.filter((point) => point.voting?.status === 'open').length,
     }));
   }
 

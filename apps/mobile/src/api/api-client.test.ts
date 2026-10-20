@@ -11,7 +11,7 @@ const T0 = 1_000_000;
 
 /**
  * Minimal API: rotates refresh tokens and, like the real one, revokes the
- * session when an old refresh token is replayed (HU-ACC-03).
+ * session when an old refresh token is replayed (US-ACC-03).
  */
 class FakeApi {
   validAccess = new Set(['access-1']);
@@ -49,8 +49,8 @@ class FakeApi {
     if (!auth || this.revoked || !this.validAccess.has(auth)) {
       return json(401, { error: 'unauthenticated' });
     }
-    if (path === '/vacio') return new Response(null, { status: 204 });
-    if (path === '/prohibido') return json(403, { error: 'forbidden', message: 'No.' });
+    if (path === '/empty') return new Response(null, { status: 204 });
+    if (path === '/forbidden') return json(403, { error: 'forbidden', message: 'No.' });
     return json(200, { ok: true, token: auth });
   };
 }
@@ -84,47 +84,47 @@ beforeEach(async () => {
   });
 });
 
-describe('cliente del API (HU-ACC-03)', () => {
-  it('envía el token de acceso y valida la respuesta con su contrato', async () => {
-    await expect(client().request('/datos', { schema: okSchema })).resolves.toEqual({
+describe('API client (US-ACC-03)', () => {
+  it('sends the access token and validates the response against its contract', async () => {
+    await expect(client().request('/data', { schema: okSchema })).resolves.toEqual({
       ok: true,
       token: 'access-1',
     });
     expect(api.refreshCalls).toBe(0);
   });
 
-  it('Dado el token de acceso caducado y el de refresco vigente, cuando hace una petición, entonces renueva sin intervención', async () => {
+  it('Given an expired access token and a valid refresh token, when a request is made, then it renews without intervention', async () => {
     now = T0 + 900_000;
 
-    const result = await client().request('/datos', { schema: okSchema });
+    const result = await client().request('/data', { schema: okSchema });
 
     expect(result.token).toBe('access-2');
     expect(await tokens.load()).toMatchObject({ refreshToken: 'refresh-2' });
   });
 
-  it('renueva antes de que caduque, con un margen', async () => {
+  it('renews before expiry, with a margin', async () => {
     now = T0 + 900_000 - 10_000;
 
-    await client().request('/datos', { schema: okSchema });
+    await client().request('/data', { schema: okSchema });
 
     expect(api.refreshCalls).toBe(1);
   });
 
-  it('si el servidor rechaza un token aún vigente, renueva una vez y reintenta', async () => {
+  it('if the server rejects a token that still looks valid, it renews once and retries', async () => {
     api.validAccess = new Set();
 
-    const result = await client().request('/datos', { schema: okSchema });
+    const result = await client().request('/data', { schema: okSchema });
 
     expect(result.token).toBe('access-2');
     expect(api.refreshCalls).toBe(1);
   });
 
-  it('peticiones simultáneas con el token caducado renuevan una sola vez (si no, el servidor revocaría la sesión)', async () => {
+  it('simultaneous requests with an expired token renew only once (otherwise the server would revoke the session)', async () => {
     now = T0 + 900_000;
     const c = client();
 
     const results = await Promise.all(
-      Array.from({ length: 5 }, () => c.request('/datos', { schema: okSchema })),
+      Array.from({ length: 5 }, () => c.request('/data', { schema: okSchema })),
     );
 
     expect(results.every((r) => r.token === 'access-2')).toBe(true);
@@ -132,44 +132,44 @@ describe('cliente del API (HU-ACC-03)', () => {
     expect(api.revoked).toBe(false);
   });
 
-  it('peticiones simultáneas rechazadas con 401 tampoco renuevan dos veces', async () => {
+  it('simultaneous requests rejected with 401 do not renew twice either', async () => {
     api.validAccess = new Set();
     const c = client();
 
-    await Promise.all(Array.from({ length: 3 }, () => c.request('/datos', { schema: okSchema })));
+    await Promise.all(Array.from({ length: 3 }, () => c.request('/data', { schema: okSchema })));
 
     expect(api.refreshCalls).toBe(1);
     expect(api.revoked).toBe(false);
   });
 
-  it('si no se puede renovar, borra los tokens y avisa de que la sesión terminó', async () => {
+  it('if it cannot renew, it clears the tokens and reports that the session ended', async () => {
     api.revoked = true;
     now = T0 + 900_000;
 
-    await expect(client().request('/datos', { schema: okSchema })).rejects.toMatchObject({
+    await expect(client().request('/data', { schema: okSchema })).rejects.toMatchObject({
       status: 401,
     });
     expect(await tokens.load()).toBeNull();
     expect(ended).toBe(1);
   });
 
-  it('sin sesión, una petición autenticada falla sin llamar al API', async () => {
+  it('without a session, an authenticated request fails without calling the API', async () => {
     await tokens.clear();
 
-    await expect(client().request('/datos')).rejects.toBeInstanceOf(ApiError);
+    await expect(client().request('/data')).rejects.toBeInstanceOf(ApiError);
     expect(api.refreshCalls).toBe(0);
   });
 
-  it('convierte los errores del API en ApiError con su código', async () => {
+  it('turns API errors into ApiError with their code', async () => {
     const error = await client()
-      .request('/prohibido')
+      .request('/forbidden')
       .catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status: 403, code: 'forbidden', message: 'No.' });
   });
 
-  it('envía un FormData tal cual, sin forzar JSON, y con el token', async () => {
+  it('sends a FormData as is, without forcing JSON, and with the token', async () => {
     let seen: { contentType: string | null; body: unknown; auth: string | null } | undefined;
     const c = createApiClient({
       baseUrl: BASE,
@@ -186,18 +186,18 @@ describe('cliente del API (HU-ACC-03)', () => {
       }) as typeof fetch,
     });
     const form = new FormData();
-    form.append('title', 'Acta');
+    form.append('title', 'Minutes');
 
-    await c.request('/subida', { method: 'POST', body: form });
+    await c.request('/upload', { method: 'POST', body: form });
 
     expect(seen).toEqual({ contentType: null, body: form, auth: 'Bearer access-1' });
   });
 
-  it('una respuesta 204 no se valida', async () => {
-    await expect(client().request('/vacio', { method: 'POST' })).resolves.toBeUndefined();
+  it('a 204 response is not validated', async () => {
+    await expect(client().request('/empty', { method: 'POST' })).resolves.toBeUndefined();
   });
 
-  it('sin red, falla con NetworkError y conserva la sesión', async () => {
+  it('without a network, it fails with NetworkError and keeps the session', async () => {
     const offline = createApiClient({
       baseUrl: BASE,
       tokens,
@@ -207,7 +207,7 @@ describe('cliente del API (HU-ACC-03)', () => {
       now: () => T0 + 900_000,
     });
 
-    await expect(offline.request('/datos')).rejects.toBeInstanceOf(NetworkError);
+    await expect(offline.request('/data')).rejects.toBeInstanceOf(NetworkError);
     expect(await tokens.load()).not.toBeNull();
   });
 });

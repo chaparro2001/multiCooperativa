@@ -12,7 +12,7 @@ export class InvalidPermissionError extends AccessDomainError {
   readonly code = 'invalid_permission';
 }
 
-/** The profile has no permission for the module: 403 (RNF-ACC-06). */
+/** The profile has no permission for the module: 403 (NFR-ACC-06). */
 export class ModuleAccessDeniedError extends AccessDomainError {
   readonly code = 'forbidden';
 
@@ -20,7 +20,7 @@ export class ModuleAccessDeniedError extends AccessDomainError {
     readonly module: string,
     readonly required: string,
   ) {
-    super('Tu perfil no tiene acceso a este módulo.');
+    super('Your profile has no access to this module.');
   }
 }
 
@@ -32,7 +32,7 @@ export class SelfModificationError extends AccessDomainError {
   readonly code = 'self_modification';
 
   constructor() {
-    super('Un administrador no puede modificar su propia membresía (RN-ACC-08).');
+    super('An administrator cannot modify their own membership (BR-ACC-08).');
   }
 }
 
@@ -40,7 +40,7 @@ export class LastAdminError extends AccessDomainError {
   readonly code = 'last_admin';
 
   constructor() {
-    super('La cooperativa debe conservar al menos un administrador activo (RN-ACC-07).');
+    super('The cooperative must keep at least one active administrator (BR-ACC-07).');
   }
 }
 
@@ -48,7 +48,9 @@ export class InvitationNotUsableError extends AccessDomainError {
   readonly code = 'invitation_not_usable';
 
   constructor(readonly reason: 'expired' | 'used') {
-    super('La invitación ha caducado o ya se ha usado; hay que pedir una nueva (RN-ACC-10).');
+    super(
+      'The invitation has expired or was already used; a new one must be requested (BR-ACC-10).',
+    );
   }
 }
 

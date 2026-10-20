@@ -2,7 +2,7 @@
 export const RELOCK_AFTER_MS = 60_000;
 
 /**
- * HU-ACC-04. Locks on a cold start with a session, and when the app returns
+ * US-ACC-04. Locks on a cold start with a session, and when the app returns
  * after a while in the background; a quick switch to another app does not.
  */
 export function shouldLock(input: {

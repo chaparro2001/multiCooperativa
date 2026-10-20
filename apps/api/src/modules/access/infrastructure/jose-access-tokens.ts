@@ -8,7 +8,7 @@ export const JWT_AUDIENCE = 'multicooperativa-app';
 
 /**
  * HS256 access token with only `sub` (user) and `sid` (session): permissions
- * are resolved on every request, never read from the token (RNF-ACC-04).
+ * are resolved on every request, never read from the token (NFR-ACC-04).
  */
 export class JoseAccessTokens implements AccessTokenIssuer, AccessTokenVerifier {
   private readonly key: Uint8Array;

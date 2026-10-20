@@ -1,15 +1,15 @@
 import { z } from 'zod';
 
 export const documentCategorySchema = z.enum([
-  'estatutos',
-  'reglamento',
-  'actas',
-  'cuentas',
-  'otros',
+  'bylaws',
+  'regulations',
+  'minutes',
+  'accounts',
+  'other',
 ]);
-export const documentStatusSchema = z.enum(['publicado', 'retirado']);
-/** HU-DOC-06: si el asistente ya conoce el documento. */
-export const indexingStatusSchema = z.enum(['pendiente', 'indexado', 'error', 'no_indexable']);
+export const documentStatusSchema = z.enum(['published', 'withdrawn']);
+/** US-DOC-06: whether the assistant already knows the document. */
+export const indexingStatusSchema = z.enum(['pending', 'indexed', 'error', 'not_indexable']);
 
 const day = z.iso.date();
 
@@ -17,41 +17,41 @@ export const documentSummarySchema = z.object({
   id: z.uuid(),
   title: z.string(),
   category: documentCategorySchema,
-  /** Día del documento (p. ej. de la reunión de un acta), AAAA-MM-DD. */
+  /** Date of the document (e.g. the meeting of the minutes), YYYY-MM-DD. */
   documentDate: day,
   status: documentStatusSchema,
-  /** Tamaño de la versión vigente, en bytes. */
+  /** Size of the current version, in bytes. */
   size: z.number().int(),
-  /** Solo con gestión; nulo con consulta. */
+  /** Only with manage access; null with read access. */
   indexingStatus: indexingStatusSchema.nullable(),
 });
 
-/** GET /cooperativas/{id}/documentos?categoria=…&q=…: por fecha descendente (HU-DOC-02). */
+/** GET /cooperatives/{id}/documents?category=…&q=…: by date descending (US-DOC-02). */
 export const listDocumentsQuerySchema = z.object({
-  categoria: documentCategorySchema.optional(),
+  category: documentCategorySchema.optional(),
   q: z.string().max(150).optional(),
 });
 
 export const listDocumentsResponseSchema = z.object({ items: z.array(documentSummarySchema) });
 
-/** GET /cooperativas/{id}/documentos/{documentoId}: la versión vigente (HU-DOC-03). */
+/** GET /cooperatives/{id}/documents/{documentId}: the current version (US-DOC-03). */
 export const documentDetailSchema = documentSummarySchema.extend({
   fileName: z.string(),
   updatedAt: z.iso.datetime(),
-  /** URL firmada que caduca a los 5 minutos (RNF-DOC-02): se pide de nuevo al abrir. */
+  /** Signed URL that expires after 5 minutes (NFR-DOC-02): requested again on open. */
   url: z.url(),
-  /** Motivo del error o de por qué no es indexable; solo con gestión. */
+  /** Reason for the error or for not being indexable; only with manage access. */
   indexingError: z.string().nullable(),
 });
 
-/** Campos de texto de POST /cooperativas/{id}/documentos (multipart, junto al campo «fichero»). */
+/** Text fields of POST /cooperatives/{id}/documents (multipart, next to the `file` field). */
 export const uploadDocumentFieldsSchema = z.object({
   title: z.string().trim().min(1).max(150),
   category: documentCategorySchema,
   documentDate: day,
 });
 
-/** GET /cooperativas/{id}/documentos/{documentoId}/versiones (HU-DOC-04). */
+/** GET /cooperatives/{id}/documents/{documentId}/versions (US-DOC-04). */
 export const documentVersionSchema = z.object({
   id: z.uuid(),
   fileName: z.string(),
@@ -75,7 +75,7 @@ export type UploadDocumentFields = z.infer<typeof uploadDocumentFieldsSchema>;
 export type DocumentVersion = z.infer<typeof documentVersionSchema>;
 export type ListDocumentVersionsResponse = z.infer<typeof listDocumentVersionsResponseSchema>;
 
-/** GET /cooperativas/{id}/documentos/buscar?q=…: búsqueda por contenido (HU-DOC-07). */
+/** GET /cooperatives/{id}/documents/search?q=…: content search (US-DOC-07). */
 export const searchDocumentsQuerySchema = z.object({
   q: z.string().trim().min(3).max(300),
 });
@@ -84,10 +84,10 @@ export const documentSearchHitSchema = z.object({
   documentId: z.uuid(),
   title: z.string(),
   category: documentCategorySchema,
-  /** Página donde aparece el fragmento, para citarla y abrir el visor en ella. */
+  /** Page where the excerpt appears, to cite it and open the viewer on it. */
   page: z.number().int().min(1),
   excerpt: z.string(),
-  /** Similitud de 0 a 1: más alto, más relevante. */
+  /** Similarity from 0 to 1: the higher, the more relevant. */
   score: z.number(),
 });
 

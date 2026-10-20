@@ -1,12 +1,12 @@
 /**
- * Alta de una cooperativa con sus 4 perfiles predefinidos y un administrador.
+ * Creates a cooperative with its 4 predefined profiles and an administrator.
  *
  *   ADMIN_PASSWORD='…' pnpm --filter @multicooperativa/api cooperative:create \
  *     --name "Cooperativa del Campo" --cif F12345678 \
- *     --admin-email admin@campo.es --admin-name "Ada Lovelace"
+ *     --admin-email admin@field.test --admin-name "Ada Lovelace"
  *
- * La contraseña va por variable de entorno para que no quede en el historial
- * del shell. No hace falta si el administrador ya es usuario de la plataforma.
+ * The password is passed as an environment variable so it does not end up in
+ * the shell history. It is not needed if the administrator is already a platform user.
  */
 import { parseArgs } from 'node:util';
 
@@ -32,7 +32,7 @@ const missing = (['name', 'cif', 'admin-email', 'admin-name'] as const).filter(
   (option) => !values[option],
 );
 if (missing.length > 0) {
-  console.error(`Faltan opciones: ${missing.map((option) => `--${option}`).join(', ')}`);
+  console.error(`Missing options: ${missing.map((option) => `--${option}`).join(', ')}`);
   process.exit(1);
 }
 
@@ -43,7 +43,7 @@ try {
   const result = await createAccessModule({
     prisma,
     jwtSecret: env.JWT_SECRET,
-    // El alta crea al administrador directamente activo: no envía invitaciones.
+    // Provisioning creates the administrator directly active: it sends no invitations.
     invitationSender: new UnavailableInvitationSender(),
   }).provisionCooperative({
     name: values.name!,
@@ -54,13 +54,11 @@ try {
       password: process.env.ADMIN_PASSWORD || undefined,
     },
   });
-  console.log(`Cooperativa creada: ${result.cooperativeId}`);
-  console.log(
-    `Administrador: usuario ${result.adminUserId}, membresía ${result.adminMembershipId}`,
-  );
+  console.log(`Cooperative created: ${result.cooperativeId}`);
+  console.log(`Administrator: user ${result.adminUserId}, membership ${result.adminMembershipId}`);
 } catch (error) {
   if (error instanceof AccessApplicationError || error instanceof AccessDomainError) {
-    console.error(`No se ha creado la cooperativa. ${error.message}`);
+    console.error(`The cooperative was not created. ${error.message}`);
     process.exitCode = 1;
   } else {
     throw error;

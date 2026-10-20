@@ -1,4 +1,5 @@
 import { type Href, Link, router, Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
@@ -6,43 +7,44 @@ import { visibleModules } from '@/navigation/modules';
 import { Loading, Screen } from '@/ui/screen';
 import { colors } from '@/ui/theme';
 
-/** Inicio de la cooperativa: una celda por módulo del perfil, dos por fila (HU-ACC-06). */
+/** Cooperative home: one cell per module of the profile, two per row (US-ACC-06). */
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const { cooperative, permissions } = useActiveCooperative();
 
   if (!permissions) return <Loading />;
   const modules = visibleModules(permissions.permissions);
 
   return (
-    <Screen testID="pantalla-inicio">
+    <Screen testID="home-screen">
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Link href="/ajustes" accessibilityLabel="Ajustes" testID="enlace-ajustes">
-              <Text style={styles.headerLink}>Ajustes</Text>
+            <Link href="/settings" accessibilityLabel={t('settings.title')} testID="settings-link">
+              <Text style={styles.headerLink}>{t('settings.title')}</Text>
             </Link>
           ),
         }}
       />
       <Text style={styles.profile}>
         {cooperative?.profileName}
-        {permissions.isPartner ? ' · Socio' : ''}
+        {permissions.isPartner ? ` · ${t('common.partner')}` : ''}
       </Text>
       <View style={styles.grid}>
         {modules.map((entry) => (
           <Pressable
             key={entry.module}
             accessibilityRole="button"
-            accessibilityLabel={entry.title}
+            accessibilityLabel={t(`enums.module.${entry.module}`)}
             onPress={() => router.push(entry.route as Href)}
             style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
-            testID={`modulo-${entry.module}`}
+            testID={`module-${entry.module}`}
           >
             <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
               {entry.emoji}
             </Text>
             <Text style={styles.cellTitle} numberOfLines={2}>
-              {entry.title}
+              {t(`enums.module.${entry.module}`)}
             </Text>
           </Pressable>
         ))}

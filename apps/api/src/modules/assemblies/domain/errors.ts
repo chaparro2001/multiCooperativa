@@ -12,12 +12,12 @@ export class InvalidAssemblyError extends AssemblyDomainError {
   readonly code = 'invalid_assembly';
 }
 
-/** RN-ASA-09: tells the minimum notice (HU-ASA-01). */
+/** BR-ASM-09: tells the minimum notice (US-ASM-01). */
 export class InsufficientNoticeError extends AssemblyDomainError {
   readonly code = 'insufficient_notice';
 
   constructor(readonly minNoticeDays: number) {
-    super(`La asamblea debe convocarse con al menos ${minNoticeDays} días de antelación.`);
+    super(`The assembly must be convened at least ${minNoticeDays} days in advance.`);
   }
 }
 
@@ -29,21 +29,21 @@ export class InvalidVotingTransitionError extends AssemblyDomainError {
   readonly code = 'invalid_voting_transition';
 }
 
-/** HU-ASA-05: not a partner, or not in the census frozen when the voting opened: 403. */
+/** US-ASM-05: not a partner, or not in the census frozen when the voting opened: 403. */
 export class NotInCensusError extends AssemblyDomainError {
   readonly code = 'not_in_census';
 
   constructor() {
-    super('No figuras en el censo de esta votación: solo votan los socios activos al abrirla.');
+    super('You are not in the census of this voting: only members active when it opened can vote.');
   }
 }
 
-/** RN-ASA-03: one vote per member and item, not changeable. */
+/** BR-ASM-03: one vote per member and item, not changeable. */
 export class AlreadyVotedError extends AssemblyDomainError {
   readonly code = 'already_voted';
 
   constructor(readonly choice: VoteChoice) {
-    super('Ya has votado este punto; el voto no se puede cambiar.');
+    super('You have already voted on this item; the vote cannot be changed.');
   }
 }
 
@@ -51,8 +51,8 @@ export class VotingClosedError extends AssemblyDomainError {
   readonly code = 'voting_not_open';
 
   constructor() {
-    super('La votación no está abierta.');
+    super('The voting is not open.');
   }
 }
 
-export type VoteChoice = 'a_favor' | 'en_contra' | 'abstencion';
+export type VoteChoice = 'in_favor' | 'against' | 'abstention';

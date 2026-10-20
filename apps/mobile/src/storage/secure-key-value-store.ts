@@ -5,7 +5,7 @@ import { type KeyValueStore, MemoryKeyValueStore } from './key-value-store';
 
 /**
  * Keychain (iOS) and Keystore (Android): tokens never go to plain storage
- * (RNF-ACC-03). Bound to this device and readable only while it is unlocked.
+ * (NFR-ACC-03). Bound to this device and readable only while it is unlocked.
  */
 class SecureKeyValueStore implements KeyValueStore {
   private readonly options: SecureStore.SecureStoreOptions = {

@@ -31,23 +31,20 @@ export class OllamaEmbedder implements Embedder {
         body: JSON.stringify({ model: this.settings.model, input }),
       });
     } catch (error) {
-      throw new EmbeddingUnavailableError(
-        'No se puede conectar con el servicio de embeddings.',
-        error,
-      );
+      throw new EmbeddingUnavailableError('Cannot connect to the embeddings service.', error);
     }
     if (!response.ok) {
       throw new EmbeddingUnavailableError(
-        `El servicio de embeddings respondió ${response.status}. ¿Está descargado el modelo ${this.settings.model}?`,
+        `The embeddings service responded ${response.status}. Is the model ${this.settings.model} downloaded?`,
       );
     }
     const { embeddings } = (await response.json()) as { embeddings?: number[][] };
     if (!embeddings || embeddings.length !== input.length) {
-      throw new EmbeddingUnavailableError('Respuesta inesperada del servicio de embeddings.');
+      throw new EmbeddingUnavailableError('Unexpected response from the embeddings service.');
     }
     if (embeddings.some((vector) => vector.length !== EMBEDDING_DIMENSIONS)) {
       throw new EmbeddingUnavailableError(
-        `El modelo ${this.settings.model} no genera vectores de ${EMBEDDING_DIMENSIONS} dimensiones.`,
+        `Model ${this.settings.model} does not produce ${EMBEDDING_DIMENSIONS}-dimension vectors.`,
       );
     }
     return embeddings;

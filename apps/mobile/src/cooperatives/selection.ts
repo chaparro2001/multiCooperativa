@@ -1,5 +1,5 @@
 /**
- * HU-ACC-05: which cooperative to open after logging in, or null to show the
+ * US-ACC-05: which cooperative to open after logging in, or null to show the
  * selector. The last one used wins while it is still active; with a single
  * active membership there is nothing to choose.
  */

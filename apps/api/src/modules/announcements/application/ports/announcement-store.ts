@@ -16,7 +16,7 @@ export interface AttachmentRecord {
 
 export interface AnnouncementListItem extends AnnouncementRecord {
   attachmentCount: number;
-  /** Read by the membership that asks (HU-COM-02). */
+  /** Read by the membership that asks (US-ANN-02). */
   read: boolean;
 }
 
@@ -54,7 +54,7 @@ export interface AnnouncementStore {
     check: (current: AnnouncementRecord, attachmentCount: number) => void,
     attachment: { name: string; fileKey: string; size: number },
   ): Promise<AttachmentRecord | null>;
-  /** RN-COM-06: idempotent, the first read is the one kept. */
+  /** BR-ANN-06: idempotent, the first read is the one kept. */
   recordRead(announcementId: string, membershipId: string, at: Date): Promise<void>;
   countReads(announcementId: string): Promise<number>;
 }

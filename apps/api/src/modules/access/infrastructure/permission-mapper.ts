@@ -4,15 +4,15 @@ import type {
 } from '../../../generated/prisma/client';
 import { createPermission, type Module, type Permission } from '../domain/permission';
 
-// The database enum cannot contain a hyphen; the domain and the API use "area-socio".
+// The database enum cannot contain a hyphen; the domain and the API use "member-area".
 const TO_COLUMN: Record<Module, ModuleColumn> = {
-  comunicados: 'comunicados',
-  asambleas: 'asambleas',
-  documentos: 'documentos',
-  facturas: 'facturas',
-  'area-socio': 'area_socio',
-  asistente: 'asistente',
-  usuarios: 'usuarios',
+  announcements: 'announcements',
+  assemblies: 'assemblies',
+  documents: 'documents',
+  invoicing: 'invoicing',
+  'member-area': 'member_area',
+  assistant: 'assistant',
+  users: 'users',
 };
 
 const TO_DOMAIN = Object.fromEntries(

@@ -24,7 +24,7 @@ export class InMemoryAnnouncementStore implements AnnouncementStore {
     const published = (row: AnnouncementRecord) => row.publishedAt?.getTime() ?? -Infinity;
     return this.rows
       .filter((row) => row.cooperativeId === cooperativeId)
-      .filter((row) => !query.onlyPublished || row.status === 'publicado')
+      .filter((row) => !query.onlyPublished || row.status === 'published')
       .sort(
         (a, b) =>
           Number(b.pinned) - Number(a.pinned) ||

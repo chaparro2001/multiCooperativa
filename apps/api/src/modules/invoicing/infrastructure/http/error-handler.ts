@@ -21,11 +21,11 @@ const STATUS_BY_CODE: Record<string, number> = {
 };
 
 function details(error: Error): ApiError['details'] {
-  // HU-FAC-01: the app offers the existing party.
+  // US-INV-01: the app offers the existing party.
   if (error instanceof ThirdPartyExistsError) {
     return { thirdPartyId: error.thirdPartyId, name: error.partyName };
   }
-  // HU-FAC-03: tells the difference.
+  // US-INV-03: tells the difference.
   if (error instanceof TotalMismatchError)
     return { expected: error.expected, difference: error.difference };
   return undefined;
@@ -33,7 +33,7 @@ function details(error: Error): ApiError['details'] {
 
 export const invoicingErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
   if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
-    error = new InvalidDocumentError('El fichero puede ocupar como máximo 10 MB.');
+    error = new InvalidDocumentError('The file can be at most 10 MB.');
   }
   const ownError =
     error instanceof InvoicingDomainError || error instanceof InvoicingApplicationError;

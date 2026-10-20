@@ -19,12 +19,12 @@ export class InvalidDocumentTransitionError extends DocumentDomainError {
 export type FileRejection = 'not_pdf' | 'too_large' | 'empty';
 
 const REJECTION_TEXT: Record<FileRejection, string> = {
-  not_pdf: 'Solo se admiten documentos en PDF.',
-  too_large: 'El documento puede ocupar como máximo 20 MB.',
-  empty: 'El fichero está vacío.',
+  not_pdf: 'Only PDF documents are accepted.',
+  too_large: 'The document can be at most 20 MB.',
+  empty: 'The file is empty.',
 };
 
-/** RN-DOC-02, telling the reason (HU-DOC-01). */
+/** BR-DOC-02, telling the reason (US-DOC-01). */
 export class DocumentFileRejectedError extends DocumentDomainError {
   readonly code = 'file_rejected';
 

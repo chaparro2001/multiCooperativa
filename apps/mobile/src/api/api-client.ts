@@ -30,7 +30,7 @@ export type ApiClient = ReturnType<typeof createApiClient>;
 
 /**
  * HTTP client of the app. Sends the access token, renews it with the refresh
- * token when it expires (HU-ACC-03) and never renews twice at once: the API
+ * token when it expires (US-ACC-03) and never renews twice at once: the API
  * revokes the whole session when a refresh token is replayed.
  */
 export function createApiClient(deps: ApiClientDeps) {

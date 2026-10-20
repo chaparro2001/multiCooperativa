@@ -20,7 +20,7 @@ function fakeOllama(dimensions = EMBEDDING_DIMENSIONS) {
 }
 
 describe('OllamaEmbedder (ADR-006)', () => {
-  it('llama a /api/embed con el modelo configurado y devuelve un vector por texto', async () => {
+  it('calls /api/embed with the configured model and returns one vector per text', async () => {
     const { doFetch, requests } = fakeOllama();
     const embedder = new OllamaEmbedder({ url: 'http://ollama:11434/', model: 'bge-m3' }, doFetch);
 
@@ -32,7 +32,7 @@ describe('OllamaEmbedder (ADR-006)', () => {
     expect(vectors).toEqual([vector(0), vector(1)]);
   });
 
-  it('agrupa los textos en lotes y conserva el orden', async () => {
+  it('groups the texts in batches and keeps the order', async () => {
     const { doFetch, requests } = fakeOllama();
     const texts = Array.from({ length: BATCH_SIZE + 3 }, (_, i) => `t${i}`);
 
@@ -43,15 +43,15 @@ describe('OllamaEmbedder (ADR-006)', () => {
     expect(vectors[BATCH_SIZE]?.[0]).toBe(0);
   });
 
-  it('falla con un mensaje claro si el modelo no tiene 1024 dimensiones', async () => {
+  it('fails with a clear message if the model does not have 1024 dimensions', async () => {
     const { doFetch } = fakeOllama(768);
 
     await expect(
-      new OllamaEmbedder({ url: 'http://o', model: 'otro' }, doFetch).embed(['x']),
-    ).rejects.toThrow(/no genera vectores de 1024/);
+      new OllamaEmbedder({ url: 'http://o', model: 'other' }, doFetch).embed(['x']),
+    ).rejects.toThrow(/does not produce 1024-dimension vectors/);
   });
 
-  it('sin servicio, falla con EmbeddingUnavailableError', async () => {
+  it('without the service, fails with EmbeddingUnavailableError', async () => {
     const down = (async () => {
       throw new TypeError('fetch failed');
     }) as unknown as typeof fetch;
@@ -61,11 +61,11 @@ describe('OllamaEmbedder (ADR-006)', () => {
     ).rejects.toBeInstanceOf(EmbeddingUnavailableError);
   });
 
-  it('un 404 (modelo sin descargar) también es EmbeddingUnavailableError', async () => {
+  it('a 404 (model not downloaded) is also EmbeddingUnavailableError', async () => {
     const notFound = (async () => new Response('{}', { status: 404 })) as unknown as typeof fetch;
 
     await expect(
       new OllamaEmbedder({ url: 'http://o', model: 'm' }, notFound).embed(['x']),
-    ).rejects.toThrow(/descargado el modelo m/);
+    ).rejects.toThrow(/Is the model m downloaded/);
   });
 });

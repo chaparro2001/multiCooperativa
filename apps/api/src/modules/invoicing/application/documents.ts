@@ -39,9 +39,9 @@ import type {
 import type { ThirdPartyStore } from './ports/third-party-store';
 import { requireManage, requireRead, UUID } from './shared';
 
-/** Same limit as other attachments; photos are reduced on the device first (RNF-FAC-03). */
+/** Same limit as other attachments; photos are reduced on the device first (NFR-INV-03). */
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
-/** HU-FAC-09: pending notes older than this are highlighted. */
+/** US-INV-09: pending notes older than this are highlighted. */
 export const STALE_NOTE_DAYS = 30;
 
 export interface InvoicingDeps {
@@ -52,7 +52,7 @@ export interface InvoicingDeps {
   settings: InvoicingSettingsStore;
   files: FileStorage;
   events: EventPublisher<InvoicingEvent>;
-  /** Today in the cooperative's calendar (AAAA-MM-DD). */
+  /** Today in the cooperative's calendar (YYYY-MM-DD). */
   today: () => string;
   now: () => Date;
 }
@@ -70,14 +70,14 @@ async function storeOriginal(
 ): Promise<StoredFile | null> {
   if (!file) return null;
   const type = detectFileType(file.content);
-  if (!type) throw new InvalidDocumentError('El fichero debe ser un PDF o una foto (JPEG o PNG).');
+  if (!type) throw new InvalidDocumentError('The file must be a PDF or a photo (JPEG or PNG).');
   if (file.content.byteLength > MAX_FILE_BYTES) {
-    throw new InvalidDocumentError('El fichero puede ocupar como máximo 10 MB.');
+    throw new InvalidDocumentError('The file can be at most 10 MB.');
   }
-  const key = newFileKey(context.cooperativeId, 'facturas');
+  const key = newFileKey(context.cooperativeId, 'invoices');
   await deps.files.put(key, file.content, type);
   // The extension carries the type, so it is known when the file is served.
-  const base = file.name.replace(/\.[^.]*$/, '').trim() || 'documento';
+  const base = file.name.replace(/\.[^.]*$/, '').trim() || 'document';
   return { key, name: `${base}.${EXTENSIONS[type as AcceptedFileType]}` };
 }
 
@@ -121,7 +121,7 @@ export async function fileUrl(
   });
 }
 
-// ── Albaranes (HU-FAC-02) ──
+// ── Delivery notes (US-INV-02) ──
 
 export async function registerDeliveryNote(
   deps: InvoicingDeps,
@@ -145,12 +145,12 @@ export async function registerDeliveryNote(
       state,
       file: stored,
     });
-    if (created === 'duplicate') throw new DuplicateNumberError('albarán');
+    if (created === 'duplicate') throw new DuplicateNumberError('delivery_note');
     return created;
   });
 
   await deps.events.publish({
-    type: 'AlbaranRegistrado',
+    type: 'DeliveryNoteRegistered',
     occurredAt: deps.now(),
     payload: {
       cooperativeId: context.cooperativeId,
@@ -193,9 +193,9 @@ export async function cancelNote(deps: InvoicingDeps, context: CooperativeContex
   return note;
 }
 
-// ── Facturas (HU-FAC-03, HU-FAC-04, HU-FAC-07) ──
+// ── Invoices (US-INV-03, US-INV-04, US-INV-07) ──
 
-/** Registers, groups its notes and reconciles in one step (HU-FAC-03, HU-FAC-04). */
+/** Registers, groups its notes and reconciles in one step (US-INV-03, US-INV-04). */
 export async function registerInvoice(
   deps: InvoicingDeps,
   context: CooperativeContext,
@@ -225,7 +225,7 @@ export async function registerInvoice(
         });
       },
     );
-    if (created === 'duplicate') throw new DuplicateNumberError('factura');
+    if (created === 'duplicate') throw new DuplicateNumberError('invoice');
     if (!created) throw new NotFoundError();
     return created;
   });
@@ -236,10 +236,10 @@ export async function registerInvoice(
     operation: invoice.operation,
     invoiceId: invoice.id,
   };
-  await deps.events.publish({ type: 'FacturaRegistrada', occurredAt: deps.now(), payload: ref });
-  if (invoice.reconciliationStatus === 'con_discrepancia') {
+  await deps.events.publish({ type: 'InvoiceRegistered', occurredAt: deps.now(), payload: ref });
+  if (invoice.reconciliationStatus === 'with_discrepancy') {
     await deps.events.publish({
-      type: 'DiscrepanciaDetectada',
+      type: 'DiscrepancyDetected',
       occurredAt: deps.now(),
       payload: ref,
     });
@@ -279,7 +279,7 @@ async function updateInvoice(
   return invoice;
 }
 
-/** HU-FAC-07: paid (purchase) or collected (sale) on a date. */
+/** US-INV-07: paid (purchase) or collected (sale) on a date. */
 export async function settleInvoice(
   deps: InvoicingDeps,
   context: CooperativeContext,
@@ -290,7 +290,7 @@ export async function settleInvoice(
   return updateInvoice(deps, context, id, (current) => settle(current, on));
 }
 
-/** «Se registra la nueva y se anula la anterior»: its notes become available again. */
+/** “Register the new one and void the old one”: its notes become available again. */
 export async function cancelInvoiceById(
   deps: InvoicingDeps,
   context: CooperativeContext,
@@ -300,7 +300,7 @@ export async function cancelInvoiceById(
   return updateInvoice(deps, context, id, (current) => cancelInvoice(current));
 }
 
-// ── Resumen (HU-FAC-07, HU-FAC-09) y ficha del tercero (HU-FAC-06) ──
+// ── Summary (US-INV-07, US-INV-09) and third-party sheet (US-INV-06) ──
 
 export interface Amounts {
   pending: bigint;
@@ -315,10 +315,10 @@ function amountsOf(
 ): Amounts {
   const of = (status: PaymentStatus) =>
     rows.find((row) => row.operation === operation && row.paymentStatus === status);
-  const pending = of('pendiente');
-  const overdue = of('vencida');
+  const pending = of('pending');
+  const overdue = of('overdue');
   return {
-    // «Pendiente» includes what is overdue: everything still to pay or collect.
+    // “Pending” includes what is overdue: everything still to pay or collect.
     pending: (pending?.total ?? 0n) + (overdue?.total ?? 0n),
     overdue: overdue?.total ?? 0n,
     pendingCount: (pending?.count ?? 0) + (overdue?.count ?? 0),
@@ -337,14 +337,14 @@ export async function summary(deps: InvoicingDeps, context: CooperativeContext) 
     ),
   ]);
   return {
-    toPay: amountsOf(rows, 'compra'),
-    toCollect: amountsOf(rows, 'venta'),
+    toPay: amountsOf(rows, 'purchase'),
+    toCollect: amountsOf(rows, 'sale'),
     openDiscrepancies,
     staleDeliveryNotes,
   };
 }
 
-/** HU-FAC-06: the party with its notes, its invoices and the outstanding balance. */
+/** US-INV-06: the party with its notes, its invoices and the outstanding balance. */
 export async function thirdPartySheet(
   deps: InvoicingDeps,
   context: CooperativeContext,
@@ -362,6 +362,6 @@ export async function thirdPartySheet(
     party,
     deliveryNotes,
     invoices,
-    balance: { toPay: amountsOf(rows, 'compra'), toCollect: amountsOf(rows, 'venta') },
+    balance: { toPay: amountsOf(rows, 'purchase'), toCollect: amountsOf(rows, 'sale') },
   };
 }

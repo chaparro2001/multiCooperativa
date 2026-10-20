@@ -32,23 +32,23 @@ function toAnnouncement(record: AnnouncementRecord): Announcement {
   };
 }
 
-/** Busboy reads multipart file names as latin1; the app sends UTF-8 («Acta de año.pdf»). */
+/** Busboy reads multipart file names as latin1; the app sends UTF-8 (non-ASCII names). */
 function originalName(name: string): string {
   const decoded = Buffer.from(name, 'latin1').toString('utf8');
-  const base = decoded.split(/[\\/]/).pop()?.trim() || 'adjunto.pdf';
+  const base = decoded.split(/[\\/]/).pop()?.trim() || 'attachment.pdf';
   return base.slice(0, 200);
 }
 
-/** HTTP adapter of the announcements module (requisitos/02, section 6). */
+/** HTTP adapter of the announcements module (docs/requirements/02-announcements.md, section 6). */
 export function createAnnouncementsRouter(
   deps: AnnouncementDeps,
   requireCooperative: RequestHandler,
 ): Router {
   const router = Router();
-  const base = '/cooperativas/:cooperativeId/comunicados';
-  const read = [requireCooperative, requirePermission('comunicados', 'consulta')];
-  const manage = [requireCooperative, requirePermission('comunicados', 'gestion')];
-  // In memory with a hard limit: RN-COM-05 caps attachments at 10 MB.
+  const base = '/cooperatives/:cooperativeId/announcements';
+  const read = [requireCooperative, requirePermission('announcements', 'read')];
+  const manage = [requireCooperative, requirePermission('announcements', 'manage')];
+  // In memory with a hard limit: BR-ANN-05 caps attachments at 10 MB.
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: MAX_ATTACHMENT_BYTES, files: 1, fields: 0 },
@@ -105,7 +105,7 @@ export function createAnnouncementsRouter(
     res.json(toAnnouncement(updated));
   });
 
-  router.post(`${base}/:announcementId/publicar`, ...manage, async (req, res) => {
+  router.post(`${base}/:announcementId/publish`, ...manage, async (req, res) => {
     const published = await useCases.publishAnnouncement(
       deps,
       getCooperativeContext(res),
@@ -114,7 +114,7 @@ export function createAnnouncementsRouter(
     res.json(toAnnouncement(published));
   });
 
-  router.post(`${base}/:announcementId/retirar`, ...manage, async (req, res) => {
+  router.post(`${base}/:announcementId/withdraw`, ...manage, async (req, res) => {
     const withdrawn = await useCases.withdrawAnnouncement(
       deps,
       getCooperativeContext(res),
@@ -123,11 +123,11 @@ export function createAnnouncementsRouter(
     res.json(toAnnouncement(withdrawn));
   });
 
-  // multipart/form-data with the PDF in the «fichero» field.
+  // multipart/form-data with the PDF in the `file` field.
   router.post(
-    `${base}/:announcementId/adjuntos`,
+    `${base}/:announcementId/attachments`,
     ...manage,
-    upload.single('fichero'),
+    upload.single('file'),
     async (req, res) => {
       if (!req.file) throw new InvalidRequestError();
       const attachment = await useCases.addAttachment(

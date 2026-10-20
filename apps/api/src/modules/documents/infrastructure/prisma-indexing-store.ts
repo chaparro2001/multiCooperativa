@@ -21,7 +21,7 @@ export class PrismaIndexingStore implements IndexingStore {
     if (!version) return null;
     return {
       fileKey: version.fileKey,
-      indexable: version.isCurrent && version.document.status === 'publicado',
+      indexable: version.isCurrent && version.document.status === 'published',
     };
   }
 
@@ -34,7 +34,7 @@ export class PrismaIndexingStore implements IndexingStore {
 
   async listPending(): Promise<PendingVersion[]> {
     const versions = await this.prisma.documentVersion.findMany({
-      where: { isCurrent: true, indexingStatus: 'pendiente', document: { status: 'publicado' } },
+      where: { isCurrent: true, indexingStatus: 'pending', document: { status: 'published' } },
       orderBy: { uploadedAt: 'asc' },
       select: { id: true, documentId: true, document: { select: { cooperativeId: true } } },
     });

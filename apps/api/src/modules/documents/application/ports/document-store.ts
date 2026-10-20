@@ -18,7 +18,7 @@ export interface VersionRecord {
   uploadedAt: Date;
 }
 
-/** RN-DOC-03: every document has exactly one current version. */
+/** BR-DOC-03: every document has exactly one current version. */
 export interface DocumentWithCurrent extends DocumentRecord {
   current: VersionRecord;
 }
@@ -32,7 +32,7 @@ export interface NewVersion {
 
 /** Every method is scoped to one cooperative (ADR-003). */
 export interface DocumentStore {
-  /** Newest document date first (HU-DOC-02); `search` matches the title, case-insensitive. */
+  /** Newest document date first (US-DOC-02); `search` matches the title, case-insensitive. */
   list(
     cooperativeId: string,
     query: { onlyPublished: boolean; category?: DocumentCategory; search?: string },

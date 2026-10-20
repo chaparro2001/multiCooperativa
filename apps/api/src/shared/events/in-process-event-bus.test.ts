@@ -3,17 +3,17 @@ import { describe, expect, it, vi } from 'vitest';
 import type { DomainEvent } from './event-bus';
 import { InProcessEventBus } from './in-process-event-bus';
 
-type ComunicadoPublicado = DomainEvent<
-  'ComunicadoPublicado',
-  { cooperativaId: string; comunicadoId: string }
+type AnnouncementPublished = DomainEvent<
+  'AnnouncementPublished',
+  { cooperativeId: string; announcementId: string }
 >;
-type FacturaVencida = DomainEvent<'FacturaVencida', { cooperativaId: string; facturaId: string }>;
-type TestEvents = ComunicadoPublicado | FacturaVencida;
+type InvoiceOverdue = DomainEvent<'InvoiceOverdue', { cooperativeId: string; invoiceId: string }>;
+type TestEvents = AnnouncementPublished | InvoiceOverdue;
 
-const comunicadoPublicado: ComunicadoPublicado = {
-  type: 'ComunicadoPublicado',
+const announcementPublished: AnnouncementPublished = {
+  type: 'AnnouncementPublished',
   occurredAt: new Date('2026-10-05T10:00:00Z'),
-  payload: { cooperativaId: 'coop-1', comunicadoId: 'com-1' },
+  payload: { cooperativeId: 'coop-1', announcementId: 'ann-1' },
 };
 
 function createBus(onHandlerError = vi.fn()) {
@@ -21,81 +21,81 @@ function createBus(onHandlerError = vi.fn()) {
 }
 
 describe('InProcessEventBus', () => {
-  it('entrega el evento a todos los suscriptores de su tipo', async () => {
+  it('delivers the event to every subscriber of its type', async () => {
     const { bus } = createBus();
     const first = vi.fn();
     const second = vi.fn();
-    bus.subscribe('ComunicadoPublicado', first);
-    bus.subscribe('ComunicadoPublicado', second);
+    bus.subscribe('AnnouncementPublished', first);
+    bus.subscribe('AnnouncementPublished', second);
 
-    await bus.publish(comunicadoPublicado);
+    await bus.publish(announcementPublished);
 
-    expect(first).toHaveBeenCalledExactlyOnceWith(comunicadoPublicado);
-    expect(second).toHaveBeenCalledExactlyOnceWith(comunicadoPublicado);
+    expect(first).toHaveBeenCalledExactlyOnceWith(announcementPublished);
+    expect(second).toHaveBeenCalledExactlyOnceWith(announcementPublished);
   });
 
-  it('no entrega el evento a suscriptores de otro tipo', async () => {
+  it('does not deliver the event to subscribers of another type', async () => {
     const { bus } = createBus();
     const handler = vi.fn();
-    bus.subscribe('FacturaVencida', handler);
+    bus.subscribe('InvoiceOverdue', handler);
 
-    await bus.publish(comunicadoPublicado);
+    await bus.publish(announcementPublished);
 
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it('publicar sin suscriptores no falla', async () => {
+  it('publishing without subscribers does not fail', async () => {
     const { bus } = createBus();
 
-    await expect(bus.publish(comunicadoPublicado)).resolves.toBeUndefined();
+    await expect(bus.publish(announcementPublished)).resolves.toBeUndefined();
   });
 
-  it('espera a los manejadores asíncronos antes de resolver', async () => {
+  it('waits for async handlers before resolving', async () => {
     const { bus } = createBus();
     const order: string[] = [];
-    bus.subscribe('ComunicadoPublicado', async () => {
+    bus.subscribe('AnnouncementPublished', async () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
       order.push('handler');
     });
 
-    await bus.publish(comunicadoPublicado);
+    await bus.publish(announcementPublished);
     order.push('published');
 
     expect(order).toEqual(['handler', 'published']);
   });
 
-  it('un manejador que falla no afecta al emisor ni a los demás suscriptores', async () => {
+  it('a failing handler affects neither the publisher nor the other subscribers', async () => {
     const { bus, onHandlerError } = createBus();
-    const error = new Error('push caído');
+    const error = new Error('push down');
     const healthy = vi.fn();
-    bus.subscribe('ComunicadoPublicado', () => {
+    bus.subscribe('AnnouncementPublished', () => {
       throw error;
     });
-    bus.subscribe('ComunicadoPublicado', healthy);
+    bus.subscribe('AnnouncementPublished', healthy);
 
-    await expect(bus.publish(comunicadoPublicado)).resolves.toBeUndefined();
+    await expect(bus.publish(announcementPublished)).resolves.toBeUndefined();
 
     expect(healthy).toHaveBeenCalledOnce();
-    expect(onHandlerError).toHaveBeenCalledExactlyOnceWith(error, comunicadoPublicado);
+    expect(onHandlerError).toHaveBeenCalledExactlyOnceWith(error, announcementPublished);
   });
 
-  it('también aísla el rechazo de un manejador asíncrono', async () => {
+  it('also isolates the rejection of an async handler', async () => {
     const { bus, onHandlerError } = createBus();
     const error = new Error('timeout');
-    bus.subscribe('ComunicadoPublicado', () => Promise.reject(error));
+    bus.subscribe('AnnouncementPublished', () => Promise.reject(error));
 
-    await bus.publish(comunicadoPublicado);
+    await bus.publish(announcementPublished);
 
-    expect(onHandlerError).toHaveBeenCalledExactlyOnceWith(error, comunicadoPublicado);
+    expect(onHandlerError).toHaveBeenCalledExactlyOnceWith(error, announcementPublished);
   });
 
-  it('deja de entregar tras cancelar la suscripción', async () => {
+  it('stops delivering after the subscription is cancelled', async () => {
     const { bus } = createBus();
     const handler = vi.fn();
-    const unsubscribe = bus.subscribe('ComunicadoPublicado', handler);
+    const unsubscribe = bus.subscribe('AnnouncementPublished', handler);
 
     unsubscribe();
-    await bus.publish(comunicadoPublicado);
+    await bus.publish(announcementPublished);
 
     expect(handler).not.toHaveBeenCalled();
   });

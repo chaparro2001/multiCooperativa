@@ -41,7 +41,7 @@ export class PrismaAnnouncementStore implements AnnouncementStore {
     query: { onlyPublished: boolean; readerMembershipId: string; offset: number; limit: number },
   ): Promise<AnnouncementListItem[]> {
     const rows = await this.prisma.announcement.findMany({
-      where: { cooperativeId, ...(query.onlyPublished && { status: 'publicado' }) },
+      where: { cooperativeId, ...(query.onlyPublished && { status: 'published' }) },
       orderBy: [
         { pinned: 'desc' },
         { publishedAt: { sort: 'desc', nulls: 'last' } },
@@ -116,7 +116,7 @@ export class PrismaAnnouncementStore implements AnnouncementStore {
   }
 
   async recordRead(announcementId: string, membershipId: string, at: Date): Promise<void> {
-    // The composite key makes it idempotent; the first read is kept (RN-COM-06).
+    // The composite key makes it idempotent; the first read is kept (BR-ANN-06).
     await this.prisma.announcementRead.createMany({
       data: [{ announcementId, membershipId, readAt: at }],
       skipDuplicates: true,

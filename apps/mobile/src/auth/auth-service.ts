@@ -7,7 +7,7 @@ import {
 import type { ApiClient } from '../api/api-client';
 import { type TokenStore, toStoredTokens } from './token-store';
 
-/** The authentication endpoints (HU-ACC-01, HU-ACC-02, HU-ACC-03) plus token persistence. */
+/** The authentication endpoints (US-ACC-01, US-ACC-02, US-ACC-03) plus token persistence. */
 export function createAuthService(deps: {
   api: ApiClient;
   tokens: TokenStore;

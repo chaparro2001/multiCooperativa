@@ -12,7 +12,7 @@ export class CooperativeAlreadyExistsError extends AccessApplicationError {
   readonly code = 'cooperative_already_exists';
 
   constructor(cif: string) {
-    super(`Ya existe una cooperativa con el CIF ${cif}.`);
+    super(`A cooperative with tax id ${cif} already exists.`);
   }
 }
 
@@ -20,16 +20,16 @@ export class PasswordRequiredError extends AccessApplicationError {
   readonly code = 'password_required';
 
   constructor() {
-    super('El administrador es un usuario nuevo: hace falta una contraseña.');
+    super('The administrator is a new user: a password is required.');
   }
 }
 
-/** Generic on purpose: never tells whether the email exists (RNF-ACC-05). */
+/** Generic on purpose: never tells whether the email exists (NFR-ACC-05). */
 export class InvalidCredentialsError extends AccessApplicationError {
   readonly code = 'invalid_credentials';
 
   constructor() {
-    super('Email o contraseña incorrectos.');
+    super('Incorrect email or password.');
   }
 }
 
@@ -37,7 +37,7 @@ export class LoginLockedError extends AccessApplicationError {
   readonly code = 'login_locked';
 
   constructor(readonly until: Date) {
-    super('Demasiados intentos fallidos. Vuelve a intentarlo más tarde (RN-ACC-11).');
+    super('Too many failed attempts. Try again later (BR-ACC-11).');
   }
 }
 
@@ -45,7 +45,7 @@ export class NoActiveMembershipError extends AccessApplicationError {
   readonly code = 'no_active_membership';
 
   constructor() {
-    super('No tienes acceso a ninguna cooperativa.');
+    super('You do not have access to any cooperative.');
   }
 }
 
@@ -54,28 +54,28 @@ export class InvalidRefreshTokenError extends AccessApplicationError {
   readonly code = 'invalid_refresh_token';
 
   constructor() {
-    super('La sesión no es válida. Vuelve a iniciar sesión.');
+    super('The session is not valid. Log in again.');
   }
 }
 
-/** Missing, invalid or expired access token, or a closed session: 401 (HU-ACC-07). */
+/** Missing, invalid or expired access token, or a closed session: 401 (US-ACC-07). */
 export class UnauthenticatedError extends AccessApplicationError {
   readonly code = 'unauthenticated';
 
   constructor() {
-    super('Hace falta iniciar sesión.');
+    super('Authentication is required.');
   }
 }
 
 /**
  * The cooperative does not exist or the user has no active membership in it.
- * Both look the same, so nobody learns which cooperatives exist (ADR-003, RNF-ACC-06).
+ * Both look the same, so nobody learns which cooperatives exist (ADR-003, NFR-ACC-06).
  */
 export class CooperativeNotFoundError extends AccessApplicationError {
   readonly code = 'not_found';
 
   constructor() {
-    super('No encontrado.');
+    super('Not found.');
   }
 }
 
@@ -84,7 +84,9 @@ export class InvitationNotFoundError extends AccessApplicationError {
   readonly code = 'invitation_not_usable';
 
   constructor() {
-    super('La invitación ha caducado o ya se ha usado; hay que pedir una nueva (RN-ACC-10).');
+    super(
+      'The invitation has expired or was already used; a new one must be requested (BR-ACC-10).',
+    );
   }
 }
 
@@ -93,26 +95,26 @@ export class AdminNotActivatedError extends AccessApplicationError {
 
   constructor() {
     super(
-      'Ese email tiene una invitación pendiente: debe activarla antes de administrar otra cooperativa.',
+      'That email has a pending invitation: it must be activated before administering another cooperative.',
     );
   }
 }
 
-/** A member of another cooperative, or one that does not exist: 404 (RNF-ACC-06). */
+/** A member of another cooperative, or one that does not exist: 404 (NFR-ACC-06). */
 export class MemberNotFoundError extends AccessApplicationError {
   readonly code = 'not_found';
 
   constructor() {
-    super('No encontrado.');
+    super('Not found.');
   }
 }
 
-/** HU-ACC-08: the email already has a live membership in this cooperative. */
+/** US-ACC-08: the email already has a live membership in this cooperative. */
 export class MemberAlreadyExistsError extends AccessApplicationError {
   readonly code = 'member_already_exists';
 
   constructor() {
-    super('Esa persona ya es miembro de la cooperativa o tiene una invitación pendiente.');
+    super('That person is already a member of the cooperative or has a pending invitation.');
   }
 }
 
@@ -121,7 +123,7 @@ export class ProfileNotFoundError extends AccessApplicationError {
   readonly code = 'profile_not_found';
 
   constructor() {
-    super('El perfil no existe en esta cooperativa.');
+    super('The profile does not exist in this cooperative.');
   }
 }
 
@@ -129,7 +131,7 @@ export class InvitationNotPendingError extends AccessApplicationError {
   readonly code = 'invitation_not_pending';
 
   constructor() {
-    super('Solo se puede reenviar la invitación de un miembro que aún no la ha aceptado.');
+    super('Only the invitation of a member who has not accepted it yet can be resent.');
   }
 }
 
@@ -138,6 +140,6 @@ export class InvitationDeliveryUnavailableError extends AccessApplicationError {
   readonly code = 'invitation_delivery_unavailable';
 
   constructor() {
-    super('No se ha podido enviar la invitación. Inténtalo de nuevo más tarde con «Reenviar».');
+    super('The invitation could not be sent. Try again later by resending it.');
   }
 }

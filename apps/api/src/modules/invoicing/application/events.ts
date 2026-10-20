@@ -5,18 +5,18 @@ type Ref = { cooperativeId: string; thirdPartyId: string; operation: Operation }
 
 /** Requisitos/05, section 7. */
 export type DeliveryNoteRegistered = DomainEvent<
-  'AlbaranRegistrado',
+  'DeliveryNoteRegistered',
   Ref & { deliveryNoteId: string }
 >;
-export type InvoiceRegistered = DomainEvent<'FacturaRegistrada', Ref & { invoiceId: string }>;
+export type InvoiceRegistered = DomainEvent<'InvoiceRegistered', Ref & { invoiceId: string }>;
 /** Consumed by notifications and by the AI explanation of the differences. */
-export type DiscrepancyDetected = DomainEvent<'DiscrepanciaDetectada', Ref & { invoiceId: string }>;
+export type DiscrepancyDetected = DomainEvent<'DiscrepancyDetected', Ref & { invoiceId: string }>;
 export type InvoiceDueSoon = DomainEvent<
-  'FacturaProximaAVencer',
+  'InvoiceDueSoon',
   Ref & { invoiceId: string; dueDate: string }
 >;
 export type InvoiceOverdue = DomainEvent<
-  'FacturaVencida',
+  'InvoiceOverdue',
   Ref & { invoiceId: string; dueDate: string }
 >;
 

@@ -1,0 +1,358 @@
+{
+  "common": {
+    "partner": "Socio",
+    "untitled": "Sin título",
+    "saved": "Guardado.",
+    "listAnd": "y",
+    "actions": {
+      "add": "Añadir",
+      "back": "Atrás",
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "confirm": "Confirmar",
+      "edit": "Editar",
+      "publish": "Publicar",
+      "remove": "Quitar",
+      "retry": "Reintentar",
+      "withdraw": "Retirar"
+    },
+    "units": {
+      "bytes": "{{value}} B",
+      "kb": "{{value}} KB",
+      "mb": "{{value}} MB"
+    }
+  },
+  "enums": {
+    "module": {
+      "announcements": "Comunicados",
+      "assemblies": "Asambleas",
+      "documents": "Documentos",
+      "invoicing": "Facturas y albaranes",
+      "member-area": "Área del socio",
+      "assistant": "Asistente",
+      "users": "Miembros"
+    },
+    "accessLevel": {
+      "read": "consulta",
+      "manage": "gestión"
+    },
+    "announcementStatus": {
+      "draft": "Borrador",
+      "published": "Publicado",
+      "withdrawn": "Retirado"
+    },
+    "documentCategory": {
+      "bylaws": "Estatutos",
+      "regulations": "Reglamento interno",
+      "minutes": "Actas",
+      "accounts": "Cuentas anuales",
+      "other": "Otros"
+    },
+    "documentStatus": {
+      "published": "Publicado",
+      "withdrawn": "Retirado"
+    },
+    "indexingStatus": {
+      "pending": "Indexando para el asistente…",
+      "indexed": "Disponible para el asistente",
+      "error": "Error al indexar",
+      "not_indexable": "No se puede indexar"
+    },
+    "assemblyType": {
+      "ordinary": "Asamblea ordinaria",
+      "extraordinary": "Asamblea extraordinaria"
+    },
+    "assemblyStatus": {
+      "draft": "Borrador",
+      "convened": "Convocada",
+      "held": "Celebrada",
+      "cancelled": "Cancelada"
+    },
+    "majority": {
+      "simple": "Mayoría simple",
+      "reinforced": "Mayoría reforzada"
+    },
+    "votingStatus": {
+      "pending": "Votación pendiente de abrir",
+      "open": "Votación abierta",
+      "closed": "Votación cerrada"
+    },
+    "voteChoice": {
+      "in_favor": "A favor",
+      "against": "En contra",
+      "abstention": "Abstención"
+    },
+    "votingOutcome": {
+      "approved": "Aprobado",
+      "rejected": "Rechazado",
+      "no_quorum": "Sin quórum"
+    },
+    "call": {
+      "first": "primera",
+      "second": "segunda"
+    }
+  },
+  "errors": {
+    "generic": "Ha ocurrido un error. Inténtalo de nuevo.",
+    "network": "No se puede conectar con el servidor.",
+    "announcementIssues": {
+      "title_missing": "falta el título",
+      "title_too_long": "el título supera los 120 caracteres",
+      "body_missing": "falta el cuerpo",
+      "body_too_long": "el cuerpo supera los 5000 caracteres"
+    },
+    "rejections": {
+      "attachment_rejected": {
+        "too_many": "Un comunicado admite como máximo 3 adjuntos.",
+        "not_pdf": "Solo se admiten adjuntos en PDF.",
+        "too_large": "Cada adjunto puede ocupar como máximo 10 MB."
+      },
+      "file_rejected": {
+        "not_pdf": "Solo se admiten documentos en PDF.",
+        "too_large": "El documento puede ocupar como máximo 20 MB.",
+        "empty": "El archivo está vacío."
+      }
+    },
+    "codes": {
+      "invalid_request": "Revisa los datos introducidos.",
+      "invalid_credentials": "Email o contraseña incorrectos.",
+      "login_locked": "Demasiados intentos fallidos. Espera unos minutos y vuelve a intentarlo.",
+      "too_many_requests": "Demasiadas peticiones. Espera unos minutos y vuelve a intentarlo.",
+      "no_active_membership": "No tienes acceso a ninguna cooperativa.",
+      "invitation_not_usable": "La invitación ha caducado o ya se ha usado. Pide una nueva a tu cooperativa.",
+      "invitation_not_pending": "Esta invitación ya no está pendiente.",
+      "invitation_delivery_unavailable": "No se ha podido enviar la invitación. Inténtalo más tarde.",
+      "password_required": "Es tu primera cooperativa en multiCooperativa: elige una contraseña.",
+      "weak_password": "La contraseña debe tener al menos 10 caracteres.",
+      "unauthenticated": "Tu sesión ha terminado. Vuelve a iniciar sesión.",
+      "invalid_refresh_token": "Tu sesión ha terminado. Vuelve a iniciar sesión.",
+      "forbidden": "Tu perfil no tiene acceso a esta sección.",
+      "not_found": "No encontrado.",
+      "not_in_census": "No estás en el censo de esta votación: solo pueden votar los miembros activos cuando se abrió.",
+      "profile_not_found": "El perfil elegido no existe.",
+      "member_already_exists": "Ese miembro ya pertenece a la cooperativa.",
+      "self_modification": "No puedes modificar tu propio acceso.",
+      "last_admin": "Debe quedar al menos un administrador.",
+      "invalid_membership_transition": "Ese cambio no es posible con el estado actual del miembro.",
+      "invalid_announcement": "No se puede guardar el comunicado: {{issues}}.",
+      "invalid_announcement_transition": "Ese cambio no es posible con el estado actual del comunicado.",
+      "invalid_document": "Revisa los datos del documento.",
+      "invalid_document_transition": "Ese cambio no es posible con el estado actual del documento.",
+      "search_unavailable": "La búsqueda por contenido no está disponible ahora mismo.",
+      "invalid_assembly": "Revisa los datos de la asamblea.",
+      "insufficient_notice_one": "La asamblea debe convocarse con al menos {{count}} día de antelación.",
+      "insufficient_notice_other": "La asamblea debe convocarse con al menos {{count}} días de antelación.",
+      "invalid_assembly_transition": "Ese cambio no es posible con el estado actual de la asamblea.",
+      "invalid_voting_transition": "Ese cambio no es posible con el estado actual de la votación.",
+      "voting_not_open": "La votación no está abierta.",
+      "already_voted": "Ya has votado en este punto; el voto no se puede cambiar.",
+      "invalid_amount": "Revisa los importes.",
+      "invalid_third_party": "Revisa los datos del proveedor o cliente.",
+      "total_mismatch": "El total no coincide con la suma de las líneas.",
+      "third_party_exists": "Ya existe un proveedor o cliente con ese NIF.",
+      "duplicate_number": "Ya existe un documento con ese número.",
+      "invalid_invoice_transition": "Ese cambio no es posible con el estado actual de la factura.",
+      "internal_error": "Ha ocurrido un error en el servidor. Inténtalo de nuevo."
+    }
+  },
+  "auth": {
+    "fields": {
+      "email": "Email",
+      "password": "Contraseña"
+    },
+    "login": {
+      "screenTitle": "Iniciar sesión",
+      "subtitle": "Entra con el email y la contraseña de tu cooperativa.",
+      "submit": "Entrar",
+      "invitedHint": "¿Te han invitado? Abre el enlace del correo de invitación desde este dispositivo."
+    },
+    "invitation": {
+      "screenTitle": "Activar acceso",
+      "title": "Activa tu acceso",
+      "invalidLink": "El enlace de invitación no es válido. Pide uno nuevo a tu cooperativa.",
+      "passwordRequired": "Es tu primera cooperativa en multiCooperativa: elige una contraseña.",
+      "instructions": "Elige una contraseña de al menos 10 caracteres. Si ya usas multiCooperativa con otra cooperativa, déjala en blanco: se añadirá a tu cuenta.",
+      "submit": "Activar",
+      "activatedTitle": "Acceso activado",
+      "activatedSignedIn": "La nueva cooperativa ya aparece en tu selector de cooperativas.",
+      "activatedSignedOut": "Entra con tu email y tu contraseña de siempre.",
+      "goToCooperatives": "Ir a mis cooperativas",
+      "goToLogin": "Iniciar sesión"
+    },
+    "lock": {
+      "prompt": "Desbloquea multiCooperativa",
+      "title": "multiCooperativa está bloqueada",
+      "unlock": "Desbloquear",
+      "usePassword": "Entrar con contraseña",
+      "lockedOut": "Demasiados intentos. Entra con tu contraseña.",
+      "failed": "No se ha podido verificar tu identidad."
+    }
+  },
+  "settings": {
+    "title": "Ajustes",
+    "cooperative": "Cooperativa",
+    "switchCooperative": "Cambiar de cooperativa",
+    "biometrics": "Desbloqueo con biometría",
+    "signOut": "Cerrar sesión"
+  },
+  "cooperatives": {
+    "select": {
+      "screenTitle": "Tus cooperativas",
+      "none": "No tienes acceso a ninguna cooperativa.",
+      "prompt": "Hola, {{name}}. ¿En qué cooperativa quieres trabajar?"
+    }
+  },
+  "modulePlaceholder": {
+    "comingSoon": "Esta sección llegará en un próximo hito.",
+    "access": "Tu acceso: {{level}}{{scope}}.",
+    "ownDataOnly": " (solo tus datos)"
+  },
+  "announcements": {
+    "pinned": "Fijado",
+    "list": {
+      "new": "Nuevo",
+      "empty": "Todavía no hay comunicados.",
+      "unreadLabel": "{{title}}, no leído",
+      "createdOn": "Creado el {{date}}",
+      "attachmentCount_one": "{{count}} adjunto",
+      "attachmentCount_other": "{{count}} adjuntos"
+    },
+    "detail": {
+      "title": "Comunicado",
+      "unknownAuthor": "Autor desconocido",
+      "editedOn": "Editado el {{date}}",
+      "attachments": "Adjuntos",
+      "readStats_one": "Leído por {{readCount}} de {{count}} miembro",
+      "readStats_other": "Leído por {{readCount}} de {{count}} miembros",
+      "pin": "Fijar arriba",
+      "unpin": "Quitar fijado",
+      "withdrawTitle": "Retirar comunicado",
+      "withdrawMessage": "Dejará de estar visible para los miembros. No se puede deshacer."
+    },
+    "editor": {
+      "newTitle": "Nuevo comunicado",
+      "editTitle": "Editar comunicado",
+      "titleLabel": "Título ({{length}}/{{max}})",
+      "bodyLabel": "Texto ({{length}}/{{max}})",
+      "publishedHint": "Está publicado: los cambios se verán como «editado» y no se reenvía el aviso.",
+      "attachments": "Adjuntos ({{current}}/{{max}})",
+      "addPdf": "Añadir PDF",
+      "saveDraft": "Guardar borrador",
+      "saveChanges": "Guardar cambios"
+    }
+  },
+  "assemblies": {
+    "agenda": "Orden del día",
+    "participation": {
+      "ofCensus": "{{votesCast}} de {{censusSize}} ({{percent}} %)",
+      "votes_one": "{{count}} voto",
+      "votes_other": "{{count}} votos"
+    },
+    "list": {
+      "new": "Nueva",
+      "empty": "No hay asambleas convocadas.",
+      "openVotings_one": "{{count}} votación abierta",
+      "openVotings_other": "{{count}} votaciones abiertas",
+      "pointCount_one": "{{count}} punto",
+      "pointCount_other": "{{count}} puntos"
+    },
+    "detail": {
+      "title": "Asamblea",
+      "firstCall": "Primera convocatoria: {{date}}",
+      "secondCall": "Segunda convocatoria: {{date}}",
+      "editConvocation": "Editar convocatoria",
+      "convene": "Convocar",
+      "conveneTitle": "Convocar asamblea",
+      "conveneMessage": "Será visible para todos los miembros y se les avisará.",
+      "closeAssembly": "Cerrar asamblea (celebrada)",
+      "closeTitle": "Cerrar asamblea",
+      "closeMessage": "Quedará como celebrada. Las votaciones deben estar cerradas.",
+      "cancelAssembly": "Cancelar asamblea",
+      "cancelTitle": "Cancelar asamblea",
+      "cancelMessage": "No se puede deshacer.",
+      "votedByMajority": "Se vota por mayoría {{majority}}",
+      "majoritySimple": "simple",
+      "majorityReinforced": "reforzada (2/3)",
+      "addDocumentation": "Añadir documentación",
+      "openVoting": "Abrir votación",
+      "closeVoting": "Cerrar votación",
+      "closeVotingTitle": "Cerrar votación",
+      "closeVotingMessage": "Se calculará el resultado y no se admitirán más votos.",
+      "participation": "Participación: {{value}}",
+      "tally": "A favor {{inFavor}} · En contra {{against}} · Abstenciones {{abstentions}}",
+      "quorumReached": "Con quórum en {{call}} convocatoria",
+      "quorumMissed": "Sin quórum en {{call}} convocatoria",
+      "myVote": "Tu voto: {{choice}}",
+      "vote": "Votar"
+    },
+    "vote": {
+      "title": "Votar",
+      "choose": "Elige tu voto:",
+      "submit": "Emitir voto",
+      "advisory": "La votación es consultiva y de apoyo a la asamblea presencial.",
+      "confirmTitle": "Confirmar voto",
+      "confirmMessage": "Vas a votar «{{choice}}». El voto no se puede cambiar.",
+      "review": "Revisar",
+      "cast": "Votar",
+      "recordedTitle": "Voto registrado",
+      "recorded": "Tu voto ha quedado registrado: {{choice}}",
+      "backToAssembly": "Volver a la asamblea"
+    },
+    "editor": {
+      "newTitle": "Nueva asamblea",
+      "editTitle": "Editar convocatoria",
+      "firstCall": "Primera convocatoria",
+      "secondCall": "Segunda convocatoria (opcional)",
+      "place": "Lugar",
+      "pointNumber": "Punto {{number}}",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
+      "pointTitle": "Título",
+      "pointDescription": "Descripción",
+      "votable": "Se somete a votación",
+      "addPoint": "Añadir punto",
+      "saveDraft": "Guardar borrador",
+      "hint": "Después podrás convocarla desde su detalle. La documentación de cada punto se añade allí."
+    }
+  },
+  "documents": {
+    "list": {
+      "upload": "Subir",
+      "searchByTitle": "Buscar por título",
+      "searchByContent": "Pregunta o tema",
+      "placeholderTitle": "Estatutos, acta…",
+      "placeholderContent": "¿Cuándo se celebra la asamblea?",
+      "mode": {
+        "title": "Título",
+        "content": "Contenido"
+      },
+      "noMatch": "Ningún título coincide.",
+      "empty": "Todavía no hay documentos.",
+      "indexing": "Indexando",
+      "notAvailableForAssistant": "No disponible para el asistente",
+      "minChars": "Escribe al menos {{min}} caracteres para buscar en el contenido.",
+      "noResults": "No se ha encontrado nada parecido.",
+      "hitTitle": "{{title}} · pág. {{page}}"
+    },
+    "detail": {
+      "title": "Documento",
+      "open": "Abrir documento",
+      "retryIndexing": "Reintentar indexación",
+      "uploadVersion": "Subir nueva versión",
+      "versionHistory": "Historial de versiones",
+      "currentVersion": "{{name}} · vigente",
+      "withdrawTitle": "Retirar documento",
+      "withdrawMessage": "Dejará de estar disponible para los miembros y para el asistente."
+    },
+    "upload": {
+      "screenTitle": "Subir documento",
+      "choosePdf": "Elegir PDF",
+      "changePdf": "Cambiar PDF",
+      "title": "Título",
+      "category": "Categoría",
+      "date": "Fecha del documento",
+      "submit": "Subir y publicar",
+      "tooLarge": "El documento puede ocupar como máximo {{max}} MB."
+    }
+  }
+}

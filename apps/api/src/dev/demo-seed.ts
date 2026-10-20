@@ -9,7 +9,7 @@ import type { PrismaClient } from '../shared/infrastructure/prisma';
  */
 
 type ProfileName = 'Socio' | 'Consejo rector' | 'Gestor' | 'Administrador';
-type Status = 'activa' | 'suspendida' | 'invitada';
+type Status = 'active' | 'suspended' | 'invited';
 
 interface DemoMember {
   email: string;
@@ -22,13 +22,13 @@ interface DemoMember {
 
 interface DemoCooperative {
   name: string;
-  /** Valid control digit: invoices will validate tax ids (Hito 4). */
+  /** Valid control digit: invoices will validate tax ids (Milestone 4). */
   cif: string;
   admin: { email: string; name: string; partnerNumber: string };
   members: DemoMember[];
 }
 
-/** In two cooperatives with different profiles: exercises the cooperative selector (HU-ACC-05). */
+/** In two cooperatives with different profiles: exercises the cooperative selector (US-ACC-05). */
 const LUCIA = { email: 'lucia@demo.test', name: 'Lucía Martín' };
 
 export const DEMO_COOPERATIVES: DemoCooperative[] = [
@@ -44,7 +44,7 @@ export const DEMO_COOPERATIVES: DemoCooperative[] = [
         isPartner: true,
         partnerNumber: '002',
       },
-      // Hired manager: manages invoices but is not a partner, so cannot vote (RN-ACC-06).
+      // Hired manager: manages invoices but is not a partner, so cannot vote (BR-ACC-06).
       { email: 'gestor@sanisidro.test', name: 'Elena Gómez', profile: 'Gestor', isPartner: false },
       {
         email: 'socio@sanisidro.test',
@@ -60,7 +60,7 @@ export const DEMO_COOPERATIVES: DemoCooperative[] = [
         profile: 'Socio',
         isPartner: true,
         partnerNumber: '005',
-        status: 'suspendida',
+        status: 'suspended',
       },
       {
         email: 'invitada@sanisidro.test',
@@ -68,7 +68,7 @@ export const DEMO_COOPERATIVES: DemoCooperative[] = [
         profile: 'Socio',
         isPartner: true,
         partnerNumber: '006',
-        status: 'invitada',
+        status: 'invited',
       },
     ],
   },
@@ -139,20 +139,20 @@ export async function seedDemoData(
     const profileId = (name: ProfileName) => profiles.find((p) => p.name === name)!.id;
 
     for (const member of demo.members) {
-      const status = member.status ?? 'activa';
+      const status = member.status ?? 'active';
       const user = await prisma.user.upsert({
         where: { email: member.email },
         create: {
           email: member.email,
           name: member.name,
-          // An invited user has no password until they accept (HU-ACC-01).
-          passwordHash: status === 'invitada' ? null : passwordHash,
+          // An invited user has no password until they accept (US-ACC-01).
+          passwordHash: status === 'invited' ? null : passwordHash,
         },
         update: {},
       });
 
       let invitation: { tokenHash: string; expiresAt: Date } | undefined;
-      if (status === 'invitada') {
+      if (status === 'invited') {
         const token = randomBytes(32).toString('base64url');
         // Same scheme as CryptoSecretTokens; the seed test accepts this token through the API.
         invitation = {

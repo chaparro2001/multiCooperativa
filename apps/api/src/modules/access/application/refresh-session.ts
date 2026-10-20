@@ -7,7 +7,7 @@ import {
   type SessionDeps,
 } from './session-tokens';
 
-/** HU-ACC-03: rotates the refresh token; replaying an old one revokes the whole session. */
+/** US-ACC-03: rotates the refresh token; replaying an old one revokes the whole session. */
 export async function refreshSession(deps: SessionDeps, refreshToken: string): Promise<AuthTokens> {
   const now = deps.now();
   const parsed = parseRefreshToken(refreshToken);

@@ -53,7 +53,7 @@ export type { CooperativeContext, SessionContext } from './application/request-c
 export type { AccessLevel, Module, Scope } from './domain/permission';
 export { AccessApplicationError } from './application/errors';
 export { AccessDomainError, ModuleAccessDeniedError } from './domain/errors';
-/** Guard for use cases: returns the scope to filter by, or throws 403 (HU-ACC-07). */
+/** Guard for use cases: returns the scope to filter by, or throws 403 (US-ACC-07). */
 export { requireAccess } from './domain/permission';
 export { hasAccess } from './domain/permission';
 /** The four profiles every cooperative is born with (requisitos/01, section 3). */
@@ -75,9 +75,9 @@ export interface AccessModuleDeps {
   prisma: PrismaClient;
   jwtSecret: string;
   now?: () => Date;
-  /** RNF-ACC-09; false disables it (tests). */
+  /** NFR-ACC-09; false disables it (tests). */
   authRateLimits?: AuthRateLimits | false;
-  /** Delivers invitation links (HU-ACC-08). */
+  /** Delivers invitation links (US-ACC-08). */
   invitationSender: InvitationSender;
 }
 
@@ -114,7 +114,7 @@ export function createAccessModule(deps: AccessModuleDeps) {
   };
   /** 401 without a valid access token of an open session. */
   const requireSession = createRequireSession(requestContext);
-  /** For `/cooperativas/:cooperativeId/...`: 401 without session, 404 without an active membership. */
+  /** For `/cooperatives/:cooperativeId/...`: 401 without session, 404 without an active membership. */
   const requireCooperative = createRequireCooperative(requestContext);
 
   const router = Router();

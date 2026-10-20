@@ -3,7 +3,7 @@ import type { z } from 'zod';
 /** The request does not match its contract: 400 `invalid_request`, handled by the app. */
 export class InvalidRequestError extends Error {
   constructor() {
-    super('La petición no cumple el contrato.');
+    super('The request does not match the contract.');
     this.name = 'InvalidRequestError';
   }
 }

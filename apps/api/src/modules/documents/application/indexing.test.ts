@@ -23,7 +23,7 @@ import { InMemoryIndexing } from './testing/in-memory-indexing';
 const COOP = '40000000-0000-4000-8000-000000000001';
 const OTHER = '40000000-0000-4000-8000-000000000002';
 
-function context(level: 'consulta' | 'gestion', cooperativeId = COOP): CooperativeContext {
+function context(level: 'read' | 'manage', cooperativeId = COOP): CooperativeContext {
   return {
     userId: 'u',
     sessionId: 's',
@@ -31,7 +31,7 @@ function context(level: 'consulta' | 'gestion', cooperativeId = COOP): Cooperati
     membershipId: 'm',
     profileName: 'x',
     isPartner: true,
-    permissions: [{ module: 'documentos', level, scope: 'todas' }],
+    permissions: [{ module: 'documents', level, scope: 'all' }],
   };
 }
 
@@ -70,8 +70,8 @@ beforeEach(() => {
     onError: (error) => void errors.push(error),
   });
   const bus = new InProcessEventBus<DocumentEvent>({ onHandlerError: (e) => void errors.push(e) });
-  bus.subscribe('DocumentoPublicado', (event) => indexer.enqueue(event.payload));
-  bus.subscribe('DocumentoRetirado', (event) =>
+  bus.subscribe('DocumentPublished', (event) => indexer.enqueue(event.payload));
+  bus.subscribe('DocumentWithdrawn', (event) =>
     indexer.remove(event.payload.cooperativeId, event.payload.documentId),
   );
   deps = {
@@ -84,76 +84,76 @@ beforeEach(() => {
 });
 
 const upload = (
-  file = pdfWith('La asamblea general ordinaria se celebra cada año en junio.'),
-  ctx = context('gestion'),
+  file = pdfWith('The ordinary general assembly is held every year in June.'),
+  ctx = context('manage'),
 ) =>
   uploadDocument(
     deps,
     ctx,
-    { title: 'Estatutos', category: 'estatutos', documentDate: '2026-01-01' },
+    { title: 'Bylaws', category: 'bylaws', documentDate: '2026-01-01' },
     file,
   );
 
-const search = (query: string, ctx = context('consulta')) =>
+const search = (query: string, ctx = context('read')) =>
   searchDocuments({ embedder, index: indexing }, ctx, query);
 
-describe('indexación (requisitos/03, apartado 4)', () => {
-  it('Dado un documento recién subido, cuando termina la indexación, entonces queda indexado con sus fragmentos por página', async () => {
+describe('indexing (requirements/03, section 4)', () => {
+  it('Given a freshly uploaded document, when indexing finishes, then it is indexed with its fragments per page', async () => {
     const document = await upload(
-      pdfWith('Primera página sobre la asamblea.', 'Segunda página sobre el capital social.'),
+      pdfWith('First page about the assembly.', 'Second page about the share capital.'),
     );
-    expect(document.current.indexingStatus).toBe('pendiente');
+    expect(document.current.indexingStatus).toBe('pending');
 
     await indexer.idle();
 
-    expect(store.rows[0]?.versions[0]?.indexingStatus).toBe('indexado');
+    expect(store.rows[0]?.versions[0]?.indexingStatus).toBe('indexed');
     expect(indexing.fragments.map((f) => [f.cooperativeId, f.documentId, f.page])).toEqual([
       [COOP, document.id, 1],
       [COOP, document.id, 2],
     ]);
   });
 
-  it('la subida no espera a la indexación', async () => {
+  it('the upload does not wait for indexing', async () => {
     const document = await upload();
 
-    expect(document.current.indexingStatus).toBe('pendiente');
+    expect(document.current.indexingStatus).toBe('pending');
     expect(indexing.fragments).toHaveLength(0);
   });
 
-  it('Dado un PDF sin texto extraíble, entonces queda como no indexable con el motivo', async () => {
+  it('Given a PDF without extractable text, then it is marked as not indexable with the reason', async () => {
     await upload(pdfWith('   ', ''));
     await indexer.idle();
 
     const version = store.rows[0]!.versions[0]!;
-    expect(version.indexingStatus).toBe('no_indexable');
-    expect(version.indexingError).toMatch(/escaneado/);
+    expect(version.indexingStatus).toBe('not_indexable');
+    expect(version.indexingError).toMatch(/scanned/);
   });
 
-  it('un PDF ilegible también es no indexable', async () => {
+  it('an unreadable PDF is also not indexable', async () => {
     await upload(pdfWith('ROTO'));
     await indexer.idle();
 
-    expect(store.rows[0]!.versions[0]!.indexingStatus).toBe('no_indexable');
+    expect(store.rows[0]!.versions[0]!.indexingStatus).toBe('not_indexable');
   });
 
-  it('si el servicio de embeddings falla, queda con error y el documento sigue disponible (RN-DOC-07)', async () => {
+  it('if the embeddings service fails, it is left with an error and the document stays available (BR-DOC-07)', async () => {
     embedder.embed = async () => {
-      throw new Error('Ollama caído');
+      throw new Error('Ollama down');
     };
 
     const document = await upload();
     await indexer.idle();
 
     expect(store.rows[0]!.versions[0]).toMatchObject({ indexingStatus: 'error' });
-    expect(store.rows[0]!.status).toBe('publicado');
+    expect(store.rows[0]!.status).toBe('published');
     expect(errors).toHaveLength(1);
     expect(document.id).toBeDefined();
   });
 
-  it('HU-DOC-06: Dado un error de indexación, cuando pulso reintentar, entonces se lanza de nuevo', async () => {
+  it('US-DOC-06: Given an indexing error, when I press retry, then it is launched again', async () => {
     const original = embedder.embed.bind(embedder);
     embedder.embed = async () => {
-      throw new Error('Ollama caído');
+      throw new Error('Ollama down');
     };
     const document = await upload();
     await indexer.idle();
@@ -161,72 +161,63 @@ describe('indexación (requisitos/03, apartado 4)', () => {
 
     await reindexDocument(
       { ...deps, indexingStore: indexing, indexer },
-      context('gestion'),
+      context('manage'),
       document.id,
     );
-    expect(store.rows[0]!.versions[0]!.indexingStatus).toBe('pendiente');
+    expect(store.rows[0]!.versions[0]!.indexingStatus).toBe('pending');
     await indexer.idle();
 
-    expect(store.rows[0]!.versions[0]!.indexingStatus).toBe('indexado');
+    expect(store.rows[0]!.versions[0]!.indexingStatus).toBe('indexed');
   });
 
-  it('reindexar exige gestión y un documento publicado', async () => {
+  it('reindexing requires manage access and a published document', async () => {
     const document = await upload();
-    await withdrawDocument(deps, context('gestion'), document.id);
+    await withdrawDocument(deps, context('manage'), document.id);
 
     await expect(
-      reindexDocument(
-        { ...deps, indexingStore: indexing, indexer },
-        context('consulta'),
-        document.id,
-      ),
+      reindexDocument({ ...deps, indexingStore: indexing, indexer }, context('read'), document.id),
     ).rejects.toMatchObject({ code: 'forbidden' });
     await expect(
       reindexDocument(
         { ...deps, indexingStore: indexing, indexer },
-        context('gestion'),
+        context('manage'),
         document.id,
       ),
     ).rejects.toThrow(InvalidDocumentTransitionError);
   });
 
-  it('RN-DOC-05: una versión nueva sustituye los fragmentos de la anterior', async () => {
-    const document = await upload(pdfWith('Texto antiguo sobre tractores.'));
+  it('BR-DOC-05: a new version replaces the fragments of the previous one', async () => {
+    const document = await upload(pdfWith('Old text about tractors.'));
     await indexer.idle();
 
-    await addVersion(
-      deps,
-      context('gestion'),
-      document.id,
-      pdfWith('Texto nuevo sobre cosechadoras.'),
-    );
+    await addVersion(deps, context('manage'), document.id, pdfWith('New text about harvesters.'));
     await indexer.idle();
 
-    expect(indexing.fragments.map((f) => f.content)).toEqual(['Texto nuevo sobre cosechadoras.']);
+    expect(indexing.fragments.map((f) => f.content)).toEqual(['New text about harvesters.']);
   });
 
-  it('RN-DOC-05: retirar un documento borra sus fragmentos', async () => {
+  it('BR-DOC-05: withdrawing a document deletes its fragments', async () => {
     const document = await upload();
     await indexer.idle();
 
-    await withdrawDocument(deps, context('gestion'), document.id);
+    await withdrawDocument(deps, context('manage'), document.id);
 
     expect(indexing.fragments).toEqual([]);
   });
 
-  it('un trabajo de una versión que ya no es la vigente se descarta', async () => {
-    const document = await upload(pdfWith('versión uno'));
-    await addVersion(deps, context('gestion'), document.id, pdfWith('versión dos'));
+  it('a job for a version that is no longer current is discarded', async () => {
+    const document = await upload(pdfWith('version one'));
+    await addVersion(deps, context('manage'), document.id, pdfWith('version two'));
     await indexer.idle();
 
-    expect(indexing.fragments.map((f) => f.content)).toEqual(['versión dos']);
+    expect(indexing.fragments.map((f) => f.content)).toEqual(['version two']);
   });
 
-  it('al arrancar, recupera las versiones que quedaron pendientes', async () => {
+  it('on startup, it recovers the versions left pending', async () => {
     const document = await upload();
-    // Simula un reinicio: el trabajo en cola se perdió y la versión sigue pendiente.
+    // Simulates a restart: the queued job was lost and the version is still pending.
     indexing.fragments.length = 0;
-    store.rows[0]!.versions[0]!.indexingStatus = 'pendiente';
+    store.rows[0]!.versions[0]!.indexingStatus = 'pending';
 
     expect(await indexer.resumePending()).toBe(1);
     await indexer.idle();
@@ -235,34 +226,34 @@ describe('indexación (requisitos/03, apartado 4)', () => {
   });
 });
 
-describe('búsqueda por contenido (HU-DOC-07)', () => {
-  it('devuelve los fragmentos más relevantes con su página', async () => {
+describe('content search (US-DOC-07)', () => {
+  it('returns the most relevant fragments with their page', async () => {
     const document = await upload(
       pdfWith(
-        'El capital social mínimo es de tres mil euros.',
-        'La asamblea general ordinaria se celebra en junio.',
+        'The minimum share capital is three thousand euros.',
+        'The ordinary general assembly is held in June.',
       ),
     );
     await indexer.idle();
 
-    const [best] = await search('¿Cuándo se celebra la asamblea general?');
+    const [best] = await search('When is the general assembly held?');
 
-    expect(best).toMatchObject({ documentId: document.id, page: 2, title: 'Estatutos' });
+    expect(best).toMatchObject({ documentId: document.id, page: 2, title: 'Bylaws' });
   });
 
-  it('nunca devuelve fragmentos de otra cooperativa, aunque el texto coincida exactamente (ADR-003)', async () => {
-    const text = 'La asamblea general ordinaria se celebra en junio.';
-    await upload(pdfWith(text), context('gestion', OTHER));
+  it('never returns fragments of another cooperative, even if the text matches exactly (ADR-003)', async () => {
+    const text = 'The ordinary general assembly is held in June.';
+    await upload(pdfWith(text), context('manage', OTHER));
     await indexer.idle();
 
     expect(await search(text)).toEqual([]);
   });
 
-  it('no devuelve documentos retirados', async () => {
+  it('does not return withdrawn documents', async () => {
     const document = await upload();
     await indexer.idle();
-    await withdrawDocument(deps, context('gestion'), document.id);
+    await withdrawDocument(deps, context('manage'), document.id);
 
-    expect(await search('asamblea junio')).toEqual([]);
+    expect(await search('assembly june')).toEqual([]);
   });
 });

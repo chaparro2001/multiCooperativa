@@ -40,11 +40,11 @@ function createStore(
 const input = {
   name: 'Cooperativa del Campo',
   cif: ' f12345678 ',
-  admin: { email: 'Admin@Campo.es', name: 'Ada', password: 'una-clave-larga' },
+  admin: { email: 'Admin@Campo.es', name: 'Ada', password: 'a-long-password' },
 };
 
 describe('provisionCooperative', () => {
-  it('crea la cooperativa con los 4 perfiles predefinidos y un administrador', async () => {
+  it('creates the cooperative with the 4 predefined profiles and an administrator', async () => {
     const { store, provisioned } = createStore();
 
     const result = await provisionCooperative({ store, hasher }, input);
@@ -64,13 +64,13 @@ describe('provisionCooperative', () => {
           kind: 'new',
           email: 'admin@campo.es',
           name: 'Ada',
-          passwordHash: 'hashed(una-clave-larga)',
+          passwordHash: 'hashed(a-long-password)',
         },
       },
     ]);
   });
 
-  it('reutiliza al usuario existente sin pedir otra contraseña', async () => {
+  it('reuses the existing user without asking for another password', async () => {
     const { store, provisioned } = createStore({
       users: [{ id: 'user-9', email: 'admin@campo.es', hasPassword: true }],
     });
@@ -83,7 +83,7 @@ describe('provisionCooperative', () => {
     expect(provisioned[0]?.admin).toEqual({ kind: 'existing', userId: 'user-9' });
   });
 
-  it('exige contraseña si el administrador es un usuario nuevo', async () => {
+  it('requires a password if the administrator is a new user', async () => {
     const { store, provisioned } = createStore();
 
     await expect(
@@ -95,7 +95,7 @@ describe('provisionCooperative', () => {
     expect(provisioned).toEqual([]);
   });
 
-  it('rechaza a un usuario invitado que aún no ha activado su acceso', async () => {
+  it('rejects an invited user who has not activated their access yet', async () => {
     const { store, provisioned } = createStore({
       users: [{ id: 'user-9', email: 'admin@campo.es', hasPassword: false }],
     });
@@ -106,7 +106,7 @@ describe('provisionCooperative', () => {
     expect(provisioned).toEqual([]);
   });
 
-  it('aplica la política de contraseñas (RNF-ACC-01)', async () => {
+  it('applies the password policy (NFR-ACC-01)', async () => {
     const { store, provisioned } = createStore();
 
     await expect(
@@ -118,7 +118,7 @@ describe('provisionCooperative', () => {
     expect(provisioned).toEqual([]);
   });
 
-  it('rechaza un CIF ya registrado', async () => {
+  it('rejects an already registered tax id', async () => {
     const { store, provisioned } = createStore({ cifs: ['F12345678'] });
 
     await expect(provisionCooperative({ store, hasher }, input)).rejects.toThrow(

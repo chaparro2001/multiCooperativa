@@ -23,23 +23,23 @@ export const toThirdParty = (party: ThirdPartyRecord): ThirdParty => ({
   active: party.active,
 });
 
-/** HU-FAC-01 (requisitos/05, section 8). */
+/** US-INV-01 (requirements/05, section 8). */
 export function createThirdPartiesRouter(
   deps: useCases.ThirdPartyDeps,
   requireCooperative: RequestHandler,
 ): Router {
   const router = Router();
-  const base = '/cooperativas/:cooperativeId/terceros';
-  const read = [requireCooperative, requirePermission('facturas', 'consulta')];
-  const manage = [requireCooperative, requirePermission('facturas', 'gestion')];
+  const base = '/cooperatives/:cooperativeId/third-parties';
+  const read = [requireCooperative, requirePermission('invoicing', 'read')];
+  const manage = [requireCooperative, requirePermission('invoicing', 'manage')];
 
   router.get(base, ...read, async (req, res) => {
     const query = listThirdPartiesQuerySchema.safeParse(req.query);
     if (!query.success) throw new InvalidRequestError();
     const parties = await useCases.listThirdParties(deps, getCooperativeContext(res), {
-      role: query.data.tipo,
+      role: query.data.type,
       search: query.data.q,
-      includeInactive: query.data.inactivos,
+      includeInactive: query.data.inactive,
     });
     res.json({ items: parties.map(toThirdParty) } satisfies ListThirdPartiesResponse);
   });

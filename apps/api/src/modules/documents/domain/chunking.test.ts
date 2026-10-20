@@ -5,16 +5,14 @@ import { CHUNK_OVERLAP, CHUNK_TARGET, chunkPages, hasExtractableText } from './c
 const paragraph = (words: number, seed = 'palabra') =>
   Array.from({ length: words }, (_, i) => `${seed}${i}`).join(' ') + '.';
 
-describe('troceado para el RAG (requisitos/03, apartado 4)', () => {
-  it('una página corta es un solo fragmento con su número de página', () => {
+describe('chunking for the RAG (requirements/03, section 4)', () => {
+  it('a short page is a single fragment with its page number', () => {
     expect(
-      chunkPages([{ page: 1, text: 'Artículo 1. La cooperativa se denomina San Isidro.' }]),
-    ).toEqual([
-      { index: 0, page: 1, content: 'Artículo 1. La cooperativa se denomina San Isidro.' },
-    ]);
+      chunkPages([{ page: 1, text: 'Article 1. The cooperative is named San Isidro.' }]),
+    ).toEqual([{ index: 0, page: 1, content: 'Article 1. The cooperative is named San Isidro.' }]);
   });
 
-  it('las páginas sin texto no generan fragmentos', () => {
+  it('pages without text produce no fragments', () => {
     expect(
       chunkPages([
         { page: 1, text: '  \n ' },
@@ -23,7 +21,7 @@ describe('troceado para el RAG (requisitos/03, apartado 4)', () => {
     ).toEqual([{ index: 0, page: 2, content: 'Texto' }]);
   });
 
-  it('ningún fragmento mezcla páginas (RN-DOC-06: cada uno lleva su página)', () => {
+  it('no fragment mixes pages (BR-DOC-06: each carries its page)', () => {
     const chunks = chunkPages([
       { page: 1, text: paragraph(150, 'a') },
       { page: 2, text: paragraph(150, 'b') },
@@ -38,7 +36,7 @@ describe('troceado para el RAG (requisitos/03, apartado 4)', () => {
     expect(chunks.map((c) => c.index)).toEqual(chunks.map((_, i) => i));
   });
 
-  it('un texto largo se reparte en fragmentos de unas 800 unidades', () => {
+  it('a long text is split into fragments of about 800 units', () => {
     const chunks = chunkPages([
       { page: 1, text: [1, 2, 3, 4, 5, 6].map(() => paragraph(60)).join('\n\n') },
     ]);
@@ -49,7 +47,7 @@ describe('troceado para el RAG (requisitos/03, apartado 4)', () => {
     }
   });
 
-  it('respeta los párrafos: uno que cabe no se parte', () => {
+  it('respects paragraphs: one that fits is not split', () => {
     const first = paragraph(40, 'uno');
     const second = paragraph(40, 'dos');
     const third = paragraph(40, 'tres');
@@ -61,7 +59,7 @@ describe('troceado para el RAG (requisitos/03, apartado 4)', () => {
     }
   });
 
-  it('los fragmentos consecutivos se solapan', () => {
+  it('consecutive fragments overlap', () => {
     const chunks = chunkPages([{ page: 1, text: paragraph(400) }]);
 
     for (let i = 1; i < chunks.length; i++) {
@@ -72,28 +70,28 @@ describe('troceado para el RAG (requisitos/03, apartado 4)', () => {
     }
   });
 
-  it('un párrafo sin espacios se corta igualmente', () => {
+  it('a paragraph without spaces is still cut', () => {
     const chunks = chunkPages([{ page: 1, text: 'x'.repeat(2500) }]);
 
     expect(chunks.length).toBeGreaterThan(2);
     expect(chunks.every((c) => c.content.length <= CHUNK_TARGET + CHUNK_OVERLAP)).toBe(true);
   });
 
-  it('es determinista: el mismo texto da los mismos fragmentos', () => {
+  it('is deterministic: the same text gives the same fragments', () => {
     const pages = [{ page: 1, text: [paragraph(80), paragraph(120)].join('\n\n') }];
 
     expect(chunkPages(pages)).toEqual(chunkPages(pages));
   });
 
-  it('normaliza espacios y saltos de línea dentro de un párrafo', () => {
-    expect(chunkPages([{ page: 3, text: 'Uno\r\ndos   tres\n cuatro' }])[0]?.content).toBe(
-      'Uno dos tres cuatro',
+  it('normalizes spaces and line breaks within a paragraph', () => {
+    expect(chunkPages([{ page: 3, text: 'One\r\ntwo   three\n four' }])[0]?.content).toBe(
+      'One two three four',
     );
   });
 });
 
-describe('texto extraíble (HU-DOC-06)', () => {
-  it('un PDF escaneado, sin texto, no es indexable', () => {
+describe('extractable text (US-DOC-06)', () => {
+  it('a scanned PDF, without text, is not indexable', () => {
     expect(
       hasExtractableText([
         { page: 1, text: '' },

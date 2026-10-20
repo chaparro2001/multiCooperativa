@@ -23,14 +23,14 @@ const STATUS_BY_CODE: Record<string, number> = {
 
 function details(error: AssemblyDomainError): ApiError['details'] {
   if (error instanceof InsufficientNoticeError) return { minNoticeDays: error.minNoticeDays };
-  // HU-ASA-05: the member is shown the vote that counts.
+  // US-ASM-05: the member is shown the vote that counts.
   if (error instanceof AlreadyVotedError) return { choice: error.choice };
   return undefined;
 }
 
 export const assemblyErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
   if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
-    error = new InvalidAssemblyError('Cada documento puede ocupar como máximo 10 MB.');
+    error = new InvalidAssemblyError('Each document can be at most 10 MB.');
   }
   const ownError =
     error instanceof AssemblyDomainError || error instanceof AssemblyApplicationError;

@@ -6,8 +6,8 @@ const prisma = createTestPrisma();
 
 afterAll(() => prisma.$disconnect());
 
-describe('base de datos', () => {
-  it('tiene la extensión pgvector instalada por las migraciones', async () => {
+describe('database', () => {
+  it('has the pgvector extension installed by the migrations', async () => {
     const rows = await prisma.$queryRaw<{ extname: string }[]>`
       SELECT extname FROM pg_extension WHERE extname = 'vector'
     `;

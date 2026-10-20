@@ -26,7 +26,7 @@ export interface AuthUseCases {
   acceptInvitation(input: AcceptInvitationInput): Promise<AcceptInvitationResult>;
 }
 
-/** RNF-ACC-09. In memory: valid while the API runs as a single instance. */
+/** NFR-ACC-09. In memory: valid while the API runs as a single instance. */
 export interface AuthRateLimits {
   windowMs: number;
   /** Requests per IP to any /auth endpoint. */

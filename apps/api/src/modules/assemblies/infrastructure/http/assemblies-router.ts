@@ -43,20 +43,20 @@ function toSummary(assembly: AssemblyRecord): AssemblySummary {
 
 const toVoting = (view: useCases.VotingView): VotingView => view;
 
-/** HTTP adapter of the assemblies module (requisitos/04, section 7). */
+/** HTTP adapter of the assemblies module (docs/requirements/04-assemblies.md, section 7). */
 export function createAssembliesRouter(
   deps: AssemblyDeps,
   requireCooperative: RequestHandler,
 ): Router {
   const router = Router();
-  const base = '/cooperativas/:cooperativeId/asambleas';
-  const points = '/cooperativas/:cooperativeId/puntos/:pointId';
-  const read = [requireCooperative, requirePermission('asambleas', 'consulta')];
-  const manage = [requireCooperative, requirePermission('asambleas', 'gestion')];
+  const base = '/cooperatives/:cooperativeId/assemblies';
+  const points = '/cooperatives/:cooperativeId/points/:pointId';
+  const read = [requireCooperative, requirePermission('assemblies', 'read')];
+  const manage = [requireCooperative, requirePermission('assemblies', 'manage')];
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: useCases.MAX_ATTACHMENT_BYTES, files: 1, fields: 0 },
-  }).single('fichero');
+  }).single('file');
   const assemblyId = (params: Record<string, unknown>) => String(params.assemblyId);
   const pointId = (params: Record<string, unknown>) => String(params.pointId);
 
@@ -121,12 +121,12 @@ export function createAssembliesRouter(
       const updated = await run(deps, getCooperativeContext(res), assemblyId(req.params));
       res.json(toSummary(updated));
     });
-  transition('convocar', useCases.conveneAssembly);
-  transition('cancelar', useCases.cancelAssembly);
-  transition('cerrar', useCases.closeAssembly);
+  transition('convene', useCases.conveneAssembly);
+  transition('cancel', useCases.cancelAssembly);
+  transition('close', useCases.closeAssembly);
 
-  // HU-ASA-02: documentation of an item, PDF in the «fichero» field.
-  router.post(`${points}/documentos`, ...manage, upload, async (req, res) => {
+  // US-ASM-02: documentation of an item, PDF in the `file` field.
+  router.post(`${points}/documents`, ...manage, upload, async (req, res) => {
     if (!req.file) throw new InvalidRequestError();
     const name = Buffer.from(req.file.originalname, 'latin1')
       .toString('utf8')
@@ -137,31 +137,31 @@ export function createAssembliesRouter(
       deps,
       getCooperativeContext(res),
       pointId(req.params),
-      { name: (name || 'documento.pdf').slice(0, 200), content: new Uint8Array(req.file.buffer) },
+      { name: (name || 'document.pdf').slice(0, 200), content: new Uint8Array(req.file.buffer) },
     );
     res.status(201).json(attachment satisfies PointAttachment);
   });
 
-  router.get(`${points}/votacion`, ...read, async (req, res) => {
+  router.get(`${points}/voting`, ...read, async (req, res) => {
     res.json(
       toVoting(await useCases.getVoting(deps, getCooperativeContext(res), pointId(req.params))),
     );
   });
 
-  router.post(`${points}/votacion/abrir`, ...manage, async (req, res) => {
+  router.post(`${points}/voting/open`, ...manage, async (req, res) => {
     res.json(
       toVoting(await useCases.openVoting(deps, getCooperativeContext(res), pointId(req.params))),
     );
   });
 
-  router.post(`${points}/votacion/cerrar`, ...manage, async (req, res) => {
+  router.post(`${points}/voting/close`, ...manage, async (req, res) => {
     res.json(
       toVoting(await useCases.closeVoting(deps, getCooperativeContext(res), pointId(req.params))),
     );
   });
 
-  // HU-ASA-05: no module permission; being in the census is what counts (RN-ACC-06).
-  router.post(`${points}/votacion/votos`, requireCooperative, async (req, res) => {
+  // US-ASM-05: no module permission; being in the census is what counts (BR-ACC-06).
+  router.post(`${points}/voting/votes`, requireCooperative, async (req, res) => {
     const { choice } = parseBody(castVoteRequestSchema, req.body);
     const view = await useCases.castVote(
       deps,

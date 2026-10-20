@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { detectFileType, fileTypeFromName } from './file-type';
 
-describe('tipo de fichero por contenido', () => {
-  it('reconoce PDF, JPEG y PNG por su firma', () => {
+describe('file type by content', () => {
+  it('recognizes PDF, JPEG and PNG by their signature', () => {
     expect(detectFileType(new TextEncoder().encode('%PDF-1.7'))).toBe('application/pdf');
     expect(detectFileType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toBe('image/jpeg');
     expect(
@@ -11,14 +11,14 @@ describe('tipo de fichero por contenido', () => {
     ).toBe('image/png');
   });
 
-  it('cualquier otra cosa no se acepta', () => {
+  it('anything else is not accepted', () => {
     expect(detectFileType(new TextEncoder().encode('<html>'))).toBeNull();
     expect(detectFileType(new Uint8Array())).toBeNull();
   });
 
-  it('deduce el tipo de un fichero guardado por su extensión', () => {
-    expect(fileTypeFromName('albaran.jpg')).toBe('image/jpeg');
-    expect(fileTypeFromName('factura.PDF')).toBe('application/pdf');
-    expect(fileTypeFromName('foto.png')).toBe('image/png');
+  it('infers the type of a stored file from its extension', () => {
+    expect(fileTypeFromName('delivery-note.jpg')).toBe('image/jpeg');
+    expect(fileTypeFromName('invoice.PDF')).toBe('application/pdf');
+    expect(fileTypeFromName('photo.png')).toBe('image/png');
   });
 });

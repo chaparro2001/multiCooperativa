@@ -3,12 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { WeakPasswordError } from './errors';
 import { assertPasswordPolicy } from './password-policy';
 
-describe('política de contraseñas (RNF-ACC-01)', () => {
-  it('acepta una contraseña de 10 caracteres', () => {
+describe('password policy (NFR-ACC-01)', () => {
+  it('accepts a 10-character password', () => {
     expect(() => assertPasswordPolicy('abcdefghij')).not.toThrow();
   });
 
-  it('rechaza una contraseña de 9 caracteres', () => {
+  it('rejects a 9-character password', () => {
     expect(() => assertPasswordPolicy('abcdefghi')).toThrow(WeakPasswordError);
   });
 });

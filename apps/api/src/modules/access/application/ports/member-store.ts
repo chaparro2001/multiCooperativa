@@ -7,7 +7,7 @@ export interface MemberRecord {
   name: string;
   profileId: string;
   profileName: string;
-  /** The profile manages users and profiles (RN-ACC-07). */
+  /** The profile manages users and profiles (BR-ACC-07). */
   isAdmin: boolean;
   status: MembershipStatus;
   isPartner: boolean;
@@ -41,7 +41,7 @@ export interface NewInvitation {
   expiresAt: Date;
 }
 
-/** What a locked decision may change on a membership; it is always audited (HU-ACC-12). */
+/** What a locked decision may change on a membership; it is always audited (US-ACC-12). */
 export interface MemberUpdate {
   status?: MembershipStatus;
   profileId?: string;
@@ -57,12 +57,12 @@ export interface MemberSnapshot {
 
 /** Every method is scoped to one cooperative (ADR-003). */
 export interface MemberStore {
-  /** Members that are not "baja" (HU-ACC-10). */
+  /** Members that are not "removed" (US-ACC-10). */
   listMembers(cooperativeId: string): Promise<MemberRecord[]>;
   listProfiles(cooperativeId: string): Promise<ProfileRecord[]>;
   findProfile(cooperativeId: string, profileId: string): Promise<ProfileRecord | null>;
   /**
-   * Creates the user if the email is new, then an "invitada" membership with
+   * Creates the user if the email is new, then an "invited" membership with
    * its invitation. 'already_member' if the user has a live membership here.
    */
   createInvitedMember(

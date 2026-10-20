@@ -4,7 +4,7 @@ import { createPrismaClient, type PrismaClient } from '../src/shared/infrastruct
 export function createTestPrisma(): PrismaClient {
   const { DATABASE_URL } = loadEnv(process.env);
   if (!new URL(DATABASE_URL).pathname.endsWith('_test')) {
-    throw new Error('Los tests de integración solo se ejecutan contra una base de datos _test.');
+    throw new Error('Integration tests only run against a _test database.');
   }
   return createPrismaClient(DATABASE_URL);
 }

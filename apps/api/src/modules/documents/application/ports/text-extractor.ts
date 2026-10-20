@@ -1,6 +1,6 @@
 import type { PageText } from '../../domain/chunking';
 
-/** Text of a PDF, page by page (requisitos/03, section 4, step 1). */
+/** Text of a PDF, page by page (requirements/03, section 4, step 1). */
 export interface PdfTextExtractor {
   /** Throws UnreadablePdfError when the file cannot be parsed as a PDF. */
   extract(pdf: Uint8Array): Promise<PageText[]>;
@@ -8,7 +8,7 @@ export interface PdfTextExtractor {
 
 export class UnreadablePdfError extends Error {
   constructor(cause: unknown) {
-    super('No se ha podido leer el PDF.', { cause });
+    super('The PDF could not be read.', { cause });
     this.name = 'UnreadablePdfError';
   }
 }

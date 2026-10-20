@@ -15,11 +15,11 @@ export interface ThirdPartyDeps {
   thirdParties: ThirdPartyStore;
 }
 
-/** HU-FAC-01: active ones by default, which are the ones offered for new records. */
+/** US-INV-01: active ones by default, which are the ones offered for new records. */
 export async function listThirdParties(
   deps: ThirdPartyDeps,
   context: CooperativeContext,
-  query: { role?: 'proveedor' | 'cliente'; search?: string; includeInactive?: boolean },
+  query: { role?: 'supplier' | 'customer'; search?: string; includeInactive?: boolean },
 ): Promise<ThirdPartyRecord[]> {
   requireRead(context);
   return deps.thirdParties.list(context.cooperativeId, {
@@ -40,7 +40,7 @@ export async function getThirdParty(
   return party;
 }
 
-/** Same NIF in this cooperative: the existing one is offered, never duplicated (RN-FAC-02). */
+/** Same NIF in this cooperative: the existing one is offered, never duplicated (BR-INV-02). */
 export async function registerThirdParty(
   deps: ThirdPartyDeps,
   context: CooperativeContext,
@@ -54,7 +54,7 @@ export async function registerThirdParty(
   return result.created;
 }
 
-/** Looks a party up by NIF in this cooperative only (requisitos/05, section 4, step 4). */
+/** Looks a party up by NIF in this cooperative only (requirements/05, section 4, step 4). */
 export async function findThirdPartyByNif(
   deps: ThirdPartyDeps,
   context: CooperativeContext,
@@ -64,7 +64,7 @@ export async function findThirdPartyByNif(
   return deps.thirdParties.findByNif(context.cooperativeId, normalizeNif(nif));
 }
 
-/** HU-FAC-01: edit, and deactivate instead of deleting (RN-FAC-14). */
+/** US-INV-01: edit, and deactivate instead of deleting (BR-INV-14). */
 export async function updateThirdParty(
   deps: ThirdPartyDeps,
   context: CooperativeContext,

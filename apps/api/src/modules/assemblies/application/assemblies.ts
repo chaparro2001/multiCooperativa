@@ -40,7 +40,7 @@ import type { AssemblySettingsStore } from './ports/settings-store';
 import type { MemberVotingView, VotingStore } from './ports/voting-store';
 
 const PDF = 'application/pdf';
-/** Same limit as announcement attachments (RN-COM-05). */
+/** Same limit as announcement attachments (BR-ANN-05). */
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -55,12 +55,12 @@ export interface AssemblyDeps {
 }
 
 const canManage = (context: CooperativeContext) =>
-  hasAccess(context.permissions, 'asambleas', 'gestion');
+  hasAccess(context.permissions, 'assemblies', 'manage');
 
 const requireRead = (context: CooperativeContext) =>
-  requireAccess(context.permissions, 'asambleas', 'consulta');
+  requireAccess(context.permissions, 'assemblies', 'read');
 const requireManage = (context: CooperativeContext) =>
-  requireAccess(context.permissions, 'asambleas', 'gestion');
+  requireAccess(context.permissions, 'assemblies', 'manage');
 
 async function findVisible(deps: AssemblyDeps, context: CooperativeContext, id: string) {
   const assembly = UUID.test(id) ? await deps.assemblies.find(context.cooperativeId, id) : null;
@@ -69,7 +69,7 @@ async function findVisible(deps: AssemblyDeps, context: CooperativeContext, id: 
   return assembly;
 }
 
-/** A point of a draft does not exist without «gestión». */
+/** A point of a draft does not exist without "manage". */
 async function findVisiblePoint(
   deps: AssemblyDeps,
   context: CooperativeContext,
@@ -83,7 +83,7 @@ async function findVisiblePoint(
   return found;
 }
 
-/** What a member sees of a voting: never how others voted while open (RN-ASA-11). */
+/** What a member sees of a voting: never how others voted while open (BR-ASM-11). */
 export interface VotingView {
   status: VotingStatus;
   censusSize: number | null;
@@ -97,7 +97,7 @@ export interface VotingView {
 function toView(voting: MemberVotingView | undefined, manager: boolean): VotingView {
   if (!voting) {
     return {
-      status: 'pendiente',
+      status: 'pending',
       censusSize: null,
       votesCast: 0,
       tally: null,
@@ -114,11 +114,11 @@ function toView(voting: MemberVotingView | undefined, manager: boolean): VotingV
     tally: visibleTally(voting.status, manager, voting.tally),
     result: voting.result,
     myVote: voting.myVote,
-    canVote: voting.status === 'abierta' && voting.inCensus && !voting.myVote,
+    canVote: voting.status === 'open' && voting.inCensus && !voting.myVote,
   };
 }
 
-/** HU-ASA-03. */
+/** US-ASM-03. */
 export async function listAssemblies(
   deps: AssemblyDeps,
   context: CooperativeContext,
@@ -137,7 +137,7 @@ export interface AssemblyDetail extends Omit<AssemblyRecord, 'points'> {
   })[];
 }
 
-/** HU-ASA-03: date, place, type, agenda with documentation and the state of each voting. */
+/** US-ASM-03: date, place, type, agenda with documentation and the state of each voting. */
 export async function getAssembly(
   deps: AssemblyDeps,
   context: CooperativeContext,
@@ -170,7 +170,7 @@ export async function getAssembly(
   return { ...assembly, points };
 }
 
-/** HU-ASA-01: starts as a draft. */
+/** US-ASM-01: starts as a draft. */
 export async function createAssembly(
   deps: AssemblyDeps,
   context: CooperativeContext,
@@ -197,7 +197,7 @@ async function updateOrFail(
   return updated.assembly;
 }
 
-/** HU-ASA-01/02: add, remove and reorder items while in draft. */
+/** US-ASM-01/02: add, remove and reorder items while in draft. */
 export async function updateAssembly(
   deps: AssemblyDeps,
   context: CooperativeContext,
@@ -208,7 +208,7 @@ export async function updateAssembly(
   return updateOrFail(deps, context, id, (current) => editDraft(current, input));
 }
 
-/** HU-ASA-01: publishes the call with the cooperative's minimum notice (RN-ASA-09). */
+/** US-ASM-01: publishes the call with the cooperative's minimum notice (BR-ASM-09). */
 export async function conveneAssembly(
   deps: AssemblyDeps,
   context: CooperativeContext,
@@ -221,7 +221,7 @@ export async function conveneAssembly(
     convene(current, now, minNoticeDays),
   );
   await deps.events.publish({
-    type: 'AsambleaConvocada',
+    type: 'AssemblyConvened',
     occurredAt: now,
     payload: {
       cooperativeId: context.cooperativeId,
@@ -241,7 +241,7 @@ export async function cancelAssembly(
   return updateOrFail(deps, context, id, (current) => cancel(current));
 }
 
-/** Convocada → celebrada, once every voting is closed. */
+/** Convened -> held, once every voting is closed. */
 export async function closeAssembly(
   deps: AssemblyDeps,
   context: CooperativeContext,
@@ -251,7 +251,7 @@ export async function closeAssembly(
   return updateOrFail(deps, context, id, (current, openVotings) => close(current, openVotings));
 }
 
-/** HU-ASA-02: documentation next to the item, PDF of up to 10 MB. */
+/** US-ASM-02: documentation next to the item, PDF of up to 10 MB. */
 export async function addPointAttachment(
   deps: AssemblyDeps,
   context: CooperativeContext,
@@ -261,12 +261,12 @@ export async function addPointAttachment(
   requireManage(context);
   const { assembly } = await findVisiblePoint(deps, context, pointId, true);
   assertCanAttach(assembly.status);
-  if (!isPdf(file.content)) throw new InvalidAssemblyError('Solo se admite documentación en PDF.');
+  if (!isPdf(file.content)) throw new InvalidAssemblyError('Only PDF documentation is accepted.');
   if (file.content.byteLength > MAX_ATTACHMENT_BYTES) {
-    throw new InvalidAssemblyError('Cada documento puede ocupar como máximo 10 MB.');
+    throw new InvalidAssemblyError('Each document can be at most 10 MB.');
   }
 
-  const fileKey = newFileKey(context.cooperativeId, 'asambleas');
+  const fileKey = newFileKey(context.cooperativeId, 'assemblies');
   await deps.files.put(fileKey, file.content, PDF);
   try {
     const stored = await deps.assemblies.addAttachment(
@@ -284,7 +284,7 @@ export async function addPointAttachment(
   }
 }
 
-/** HU-ASA-04: freezes the census at this instant (RN-ASA-02) and the rules in force. */
+/** US-ASM-04: freezes the census at this instant (BR-ASM-02) and the rules in force. */
 export async function openVoting(
   deps: AssemblyDeps,
   context: CooperativeContext,
@@ -309,7 +309,7 @@ export async function openVoting(
   if (!opened) throw new AssemblyNotFoundError();
 
   await deps.events.publish({
-    type: 'VotacionAbierta',
+    type: 'VotingOpened',
     occurredAt: now,
     payload: {
       cooperativeId: context.cooperativeId,
@@ -321,7 +321,7 @@ export async function openVoting(
   return getVoting(deps, context, pointId);
 }
 
-/** HU-ASA-04: computes the result (pure, RNF-ASA-02) and admits no more votes. */
+/** US-ASM-04: computes the result (pure, NFR-ASM-02) and admits no more votes. */
 export async function closeVoting(
   deps: AssemblyDeps,
   context: CooperativeContext,
@@ -343,11 +343,11 @@ export async function closeVoting(
   });
   if (!closed) {
     // The item exists (found above): it was never opened.
-    throw new InvalidVotingTransitionError('Solo se puede cerrar una votación abierta.');
+    throw new InvalidVotingTransitionError('Only an open voting can be closed.');
   }
 
   await deps.events.publish({
-    type: 'VotacionCerrada',
+    type: 'VotingClosed',
     occurredAt: now,
     payload: {
       cooperativeId: context.cooperativeId,
@@ -361,8 +361,8 @@ export async function closeVoting(
 }
 
 /**
- * HU-ASA-05. Voting depends on being in the census, not on the profile
- * (RN-ACC-06): no module permission is required, the census decides.
+ * US-ASM-05. Voting depends on being in the census, not on the profile
+ * (BR-ACC-06): no module permission is required, the census decides.
  */
 export async function castVote(
   deps: AssemblyDeps,
@@ -383,7 +383,7 @@ export async function castVote(
   return toView(view, canManage(context));
 }
 
-/** HU-ASA-06: result once closed; only participation while open without «gestión». */
+/** US-ASM-06: result once closed; only participation while open without "manage". */
 export async function getVoting(
   deps: AssemblyDeps,
   context: CooperativeContext,

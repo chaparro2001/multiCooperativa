@@ -34,20 +34,20 @@ beforeEach(async () => {
 
 const deps = () => ({ accessTokens: verifier, sessions, now: clock.now });
 
-describe('autenticación de la petición (HU-ACC-07)', () => {
-  it('acepta un token válido de una sesión abierta', async () => {
+describe('request authentication (US-ACC-07)', () => {
+  it('accepts a valid token of an open session', async () => {
     await expect(authenticateRequest(deps(), `valid:user-1:${sessionId}`)).resolves.toEqual({
       userId: 'user-1',
       sessionId,
     });
   });
 
-  it('Dado una petición sin sesión válida, cuando llega a un endpoint protegido, entonces se rechaza', async () => {
+  it('Given a request without a valid session, when it reaches a protected endpoint, then it is rejected', async () => {
     await expect(authenticateRequest(deps(), undefined)).rejects.toThrow(UnauthenticatedError);
     await expect(authenticateRequest(deps(), 'firma-mala')).rejects.toThrow(UnauthenticatedError);
   });
 
-  it('una sesión cerrada deja de valer al momento, aunque el JWT no haya caducado', async () => {
+  it('a closed session stops being valid immediately, even if the JWT has not expired', async () => {
     await sessions.revoke(sessionId, clock.now());
 
     await expect(authenticateRequest(deps(), `valid:user-1:${sessionId}`)).rejects.toThrow(
@@ -55,7 +55,7 @@ describe('autenticación de la petición (HU-ACC-07)', () => {
     );
   });
 
-  it('una sesión caducada no vale', async () => {
+  it('an expired session is not valid', async () => {
     clock.current = new Date('2026-11-09T10:00:00Z');
 
     await expect(authenticateRequest(deps(), `valid:user-1:${sessionId}`)).rejects.toThrow(
@@ -63,25 +63,25 @@ describe('autenticación de la petición (HU-ACC-07)', () => {
     );
   });
 
-  it('el usuario del token tiene que ser el de la sesión', async () => {
+  it('the token user must be the session user', async () => {
     await expect(authenticateRequest(deps(), `valid:user-2:${sessionId}`)).rejects.toThrow(
       UnauthenticatedError,
     );
   });
 
-  it('una sesión que no existe no vale', async () => {
+  it('a session that does not exist is not valid', async () => {
     await expect(
       authenticateRequest(deps(), 'valid:user-1:00000000-0000-4000-8000-000000000999'),
     ).rejects.toThrow(UnauthenticatedError);
   });
 });
 
-describe('contexto de cooperativa (ADR-003)', () => {
+describe('cooperative context (ADR-003)', () => {
   const membership: ActiveMembership = {
     membershipId: 'mem-1',
     profileName: 'Socio',
     isPartner: true,
-    permissions: [createPermission('comunicados', 'consulta')],
+    permissions: [createPermission('announcements', 'read')],
   };
   const contexts: AccessContextStore = {
     findActiveMembership: async (userId, cooperativeId) =>
@@ -90,7 +90,7 @@ describe('contexto de cooperativa (ADR-003)', () => {
   };
   const session = { userId: 'user-1', sessionId: 'sess-1' };
 
-  it('construye el contexto con los permisos de la membresía activa', async () => {
+  it('builds the context with the permissions of the active membership', async () => {
     await expect(resolveCooperativeContext({ contexts }, session, COOP)).resolves.toEqual({
       ...session,
       cooperativeId: COOP,
@@ -98,13 +98,13 @@ describe('contexto de cooperativa (ADR-003)', () => {
     });
   });
 
-  it('Dado un usuario sin membresía activa en una cooperativa, cuando pide un recurso de ella, entonces no la encuentra', async () => {
+  it('Given a user without an active membership in a cooperative, when they request one of its resources, then it is not found', async () => {
     await expect(resolveCooperativeContext({ contexts }, session, OTHER_COOP)).rejects.toThrow(
       CooperativeNotFoundError,
     );
   });
 
-  it('un identificador que no es UUID tampoco existe', async () => {
+  it('an identifier that is not a UUID does not exist either', async () => {
     await expect(resolveCooperativeContext({ contexts }, session, 'abc')).rejects.toThrow(
       CooperativeNotFoundError,
     );

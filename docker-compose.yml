@@ -1,4 +1,4 @@
-# Infraestructura local de desarrollo. Las credenciales son solo para el entorno local.
+# Local development infrastructure. The credentials are for the local environment only.
 services:
   postgres:
     image: pgvector/pgvector:pg17
@@ -16,7 +16,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # Almacenamiento compatible con S3 (ADR-005). Consola web en http://localhost:9001.
+  # S3-compatible storage (ADR-005). Web console at http://localhost:9001.
   storage:
     image: rustfs/rustfs:1.0.1
     environment:
@@ -28,7 +28,7 @@ services:
     volumes:
       - storage-data:/data
 
-  # Embeddings con un modelo local (ADR-006). El modelo se descarga con `pnpm ai:pull`.
+  # Embeddings with a local model (ADR-006). The model is downloaded with `pnpm ai:pull`.
   ollama:
     image: ollama/ollama:0.35.1
     ports:

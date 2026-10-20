@@ -1,4 +1,6 @@
 import { Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { messageFor } from '@/api/api-error';
 import { ActiveCooperativeProvider, useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { canAccess, canManage } from '@/navigation/modules';
@@ -14,10 +16,11 @@ export default function AppLayout() {
 }
 
 /**
- * HU-ACC-06: a module's screen exists only while the profile can read it. The
+ * US-ACC-06: a module's screen exists only while the profile can read it. The
  * guards hide; the API still answers 403 to anything else.
  */
 function CooperativeNavigator() {
+  const { t } = useTranslation();
   const { meQuery, cooperativeId, cooperative, permissions } = useActiveCooperative();
   const allowed = permissions?.permissions;
 
@@ -25,7 +28,7 @@ function CooperativeNavigator() {
     return (
       <Screen>
         <ErrorText>{messageFor(meQuery.error)}</ErrorText>
-        <Button title="Reintentar" onPress={() => meQuery.refetch()} />
+        <Button title={t('common.actions.retry')} onPress={() => meQuery.refetch()} />
       </Screen>
     );
   }
@@ -34,46 +37,64 @@ function CooperativeNavigator() {
   const inCooperative = cooperativeId !== null;
 
   return (
-    <Stack screenOptions={{ headerBackTitle: 'Atrás' }}>
+    <Stack screenOptions={{ headerBackTitle: t('common.actions.back') }}>
       <Stack.Protected guard={inCooperative}>
         <Stack.Screen name="index" options={{ title: cooperative?.cooperativeName ?? '' }} />
-        <Stack.Screen name="ajustes" options={{ title: 'Ajustes' }} />
-        <Stack.Protected guard={canAccess(allowed, 'comunicados')}>
-          <Stack.Screen name="comunicados/index" options={{ title: 'Comunicados' }} />
-          <Stack.Screen name="comunicados/[id]" options={{ title: 'Comunicado' }} />
-          <Stack.Protected guard={canManage(allowed, 'comunicados')}>
-            <Stack.Screen name="comunicados/editor" options={{ title: 'Comunicado' }} />
+        <Stack.Screen name="settings" options={{ title: t('settings.title') }} />
+        <Stack.Protected guard={canAccess(allowed, 'announcements')}>
+          <Stack.Screen
+            name="announcements/index"
+            options={{ title: t('enums.module.announcements') }}
+          />
+          <Stack.Screen
+            name="announcements/[id]"
+            options={{ title: t('announcements.detail.title') }}
+          />
+          <Stack.Protected guard={canManage(allowed, 'announcements')}>
+            <Stack.Screen
+              name="announcements/editor"
+              options={{ title: t('announcements.detail.title') }}
+            />
           </Stack.Protected>
         </Stack.Protected>
-        <Stack.Protected guard={canAccess(allowed, 'asambleas')}>
-          <Stack.Screen name="asambleas/index" options={{ title: 'Asambleas' }} />
-          <Stack.Screen name="asambleas/[id]" options={{ title: 'Asamblea' }} />
-          <Stack.Screen name="asambleas/votar" options={{ title: 'Votar' }} />
-          <Stack.Protected guard={canManage(allowed, 'asambleas')}>
-            <Stack.Screen name="asambleas/editor" options={{ title: 'Asamblea' }} />
+        <Stack.Protected guard={canAccess(allowed, 'assemblies')}>
+          <Stack.Screen name="assemblies/index" options={{ title: t('enums.module.assemblies') }} />
+          <Stack.Screen name="assemblies/[id]" options={{ title: t('assemblies.detail.title') }} />
+          <Stack.Screen name="assemblies/vote" options={{ title: t('assemblies.vote.title') }} />
+          <Stack.Protected guard={canManage(allowed, 'assemblies')}>
+            <Stack.Screen
+              name="assemblies/editor"
+              options={{ title: t('assemblies.detail.title') }}
+            />
           </Stack.Protected>
         </Stack.Protected>
-        <Stack.Protected guard={canAccess(allowed, 'documentos')}>
-          <Stack.Screen name="documentos/index" options={{ title: 'Documentos' }} />
-          <Stack.Screen name="documentos/[id]" options={{ title: 'Documento' }} />
-          <Stack.Protected guard={canManage(allowed, 'documentos')}>
-            <Stack.Screen name="documentos/subir" options={{ title: 'Subir documento' }} />
+        <Stack.Protected guard={canAccess(allowed, 'documents')}>
+          <Stack.Screen name="documents/index" options={{ title: t('enums.module.documents') }} />
+          <Stack.Screen name="documents/[id]" options={{ title: t('documents.detail.title') }} />
+          <Stack.Protected guard={canManage(allowed, 'documents')}>
+            <Stack.Screen
+              name="documents/upload"
+              options={{ title: t('documents.upload.screenTitle') }}
+            />
           </Stack.Protected>
         </Stack.Protected>
-        <Stack.Protected guard={canAccess(allowed, 'facturas')}>
-          <Stack.Screen name="facturas" options={{ title: 'Facturas y albaranes' }} />
+        <Stack.Protected guard={canAccess(allowed, 'invoicing')}>
+          <Stack.Screen name="invoices" options={{ title: t('enums.module.invoicing') }} />
         </Stack.Protected>
-        <Stack.Protected guard={canAccess(allowed, 'area-socio')}>
-          <Stack.Screen name="area-socio" options={{ title: 'Área del socio' }} />
+        <Stack.Protected guard={canAccess(allowed, 'member-area')}>
+          <Stack.Screen name="member-area" options={{ title: t('enums.module.member-area') }} />
         </Stack.Protected>
-        <Stack.Protected guard={canAccess(allowed, 'asistente')}>
-          <Stack.Screen name="asistente" options={{ title: 'Asistente' }} />
+        <Stack.Protected guard={canAccess(allowed, 'assistant')}>
+          <Stack.Screen name="assistant" options={{ title: t('enums.module.assistant') }} />
         </Stack.Protected>
-        <Stack.Protected guard={canAccess(allowed, 'usuarios')}>
-          <Stack.Screen name="miembros" options={{ title: 'Miembros' }} />
+        <Stack.Protected guard={canAccess(allowed, 'users')}>
+          <Stack.Screen name="members" options={{ title: t('enums.module.users') }} />
         </Stack.Protected>
       </Stack.Protected>
-      <Stack.Screen name="seleccionar-cooperativa" options={{ title: 'Tus cooperativas' }} />
+      <Stack.Screen
+        name="select-cooperative"
+        options={{ title: t('cooperatives.select.screenTitle') }}
+      />
     </Stack>
   );
 }

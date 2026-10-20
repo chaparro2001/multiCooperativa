@@ -25,12 +25,12 @@ export type {
   InvoicingEvent,
 } from './application/events';
 
-/** Calendar day in Spain, where the cooperatives are (AAAA-MM-DD). */
+/** Calendar day in Spain, where the cooperatives are (YYYY-MM-DD). */
 export function todayInSpain(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(now);
 }
 
-/** HU-FAC-07: the daily due-date process over every cooperative. Idempotent (RNF-FAC-04). */
+/** US-INV-07: the daily due-date process over every cooperative. Idempotent (NFR-INV-04). */
 export function runDueDatesJob(deps: {
   prisma: PrismaClient;
   events: EventPublisher<InvoicingEvent>;
@@ -43,7 +43,7 @@ export function runDueDatesJob(deps: {
   );
 }
 
-/** Public interface of the invoicing module (requisitos/05). */
+/** Public interface of the invoicing module (requirements/05). */
 export function createInvoicingModule(deps: {
   prisma: PrismaClient;
   files: FileStorage;

@@ -15,7 +15,7 @@ const INSERT_BATCH = 100;
 /**
  * Fragments with their embeddings in PostgreSQL (ADR-006). Exact cosine search
  * over the cooperative's own rows: filtered first, so isolation does not depend
- * on an approximate index (RNF-DOC-03).
+ * on an approximate index (NFR-DOC-03).
  */
 export class PgVectorFragmentIndex implements FragmentIndex {
   constructor(private readonly prisma: PrismaClient) {}
@@ -65,7 +65,7 @@ export class PgVectorFragmentIndex implements FragmentIndex {
       JOIN "Document" d ON d.id = c."documentId"
       WHERE c."cooperativeId" = ${cooperativeId}::uuid
         AND d."cooperativeId" = ${cooperativeId}::uuid
-        AND d.status = 'publicado'
+        AND d.status = 'published'
       ORDER BY c.embedding <=> ${vector}::vector
       LIMIT ${limit}`;
     return rows.map((row) => ({ ...row, score: Number(row.score) }));

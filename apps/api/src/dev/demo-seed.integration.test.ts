@@ -15,7 +15,7 @@ import { createAccessModule } from '../modules/access';
 import { HashingEmbedder } from '../modules/documents';
 import { DEMO_COOPERATIVES, type DemoSeedResult, seedDemoData } from './demo-seed';
 
-const PASSWORD = 'clave-de-demo-larga';
+const PASSWORD = 'a-long-demo-password';
 const prisma = createTestPrisma();
 const jwtSecret = loadEnv(process.env).JWT_SECRET;
 const invitationSender = { send: async () => {} };
@@ -42,13 +42,13 @@ async function login(email: string) {
   return response;
 }
 
-describe('datos de ejemplo', () => {
-  it('crea dos cooperativas con los cuatro perfiles cubiertos en cada una', async () => {
+describe('sample data', () => {
+  it('creates two cooperatives with the four profiles covered in each', async () => {
     expect(seeded.cooperatives.map((c) => c.created)).toEqual([true, true]);
 
     for (const { id } of seeded.cooperatives) {
       const profiles = await prisma.membership.findMany({
-        where: { cooperativeId: id, status: 'activa' },
+        where: { cooperativeId: id, status: 'active' },
         select: { profile: { select: { name: true } } },
       });
       expect(new Set(profiles.map((m) => m.profile.name))).toEqual(
@@ -57,19 +57,19 @@ describe('datos de ejemplo', () => {
     }
   });
 
-  it('cada usuario activo inicia sesión y ve el perfil previsto en su cooperativa', async () => {
+  it('every active user logs in and sees the expected profile in their cooperative', async () => {
     for (const [index, demo] of DEMO_COOPERATIVES.entries()) {
       const cooperativeId = seeded.cooperatives[index]!.id;
       const active = [
         { email: demo.admin.email, profile: 'Administrador' },
-        ...demo.members.filter((m) => (m.status ?? 'activa') === 'activa'),
+        ...demo.members.filter((m) => (m.status ?? 'active') === 'active'),
       ];
       for (const member of active) {
         const { accessToken } = authTokensSchema.parse((await login(member.email)).body);
         const permissions = myPermissionsResponseSchema.parse(
           (
             await request(app)
-              .get(`/cooperativas/${cooperativeId}/me/permisos`)
+              .get(`/cooperatives/${cooperativeId}/me/permissions`)
               .set('Authorization', `Bearer ${accessToken}`)
           ).body,
         );
@@ -78,7 +78,7 @@ describe('datos de ejemplo', () => {
     }
   });
 
-  it('Lucía pertenece a las dos cooperativas, con perfiles distintos (selector de cooperativa)', async () => {
+  it('Lucía belongs to both cooperatives, with different profiles (cooperative selector)', async () => {
     const { accessToken } = authTokensSchema.parse((await login('lucia@demo.test')).body);
 
     const me = meResponseSchema.parse(
@@ -88,21 +88,21 @@ describe('datos de ejemplo', () => {
     expect(me.memberships.map((m) => m.profileName).sort()).toEqual(['Consejo rector', 'Socio']);
   });
 
-  it('el gestor contratado no es socio (no podrá votar, RN-ACC-06)', async () => {
-    const gestor = await prisma.membership.findFirstOrThrow({
+  it('the hired manager is not a partner (cannot vote, BR-ACC-06)', async () => {
+    const manager = await prisma.membership.findFirstOrThrow({
       where: { user: { email: 'gestor@sanisidro.test' } },
     });
-    expect(gestor.isPartner).toBe(false);
+    expect(manager.isPartner).toBe(false);
   });
 
-  it('el miembro suspendido no tiene ninguna cooperativa activa', async () => {
+  it('the suspended member has no active cooperative', async () => {
     const response = await login('suspendido@sanisidro.test');
 
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('no_active_membership');
   });
 
-  it('la invitación pendiente se acepta con el token que devuelve el seed', async () => {
+  it('the pending invitation is accepted with the token the seed returns', async () => {
     const [invitation] = seeded.invitations;
 
     const response = await request(app)
@@ -113,7 +113,7 @@ describe('datos de ejemplo', () => {
     expect(acceptInvitationResponseSchema.parse(response.body).tokens).not.toBeNull();
   });
 
-  it('es idempotente: una segunda ejecución no crea ni cambia nada', async () => {
+  it('is idempotent: a second run creates and changes nothing', async () => {
     const before = await prisma.membership.count();
 
     const again = await seedDemoData({ prisma, access }, PASSWORD);

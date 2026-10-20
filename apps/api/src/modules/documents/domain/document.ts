@@ -5,20 +5,20 @@ import {
 } from './errors';
 
 export const TITLE_MAX_LENGTH = 150;
-/** RN-DOC-02. */
+/** BR-DOC-02. */
 export const MAX_FILE_BYTES = 20 * 1024 * 1024;
 
 export const DOCUMENT_CATEGORIES = [
-  'estatutos',
-  'reglamento',
-  'actas',
-  'cuentas',
-  'otros',
+  'bylaws',
+  'regulations',
+  'minutes',
+  'accounts',
+  'other',
 ] as const;
 export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
 
-/** Uploading publishes: there are no drafts (HU-DOC-01). Withdrawing is final. */
-export type DocumentStatus = 'publicado' | 'retirado';
+/** Uploading publishes: there are no drafts (US-DOC-01). Withdrawing is final. */
+export type DocumentStatus = 'published' | 'withdrawn';
 
 export interface DocumentState {
   readonly status: DocumentStatus;
@@ -40,46 +40,46 @@ export function createDocument(input: {
   documentDate: string;
 }): DocumentState {
   const title = input.title.trim();
-  if (title.length === 0) throw new InvalidDocumentError('Falta el título del documento.');
+  if (title.length === 0) throw new InvalidDocumentError('The document title is missing.');
   if (title.length > TITLE_MAX_LENGTH) {
-    throw new InvalidDocumentError(`El título supera los ${TITLE_MAX_LENGTH} caracteres.`);
+    throw new InvalidDocumentError(`The title exceeds ${TITLE_MAX_LENGTH} characters.`);
   }
   if (!DOCUMENT_CATEGORIES.includes(input.category)) {
-    throw new InvalidDocumentError('La categoría no es válida.');
+    throw new InvalidDocumentError('The category is not valid.');
   }
   if (!isCalendarDate(input.documentDate)) {
-    throw new InvalidDocumentError('La fecha del documento no es válida.');
+    throw new InvalidDocumentError('The document date is not valid.');
   }
-  return { status: 'publicado', title, category: input.category, documentDate: input.documentDate };
+  return { status: 'published', title, category: input.category, documentDate: input.documentDate };
 }
 
-/** RN-DOC-02, on the facts the server measured, never on what the client declared. */
+/** BR-DOC-02, on the facts the server measured, never on what the client declared. */
 export function assertValidFile(file: { isPdf: boolean; size: number }): void {
   if (file.size === 0) throw new DocumentFileRejectedError('empty');
   if (!file.isPdf) throw new DocumentFileRejectedError('not_pdf');
   if (file.size > MAX_FILE_BYTES) throw new DocumentFileRejectedError('too_large');
 }
 
-/** HU-DOC-04. */
+/** US-DOC-04. */
 export function assertCanAddVersion(document: DocumentState): void {
-  if (document.status !== 'publicado') {
-    throw new InvalidDocumentTransitionError('Un documento retirado no admite versiones nuevas.');
+  if (document.status !== 'published') {
+    throw new InvalidDocumentTransitionError('A withdrawn document does not accept new versions.');
   }
 }
 
-/** HU-DOC-05. */
+/** US-DOC-05. */
 export function withdraw<T extends DocumentState>(document: T): T {
-  if (document.status !== 'publicado') {
-    throw new InvalidDocumentTransitionError('El documento ya está retirado.');
+  if (document.status !== 'published') {
+    throw new InvalidDocumentTransitionError('The document is already withdrawn.');
   }
-  return { ...document, status: 'retirado' };
+  return { ...document, status: 'withdrawn' };
 }
 
-/** HU-DOC-03: withdrawn documents only exist for «gestión». */
+/** US-DOC-03: withdrawn documents only exist for “manage”. */
 export function isVisible(status: DocumentStatus, canManage: boolean): boolean {
-  return canManage || status === 'publicado';
+  return canManage || status === 'published';
 }
 
-/** HU-DOC-06: whether the assistant already knows this version. */
-export const INDEXING_STATUSES = ['pendiente', 'indexado', 'error', 'no_indexable'] as const;
+/** US-DOC-06: whether the assistant already knows this version. */
+export const INDEXING_STATUSES = ['pending', 'indexed', 'error', 'not_indexable'] as const;
 export type IndexingStatus = (typeof INDEXING_STATUSES)[number];

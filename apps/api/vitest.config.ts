@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     name: 'api',
     include: ['src/**/*.test.ts'],
-    // Los tests de integración necesitan PostgreSQL: se lanzan con `pnpm test:integration`.
+    // Integration tests need PostgreSQL: run them with `pnpm test:integration`.
     exclude: ['src/**/*.integration.test.ts'],
   },
 });

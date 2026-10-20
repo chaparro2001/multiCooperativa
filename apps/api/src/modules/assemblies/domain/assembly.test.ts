@@ -21,15 +21,15 @@ const now = new Date('2026-10-01T10:00:00Z');
 const inDays = (days: number) => new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
 
 const input = (overrides: Partial<AssemblyInput> = {}): AssemblyInput => ({
-  type: 'ordinaria',
+  type: 'ordinary',
   firstCallAt: inDays(20),
   secondCallAt: null,
-  place: ' Salón social ',
+  place: ' Social hall ',
   points: [
-    { title: 'Aprobación de cuentas', description: '', votable: true, majority: 'simple' },
+    { title: 'Approval of accounts', description: '', votable: true, majority: 'simple' },
     {
-      title: 'Informe del presidente',
-      description: 'Resumen del año',
+      title: 'Chairman report',
+      description: 'Year summary',
       votable: false,
       majority: null,
     },
@@ -37,18 +37,18 @@ const input = (overrides: Partial<AssemblyInput> = {}): AssemblyInput => ({
   ...overrides,
 });
 
-describe('convocatoria en borrador (HU-ASA-01, HU-ASA-02)', () => {
-  it('numera los puntos en orden y normaliza los textos', () => {
+describe('draft call (US-ASM-01, US-ASM-02)', () => {
+  it('numbers the items in order and normalizes the texts', () => {
     const draft = createDraft(input());
 
-    expect(draft).toMatchObject({ status: 'borrador', place: 'Salón social' });
+    expect(draft).toMatchObject({ status: 'draft', place: 'Social hall' });
     expect(draft.points.map((p) => [p.position, p.title, p.majority])).toEqual([
-      [1, 'Aprobación de cuentas', 'simple'],
-      [2, 'Informe del presidente', null],
+      [1, 'Approval of accounts', 'simple'],
+      [2, 'Chairman report', null],
     ]);
   });
 
-  it('Dado un punto votable, entonces exige mayoría simple o reforzada', () => {
+  it('Given a votable item, then it requires a simple or reinforced majority', () => {
     expect(() =>
       createDraft(
         input({ points: [{ title: 'X', description: '', votable: true, majority: null }] }),
@@ -56,55 +56,55 @@ describe('convocatoria en borrador (HU-ASA-01, HU-ASA-02)', () => {
     ).toThrow(InvalidAssemblyError);
   });
 
-  it('un punto informativo no lleva mayoría', () => {
+  it('an informative item carries no majority', () => {
     const draft = createDraft(
-      input({ points: [{ title: 'X', description: '', votable: false, majority: 'reforzada' }] }),
+      input({ points: [{ title: 'X', description: '', votable: false, majority: 'reinforced' }] }),
     );
     expect(draft.points[0]?.majority).toBeNull();
   });
 
-  it('la segunda convocatoria es posterior a la primera', () => {
+  it('the second call is after the first', () => {
     expect(() => createDraft(input({ secondCallAt: inDays(19) }))).toThrow(InvalidAssemblyError);
   });
 
-  it('exige el lugar y títulos en todos los puntos', () => {
+  it('requires the place and titles in all items', () => {
     expect(() => createDraft(input({ place: ' ' }))).toThrow(InvalidAssemblyError);
     expect(() =>
       createDraft(
         input({ points: [{ title: ' ', description: '', votable: false, majority: null }] }),
       ),
-    ).toThrow(/Punto 1/);
+    ).toThrow(/Item 1/);
   });
 
-  it('Dado un borrador, cuando lo edito, entonces puedo añadir, quitar y reordenar puntos', () => {
+  it('Given a draft, when I edit it, then I can add, remove and reorder items', () => {
     const edited = editDraft(
       createDraft(input()),
       input({
         points: [
-          { title: 'Nuevo primero', description: '', votable: false, majority: null },
+          { title: 'New first', description: '', votable: false, majority: null },
           {
             id: 'p-1',
-            title: 'Aprobación de cuentas',
+            title: 'Approval of accounts',
             description: '',
             votable: true,
-            majority: 'reforzada',
+            majority: 'reinforced',
           },
         ],
       }),
     );
     expect(edited.points.map((p) => [p.position, p.title, p.id])).toEqual([
-      [1, 'Nuevo primero', undefined],
-      [2, 'Aprobación de cuentas', 'p-1'],
+      [1, 'New first', undefined],
+      [2, 'Approval of accounts', 'p-1'],
     ]);
   });
 });
 
-describe('convocar (HU-ASA-01)', () => {
-  it('Dado una fecha futura con antelación suficiente y al menos un punto, entonces pasa a convocada', () => {
-    expect(convene(createDraft(input()), now, 15).status).toBe('convocada');
+describe('convene (US-ASM-01)', () => {
+  it('Given a future date with enough notice and at least one item, then it becomes convened', () => {
+    expect(convene(createDraft(input()), now, 15).status).toBe('convened');
   });
 
-  it('Dado una fecha con menos antelación de la configurada, entonces se rechaza indicando la antelación mínima', () => {
+  it('Given a date with less notice than configured, then it is rejected stating the minimum notice', () => {
     const error = (() => {
       try {
         convene(createDraft(input({ firstCallAt: inDays(10) })), now, 15);
@@ -113,69 +113,69 @@ describe('convocar (HU-ASA-01)', () => {
       }
     })();
     expect(error).toBeInstanceOf(InsufficientNoticeError);
-    expect((error as InsufficientNoticeError).message).toContain('15 días');
+    expect((error as InsufficientNoticeError).message).toContain('15 days');
   });
 
-  it('justo con la antelación mínima es válido', () => {
+  it('exactly the minimum notice is valid', () => {
     expect(() => convene(createDraft(input({ firstCallAt: inDays(15) })), now, 15)).not.toThrow();
   });
 
-  it('sin puntos no se convoca', () => {
+  it('without items it is not convened', () => {
     expect(() => convene(createDraft(input({ points: [] })), now, 15)).toThrow(
       InvalidAssemblyError,
     );
   });
 
-  it('una convocada no se vuelve a convocar ni se edita (RN-ASA-10)', () => {
+  it('a convened one is not convened again nor edited (BR-ASM-10)', () => {
     const convened = convene(createDraft(input()), now, 15);
     expect(() => convene(convened, now, 15)).toThrow(InvalidAssemblyTransitionError);
     expect(() => editDraft(convened, input())).toThrow(InvalidAssemblyTransitionError);
   });
 });
 
-describe('cancelar y cerrar', () => {
+describe('cancel and close', () => {
   const convened = () => convene(createDraft(input()), now, 15);
 
-  it('se cancela una convocada', () => {
-    expect(cancel(convened()).status).toBe('cancelada');
+  it('a convened one is cancelled', () => {
+    expect(cancel(convened()).status).toBe('cancelled');
     expect(() => cancel(createDraft(input()))).toThrow(InvalidAssemblyTransitionError);
   });
 
-  it('se cierra (celebrada) cuando no quedan votaciones abiertas', () => {
-    expect(close(convened(), 0).status).toBe('celebrada');
-    expect(() => close(convened(), 1)).toThrow(/votaciones abiertas/);
+  it('it is closed (held) when no open votings remain', () => {
+    expect(close(convened(), 0).status).toBe('held');
+    expect(() => close(convened(), 1)).toThrow(/open votings/);
   });
 
-  it('RN-ASA-10: celebrada o cancelada no admite cambios ni documentación', () => {
+  it('BR-ASM-10: held or cancelled admits no changes or documentation', () => {
     expect(() => editDraft(close(convened(), 0), input())).toThrow(InvalidAssemblyTransitionError);
-    expect(() => assertCanAttach('cancelada')).toThrow(InvalidAssemblyTransitionError);
-    expect(() => assertCanAttach('convocada')).not.toThrow();
+    expect(() => assertCanAttach('cancelled')).toThrow(InvalidAssemblyTransitionError);
+    expect(() => assertCanAttach('convened')).not.toThrow();
   });
 
-  it('los borradores solo son visibles con gestión', () => {
-    expect(isVisible('borrador', false)).toBe(false);
-    expect(isVisible('convocada', false)).toBe(true);
-    expect(isVisible('borrador', true)).toBe(true);
+  it('drafts are visible only with manage access', () => {
+    expect(isVisible('draft', false)).toBe(false);
+    expect(isVisible('convened', false)).toBe(true);
+    expect(isVisible('draft', true)).toBe(true);
   });
 });
 
-describe('orden del listado (HU-ASA-03)', () => {
-  it('primero las próximas por fecha y después las celebradas, de la más reciente a la más antigua', () => {
+describe('listing order (US-ASM-03)', () => {
+  it('upcoming ones first by date and then the held ones, most recent first', () => {
     const at = (day: number) => new Date(Date.UTC(2026, 9, day));
     const ordered = orderForListing([
-      { id: 'celebrada-1', status: 'celebrada', firstCallAt: at(1) },
-      { id: 'proxima-25', status: 'convocada', firstCallAt: at(25) },
-      { id: 'cancelada-5', status: 'cancelada', firstCallAt: at(5) },
-      { id: 'proxima-20', status: 'convocada', firstCallAt: at(20) },
-      { id: 'borrador', status: 'borrador', firstCallAt: at(30) },
+      { id: 'held-1', status: 'held', firstCallAt: at(1) },
+      { id: 'upcoming-25', status: 'convened', firstCallAt: at(25) },
+      { id: 'cancelled-5', status: 'cancelled', firstCallAt: at(5) },
+      { id: 'upcoming-20', status: 'convened', firstCallAt: at(20) },
+      { id: 'draft', status: 'draft', firstCallAt: at(30) },
     ] as const);
 
     expect(ordered.map((a) => a.id)).toEqual([
-      'borrador',
-      'proxima-20',
-      'proxima-25',
-      'cancelada-5',
-      'celebrada-1',
+      'draft',
+      'upcoming-20',
+      'upcoming-25',
+      'cancelled-5',
+      'held-1',
     ]);
   });
 });

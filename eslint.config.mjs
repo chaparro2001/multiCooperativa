@@ -28,7 +28,7 @@ export default tseslint.config(
     },
   },
   {
-    // ADR-002: un módulo solo importa de otro a través de su interfaz pública.
+    // ADR-002: a module only imports from another through its public interface.
     files: ['apps/api/**/*.ts'],
     plugins: { local: { rules: { 'module-boundaries': moduleBoundaries } } },
     rules: { 'local/module-boundaries': 'error' },
@@ -50,11 +50,11 @@ export default tseslint.config(
                 '@anthropic-ai/*',
                 '@sentry/*',
               ],
-              message: 'El dominio no importa Prisma, el framework HTTP ni SDK externos.',
+              message: 'The domain does not import Prisma, the HTTP framework or external SDKs.',
             },
             {
               group: ['**/application/**', '**/infrastructure/**'],
-              message: 'El dominio no depende de las capas de aplicación ni de infraestructura.',
+              message: 'The domain does not depend on the application or infrastructure layers.',
             },
           ],
         },

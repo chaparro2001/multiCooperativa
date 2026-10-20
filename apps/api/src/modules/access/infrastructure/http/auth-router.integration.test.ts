@@ -22,7 +22,7 @@ const access = createAccessModule({
 const app = createApp({ routers: [access.router], errorHandlers: [access.errorHandler] });
 const secrets = new CryptoSecretTokens();
 
-const ADMIN = { email: 'admin@campo.es', password: 'clave-del-admin' };
+const ADMIN = { email: 'admin@campo.es', password: 'admin-password' };
 
 let cooperativeId: string;
 
@@ -64,21 +64,21 @@ async function invite(email: string, existingUserId?: string) {
 const loginAs = (email: string, password: string) =>
   request(app).post('/auth/login').send({ email, password });
 
-describe('flujo de autenticación (HU-ACC-01, HU-ACC-02, HU-ACC-03)', () => {
-  it('invitación → activación → inicio de sesión → renovación → cierre', async () => {
+describe('authentication flow (US-ACC-01, US-ACC-02, US-ACC-03)', () => {
+  it('invitation → activation → login → renewal → logout', async () => {
     const token = await invite('grace@campo.es');
 
     const accepted = await request(app)
       .post('/auth/invitations/accept')
-      .send({ token, password: 'clave-de-grace' });
+      .send({ token, password: 'grace-password' });
     expect(accepted.status).toBe(200);
     const { tokens } = acceptInvitationResponseSchema.parse(accepted.body);
     expect(tokens).not.toBeNull();
     expect(
       await prisma.membership.findFirstOrThrow({ where: { user: { email: 'grace@campo.es' } } }),
-    ).toMatchObject({ status: 'activa' });
+    ).toMatchObject({ status: 'active' });
 
-    const loggedIn = await loginAs('Grace@Campo.es', 'clave-de-grace');
+    const loggedIn = await loginAs('Grace@Campo.es', 'grace-password');
     expect(loggedIn.status).toBe(200);
     const session = authTokensSchema.parse(loggedIn.body);
     expect(session.accessTokenExpiresIn).toBe(900);
@@ -97,7 +97,7 @@ describe('flujo de autenticación (HU-ACC-01, HU-ACC-02, HU-ACC-03)', () => {
     expect(afterLogout.status).toBe(401);
   });
 
-  it('la base de datos guarda solo hashes, nunca los tokens', async () => {
+  it('the database stores only hashes, never the tokens', async () => {
     const { body } = await loginAs(ADMIN.email, ADMIN.password);
     const { refreshToken } = authTokensSchema.parse(body);
 
@@ -105,7 +105,7 @@ describe('flujo de autenticación (HU-ACC-01, HU-ACC-02, HU-ACC-03)', () => {
     expect(stored!.refreshTokenHash).not.toContain(refreshToken.split('.')[1]);
   });
 
-  it('Dado un token de refresco ya utilizado, cuando se reutiliza, entonces se revoca toda la sesión', async () => {
+  it('Given an already used refresh token, when it is reused, then the whole session is revoked', async () => {
     const { body } = await loginAs(ADMIN.email, ADMIN.password);
     const first = authTokensSchema.parse(body);
     const second = authTokensSchema.parse(
@@ -125,7 +125,7 @@ describe('flujo de autenticación (HU-ACC-01, HU-ACC-02, HU-ACC-03)', () => {
     expect((await prisma.session.findFirstOrThrow()).revokedAt).not.toBeNull();
   });
 
-  it('dos renovaciones simultáneas con el mismo token: como mucho una gana', async () => {
+  it('two simultaneous renewals with the same token: at most one wins', async () => {
     const { refreshToken } = authTokensSchema.parse(
       (await loginAs(ADMIN.email, ADMIN.password)).body,
     );
@@ -137,16 +137,16 @@ describe('flujo de autenticación (HU-ACC-01, HU-ACC-02, HU-ACC-03)', () => {
     expect(responses.filter((response) => response.status === 200).length).toBeLessThanOrEqual(1);
   });
 
-  it('credenciales incorrectas y email inexistente responden igual (RNF-ACC-05)', async () => {
+  it('wrong credentials and a nonexistent email get the same response (NFR-ACC-05)', async () => {
     const wrongPassword = await loginAs(ADMIN.email, 'clave-equivocada');
-    const unknownEmail = await loginAs('nadie@campo.es', 'clave-equivocada');
+    const unknownEmail = await loginAs('nobody@campo.es', 'clave-equivocada');
 
     expect(wrongPassword.status).toBe(401);
     expect(unknownEmail.status).toBe(401);
     expect(unknownEmail.body).toEqual(wrongPassword.body);
   });
 
-  it('cinco fallos bloquean el acceso aunque la contraseña sea correcta (RN-ACC-11)', async () => {
+  it('five failures block access even if the password is correct (BR-ACC-11)', async () => {
     for (let i = 0; i < 5; i++) await loginAs(ADMIN.email, 'clave-equivocada');
 
     const locked = await loginAs(ADMIN.email, ADMIN.password);
@@ -156,8 +156,8 @@ describe('flujo de autenticación (HU-ACC-01, HU-ACC-02, HU-ACC-03)', () => {
     expect(Number(locked.headers['retry-after'])).toBeGreaterThan(0);
   });
 
-  it('sin membresía activa no hay sesión', async () => {
-    await prisma.membership.updateMany({ data: { status: 'suspendida' } });
+  it('without an active membership there is no session', async () => {
+    await prisma.membership.updateMany({ data: { status: 'suspended' } });
 
     const response = await loginAs(ADMIN.email, ADMIN.password);
 
@@ -166,9 +166,9 @@ describe('flujo de autenticación (HU-ACC-01, HU-ACC-02, HU-ACC-03)', () => {
     expect(await prisma.session.count()).toBe(0);
   });
 
-  it('una invitación usada no se puede volver a usar', async () => {
+  it('a used invitation cannot be used again', async () => {
     const token = await invite('grace@campo.es');
-    await request(app).post('/auth/invitations/accept').send({ token, password: 'clave-de-grace' });
+    await request(app).post('/auth/invitations/accept').send({ token, password: 'grace-password' });
 
     const again = await request(app)
       .post('/auth/invitations/accept')
@@ -178,13 +178,13 @@ describe('flujo de autenticación (HU-ACC-01, HU-ACC-02, HU-ACC-03)', () => {
     expect(again.body.error).toBe('invitation_not_usable');
   });
 
-  it('un usuario con cuenta acepta sin contraseña y no recibe sesión', async () => {
+  it('a user with an account accepts without a password and gets no session', async () => {
     const admin = await prisma.user.findUniqueOrThrow({ where: { email: ADMIN.email } });
-    // Ada ya tiene cuenta por la primera cooperativa; la invitan a una segunda.
+    // Ada already has an account through the first cooperative; she is invited to a second one.
     const second = await access.provisionCooperative({
       name: 'Cooperativa del Mar',
       cif: 'F87654321',
-      admin: { email: 'otro-admin@mar.es', name: 'Otro', password: 'clave-del-otro' },
+      admin: { email: 'other-admin@mar.es', name: 'Otro', password: 'other-password' },
     });
     cooperativeId = second.cooperativeId;
     const token = await invite(ADMIN.email, admin.id);
@@ -196,7 +196,7 @@ describe('flujo de autenticación (HU-ACC-01, HU-ACC-02, HU-ACC-03)', () => {
       cooperativeId: second.cooperativeId,
       tokens: null,
     });
-    expect(await prisma.membership.count({ where: { userId: admin.id, status: 'activa' } })).toBe(
+    expect(await prisma.membership.count({ where: { userId: admin.id, status: 'active' } })).toBe(
       2,
     );
   });
@@ -205,14 +205,14 @@ describe('flujo de autenticación (HU-ACC-01, HU-ACC-02, HU-ACC-03)', () => {
     ['/auth/login', { email: 'admin@campo.es' }],
     ['/auth/refresh', {}],
     ['/auth/invitations/accept', { password: 'x' }],
-  ])('%s con un cuerpo inválido responde 400', async (path, body) => {
+  ])('%s with an invalid body answers 400', async (path, body) => {
     const response = await request(app).post(path).send(body);
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({ error: 'invalid_request' });
   });
 
-  it('un JSON mal formado responde 400', async () => {
+  it('malformed JSON answers 400', async () => {
     const response = await request(app)
       .post('/auth/login')
       .set('Content-Type', 'application/json')

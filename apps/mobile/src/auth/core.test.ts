@@ -1,100 +1,104 @@
 import { describe, expect, it } from 'vitest';
 
+import { i18n } from '../i18n';
 import { ApiError, messageFor, NetworkError } from '../api/api-error';
 import { initialCooperative } from '../cooperatives/selection';
-import { canAccess, canManage, visibleModules } from '../navigation/modules';
+import { canAccess, canManage, MODULE_ENTRIES, visibleModules } from '../navigation/modules';
 import { MemoryKeyValueStore } from '../storage/key-value-store';
 import { RELOCK_AFTER_MS, shouldLock } from './biometric-lock';
 import { TokenStore, toStoredTokens } from './token-store';
 
-describe('elegir cooperativa al entrar (HU-ACC-05)', () => {
-  it('Dado una única membresía activa, cuando inicio sesión, entonces entro directamente en ella', () => {
+describe('choosing a cooperative on entry (US-ACC-05)', () => {
+  it('Given a single active membership, when I log in, then I enter it directly', () => {
     expect(initialCooperative(['a'], null)).toBe('a');
   });
 
-  it('Dado varias membresías activas la primera vez, entonces veo el selector', () => {
+  it('Given several active memberships the first time, then I see the selector', () => {
     expect(initialCooperative(['a', 'b'], null)).toBeNull();
   });
 
-  it('Dado que ya elegí cooperativa antes, cuando vuelvo a abrir la app, entonces entro en la última usada', () => {
+  it('Given I already chose a cooperative before, when I reopen the app, then I enter the last used one', () => {
     expect(initialCooperative(['a', 'b'], 'b')).toBe('b');
   });
 
-  it('si la última usada ya no está activa, se vuelve a elegir', () => {
+  it('if the last used one is no longer active, the user chooses again', () => {
     expect(initialCooperative(['a', 'b'], 'c')).toBeNull();
     expect(initialCooperative(['a'], 'c')).toBe('a');
   });
 
-  it('sin membresías activas no hay cooperativa', () => {
+  it('without active memberships there is no cooperative', () => {
     expect(initialCooperative([], null)).toBeNull();
   });
 });
 
-describe('navegación según permisos (HU-ACC-06)', () => {
-  const socio = [
-    { module: 'comunicados', level: 'consulta', scope: 'todas' },
-    { module: 'area-socio', level: 'consulta', scope: 'propias' },
+describe('navigation by permissions (US-ACC-06)', () => {
+  const partner = [
+    { module: 'announcements', level: 'read', scope: 'all' },
+    { module: 'member-area', level: 'read', scope: 'own' },
   ] as const;
 
-  it('solo incluye los módulos con consulta o gestión, en el orden de la app', () => {
-    expect(visibleModules([...socio]).map((m) => m.module)).toEqual(['comunicados', 'area-socio']);
-  });
-
-  it('marca si se pueden mostrar las acciones de gestión', () => {
-    const modules = visibleModules([{ module: 'facturas', level: 'gestion', scope: 'todas' }]);
-    expect(modules).toEqual([
-      {
-        module: 'facturas',
-        title: 'Facturas y albaranes',
-        emoji: '🧾',
-        route: '/facturas',
-        canManage: true,
-      },
+  it('includes only the modules with read or manage access, in the app order', () => {
+    expect(visibleModules([...partner]).map((m) => m.module)).toEqual([
+      'announcements',
+      'member-area',
     ]);
-    expect(visibleModules([...socio])[0]?.canManage).toBe(false);
   });
 
-  it('el módulo de usuarios se muestra como «Miembros»', () => {
+  it('flags whether the management actions can be shown', () => {
+    const modules = visibleModules([{ module: 'invoicing', level: 'manage', scope: 'all' }]);
+    expect(modules).toEqual([
+      { module: 'invoicing', emoji: '🧾', route: '/invoices', canManage: true },
+    ]);
+    expect(visibleModules([...partner])[0]?.canManage).toBe(false);
+  });
+
+  it('the users module opens the members screen', () => {
+    expect(visibleModules([{ module: 'users', level: 'manage', scope: 'all' }])[0]).toMatchObject({
+      route: '/members',
+    });
+  });
+
+  it('every module has a localized title', () => {
+    for (const entry of MODULE_ENTRIES) {
+      expect(i18n.t(`enums.module.${entry.module}`)).not.toBe(`enums.module.${entry.module}`);
+    }
+  });
+
+  it('canAccess denies while the permissions are not loaded yet', () => {
+    expect(canAccess(undefined, 'announcements')).toBe(false);
+    expect(canAccess([...partner], 'announcements')).toBe(true);
+    expect(canAccess([...partner], 'invoicing')).toBe(false);
+  });
+
+  it('canManage only with the manage level: the editing screens do not exist without it', () => {
+    expect(canManage([...partner], 'announcements')).toBe(false);
     expect(
-      visibleModules([{ module: 'usuarios', level: 'gestion', scope: 'todas' }])[0],
-    ).toMatchObject({ title: 'Miembros', route: '/miembros' });
-  });
-
-  it('canAccess deniega si aún no hay permisos cargados', () => {
-    expect(canAccess(undefined, 'comunicados')).toBe(false);
-    expect(canAccess([...socio], 'comunicados')).toBe(true);
-    expect(canAccess([...socio], 'facturas')).toBe(false);
-  });
-
-  it('canManage solo con nivel gestión: las pantallas de edición no existen sin él', () => {
-    expect(canManage([...socio], 'comunicados')).toBe(false);
-    expect(
-      canManage([{ module: 'comunicados', level: 'gestion', scope: 'todas' }], 'comunicados'),
+      canManage([{ module: 'announcements', level: 'manage', scope: 'all' }], 'announcements'),
     ).toBe(true);
-    expect(canManage(undefined, 'comunicados')).toBe(false);
+    expect(canManage(undefined, 'announcements')).toBe(false);
   });
 });
 
-describe('bloqueo biométrico (HU-ACC-04)', () => {
+describe('biometric lock (US-ACC-04)', () => {
   const base = { enabled: true, hasSession: true, backgroundedAt: null, now: 0, coldStart: false };
 
-  it('Dado la biometría activada, cuando abro la app con sesión, entonces se pide antes de mostrar datos', () => {
+  it('Given biometrics enabled, when I open the app with a session, then it asks before showing data', () => {
     expect(shouldLock({ ...base, coldStart: true })).toBe(true);
   });
 
-  it('no bloquea si está desactivada o no hay sesión', () => {
+  it('does not lock if it is disabled or there is no session', () => {
     expect(shouldLock({ ...base, coldStart: true, enabled: false })).toBe(false);
     expect(shouldLock({ ...base, coldStart: true, hasSession: false })).toBe(false);
   });
 
-  it('al volver del segundo plano bloquea solo si pasó un rato', () => {
+  it('when coming back from the background it locks only after a while', () => {
     expect(shouldLock({ ...base, backgroundedAt: 0, now: RELOCK_AFTER_MS - 1 })).toBe(false);
     expect(shouldLock({ ...base, backgroundedAt: 0, now: RELOCK_AFTER_MS })).toBe(true);
   });
 });
 
-describe('almacén de tokens (RNF-ACC-03)', () => {
-  it('guarda y recupera la sesión con la caducidad calculada', async () => {
+describe('token store (NFR-ACC-03)', () => {
+  it('saves and loads the session with the computed expiry', async () => {
     const store = new TokenStore(new MemoryKeyValueStore());
     const stored = toStoredTokens(
       { accessToken: 'a', refreshToken: 'r', accessTokenExpiresIn: 900 },
@@ -110,29 +114,45 @@ describe('almacén de tokens (RNF-ACC-03)', () => {
     });
   });
 
-  it('un contenido ilegible cuenta como sin sesión y se borra', async () => {
+  it('unreadable content counts as no session and is deleted', async () => {
     const kv = new MemoryKeyValueStore();
-    await kv.set('session', '{no-es-json');
+    await kv.set('session', '{not-json');
 
     expect(await new TokenStore(kv).load()).toBeNull();
     expect(await kv.get('session')).toBeNull();
   });
 });
 
-describe('mensajes de error', () => {
-  it('traduce los códigos conocidos y no revela si el email existe', () => {
-    expect(messageFor(new ApiError(401, 'invalid_credentials', ''))).toBe(
-      'Email o contraseña incorrectos.',
+describe('error messages', () => {
+  it('maps known codes to localized text and does not reveal whether the email exists', () => {
+    expect(
+      messageFor(new ApiError(401, 'invalid_credentials', 'Incorrect email or password.')),
+    ).toBe('Email o contraseña incorrectos.');
+  });
+
+  it('never shows the developer message of the API: unknown codes get the generic text', () => {
+    expect(messageFor(new ApiError(409, 'some_new_code', 'Developer message.'))).toBe(
+      'Ha ocurrido un error. Inténtalo de nuevo.',
     );
   });
 
-  it('usa el mensaje del servidor si el código no es conocido', () => {
-    expect(messageFor(new ApiError(409, 'last_admin', 'Debe quedar un administrador.'))).toBe(
-      'Debe quedar un administrador.',
+  it('builds the text from the details the API sends with the code', () => {
+    expect(
+      messageFor(
+        new ApiError(400, 'invalid_announcement', '', {
+          issues: ['title_missing', 'body_missing'],
+        }),
+      ),
+    ).toBe('No se puede guardar el comunicado: falta el título y falta el cuerpo.');
+    expect(messageFor(new ApiError(400, 'file_rejected', '', { reason: 'too_large' }))).toBe(
+      'El documento puede ocupar como máximo 20 MB.',
+    );
+    expect(messageFor(new ApiError(400, 'insufficient_notice', '', { minNoticeDays: 15 }))).toBe(
+      'La asamblea debe convocarse con al menos 15 días de antelación.',
     );
   });
 
-  it('sin red y ante errores desconocidos da un texto genérico', () => {
+  it('without a network and for unknown errors it gives a generic text', () => {
     expect(messageFor(new NetworkError(null))).toBe('No se puede conectar con el servidor.');
     expect(messageFor(new Error('x'))).toBe('Ha ocurrido un error. Inténtalo de nuevo.');
   });

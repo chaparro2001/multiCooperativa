@@ -5,30 +5,30 @@ import { FileNotFoundError, newFileKey } from './file-storage';
 import { S3FileStorage, s3SettingsFromEnv } from './s3-file-storage';
 
 const COOP = '11111111-1111-4111-8111-111111111111';
-const PDF = new TextEncoder().encode('%PDF-1.4\nAcuerdos de la asamblea\n%%EOF');
+const PDF = new TextEncoder().encode('%PDF-1.4\nAssembly resolutions\n%%EOF');
 
 const storage = new S3FileStorage(s3SettingsFromEnv(loadEnv(process.env)));
 
 beforeAll(() => storage.ensureBucket());
 
 async function stored() {
-  const key = newFileKey(COOP, 'documentos');
+  const key = newFileKey(COOP, 'documents');
   await storage.put(key, PDF, 'application/pdf');
   return key;
 }
 
-describe('almacenamiento S3 (ADR-005)', () => {
-  it('guarda y lee el contenido exacto', async () => {
+describe('S3 storage (ADR-005)', () => {
+  it('stores and reads the exact content', async () => {
     const key = await stored();
 
     expect(await storage.read(key)).toEqual(PDF);
   });
 
-  it('la URL firmada descarga el fichero con su tipo y su nombre (RNF-DOC-02)', async () => {
+  it('the signed URL downloads the file with its type and name (NFR-DOC-02)', async () => {
     const key = await stored();
 
     const url = await storage.signedDownloadUrl(key, {
-      fileName: 'Acta de junio.pdf',
+      fileName: 'Minutes of June.pdf',
       contentType: 'application/pdf',
     });
     const response = await fetch(url);
@@ -36,13 +36,13 @@ describe('almacenamiento S3 (ADR-005)', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('application/pdf');
     expect(response.headers.get('content-disposition')).toContain(
-      "filename*=UTF-8''Acta%20de%20junio.pdf",
+      "filename*=UTF-8''Minutes%20of%20June.pdf",
     );
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(PDF);
     expect(url).toContain('X-Amz-Expires=300');
   });
 
-  it('sin firma, con la firma alterada o con otra clave, no se descarga', async () => {
+  it('without a signature, with a tampered signature or with another key, it is not downloaded', async () => {
     const key = await stored();
     const url = await storage.signedDownloadUrl(key, {
       fileName: 'a.pdf',
@@ -59,7 +59,7 @@ describe('almacenamiento S3 (ADR-005)', () => {
     }
   });
 
-  it('la URL firmada caduca', async () => {
+  it('the signed URL expires', async () => {
     const key = await stored();
     const url = await storage.signedDownloadUrl(key, {
       fileName: 'a.pdf',

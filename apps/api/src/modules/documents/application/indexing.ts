@@ -16,14 +16,14 @@ export interface IndexingDeps {
 }
 
 const NO_TEXT =
-  'El PDF no contiene texto extraíble (¿es un documento escaneado?). Sigue siendo consultable, pero el asistente no lo conoce.';
-const UNREADABLE = 'El fichero no se ha podido leer como PDF.';
-const FAILED = 'No se ha podido indexar. Vuelve a intentarlo más tarde.';
+  'The PDF has no extractable text (is it a scanned document?). It can still be viewed, but the assistant does not know it.';
+const UNREADABLE = 'The file could not be read as a PDF.';
+const FAILED = 'Indexing failed. Try again later.';
 
-/** Extract, chunk, embed and store one version (requisitos/03, section 4). */
+/** Extract, chunk, embed and store one version (requirements/03, section 4). */
 export async function indexVersion(deps: IndexingDeps, job: PendingVersion): Promise<void> {
   const version = await deps.store.findVersion(job.cooperativeId, job.documentId, job.versionId);
-  // A newer version or a withdrawal arrived first: this job is stale (RN-DOC-04).
+  // A newer version or a withdrawal arrived first: this job is stale (BR-DOC-04).
   if (!version?.indexable) return;
 
   try {
@@ -33,13 +33,13 @@ export async function indexVersion(deps: IndexingDeps, job: PendingVersion): Pro
       pages = await deps.extractor.extract(pdf);
     } catch (error) {
       if (error instanceof UnreadablePdfError) {
-        await deps.store.setStatus(job.versionId, 'no_indexable', UNREADABLE);
+        await deps.store.setStatus(job.versionId, 'not_indexable', UNREADABLE);
         return;
       }
       throw error;
     }
     if (!hasExtractableText(pages)) {
-      await deps.store.setStatus(job.versionId, 'no_indexable', NO_TEXT);
+      await deps.store.setStatus(job.versionId, 'not_indexable', NO_TEXT);
       return;
     }
 
@@ -56,9 +56,9 @@ export async function indexVersion(deps: IndexingDeps, job: PendingVersion): Pro
         embedding: embeddings[i]!,
       })),
     );
-    await deps.store.setStatus(job.versionId, 'indexado', null);
+    await deps.store.setStatus(job.versionId, 'indexed', null);
   } catch (error) {
-    // RN-DOC-07: the document stays available; it just is not indexed yet (HU-DOC-06: retry).
+    // BR-DOC-07: the document stays available; it just is not indexed yet (US-DOC-06: retry).
     await deps.store.setStatus(job.versionId, 'error', FAILED);
     deps.onError?.(error, job);
   }

@@ -10,7 +10,7 @@ export interface LoginInput {
   password: string;
 }
 
-/** HU-ACC-02. */
+/** US-ACC-02. */
 export async function login(
   deps: SessionDeps & { loginStore: LoginStore; hasher: PasswordHasher },
   input: LoginInput,
@@ -19,7 +19,7 @@ export async function login(
   const email = normalizeEmail(input.email);
 
   // Checked before the password: while locked, even the right password is refused.
-  // Attempts are counted per email whether or not it exists (RNF-ACC-05).
+  // Attempts are counted per email whether or not it exists (NFR-ACC-05).
   const failures = await deps.loginStore.failedAttemptsSince(email, relevantAttemptsSince(now));
   const until = lockedUntil(failures, now);
   if (until) throw new LoginLockedError(until);

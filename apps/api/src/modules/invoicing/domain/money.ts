@@ -1,14 +1,14 @@
 import { InvalidAmountError, TotalMismatchError } from './errors';
 
 /**
- * RN-FAC-13: exact decimals. Money lives as integer cents, quantities as
+ * BR-INV-13: exact decimals. Money lives as integer cents, quantities as
  * thousandths and VAT rates as hundredths of a point, all in bigint.
  * Outside the domain they travel as decimal strings ("1234.56").
  */
 
 function parseScaled(value: string, decimals: number, what: string): bigint {
   const match = value.trim().match(new RegExp(`^(-?)(\\d+)(?:\\.(\\d{1,${decimals}}))?$`));
-  if (!match) throw new InvalidAmountError(`${what} no válido: «${value}».`);
+  if (!match) throw new InvalidAmountError(`Invalid ${what}: “${value}”.`);
   const [, sign, whole, fraction = ''] = match;
   const scaled =
     BigInt(whole!) * 10n ** BigInt(decimals) + BigInt(fraction.padEnd(decimals, '0') || '0');
@@ -24,17 +24,17 @@ function formatScaled(value: bigint, decimals: number, trimZeros: boolean): stri
   return `${negative ? '-' : ''}${abs / unit}${fraction ? `.${fraction}` : ''}`;
 }
 
-export const parseMoney = (value: string): bigint => parseScaled(value, 2, 'Importe');
+export const parseMoney = (value: string): bigint => parseScaled(value, 2, 'amount');
 export const formatMoney = (cents: bigint): string => formatScaled(cents, 2, false);
 
-export const parseQuantity = (value: string): bigint => parseScaled(value, 3, 'Cantidad');
+export const parseQuantity = (value: string): bigint => parseScaled(value, 3, 'quantity');
 export const formatQuantity = (thousandths: bigint): string => formatScaled(thousandths, 3, true);
 
-/** «21» → 2100n. Between 0 and 100 %. */
+/** “21” → 2100n. Between 0 and 100 %. */
 export function parseVatRate(value: string): bigint {
-  const rate = parseScaled(value, 2, 'Tipo de IVA');
+  const rate = parseScaled(value, 2, 'VAT rate');
   if (rate < 0n || rate > 10000n)
-    throw new InvalidAmountError('El tipo de IVA debe estar entre 0 y 100.');
+    throw new InvalidAmountError('The VAT rate must be between 0 and 100.');
   return rate;
 }
 export const formatVatRate = (hundredths: bigint): string => formatScaled(hundredths, 2, true);
@@ -48,7 +48,7 @@ export function vatAmount(baseCents: bigint, rateHundredths: bigint): bigint {
   return negative ? -rounded : rounded;
 }
 
-/** RN-FAC-07: total = base + VAT, rounded to 2 decimals, within 0.01 €. */
+/** BR-INV-07: total = base + VAT, rounded to 2 decimals, within 0.01 €. */
 export const TOTAL_TOLERANCE_CENTS = 1n;
 
 export function assertTotal(baseCents: bigint, rateHundredths: bigint, totalCents: bigint): void {

@@ -11,7 +11,7 @@ export interface SessionState {
 
 export type RefreshCheck = 'valid' | 'expired' | 'revoked' | 'reused';
 
-/** Each rotation issues a refresh token valid for 30 days (RNF-ACC-02). */
+/** Each rotation issues a refresh token valid for 30 days (NFR-ACC-02). */
 export function sessionExpiry(now: Date): Date {
   return new Date(now.getTime() + SESSION_TTL_DAYS * DAY_IN_MS);
 }
@@ -19,7 +19,7 @@ export function sessionExpiry(now: Date): Date {
 /**
  * A session keeps only the hash of its current refresh token. Presenting any
  * other token of the same session means an old one was replayed: the caller
- * must revoke the whole session (HU-ACC-03).
+ * must revoke the whole session (US-ACC-03).
  */
 export function checkRefresh(
   session: SessionState,

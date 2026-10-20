@@ -13,64 +13,64 @@ import {
 
 const membership = (status: MembershipStatus, isPartner = true) => ({ status, isPartner });
 
-describe('transiciones de la membresía (apartado 5)', () => {
+describe('membership transitions (section 5)', () => {
   it.each([
-    { name: 'aceptar invitación', transition: activate, from: 'invitada', to: 'activa' },
-    { name: 'suspender', transition: suspend, from: 'activa', to: 'suspendida' },
-    { name: 'reactivar', transition: reactivate, from: 'suspendida', to: 'activa' },
-    { name: 'dar de baja una activa', transition: remove, from: 'activa', to: 'baja' },
-    { name: 'dar de baja una suspendida', transition: remove, from: 'suspendida', to: 'baja' },
+    { name: 'accept invitation', transition: activate, from: 'invited', to: 'active' },
+    { name: 'suspender', transition: suspend, from: 'active', to: 'suspended' },
+    { name: 'reactivar', transition: reactivate, from: 'suspended', to: 'active' },
+    { name: 'dar de baja una activa', transition: remove, from: 'active', to: 'removed' },
+    { name: 'dar de baja una suspendida', transition: remove, from: 'suspended', to: 'removed' },
   ] as const)('$name: $from → $to', ({ transition, from, to }) => {
     expect(transition(membership(from))).toEqual(membership(to));
   });
 
   it.each([
-    { name: 'activar', transition: activate, from: ['activa', 'suspendida', 'baja'] },
-    { name: 'suspender', transition: suspend, from: ['invitada', 'suspendida', 'baja'] },
-    { name: 'reactivar', transition: reactivate, from: ['invitada', 'activa', 'baja'] },
-    { name: 'dar de baja', transition: remove, from: ['invitada', 'baja'] },
-  ] as const)('$name se rechaza desde $from', ({ transition, from }) => {
+    { name: 'activar', transition: activate, from: ['active', 'suspended', 'removed'] },
+    { name: 'suspender', transition: suspend, from: ['invited', 'suspended', 'removed'] },
+    { name: 'reactivar', transition: reactivate, from: ['invited', 'active', 'removed'] },
+    { name: 'dar de baja', transition: remove, from: ['invited', 'removed'] },
+  ] as const)('$name is rejected from $from', ({ transition, from }) => {
     for (const status of from) {
       expect(() => transition(membership(status))).toThrow(InvalidMembershipTransitionError);
     }
   });
 
-  it('la baja es un estado final (RN-ACC-14)', () => {
-    const removed = membership('baja');
+  it('removal is a final state (BR-ACC-14)', () => {
+    const removed = membership('removed');
     for (const transition of [activate, suspend, reactivate, remove]) {
       expect(() => transition(removed)).toThrow(InvalidMembershipTransitionError);
     }
   });
 
-  it('no muta la membresía original', () => {
-    const original = membership('activa');
+  it('does not mutate the original membership', () => {
+    const original = membership('active');
     suspend(original);
-    expect(original.status).toBe('activa');
+    expect(original.status).toBe('active');
   });
 });
 
-describe('grantsAccess (RN-ACC-09)', () => {
+describe('grantsAccess (BR-ACC-09)', () => {
   it.each([
-    ['activa', true],
-    ['invitada', false],
-    ['suspendida', false],
-    ['baja', false],
-  ] as const)('una membresía %s concede acceso: %s', (status, expected) => {
+    ['active', true],
+    ['invited', false],
+    ['suspended', false],
+    ['removed', false],
+  ] as const)('a %s membership grants access: %s', (status, expected) => {
     expect(grantsAccess(membership(status))).toBe(expected);
   });
 });
 
-describe('canVote (RN-ACC-06)', () => {
-  it('vota un socio con membresía activa', () => {
-    expect(canVote(membership('activa', true))).toBe(true);
+describe('canVote (BR-ACC-06)', () => {
+  it('a partner with an active membership votes', () => {
+    expect(canVote(membership('active', true))).toBe(true);
   });
 
-  it('no vota un miembro activo que no es socio', () => {
-    expect(canVote(membership('activa', false))).toBe(false);
+  it('an active member who is not a partner does not vote', () => {
+    expect(canVote(membership('active', false))).toBe(false);
   });
 
-  it.each(['invitada', 'suspendida', 'baja'] as const)(
-    'no vota un socio con membresía %s',
+  it.each(['invited', 'suspended', 'removed'] as const)(
+    'a partner with a %s membership does not vote',
     (status) => {
       expect(canVote(membership(status, true))).toBe(false);
     },

@@ -26,7 +26,7 @@ export class InMemoryDocumentStore implements DocumentStore {
       id: this.id(),
       ...data,
       isCurrent: true,
-      indexingStatus: 'pendiente',
+      indexingStatus: 'pending',
       indexingError: null,
       uploadedAt: new Date(Date.UTC(2026, 9, 1, 0, 0, this.nextId)),
     };
@@ -42,7 +42,7 @@ export class InMemoryDocumentStore implements DocumentStore {
   ) {
     return this.rows
       .filter((row) => row.cooperativeId === cooperativeId)
-      .filter((row) => !query.onlyPublished || row.status === 'publicado')
+      .filter((row) => !query.onlyPublished || row.status === 'published')
       .filter((row) => !query.category || row.category === query.category)
       .filter(
         (row) => !query.search || row.title.toLowerCase().includes(query.search.toLowerCase()),

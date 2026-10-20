@@ -107,7 +107,7 @@ export function pendingInvitation(overrides: Partial<PendingInvitation> = {}): P
   return {
     id: 'inv-1',
     membershipId: 'mem-1',
-    membershipStatus: 'invitada',
+    membershipStatus: 'invited',
     cooperativeId: 'coop-1',
     expiresAt: new Date('2026-10-12T10:00:00Z'),
     usedAt: null,
@@ -141,7 +141,7 @@ export class InMemoryMemberStore implements MemberStore {
     return this.profiles.find((profile) => profile.name === name)!;
   }
 
-  addMember(email: string, profileName: string, status: MembershipStatus = 'activa'): MemberRecord {
+  addMember(email: string, profileName: string, status: MembershipStatus = 'active'): MemberRecord {
     const profile = this.profile(profileName);
     const id = String(this.nextId++).padStart(12, '0');
     const member: MemberRecord = {
@@ -161,7 +161,7 @@ export class InMemoryMemberStore implements MemberStore {
   }
 
   async listMembers() {
-    return this.members.filter((member) => member.status !== 'baja');
+    return this.members.filter((member) => member.status !== 'removed');
   }
 
   async listProfiles() {
@@ -176,14 +176,14 @@ export class InMemoryMemberStore implements MemberStore {
     _cooperativeId: string,
     data: Parameters<MemberStore['createInvitedMember']>[1],
   ) {
-    if (this.members.some((m) => m.email === data.email && m.status !== 'baja')) {
+    if (this.members.some((m) => m.email === data.email && m.status !== 'removed')) {
       return 'already_member' as const;
     }
     const existing = this.members.find((m) => m.email === data.email);
     const member = this.addMember(
       data.email,
       this.profiles.find((p) => p.id === data.profileId)!.name,
-      'invitada',
+      'invited',
     );
     if (existing) member.userId = existing.userId;
     member.isPartner = data.isPartner;
@@ -200,7 +200,7 @@ export class InMemoryMemberStore implements MemberStore {
   ) {
     const member = this.members.find((m) => m.membershipId === membershipId);
     if (!member) return null;
-    const activeAdminCount = this.members.filter((m) => m.status === 'activa' && m.isAdmin).length;
+    const activeAdminCount = this.members.filter((m) => m.status === 'active' && m.isAdmin).length;
 
     const update = decide({ member: { ...member }, activeAdminCount });
     if (update.status) member.status = update.status;

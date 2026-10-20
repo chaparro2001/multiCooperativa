@@ -1,9 +1,9 @@
 import type { Line } from './documents';
 
-/** RN-FAC-08: 1 % by default, configurable per cooperative. */
+/** BR-INV-08: 1 % by default, configurable per cooperative. */
 export const DEFAULT_TOLERANCE_BASIS_POINTS = 100;
 
-export type ReconciliationStatus = 'sin_albaranes' | 'conciliada' | 'con_discrepancia';
+export type ReconciliationStatus = 'no_delivery_notes' | 'reconciled' | 'with_discrepancy';
 
 export interface Discrepancy {
   concept: string;
@@ -18,7 +18,7 @@ export interface Reconciliation {
   discrepancies: Discrepancy[];
 }
 
-/** «Aceite de oliva» and «aceite  de OLIVA» are the same concept. */
+/** “Olive oil” and “olive  OIL” are the same concept. */
 const keyOf = (line: Line) =>
   [line.concept, line.unit]
     .map((part) =>
@@ -38,8 +38,8 @@ function totals(lines: readonly Line[]) {
 }
 
 /**
- * HU-FAC-04: compares invoiced quantities with delivered ones per concept and
- * unit. The numeric rule decides; an AI only writes the explanation (RN-FAC-12).
+ * US-INV-04: compares invoiced quantities with delivered ones per concept and
+ * unit. The numeric rule decides; an AI only writes the explanation (BR-INV-12).
  */
 export function reconcile(input: {
   invoiceLines: readonly Line[];
@@ -47,7 +47,7 @@ export function reconcile(input: {
   noteLines: readonly Line[] | null;
   toleranceBasisPoints: number;
 }): Reconciliation {
-  if (input.noteLines === null) return { status: 'sin_albaranes', discrepancies: [] };
+  if (input.noteLines === null) return { status: 'no_delivery_notes', discrepancies: [] };
 
   const invoiced = totals(input.invoiceLines);
   const delivered = totals(input.noteLines);
@@ -71,5 +71,5 @@ export function reconcile(input: {
     }
   }
 
-  return { status: discrepancies.length > 0 ? 'con_discrepancia' : 'conciliada', discrepancies };
+  return { status: discrepancies.length > 0 ? 'with_discrepancy' : 'reconciled', discrepancies };
 }

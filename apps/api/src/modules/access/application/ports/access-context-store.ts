@@ -22,7 +22,7 @@ export interface UserSummary {
 
 /** Reads that build the context of each request. */
 export interface AccessContextStore {
-  /** Only an active membership counts: any other status grants nothing (RN-ACC-09). */
+  /** Only an active membership counts: any other status grants nothing (BR-ACC-09). */
   findActiveMembership(userId: string, cooperativeId: string): Promise<ActiveMembership | null>;
   /** The user's own data and active memberships across cooperatives. */
   findUserSummary(userId: string): Promise<UserSummary | null>;

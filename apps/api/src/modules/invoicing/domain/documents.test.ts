@@ -23,7 +23,7 @@ import {
 
 const supplier = createThirdParty({
   nif: 'b-12345674',
-  name: ' Abonos del Sur SL ',
+  name: ' Southern Fertilizers SL ',
   isSupplier: true,
   isCustomer: false,
   email: null,
@@ -31,19 +31,23 @@ const supplier = createThirdParty({
 });
 const customer = createThirdParty({
   nif: '12345678Z',
-  name: 'Almazara Norte',
+  name: 'Northern Oil Mill',
   isSupplier: false,
   isCustomer: true,
   email: 'compras@norte.es',
   phone: null,
 });
 
-describe('terceros (HU-FAC-01)', () => {
-  it('normaliza el NIF y el nombre', () => {
-    expect(supplier).toMatchObject({ nif: 'B12345674', name: 'Abonos del Sur SL', active: true });
+describe('third parties (US-INV-01)', () => {
+  it('normalizes the NIF and the name', () => {
+    expect(supplier).toMatchObject({
+      nif: 'B12345674',
+      name: 'Southern Fertilizers SL',
+      active: true,
+    });
   });
 
-  it('rechaza un NIF con el dígito de control incorrecto (RNF-FAC-06)', () => {
+  it('rejects a NIF with an incorrect check digit (NFR-INV-06)', () => {
     expect(() =>
       createThirdParty({
         nif: 'B12345675',
@@ -56,7 +60,7 @@ describe('terceros (HU-FAC-01)', () => {
     ).toThrow(/NIF/);
   });
 
-  it('debe ser proveedor, cliente o ambos', () => {
+  it('must be a supplier, a customer or both', () => {
     expect(() =>
       createThirdParty({
         nif: 'B12345674',
@@ -69,37 +73,37 @@ describe('terceros (HU-FAC-01)', () => {
     ).toThrow(InvalidThirdPartyError);
   });
 
-  it('RN-FAC-03: un albarán de compra solo admite proveedores y uno de venta solo clientes', () => {
-    expect(() => assertCanOperate(supplier, 'compra')).not.toThrow();
-    expect(() => assertCanOperate(supplier, 'venta')).toThrow(/cliente/);
-    expect(() => assertCanOperate(customer, 'compra')).toThrow(/proveedor/);
+  it('BR-INV-03: a purchase delivery note only admits suppliers and a sale one only customers', () => {
+    expect(() => assertCanOperate(supplier, 'purchase')).not.toThrow();
+    expect(() => assertCanOperate(supplier, 'sale')).toThrow(/customer/);
+    expect(() => assertCanOperate(customer, 'purchase')).toThrow(/supplier/);
   });
 
-  it('RN-FAC-14: un tercero desactivado deja de ofrecerse para nuevos registros', () => {
-    expect(() => assertCanOperate(deactivate(supplier), 'compra')).toThrow(/desactivado/);
+  it('BR-INV-14: a deactivated third party is no longer offered for new records', () => {
+    expect(() => assertCanOperate(deactivate(supplier), 'purchase')).toThrow(/deactivated/);
   });
 });
 
 const line = (concept: string, quantity: string, unit = 'kg') => ({ concept, quantity, unit });
 
-describe('albaranes (HU-FAC-02)', () => {
-  it('queda pendiente de facturar con sus líneas', () => {
+describe('delivery notes (US-INV-02)', () => {
+  it('is pending invoicing with its lines', () => {
     const note = createDeliveryNote({
-      operation: 'compra',
+      operation: 'purchase',
       number: ' A-001 ',
       date: '2026-10-01',
-      lines: [line('Abono NPK', '1250.5')],
+      lines: [line('Fertilizer NPK', '1250.5')],
     });
 
-    expect(note).toMatchObject({ status: 'pendiente_facturar', number: 'A-001' });
-    expect(note.lines).toEqual([{ concept: 'Abono NPK', quantity: 1250500n, unit: 'kg' }]);
+    expect(note).toMatchObject({ status: 'pending_invoicing', number: 'A-001' });
+    expect(note.lines).toEqual([{ concept: 'Fertilizer NPK', quantity: 1250500n, unit: 'kg' }]);
   });
 
-  it('Dado una línea con cantidad cero o negativa, entonces se rechaza', () => {
+  it('Given a line with zero or negative quantity, then it is rejected', () => {
     for (const quantity of ['0', '-1']) {
       expect(() =>
         createDeliveryNote({
-          operation: 'compra',
+          operation: 'purchase',
           number: 'A-1',
           date: '2026-10-01',
           lines: [line('X', quantity)],
@@ -108,13 +112,13 @@ describe('albaranes (HU-FAC-02)', () => {
     }
   });
 
-  it('necesita al menos una línea con concepto y unidad', () => {
+  it('needs at least one line with concept and unit', () => {
     expect(() =>
-      createDeliveryNote({ operation: 'compra', number: 'A-1', date: '2026-10-01', lines: [] }),
+      createDeliveryNote({ operation: 'purchase', number: 'A-1', date: '2026-10-01', lines: [] }),
     ).toThrow(InvalidDocumentError);
     expect(() =>
       createDeliveryNote({
-        operation: 'compra',
+        operation: 'purchase',
         number: 'A-1',
         date: '2026-10-01',
         lines: [line(' ', '1')],
@@ -122,128 +126,128 @@ describe('albaranes (HU-FAC-02)', () => {
     ).toThrow(InvalidDocumentError);
   });
 
-  it('se anula solo mientras está pendiente de facturar', () => {
+  it('can be voided only while pending invoicing', () => {
     const note = createDeliveryNote({
-      operation: 'compra',
+      operation: 'purchase',
       number: 'A-1',
       date: '2026-10-01',
       lines: [line('X', '1')],
     });
-    expect(cancelDeliveryNote(note).status).toBe('anulado');
-    expect(() => cancelDeliveryNote({ ...note, status: 'facturado' })).toThrow(
+    expect(cancelDeliveryNote(note).status).toBe('voided');
+    expect(() => cancelDeliveryNote({ ...note, status: 'invoiced' })).toThrow(
       InvalidInvoiceTransitionError,
     );
   });
 });
 
 const invoiceInput = {
-  operation: 'compra' as const,
+  operation: 'purchase' as const,
   number: 'F-2026-10',
   issueDate: '2026-10-01',
   dueDate: '2026-10-31',
   base: '1000.00',
   vatRate: '21',
   total: '1210.00',
-  lines: [line('Abono NPK', '1000')],
+  lines: [line('Fertilizer NPK', '1000')],
 };
 
-describe('facturas (HU-FAC-03)', () => {
-  it('queda pendiente con importes exactos', () => {
+describe('invoices (US-INV-03)', () => {
+  it('is pending with exact amounts', () => {
     const invoice = createInvoice(invoiceInput);
     expect(invoice).toMatchObject({
-      paymentStatus: 'pendiente',
+      paymentStatus: 'pending',
       base: 100000n,
       vatRate: 2100n,
       total: 121000n,
     });
   });
 
-  it('Dado un total que no coincide con base más IVA, entonces se rechaza', () => {
+  it('Given a total that does not match base plus VAT, then it is rejected', () => {
     expect(() => createInvoice({ ...invoiceInput, total: '1200.00' })).toThrow(TotalMismatchError);
   });
 
-  it('el vencimiento no es anterior a la emisión', () => {
+  it('the due date is not earlier than the issue date', () => {
     expect(() => createInvoice({ ...invoiceInput, dueDate: '2026-09-30' })).toThrow(
       InvalidDocumentError,
     );
   });
 
-  it('una factura sin albaranes puede no llevar líneas (por ejemplo, un servicio)', () => {
+  it('an invoice without delivery notes may have no lines (for example, a service)', () => {
     expect(() => createInvoice({ ...invoiceInput, lines: [] })).not.toThrow();
   });
 });
 
-describe('agrupar albaranes (RN-FAC-05, RN-FAC-06)', () => {
+describe('grouping delivery notes (BR-INV-05, BR-INV-06)', () => {
   const invoice = {
-    operation: 'compra' as const,
+    operation: 'purchase' as const,
     thirdPartyId: 'p-1',
     lines: [{ concept: 'X', quantity: 1n, unit: 'kg' }],
   };
   const note = {
     thirdPartyId: 'p-1',
-    operation: 'compra' as const,
-    status: 'pendiente_facturar' as const,
+    operation: 'purchase' as const,
+    status: 'pending_invoicing' as const,
   };
 
-  it('agrupa albaranes pendientes del mismo tercero y operación', () => {
+  it('groups pending delivery notes of the same third party and operation', () => {
     expect(() => assertCanGroup(invoice, [note, note])).not.toThrow();
   });
 
   it.each([
-    [{ ...note, thirdPartyId: 'p-2' }, /otro tercero/],
-    [{ ...note, operation: 'venta' as const }, /otra operación/],
-    [{ ...note, status: 'facturado' as const }, /ya facturado/],
-    [{ ...note, status: 'anulado' as const }, /anulado/],
-  ])('Dado un albarán %o, cuando intento vincularlo, entonces se rechaza', (bad, message) => {
+    [{ ...note, thirdPartyId: 'p-2' }, /another third party/],
+    [{ ...note, operation: 'sale' as const }, /another operation/],
+    [{ ...note, status: 'invoiced' as const }, /already invoiced/],
+    [{ ...note, status: 'voided' as const }, /voided/],
+  ])('Given a delivery note %o, when I try to link it, then it is rejected', (bad, message) => {
     expect(() => assertCanGroup(invoice, [note, bad])).toThrow(message);
   });
 
-  it('para conciliar, una factura con albaranes necesita sus líneas', () => {
-    expect(() => assertCanGroup({ ...invoice, lines: [] }, [note])).toThrow(/líneas/);
+  it('to reconcile, an invoice with delivery notes needs its lines', () => {
+    expect(() => assertCanGroup({ ...invoice, lines: [] }, [note])).toThrow(/lines/);
   });
 });
 
-describe('pagos, cobros y vencimientos (HU-FAC-07)', () => {
-  const pending = { paymentStatus: 'pendiente' as const, dueDate: '2026-10-31', settledAt: null };
+describe('payments, collections and due dates (US-INV-07)', () => {
+  const pending = { paymentStatus: 'pending' as const, dueDate: '2026-10-31', settledAt: null };
 
-  it('RN-FAC-09: pasa a vencida cuando su vencimiento es anterior a hoy', () => {
-    expect(markOverdue(pending, '2026-10-31').paymentStatus).toBe('pendiente');
-    expect(markOverdue(pending, '2026-11-01').paymentStatus).toBe('vencida');
+  it('BR-INV-09: becomes overdue when its due date is before today', () => {
+    expect(markOverdue(pending, '2026-10-31').paymentStatus).toBe('pending');
+    expect(markOverdue(pending, '2026-11-01').paymentStatus).toBe('overdue');
   });
 
-  it('avisa cuando vence en los próximos 3 días, también si un día no se ejecutó el proceso', () => {
+  it('warns when due within the next 3 days, also if the process did not run one day', () => {
     expect(isDueSoon(pending, '2026-10-28')).toBe(true);
     expect(isDueSoon(pending, '2026-10-30')).toBe(true);
     expect(isDueSoon(pending, '2026-10-31')).toBe(true);
     expect(isDueSoon(pending, '2026-10-27')).toBe(false);
     expect(isDueSoon(pending, '2026-11-01')).toBe(false);
-    expect(isDueSoon({ ...pending, paymentStatus: 'liquidada' }, '2026-10-28')).toBe(false);
+    expect(isDueSoon({ ...pending, paymentStatus: 'settled' }, '2026-10-28')).toBe(false);
   });
 
-  it('se liquida pendiente o vencida, con su fecha', () => {
+  it('is settled when pending or overdue, with its date', () => {
     expect(settle(pending, '2026-10-15')).toMatchObject({
-      paymentStatus: 'liquidada',
+      paymentStatus: 'settled',
       settledAt: '2026-10-15',
     });
-    expect(settle({ ...pending, paymentStatus: 'vencida' }, '2026-11-05').paymentStatus).toBe(
-      'liquidada',
+    expect(settle({ ...pending, paymentStatus: 'overdue' }, '2026-11-05').paymentStatus).toBe(
+      'settled',
     );
   });
 
-  it('RN-FAC-10: una liquidada no vuelve a pendiente ni a vencida', () => {
+  it('BR-INV-10: a settled one does not go back to pending or overdue', () => {
     const settled = settle(pending, '2026-10-15');
-    expect(markOverdue(settled, '2027-01-01').paymentStatus).toBe('liquidada');
+    expect(markOverdue(settled, '2027-01-01').paymentStatus).toBe('settled');
     expect(() => settle(settled, '2026-10-16')).toThrow(InvalidInvoiceTransitionError);
   });
 
-  it('se anula pendiente o vencida, no liquidada', () => {
-    expect(cancelInvoice(pending).paymentStatus).toBe('anulada');
+  it('is voided when pending or overdue, not settled', () => {
+    expect(cancelInvoice(pending).paymentStatus).toBe('voided');
     expect(() => cancelInvoice(settle(pending, '2026-10-15'))).toThrow(
       InvalidInvoiceTransitionError,
     );
   });
 
-  it('suma días a una fecha de calendario, también al cambiar de mes y año', () => {
+  it('adds days to a calendar date, also across month and year changes', () => {
     expect(addDays('2026-12-30', 3)).toBe('2027-01-02');
     expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
   });

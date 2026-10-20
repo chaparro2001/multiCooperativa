@@ -50,7 +50,7 @@ function toRecord(row: DocumentRow): DocumentRecord {
 function toWithCurrent(row: DocumentRow & { versions: VersionRecord[] }): DocumentWithCurrent {
   const { versions, ...document } = row;
   const current = versions[0];
-  if (!current) throw new Error(`El documento ${row.id} no tiene versión vigente (RN-DOC-03).`);
+  if (!current) throw new Error(`Document ${row.id} has no current version (BR-DOC-03).`);
   return { ...toRecord(document), current };
 }
 
@@ -71,7 +71,7 @@ export class PrismaDocumentStore implements DocumentStore {
     const rows = await this.prisma.document.findMany({
       where: {
         cooperativeId,
-        ...(query.onlyPublished && { status: 'publicado' }),
+        ...(query.onlyPublished && { status: 'published' }),
         ...(query.category && { category: query.category }),
         ...(query.search && { title: { contains: query.search, mode: 'insensitive' } }),
       },

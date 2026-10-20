@@ -39,7 +39,7 @@ export function Loading() {
 
 export function ErrorText({ children }: { children: ReactNode }) {
   return (
-    <Text accessibilityRole="alert" style={styles.error} testID="mensaje-error">
+    <Text accessibilityRole="alert" style={styles.error} testID="error-message">
       {children}
     </Text>
   );

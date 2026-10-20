@@ -10,93 +10,91 @@ import {
 } from './permission';
 
 const permissions: Permission[] = [
-  createPermission('comunicados', 'consulta'),
-  createPermission('facturas', 'gestion'),
-  createPermission('area-socio', 'consulta', 'propias'),
+  createPermission('announcements', 'read'),
+  createPermission('invoicing', 'manage'),
+  createPermission('member-area', 'read', 'own'),
 ];
 
-describe('resolveAccess (RN-ACC-04)', () => {
-  it('concede consulta cuando el perfil tiene consulta', () => {
-    expect(resolveAccess(permissions, 'comunicados', 'consulta')).toEqual({
+describe('resolveAccess (BR-ACC-04)', () => {
+  it('grants read when the profile has read', () => {
+    expect(resolveAccess(permissions, 'announcements', 'read')).toEqual({
       granted: true,
-      scope: 'todas',
+      scope: 'all',
     });
   });
 
-  it('deniega gestión cuando el perfil solo tiene consulta', () => {
-    expect(resolveAccess(permissions, 'comunicados', 'gestion')).toEqual({ granted: false });
+  it('denies manage when the profile only has read', () => {
+    expect(resolveAccess(permissions, 'announcements', 'manage')).toEqual({ granted: false });
   });
 
-  it('gestión incluye consulta', () => {
-    expect(resolveAccess(permissions, 'facturas', 'consulta')).toEqual({
+  it('manage includes read', () => {
+    expect(resolveAccess(permissions, 'invoicing', 'read')).toEqual({
       granted: true,
-      scope: 'todas',
+      scope: 'all',
     });
   });
 
-  it('la ausencia de permiso equivale a sin acceso', () => {
-    expect(resolveAccess(permissions, 'asambleas', 'consulta')).toEqual({ granted: false });
+  it('the absence of a permission equals no access', () => {
+    expect(resolveAccess(permissions, 'assemblies', 'read')).toEqual({ granted: false });
   });
 
-  it('sin permisos se deniega todo', () => {
-    expect(resolveAccess([], 'comunicados', 'consulta')).toEqual({ granted: false });
+  it('without permissions everything is denied', () => {
+    expect(resolveAccess([], 'announcements', 'read')).toEqual({ granted: false });
   });
 
-  it('devuelve el alcance del permiso concedido', () => {
-    expect(resolveAccess(permissions, 'area-socio', 'consulta')).toEqual({
+  it('returns the scope of the granted permission', () => {
+    expect(resolveAccess(permissions, 'member-area', 'read')).toEqual({
       granted: true,
-      scope: 'propias',
+      scope: 'own',
     });
   });
 });
 
-describe('createPermission (RN-ACC-05)', () => {
-  it('el alcance por defecto es todas', () => {
-    expect(createPermission('documentos', 'consulta')).toEqual({
-      module: 'documentos',
-      level: 'consulta',
-      scope: 'todas',
+describe('createPermission (BR-ACC-05)', () => {
+  it('the default scope is all', () => {
+    expect(createPermission('documents', 'read')).toEqual({
+      module: 'documents',
+      level: 'read',
+      scope: 'all',
     });
   });
 
-  it('admite el alcance propias en el área del socio', () => {
-    expect(createPermission('area-socio', 'consulta', 'propias').scope).toBe('propias');
+  it('accepts the own scope in the member area', () => {
+    expect(createPermission('member-area', 'read', 'own').scope).toBe('own');
   });
 
-  it.each(['comunicados', 'asambleas', 'documentos', 'facturas', 'asistente', 'usuarios'] as const)(
-    'rechaza el alcance propias en %s',
+  it.each(['announcements', 'assemblies', 'documents', 'invoicing', 'assistant', 'users'] as const)(
+    'rejects the own scope in %s',
     (module) => {
-      expect(() => createPermission(module, 'consulta', 'propias')).toThrow(InvalidPermissionError);
+      expect(() => createPermission(module, 'read', 'own')).toThrow(InvalidPermissionError);
     },
   );
 });
 
-describe('requireAccess (HU-ACC-07)', () => {
-  it('devuelve el alcance cuando el permiso lo concede', () => {
-    expect(requireAccess(permissions, 'area-socio', 'consulta')).toBe('propias');
+describe('requireAccess (US-ACC-07)', () => {
+  it('returns the scope when the permission grants it', () => {
+    expect(requireAccess(permissions, 'member-area', 'read')).toBe('own');
   });
 
-  it('Dado un miembro sin acceso a un módulo, cuando lo pide, entonces se deniega', () => {
-    expect(() => requireAccess(permissions, 'asambleas', 'consulta')).toThrow(
+  it('Given a member without access to a module, when they request it, then it is denied', () => {
+    expect(() => requireAccess(permissions, 'assemblies', 'read')).toThrow(ModuleAccessDeniedError);
+  });
+
+  it('denies manage with only read', () => {
+    expect(() => requireAccess(permissions, 'announcements', 'manage')).toThrow(
       ModuleAccessDeniedError,
     );
   });
 
-  it('deniega gestión con solo consulta', () => {
-    expect(() => requireAccess(permissions, 'comunicados', 'gestion')).toThrow(
-      ModuleAccessDeniedError,
-    );
-  });
-
-  it('sin permisos deniega todo', () => {
-    expect(() => requireAccess([], 'comunicados', 'consulta')).toThrow(ModuleAccessDeniedError);
+  it('without permissions it denies everything', () => {
+    expect(() => requireAccess([], 'announcements', 'read')).toThrow(ModuleAccessDeniedError);
   });
 });
 
 describe('hasAccess', () => {
-  it('dice si el nivel está concedido sin lanzar', () => {
-    expect(hasAccess(permissions, 'facturas', 'gestion')).toBe(true);
-    expect(hasAccess(permissions, 'comunicados', 'gestion')).toBe(false);
-    expect(hasAccess(permissions, 'asambleas', 'consulta')).toBe(false);
+  it('tells whether the level is granted without throwing', () => {
+    expect(hasAccess(permissions, 'invoicing', 'manage')).toBe(true);
+    expect(hasAccess(permissions, 'announcements', 'manage')).toBe(false);
+    expect(hasAccess(permissions, 'assemblies', 'read')).toBe(false);
   });
 });

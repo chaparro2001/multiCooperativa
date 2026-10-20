@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Lint, typecheck y tests
+    name: Lint, typecheck and tests
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -26,7 +26,7 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
-      # Almacenamiento compatible con S3 para los tests de integración (ADR-005).
+      # S3-compatible storage for the integration tests (ADR-005).
       storage:
         image: rustfs/rustfs:1.0.1
         env:
@@ -35,7 +35,7 @@ jobs:
         ports:
           - 9000:9000
     env:
-      # Credenciales efímeras del contenedor de servicio de este job.
+      # Ephemeral credentials of this job's service container.
       DATABASE_URL: postgresql://multicooperativa:multicooperativa@localhost:5432/multicooperativa
     steps:
       - uses: actions/checkout@v4
@@ -47,10 +47,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Instalar dependencias
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Formato
+      - name: Format
         run: pnpm format:check
 
       - name: Lint
@@ -62,8 +62,8 @@ jobs:
       - name: Tests
         run: pnpm test
 
-      - name: Migraciones
+      - name: Migrations
         run: pnpm --filter @multicooperativa/api db:deploy
 
-      - name: Tests de integración
+      - name: Integration tests
         run: pnpm test:integration

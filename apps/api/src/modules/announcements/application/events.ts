@@ -1,8 +1,8 @@
 import type { DomainEvent } from '../../../shared/events';
 
-/** RN-COM-07: emitted once, when a draft becomes published. Consumed by notifications. */
+/** BR-ANN-07: emitted once, when a draft becomes published. Consumed by notifications. */
 export type AnnouncementPublished = DomainEvent<
-  'ComunicadoPublicado',
+  'AnnouncementPublished',
   { cooperativeId: string; announcementId: string; title: string }
 >;
 
