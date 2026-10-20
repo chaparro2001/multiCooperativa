@@ -1,0 +1,38 @@
+name: Hourly jobs
+
+# The free Render instance sleeps when idle, so its in-process timer does not run. This calls
+# the idempotent due-dates job (US-INV-07, NFR-INV-04) every hour, which also wakes the API.
+# Repository variable API_URL and secret JOBS_TOKEN (same value as JOBS_TOKEN in Render).
+# GitHub disables scheduled workflows after 60 days without repository activity.
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  due-dates:
+    name: Invoice due dates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      API_URL: ${{ vars.API_URL }}
+      JOBS_TOKEN: ${{ secrets.JOBS_TOKEN }}
+    steps:
+      - name: Check configuration
+        run: |
+          if [ -z "$API_URL" ] || [ -z "$JOBS_TOKEN" ]; then
+            echo "::error::Set the repository variable API_URL and the secret JOBS_TOKEN."
+            exit 1
+          fi
+
+      # A cold start takes about a minute: generous timeout and retries.
+      - name: Wake the API
+        run: curl --silent --show-error --fail --max-time 120 --retry 3 --retry-delay 15 --retry-all-errors "$API_URL/health"
+
+      - name: Run the due-dates job
+        run: |
+          curl --silent --show-error --fail-with-body --max-time 120 --retry 3 --retry-delay 15 \
+            --retry-all-errors -X POST -H "Authorization: Bearer $JOBS_TOKEN" "$API_URL/jobs/due-dates"
+          echo
