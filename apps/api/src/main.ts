@@ -1,6 +1,7 @@
 import { createApi } from './api';
 import { loadEnv } from './config/env';
 import { ConsoleInvitationSender, UnavailableInvitationSender } from './modules/access';
+import { createGeminiLanguageModel } from './modules/assistant';
 import { OllamaEmbedder } from './modules/documents';
 import { S3FileStorage, s3SettingsFromEnv } from './shared/files/s3-file-storage';
 import { createPrismaClient } from './shared/infrastructure/prisma';
@@ -17,6 +18,11 @@ const { app, indexing, runDueDates } = createApi({
   jwtSecret: env.JWT_SECRET,
   files,
   embedder: new OllamaEmbedder({ url: env.OLLAMA_URL, model: env.EMBEDDING_MODEL }),
+  // Without a key the assistant answers 503 and the rest of the app keeps working (ADR-009).
+  languageModel: env.GEMINI_API_KEY
+    ? createGeminiLanguageModel({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL })
+    : null,
+  assistantMessageLimitPerHour: env.ASSISTANT_MESSAGE_LIMIT_PER_HOUR,
   // No email provider yet: in development the link is printed to the console;
   // in production inviting returns 503 until one is configured.
   invitationSender: production ? new UnavailableInvitationSender() : new ConsoleInvitationSender(),

@@ -18,6 +18,8 @@ export interface ToolCall {
 
 export interface ToolResult {
   callId: string;
+  /** Name of the tool that was called: some providers pair results by name. */
+  name: string;
   content: string;
   isError: boolean;
 }

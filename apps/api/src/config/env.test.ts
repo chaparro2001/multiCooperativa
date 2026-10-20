@@ -21,7 +21,25 @@ describe('loadEnv', () => {
       S3_FORCE_PATH_STYLE: true,
       OLLAMA_URL: 'http://localhost:11434',
       EMBEDDING_MODEL: 'bge-m3',
+      GEMINI_MODEL: 'gemini-3.6-flash',
+      ASSISTANT_MESSAGE_LIMIT_PER_HOUR: 30,
     });
+  });
+
+  it('NFR-AI-03: the Gemini key is optional and the assistant limit and model are configurable', () => {
+    expect(loadEnv(required).GEMINI_API_KEY).toBeUndefined();
+    const configured = loadEnv({
+      ...required,
+      GEMINI_API_KEY: 'gemini-test-key',
+      GEMINI_MODEL: 'gemini-3.5-flash-lite',
+      ASSISTANT_MESSAGE_LIMIT_PER_HOUR: '10',
+    });
+    expect(configured).toMatchObject({
+      GEMINI_API_KEY: 'gemini-test-key',
+      GEMINI_MODEL: 'gemini-3.5-flash-lite',
+      ASSISTANT_MESSAGE_LIMIT_PER_HOUR: 10,
+    });
+    expect(() => loadEnv({ ...required, ASSISTANT_MESSAGE_LIMIT_PER_HOUR: '0' })).toThrow();
   });
 
   it('converts the port to a number', () => {

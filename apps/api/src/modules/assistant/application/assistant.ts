@@ -50,15 +50,9 @@ export const MAX_MODEL_CALLS = 6;
 /** Previous messages sent as context (US-AI-04). */
 export const HISTORY_MESSAGES = 20;
 
-/** US-AI-06 and BR-AI-01: the module access is required, then the tools are computed per request. */
+/** BR-AI-01: the tools are computed from the user's permissions on every request. */
 function toolsFor(context: CooperativeContext): readonly ToolSpec[] {
   return availableTools((module, level) => hasAccess(context.permissions, module, level));
-}
-
-/** The tools this user can call (BR-AI-01); the app also uses it for suggested questions (US-AI-06). */
-export function toolNamesFor(context: CooperativeContext): ToolName[] {
-  requireAccess(context.permissions, 'assistant', 'read');
-  return toolsFor(context).map((tool) => tool.name);
 }
 
 // ── Conversations (US-AI-04, BR-AI-07) ──
@@ -134,8 +128,9 @@ function serialize(output: ToolOutput, sources: Map<string, Source>): string {
   return `<tool_data>${JSON.stringify(body)}</tool_data>`;
 }
 
-const fail = (callId: string, content: string): ToolResult => ({
-  callId,
+const fail = (call: ToolCall, content: string): ToolResult => ({
+  callId: call.id,
+  name: call.name,
   content: `<tool_data>${JSON.stringify({ error: content })}</tool_data>`,
   isError: true,
 });
@@ -152,23 +147,24 @@ async function runTool(
   sources: Map<string, Source>,
 ): Promise<ToolResult> {
   if (!offered.has(call.name)) {
-    return fail(call.id, 'This tool is not available to the user. Tell them you cannot access that information.');
+    return fail(call, 'This tool is not available to the user. Tell them you cannot access that information.');
   }
   try {
     const executor = deps.executors[call.name as ToolName];
     return {
       callId: call.id,
+      name: call.name,
       content: serialize(await executor(context, call.input), sources),
       isError: false,
     };
   } catch (error) {
     if (error instanceof ModuleAccessDeniedError) {
-      return fail(call.id, 'The user has no access to this information. Tell them you cannot access it.');
+      return fail(call, 'The user has no access to this information. Tell them you cannot access it.');
     }
-    if (error instanceof InvalidToolInputError) return fail(call.id, error.message);
+    if (error instanceof InvalidToolInputError) return fail(call, error.message);
     // The model never sees internals; the operator does.
     console.error(`Assistant tool ${call.name} failed:`, error instanceof Error ? error.message : error);
-    return fail(call.id, 'The information is temporarily unavailable.');
+    return fail(call, 'The information is temporarily unavailable.');
   }
 }
 
