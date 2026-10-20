@@ -5,7 +5,13 @@ import { type AuthRateLimits, createAccessModule, type InvitationSender } from '
 import { type AnnouncementEvent, createAnnouncementsModule } from './modules/announcements';
 import { type AssemblyEvent, createAssembliesModule } from './modules/assemblies';
 import { createDocumentsModule, type DocumentEvent, type Embedder } from './modules/documents';
-import { createInvoicingModule, type InvoicingEvent, runDueDatesJob } from './modules/invoicing';
+import {
+  createInvoicingModule,
+  type DiscrepancyExplainer,
+  type DocumentExtractor,
+  type InvoicingEvent,
+  runDueDatesJob,
+} from './modules/invoicing';
 import { type EventBus, InProcessEventBus } from './shared/events';
 import type { FileStorage } from './shared/files/file-storage';
 import type { PrismaClient } from './shared/infrastructure/prisma';
@@ -20,6 +26,10 @@ export interface ApiDeps {
   files: FileStorage;
   /** Embeddings for document indexing and search (ADR-006). */
   embedder: Embedder;
+  /** Reads scanned invoices and delivery notes (ADR-009); without it, extraction answers 503. */
+  documentExtractor?: DocumentExtractor;
+  /** Drafts explanations of invoice discrepancies (ADR-009); without it they stay empty. */
+  discrepancyExplainer?: DiscrepancyExplainer;
   /** Injectable so tests can observe the events; one in-process bus by default. */
   events?: EventBus<AppEvent>;
   authRateLimits?: AuthRateLimits | false;
@@ -84,6 +94,9 @@ export function createApi(deps: ApiDeps): Api {
     files: deps.files,
     events,
     requireCooperative: access.requireCooperative,
+    extractor: deps.documentExtractor,
+    explainer: deps.discrepancyExplainer,
+    cooperativeTaxId: (id) => access.directory.cooperativeTaxId(id),
   });
 
   const app = createApp({

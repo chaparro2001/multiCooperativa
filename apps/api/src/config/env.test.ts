@@ -21,6 +21,14 @@ describe('loadEnv', () => {
       S3_FORCE_PATH_STYLE: true,
       OLLAMA_URL: 'http://localhost:11434',
       EMBEDDING_MODEL: 'bge-m3',
+      GEMINI_MODEL: 'gemini-3.8-flash',
+    });
+  });
+
+  it('reads the Gemini key and model for document extraction (NFR-INV-05)', () => {
+    expect(loadEnv({ ...required, GEMINI_API_KEY: 'key-test', GEMINI_MODEL: 'm' })).toMatchObject({
+      GEMINI_API_KEY: 'key-test',
+      GEMINI_MODEL: 'm',
     });
   });
 

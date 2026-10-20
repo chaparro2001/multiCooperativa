@@ -18,6 +18,8 @@ import type { z } from 'zod';
 import { getCooperativeContext, requirePermission } from '../../../access';
 import { InvalidRequestError, parseBody } from '../../../../shared/infrastructure/http/validation';
 import * as useCases from '../../application/documents';
+import { explainDiscrepancies } from '../../application/explanations';
+import type { DiscrepancyExplainer } from '../../application/ports/discrepancy-explainer';
 import { formatQuantity } from '../../domain/money';
 import { toAmounts, toDeliveryNote, toInvoice, toLine } from './mappers';
 import { toThirdParty } from './third-parties-router';
@@ -54,9 +56,28 @@ function query<T extends z.ZodType>(schema: T, value: unknown): z.infer<T> {
   return parsed.data;
 }
 
+type LoadedInvoice = Awaited<ReturnType<typeof useCases.getInvoice>>;
+
+function toInvoiceDetail(invoice: LoadedInvoice): InvoiceDetail {
+  return {
+    ...toInvoice(invoice),
+    lines: invoice.lines.map(toLine),
+    deliveryNotes: invoice.deliveryNotes,
+    discrepancies: invoice.discrepancies.map((d) => ({
+      id: d.id,
+      concept: d.concept,
+      unit: d.unit,
+      deliveredQuantity: formatQuantity(d.deliveredQuantity),
+      invoicedQuantity: formatQuantity(d.invoicedQuantity),
+      explanation: d.explanation,
+    })),
+    fileUrl: invoice.fileUrl,
+  };
+}
+
 /** US-INV-02/03/06/07 (requirements/05, section 8). */
 export function createInvoicingDocumentsRouter(
-  deps: useCases.InvoicingDeps,
+  deps: useCases.InvoicingDeps & { explainer: DiscrepancyExplainer },
   requireCooperative: RequestHandler,
 ): Router {
   const router = Router();
@@ -138,20 +159,15 @@ export function createInvoicingDocumentsRouter(
       getCooperativeContext(res),
       id(req, 'invoiceId'),
     );
-    res.json({
-      ...toInvoice(invoice),
-      lines: invoice.lines.map(toLine),
-      deliveryNotes: invoice.deliveryNotes,
-      discrepancies: invoice.discrepancies.map((d) => ({
-        id: d.id,
-        concept: d.concept,
-        unit: d.unit,
-        deliveredQuantity: formatQuantity(d.deliveredQuantity),
-        invoicedQuantity: formatQuantity(d.invoicedQuantity),
-        explanation: d.explanation,
-      })),
-      fileUrl: invoice.fileUrl,
-    } satisfies InvoiceDetail);
+    res.json(toInvoiceDetail(invoice));
+  });
+
+  // US-INV-04: drafts the plain-language explanation of the differences (read level; the numeric detail governs).
+  router.post(`${coop}/invoices/:invoiceId/explanations`, ...read, async (req, res) => {
+    const context = getCooperativeContext(res);
+    const invoiceId = id(req, 'invoiceId');
+    await explainDiscrepancies(deps, context, invoiceId);
+    res.json(toInvoiceDetail(await useCases.getInvoice(deps, context, invoiceId)));
   });
 
   router.post(`${coop}/invoices`, ...manage, upload, async (req, res) => {

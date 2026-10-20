@@ -444,6 +444,26 @@ export class PrismaInvoiceStore implements InvoiceStore {
     }));
   }
 
+  async saveExplanations(
+    cooperativeId: string,
+    invoiceId: string,
+    drafts: { id: string; text: string }[],
+  ): Promise<void> {
+    await this.prisma.$transaction(
+      drafts.map((draft) =>
+        this.prisma.discrepancy.updateMany({
+          // Scoped through the invoice to the cooperative; never overwrites an existing text.
+          where: {
+            id: draft.id,
+            explanation: null,
+            invoice: { id: invoiceId, cooperativeId },
+          },
+          data: { explanation: draft.text },
+        }),
+      ),
+    );
+  }
+
   countOpenDiscrepancies(cooperativeId: string): Promise<number> {
     return this.prisma.invoice.count({
       where: {

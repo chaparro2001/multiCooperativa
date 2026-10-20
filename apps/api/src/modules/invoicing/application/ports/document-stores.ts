@@ -124,6 +124,12 @@ export interface InvoiceStore {
   /** Totals by operation and payment status, for the summary (US-INV-07). */
   totals(cooperativeId: string, thirdPartyId?: string): Promise<InvoiceSummaryRow[]>;
   countOpenDiscrepancies(cooperativeId: string): Promise<number>;
+  /** AI-drafted texts for discrepancies of this invoice that have none yet (BR-INV-12). */
+  saveExplanations(
+    cooperativeId: string,
+    invoiceId: string,
+    drafts: { id: string; text: string }[],
+  ): Promise<void>;
 }
 
 /** US-INV-09: pending notes older than a date, per party. */

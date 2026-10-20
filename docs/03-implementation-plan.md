@@ -61,9 +61,9 @@ Specification: [05-invoices-and-delivery-notes](requirements/05-invoices-and-del
 - [x] Third parties: create, edit and deactivate.
 - [x] API for purchase and sales delivery notes and invoices, payments and collections summary.
 - [x] Idempotent daily due-date process.
-- [ ] Vision extraction: port, adapter, output validated with the Zod schema.
-- [ ] AI explanation of discrepancies.
-- [ ] App: summary, purchases and sales, details, third parties, camera capture and review.
+- [x] Vision extraction: port, adapter (Gemini, ADR-009), output validated with the Zod schema.
+- [x] AI explanation of discrepancies.
+- [x] App: summary, purchases and sales, details, third parties, camera capture and review.
 - [ ] Claims (if there is margin).
 
 ## Milestone 5 · AI assistant and member area (17–20 Oct)

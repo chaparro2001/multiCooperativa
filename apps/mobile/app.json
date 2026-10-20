@@ -47,7 +47,15 @@
       ],
       "expo-web-browser",
       "@react-native-community/datetimepicker",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite que $(PRODUCT_NAME) acceda a tus fotos para leer albaranes y facturas.",
+          "cameraPermission": "Permite que $(PRODUCT_NAME) use la c\u00e1mara para fotografiar albaranes y facturas.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

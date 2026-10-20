@@ -247,6 +247,7 @@ beforeAll(async () => {
     'POST /cooperatives/:cooperativeId/delivery-notes/:noteId/void': {},
     'POST /cooperatives/:cooperativeId/invoices/:invoiceId/settle': { date: '2026-10-15' },
     'POST /cooperatives/:cooperativeId/invoices/:invoiceId/void': {},
+    'POST /cooperatives/:cooperativeId/invoices/:invoiceId/explanations': {},
     'PATCH /cooperatives/:cooperativeId/third-parties/:thirdPartyId': {
       name: 'Changed',
       isSupplier: true,

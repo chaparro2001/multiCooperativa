@@ -39,6 +39,9 @@ const envSchema = z
     /** Ollama service that computes the embeddings (ADR-006). */
     OLLAMA_URL: z.url({ protocol: /^https?$/ }).optional(),
     EMBEDDING_MODEL: z.string().min(1).default('bge-m3'),
+    /** Gemini key for reading scanned documents (ADR-009). Without it, extraction answers 503. */
+    GEMINI_API_KEY: z.string().min(1).optional(),
+    GEMINI_MODEL: z.string().min(1).default('gemini-3.8-flash'),
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV !== 'production') return;
