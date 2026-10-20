@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-import { type KeyValueStore, MemoryKeyValueStore } from './key-value-store';
+import { type KeyValueStore, WebSessionKeyValueStore } from './key-value-store';
 
 /**
  * Keychain (iOS) and Keystore (Android): tokens never go to plain storage
@@ -25,7 +25,9 @@ class SecureKeyValueStore implements KeyValueStore {
   }
 }
 
-/** SecureStore does not exist on web: there the session lasts until the page reloads. */
+/** SecureStore does not exist on web: there the session lasts until the tab is closed. */
 export function createDeviceStore(): KeyValueStore {
-  return Platform.OS === 'web' ? new MemoryKeyValueStore() : new SecureKeyValueStore();
+  return Platform.OS === 'web'
+    ? new WebSessionKeyValueStore(() => globalThis.sessionStorage)
+    : new SecureKeyValueStore();
 }

@@ -1,8 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { withPage } from '@/features/assistant/chat';
@@ -21,6 +20,8 @@ import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { colors } from '@/ui/theme';
+import { openUrl } from '@/ui/open-url';
+import { confirmAction } from '@/ui/confirm';
 
 const INDEXING_TONE = {
   pending: 'warning',
@@ -63,14 +64,14 @@ export default function DocumentScreen() {
   }
 
   function confirmWithdraw() {
-    Alert.alert(t('documents.detail.withdrawTitle'), t('documents.detail.withdrawMessage'), [
-      { text: t('common.actions.cancel'), style: 'cancel' },
-      {
-        text: t('common.actions.withdraw'),
-        style: 'destructive',
-        onPress: () => run(() => action.mutateAsync({ id, action: 'withdraw' })),
-      },
-    ]);
+    confirmAction({
+      title: t('documents.detail.withdrawTitle'),
+      message: t('documents.detail.withdrawMessage'),
+      confirmLabel: t('common.actions.withdraw'),
+      cancelLabel: t('common.actions.cancel'),
+      destructive: true,
+      onConfirm: () => run(() => action.mutateAsync({ id, action: 'withdraw' })),
+    });
   }
 
   const indexingStatus = data.indexingStatus;
@@ -94,7 +95,7 @@ export default function DocumentScreen() {
             setOpening(true);
             try {
               // A fresh 5-minute link every time (NFR-DOC-02).
-              await WebBrowser.openBrowserAsync(withPage(await freshUrl(id), page));
+              await openUrl(withPage(await freshUrl(id), page));
             } finally {
               setOpening(false);
             }

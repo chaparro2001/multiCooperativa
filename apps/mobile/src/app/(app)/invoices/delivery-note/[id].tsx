@@ -1,5 +1,4 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -18,6 +17,7 @@ import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { colors } from '@/ui/theme';
+import { openUrl } from '@/ui/open-url';
 
 /** US-INV-06: delivery note with its lines, status, invoice and original. */
 export default function DeliveryNoteScreen() {
@@ -92,7 +92,7 @@ export default function DeliveryNoteScreen() {
               setOpening(true);
               try {
                 const url = await freshUrl(id);
-                if (url) await WebBrowser.openBrowserAsync(url);
+                if (url) await openUrl(url);
               } finally {
                 setOpening(false);
               }

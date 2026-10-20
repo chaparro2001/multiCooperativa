@@ -1,5 +1,4 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -21,6 +20,7 @@ import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
+import { openUrl } from '@/ui/open-url';
 
 /** US-INV-06 (detail), US-INV-04 (reconciliation) and US-INV-07 (settle). */
 export default function InvoiceScreen() {
@@ -95,7 +95,7 @@ export default function InvoiceScreen() {
               try {
                 // A fresh 5-minute link every time (NFR-INV-02).
                 const url = await freshUrl(id);
-                if (url) await WebBrowser.openBrowserAsync(url);
+                if (url) await openUrl(url);
               } finally {
                 setOpening(false);
               }

@@ -2,13 +2,14 @@ import type { VoteChoice } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ApiError, messageFor } from '@/api/api-error';
 import { useCastVote } from '@/features/assemblies/queries';
 import { Button } from '@/ui/button';
 import { ErrorText, Screen } from '@/ui/screen';
 import { colors } from '@/ui/theme';
+import { confirmAction } from '@/ui/confirm';
 
 const CHOICES: VoteChoice[] = ['in_favor', 'against', 'abstention'];
 
@@ -23,29 +24,25 @@ export default function VoteScreen() {
 
   function confirm() {
     if (!choice) return;
-    Alert.alert(
-      t('assemblies.vote.confirmTitle'),
-      t('assemblies.vote.confirmMessage', { choice: t(`enums.voteChoice.${choice}`) }),
-      [
-        { text: t('assemblies.vote.review'), style: 'cancel' },
-        {
-          text: t('assemblies.vote.cast'),
-          onPress: async () => {
-            setError(null);
-            try {
-              const result = await vote.mutateAsync({ pointId, choice });
-              setCast(result.myVote);
-            } catch (failure) {
-              // US-ASM-05: if already voted, the vote that counts is shown.
-              if (failure instanceof ApiError && failure.code === 'already_voted') {
-                setCast((failure.details.choice as VoteChoice | undefined) ?? null);
-              }
-              setError(messageFor(failure));
-            }
-          },
-        },
-      ],
-    );
+    confirmAction({
+      title: t('assemblies.vote.confirmTitle'),
+      message: t('assemblies.vote.confirmMessage', { choice: t(`enums.voteChoice.${choice}`) }),
+      confirmLabel: t('assemblies.vote.cast'),
+      cancelLabel: t('assemblies.vote.review'),
+      onConfirm: async () => {
+        setError(null);
+        try {
+          const result = await vote.mutateAsync({ pointId, choice });
+          setCast(result.myVote);
+        } catch (failure) {
+          // US-ASM-05: if already voted, the vote that counts is shown.
+          if (failure instanceof ApiError && failure.code === 'already_voted') {
+            setCast((failure.details.choice as VoteChoice | undefined) ?? null);
+          }
+          setError(messageFor(failure));
+        }
+      },
+    });
   }
 
   if (cast) {

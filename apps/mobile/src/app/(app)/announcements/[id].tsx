@@ -1,8 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import {
@@ -16,6 +15,8 @@ import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { colors } from '@/ui/theme';
+import { openUrl } from '@/ui/open-url';
+import { confirmAction } from '@/ui/confirm';
 
 /** US-ANN-03 (read), US-ANN-05/06/07 (manage). */
 export default function AnnouncementScreen() {
@@ -50,22 +51,18 @@ export default function AnnouncementScreen() {
   async function openAttachment(attachmentId: string) {
     const fresh = await detail.refetch();
     const url = fresh.data?.attachments.find((a) => a.id === attachmentId)?.url;
-    if (url) await WebBrowser.openBrowserAsync(url);
+    if (url) await openUrl(url);
   }
 
   function confirmWithdraw() {
-    Alert.alert(
-      t('announcements.detail.withdrawTitle'),
-      t('announcements.detail.withdrawMessage'),
-      [
-        { text: t('common.actions.cancel'), style: 'cancel' },
-        {
-          text: t('common.actions.withdraw'),
-          style: 'destructive',
-          onPress: () => run(() => action.mutateAsync({ id, action: 'withdraw' })),
-        },
-      ],
-    );
+    confirmAction({
+      title: t('announcements.detail.withdrawTitle'),
+      message: t('announcements.detail.withdrawMessage'),
+      confirmLabel: t('common.actions.withdraw'),
+      cancelLabel: t('common.actions.cancel'),
+      destructive: true,
+      onConfirm: () => run(() => action.mutateAsync({ id, action: 'withdraw' })),
+    });
   }
 
   return (

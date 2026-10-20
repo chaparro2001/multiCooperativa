@@ -1,9 +1,8 @@
 import type { AssemblyDetail, VotingView } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { ASSEMBLY_STATUS_TONE, participation } from '@/features/assemblies/agenda';
@@ -20,6 +19,8 @@ import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { colors } from '@/ui/theme';
+import { openUrl } from '@/ui/open-url';
+import { confirmAction } from '@/ui/confirm';
 
 type Point = AssemblyDetail['points'][number];
 
@@ -52,10 +53,14 @@ export default function AssemblyScreen() {
   }
 
   const confirm = (title: string, message: string, onConfirm: () => void) =>
-    Alert.alert(title, message, [
-      { text: t('common.actions.cancel'), style: 'cancel' },
-      { text: t('common.actions.confirm'), style: 'destructive', onPress: onConfirm },
-    ]);
+    confirmAction({
+      title,
+      message,
+      confirmLabel: t('common.actions.confirm'),
+      cancelLabel: t('common.actions.cancel'),
+      destructive: true,
+      onConfirm,
+    });
 
   return (
     <Screen testID="assembly-screen">
@@ -89,7 +94,7 @@ export default function AssemblyScreen() {
             const url = fresh.data?.points
               .flatMap((p) => p.attachments)
               .find((a) => a.id === attachmentId)?.url;
-            if (url) await WebBrowser.openBrowserAsync(url);
+            if (url) await openUrl(url);
           }}
         />
       ))}
@@ -240,19 +245,15 @@ function PointCard({
               variant="secondary"
               loading={control.isPending}
               onPress={() =>
-                Alert.alert(
-                  t('assemblies.detail.closeVotingTitle'),
-                  t('assemblies.detail.closeVotingMessage'),
-                  [
-                    { text: t('common.actions.cancel'), style: 'cancel' },
-                    {
-                      text: t('common.actions.close'),
-                      style: 'destructive',
-                      onPress: () =>
-                        run(() => control.mutateAsync({ pointId: point.id, action: 'close' })),
-                    },
-                  ],
-                )
+                confirmAction({
+                  title: t('assemblies.detail.closeVotingTitle'),
+                  message: t('assemblies.detail.closeVotingMessage'),
+                  confirmLabel: t('common.actions.close'),
+                  cancelLabel: t('common.actions.cancel'),
+                  destructive: true,
+                  onConfirm: () =>
+                    run(() => control.mutateAsync({ pointId: point.id, action: 'close' })),
+                })
               }
               testID={`close-voting-${point.position}`}
             />

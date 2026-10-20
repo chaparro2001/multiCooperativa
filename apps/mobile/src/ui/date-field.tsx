@@ -1,10 +1,12 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { currentLocale, formatDate, formatTime } from '@/i18n/format';
 
 import { colors } from './theme';
+import { fromInputValue, toInputValue } from './web-date-input';
 
 export interface DateFieldProps {
   label: string;
@@ -50,7 +52,15 @@ export function DateField({
         </Pressable>
       ) : (
         <View style={styles.row}>
-          {Platform.OS === 'ios' ? (
+          {Platform.OS === 'web' ? (
+            <WebPicker
+              value={value}
+              mode={mode}
+              minimumDate={minimumDate}
+              label={label}
+              onChange={onChange}
+            />
+          ) : Platform.OS === 'ios' ? (
             <DateTimePicker
               value={value}
               mode={mode}
@@ -78,6 +88,41 @@ export function DateField({
       )}
     </View>
   );
+}
+
+/** The browser's own date control: the native pickers do not exist on the web. */
+function WebPicker({
+  value,
+  mode,
+  minimumDate,
+  label,
+  onChange,
+}: {
+  value: Date;
+  mode: 'date' | 'datetime';
+  minimumDate?: Date;
+  label: string;
+  onChange(value: Date): void;
+}) {
+  return createElement('input', {
+    type: mode === 'date' ? 'date' : 'datetime-local',
+    value: toInputValue(value, mode),
+    min: minimumDate ? toInputValue(minimumDate, mode) : undefined,
+    'aria-label': label,
+    style: {
+      minHeight: 48,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 10,
+      padding: '0 12px',
+      fontSize: 16,
+      color: colors.text,
+      backgroundColor: 'transparent',
+    },
+    onChange: (event: { target: { value: string } }) => {
+      const next = fromInputValue(event.target.value, mode);
+      if (next) onChange(next);
+    },
+  });
 }
 
 function AndroidPicker({
