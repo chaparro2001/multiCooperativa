@@ -27,7 +27,7 @@ This folder collects, in order, what is being decided and specified. Each docume
 | [requirements/04-assemblies.md](requirements/04-assemblies.md)                                       | Calls to meeting, voting, quorum and majorities                                                        | Draft to validate    |
 | [requirements/05-invoices-and-delivery-notes.md](requirements/05-invoices-and-delivery-notes.md)     | Suppliers and customers, purchases and sales, reconciliation, payments and collections, vision capture | Accepted in essence  |
 | [requirements/06-member-area.md](requirements/06-member-area.md)                                     | Member record and capital contributions                                                                | Draft to validate    |
-| [requirements/07-ai-assistant.md](requirements/07-ai-assistant.md)                                   | RAG and tool calling with the user's permissions                                                       | Draft to validate    |
+| [requirements/07-ai-assistant.md](requirements/07-ai-assistant.md)                                   | RAG and tool calling with the user's permissions                                                       | Accepted in essence  |
 
 The `CLAUDE.md` file at the repository root summarizes the rules for working with Claude Code and points to this folder.
 

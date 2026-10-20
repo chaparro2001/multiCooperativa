@@ -67,6 +67,7 @@ pnpm ai:pull                 # downloads the bge-m3 embeddings model into Ollama
 pnpm --filter @multicooperativa/api db:migrate   # applies or creates migrations
 pnpm --filter @multicooperativa/api db:seed      # sample data (docs/sample-data.md)
 pnpm --filter @multicooperativa/api jobs:due-dates  # invoice due dates (the API already runs it every hour)
+pnpm --filter @multicooperativa/api ai:eval      # evaluation set of the assistant (NFR-AI-05); --offline without GEMINI_API_KEY
 pnpm --filter @multicooperativa/api dev          # API at http://localhost:3000
 pnpm --filter @multicooperativa/mobile start     # Expo app
 
@@ -78,5 +79,7 @@ pnpm test:integration        # *.integration.test.ts tests against the multicoop
 ```
 
 Environment variables: copy `apps/api/.env.example` and `apps/mobile/.env.example` to `.env`.
+
+The AI assistant needs `GEMINI_API_KEY` (free key from Google AI Studio, no card; ADR-009) and optionally `GEMINI_MODEL` (default `gemini-3.6-flash`) and `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` (default 30). Without the key the assistant answers 503 and the rest of the app works.
 
 In `apps/mobile`, dependencies are added with `pnpm exec expo install <package>` so that they match the Expo SDK.
