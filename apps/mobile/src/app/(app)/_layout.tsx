@@ -79,7 +79,34 @@ function CooperativeNavigator() {
           </Stack.Protected>
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'invoicing')}>
-          <Stack.Screen name="invoices" options={{ title: t('enums.module.invoicing') }} />
+          <Stack.Screen name="invoices/index" options={{ title: t('enums.module.invoicing') }} />
+          <Stack.Screen
+            name="invoices/invoice/[id]"
+            options={{ title: t('invoicing.detail.invoice') }}
+          />
+          <Stack.Screen
+            name="invoices/delivery-note/[id]"
+            options={{ title: t('invoicing.detail.deliveryNote') }}
+          />
+          <Stack.Screen
+            name="invoices/third-parties/index"
+            options={{ title: t('invoicing.thirdParties.title') }}
+          />
+          <Stack.Screen
+            name="invoices/third-parties/[id]"
+            options={{ title: t('invoicing.thirdParties.record') }}
+          />
+          <Stack.Protected guard={canManage(allowed, 'invoicing')}>
+            <Stack.Screen
+              name="invoices/third-parties/editor"
+              options={{ title: t('invoicing.thirdParties.edit') }}
+            />
+            <Stack.Screen
+              name="invoices/capture"
+              options={{ title: t('invoicing.capture.title') }}
+            />
+            <Stack.Screen name="invoices/register" options={{ title: t('invoicing.form.title') }} />
+          </Stack.Protected>
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'member-area')}>
           <Stack.Screen name="member-area" options={{ title: t('enums.module.member-area') }} />

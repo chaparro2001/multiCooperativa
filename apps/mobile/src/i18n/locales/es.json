@@ -14,7 +14,8 @@
       "publish": "Publicar",
       "remove": "Quitar",
       "retry": "Reintentar",
-      "withdraw": "Retirar"
+      "withdraw": "Retirar",
+      "save": "Guardar"
     },
     "units": {
       "bytes": "{{value}} B",
@@ -90,6 +91,30 @@
     "call": {
       "first": "primera",
       "second": "segunda"
+    },
+    "operation": {
+      "purchase": "Compras",
+      "sale": "Ventas"
+    },
+    "paymentStatus": {
+      "pending": "Pendiente",
+      "overdue": "Vencida",
+      "settled": "Liquidada",
+      "voided": "Anulada"
+    },
+    "settledStatus": {
+      "purchase": "Pagada",
+      "sale": "Cobrada"
+    },
+    "reconciliationStatus": {
+      "no_delivery_notes": "Sin albaranes",
+      "reconciled": "Conciliada",
+      "with_discrepancy": "Con discrepancia"
+    },
+    "deliveryNoteStatus": {
+      "pending_invoicing": "Pendiente de facturar",
+      "invoiced": "Facturado",
+      "voided": "Anulado"
     }
   },
   "errors": {
@@ -148,11 +173,12 @@
       "already_voted": "Ya has votado en este punto; el voto no se puede cambiar.",
       "invalid_amount": "Revisa los importes.",
       "invalid_third_party": "Revisa los datos del proveedor o cliente.",
-      "total_mismatch": "El total no coincide con la suma de las líneas.",
+      "total_mismatch": "El total no coincide con la base más el IVA.",
       "third_party_exists": "Ya existe un proveedor o cliente con ese NIF.",
       "duplicate_number": "Ya existe un documento con ese número.",
       "invalid_invoice_transition": "Ese cambio no es posible con el estado actual de la factura.",
-      "internal_error": "Ha ocurrido un error en el servidor. Inténtalo de nuevo."
+      "internal_error": "Ha ocurrido un error en el servidor. Inténtalo de nuevo.",
+      "extraction_unavailable": "La lectura automática no está disponible ahora mismo. Puedes rellenar el formulario a mano."
     }
   },
   "auth": {
@@ -353,6 +379,140 @@
       "date": "Fecha del documento",
       "submit": "Subir y publicar",
       "tooLarge": "El documento puede ocupar como máximo {{max}} MB."
+    }
+  },
+  "invoicing": {
+    "home": {
+      "thirdParties": "Terceros",
+      "scan": "Escanear",
+      "register": "Registrar",
+      "invoices": "Facturas",
+      "notes": "Albaranes",
+      "noInvoices": "No hay facturas.",
+      "noNotes": "No hay albaranes."
+    },
+    "summary": {
+      "toPay": "Pendiente de pagar",
+      "toCollect": "Pendiente de cobrar",
+      "invoices_one": "{{count}} factura",
+      "invoices_other": "{{count}} facturas",
+      "overdue_one": "{{amount}} vencida ({{count}})",
+      "overdue_other": "{{amount}} vencidas ({{count}})",
+      "openDiscrepancies_one": "{{count}} factura con discrepancia sin resolver.",
+      "openDiscrepancies_other": "{{count}} facturas con discrepancia sin resolver.",
+      "staleNotes_one": "{{count}} albarán lleva más de 30 días sin facturar.",
+      "staleNotes_other": "{{count}} albaranes llevan más de 30 días sin facturar."
+    },
+    "row": {
+      "invoiceNumber": "Factura {{number}}",
+      "noteNumber": "Albarán {{number}}",
+      "due": "vence {{date}}"
+    },
+    "detail": {
+      "invoice": "Factura",
+      "deliveryNote": "Albarán",
+      "invoiceTitle": "Factura {{number}}",
+      "noteTitle": "Albarán {{number}}",
+      "issueDate": "Fecha de emisión",
+      "dueDate": "Vencimiento",
+      "noteDate": "Fecha",
+      "base": "Base imponible",
+      "vat": "IVA ({{rate}} %)",
+      "total": "Total",
+      "settledOn": {
+        "purchase": "Pagada el",
+        "sale": "Cobrada el"
+      },
+      "openFile": "Ver original",
+      "discrepancies": "Discrepancias",
+      "deliveredVsInvoiced": "Albaranes: {{delivered}} {{unit}} · Factura: {{invoiced}} {{unit}}",
+      "numericGoverns": "El detalle numérico es el que manda; la explicación es orientativa.",
+      "lines": "Líneas",
+      "deliveryNotes": "Albaranes",
+      "noDeliveryNotes": "Sin albaranes asociados.",
+      "viewThirdParty": "Ver ficha del tercero",
+      "viewInvoice": "Ver factura",
+      "settleDate": {
+        "purchase": "Fecha de pago",
+        "sale": "Fecha de cobro"
+      },
+      "settle": {
+        "purchase": "Marcar como pagada",
+        "sale": "Marcar como cobrada"
+      },
+      "void": "Anular",
+      "voidInvoiceMessage": "La factura quedará anulada y sus albaranes volverán a estar pendientes de facturar.",
+      "voidNoteMessage": "El albarán quedará anulado."
+    },
+    "thirdParties": {
+      "title": "Proveedores y clientes",
+      "record": "Ficha",
+      "edit": "Proveedor o cliente",
+      "new": "Nuevo",
+      "search": "Buscar por nombre o NIF",
+      "empty": "No hay proveedores ni clientes.",
+      "filter": {
+        "all": "Todos",
+        "supplier": "Proveedores",
+        "customer": "Clientes"
+      },
+      "supplier": "Proveedor",
+      "customer": "Cliente",
+      "inactive": "Inactivo",
+      "nif": "NIF",
+      "name": "Nombre",
+      "roles": "Tipo",
+      "email": "Email",
+      "phone": "Teléfono",
+      "balance": "Saldo pendiente",
+      "deactivate": "Desactivar",
+      "reactivate": "Reactivar",
+      "openExisting": "Abrir el existente"
+    },
+    "capture": {
+      "title": "Escanear documento",
+      "intro": "Haz una foto de un albarán o factura, elige una imagen o un PDF. Revisarás los datos leídos antes de guardar nada.",
+      "takePhoto": "Hacer una foto",
+      "gallery": "Elegir de la galería",
+      "chooseImage": "Elegir imagen",
+      "choosePdf": "Elegir un PDF",
+      "reading": "Leyendo el documento…",
+      "cameraDenied": "No hay permiso para usar la cámara. Puedes elegir una imagen en su lugar.",
+      "privacy": "El documento se envía a nuestro servidor, que lo lee con un modelo de IA de Anthropic. No se guarda nada hasta que lo confirmes.",
+      "manually": "Rellenar a mano"
+    },
+    "form": {
+      "title": "Registrar documento",
+      "kind": {
+        "invoice": "Factura",
+        "delivery_note": "Albarán"
+      },
+      "noData": "No se han podido leer los datos del documento. Rellena el formulario a mano.",
+      "reviewFields": "Revisa los datos leídos: los campos marcados con ⚠ tienen poca confianza. No se guardará nada hasta que confirmes.",
+      "thirdParty": "Proveedor o cliente",
+      "searchParty": "Buscar",
+      "noParties": "No hay terceros de este tipo. Crea uno.",
+      "unknownParty": "{{name}} ({{nif}}) no está registrado en tu cooperativa.",
+      "createParty": "Crear con estos datos",
+      "number": "Número",
+      "issueDate": "Fecha de emisión (AAAA-MM-DD)",
+      "noteDate": "Fecha (AAAA-MM-DD)",
+      "dueDate": "Vencimiento (AAAA-MM-DD)",
+      "base": "Base imponible (€)",
+      "vatRate": "IVA (%)",
+      "total": "Total (€)",
+      "useComputedTotal": "Usar el total calculado: {{total}} €",
+      "lines": "Líneas",
+      "concept": "Concepto",
+      "quantity": "Cantidad",
+      "unit": "Unidad",
+      "addLine": "Añadir línea",
+      "removeLine": "Quitar línea",
+      "groupNotes": "Albaranes pendientes que agrupa",
+      "attached": "Original adjunto: {{name}}",
+      "confirm": "Confirmar y guardar",
+      "invalid": "Revisa los datos: faltan campos o alguno no es válido.",
+      "expectedTotal": "Total esperado: {{expected}} €."
     }
   }
 }
