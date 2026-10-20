@@ -87,6 +87,11 @@ async function snapshot() {
       orderBy: { id: 'asc' },
       select: { id: true, status: true, profileId: true },
     }),
+    assistantConversations: await prisma.assistantConversation.findMany({
+      where: { cooperativeId: fieldCoop },
+      orderBy: { id: 'asc' },
+      include: { messages: true },
+    }),
     invitations: await prisma.invitation.count(),
     audit: await prisma.auditEvent.count({ where: { cooperativeId: fieldCoop } }),
   };
@@ -203,7 +208,22 @@ beforeAll(async () => {
       reconciliationStatus: 'no_delivery_notes',
     },
   });
+  const conversation = await prisma.assistantConversation.create({
+    data: {
+      cooperativeId: fieldCoop,
+      membershipId: member.id,
+      messages: {
+        create: [
+          { role: 'user', content: 'Question' },
+          { role: 'assistant', content: 'Answer' },
+        ],
+      },
+    },
+    include: { messages: true },
+  });
   fieldCoopParams = {
+    conversationId: conversation.id,
+    messageId: conversation.messages.find((message) => message.role === 'assistant')!.id,
     noteId: note.id,
     invoiceId: invoice.id,
     thirdPartyId: thirdParty.id,
@@ -255,6 +275,12 @@ beforeAll(async () => {
       email: null,
       phone: null,
       active: false,
+    },
+    'POST /cooperatives/:cooperativeId/assistant/conversations/:conversationId/messages': {
+      content: 'Hello',
+    },
+    'POST /cooperatives/:cooperativeId/assistant/messages/:messageId/rating': {
+      rating: 'helpful',
     },
     'POST /cooperatives/:cooperativeId/members': {
       email: 'new@sea.test',

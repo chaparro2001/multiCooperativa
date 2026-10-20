@@ -3,6 +3,7 @@ import { type RequestHandler, Router } from 'express';
 import type { EventPublisher } from '../../shared/events';
 import type { FileStorage } from '../../shared/files/file-storage';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
+import { createInvoicingReads } from './application/assistant-reads';
 import { runDueDates } from './application/due-dates';
 import type { DiscrepancyExplainer } from './application/ports/discrepancy-explainer';
 import type { DocumentExtractor } from './application/ports/document-extractor';
@@ -31,6 +32,7 @@ export {
   createGeminiClient,
 } from './infrastructure/gemini-ai';
 export { FakeDocumentExtractor } from './infrastructure/fake-document-extractor';
+export type { InvoicingReads } from './application/assistant-reads';
 export type {
   DeliveryNoteRegistered,
   DiscrepancyDetected,
@@ -103,5 +105,10 @@ export function createInvoicingModule(deps: {
     ),
   );
 
-  return { router, errorHandler: invoicingErrorHandler };
+  return {
+    router,
+    errorHandler: invoicingErrorHandler,
+    /** For the AI assistant's tools (requirements/07): same use cases and permissions. */
+    reads: createInvoicingReads(useCaseDeps),
+  };
 }

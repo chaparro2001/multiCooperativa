@@ -4,6 +4,7 @@ import { createApp } from './app';
 import { type AuthRateLimits, createAccessModule, type InvitationSender } from './modules/access';
 import { type AnnouncementEvent, createAnnouncementsModule } from './modules/announcements';
 import { type AssemblyEvent, createAssembliesModule } from './modules/assemblies';
+import { createAssistantModule, type LanguageModel } from './modules/assistant';
 import { createDocumentsModule, type DocumentEvent, type Embedder } from './modules/documents';
 import {
   createInvoicingModule,
@@ -30,8 +31,12 @@ export interface ApiDeps {
   documentExtractor?: DocumentExtractor;
   /** Drafts explanations of invoice discrepancies (ADR-009); without it they stay empty. */
   discrepancyExplainer?: DiscrepancyExplainer;
+  /** Model of the AI assistant; without it the assistant answers 503 (ADR-009). */
+  languageModel?: LanguageModel | null;
   /** Injectable so tests can observe the events; one in-process bus by default. */
   events?: EventBus<AppEvent>;
+  /** BR-AI-08; 30 when omitted. */
+  assistantMessageLimitPerHour?: number;
   authRateLimits?: AuthRateLimits | false;
   trustProxy?: number | false;
 }
@@ -99,6 +104,19 @@ export function createApi(deps: ApiDeps): Api {
     cooperativeTaxId: (id) => access.directory.cooperativeTaxId(id),
   });
 
+  const assistant = createAssistantModule({
+    prisma: deps.prisma,
+    model: deps.languageModel ?? null,
+    requireCooperative: access.requireCooperative,
+    messageLimitPerHour: deps.assistantMessageLimitPerHour,
+    sources: {
+      documents: documents,
+      invoicing: invoicing.reads,
+      assemblies: assemblies.reads,
+      announcements: announcements.reads,
+    },
+  });
+
   const app = createApp({
     routers: [
       access.router,
@@ -106,6 +124,7 @@ export function createApi(deps: ApiDeps): Api {
       documents.router,
       assemblies.router,
       invoicing.router,
+      assistant.router,
     ],
     errorHandlers: [
       access.errorHandler,
@@ -113,6 +132,7 @@ export function createApi(deps: ApiDeps): Api {
       documents.errorHandler,
       assemblies.errorHandler,
       invoicing.errorHandler,
+      assistant.errorHandler,
     ],
     trustProxy: deps.trustProxy,
   });

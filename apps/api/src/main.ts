@@ -1,6 +1,7 @@
 import { createApi } from './api';
 import { loadEnv } from './config/env';
 import { ConsoleInvitationSender, UnavailableInvitationSender } from './modules/access';
+import { createGeminiLanguageModel } from './modules/assistant';
 import { OllamaEmbedder } from './modules/documents';
 import {
   GeminiDiscrepancyExplainer,
@@ -27,6 +28,11 @@ const { app, indexing, runDueDates } = createApi({
   // Scanned documents are read by Gemini (ADR-009); without a key, extraction answers 503.
   documentExtractor: gemini && new GeminiDocumentExtractor(gemini, env.GEMINI_MODEL),
   discrepancyExplainer: gemini && new GeminiDiscrepancyExplainer(gemini, env.GEMINI_MODEL),
+  // Without a key the assistant answers 503 and the rest of the app keeps working (ADR-009).
+  languageModel: env.GEMINI_API_KEY
+    ? createGeminiLanguageModel({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL })
+    : null,
+  assistantMessageLimitPerHour: env.ASSISTANT_MESSAGE_LIMIT_PER_HOUR,
   // No email provider yet: in development the link is printed to the console;
   // in production inviting returns 503 until one is configured.
   invitationSender: production ? new UnavailableInvitationSender() : new ConsoleInvitationSender(),

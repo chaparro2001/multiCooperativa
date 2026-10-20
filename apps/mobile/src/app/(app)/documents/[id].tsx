@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { withPage } from '@/features/assistant/chat';
 import { categoryTitle } from '@/features/documents/grouping';
 import {
   useAddVersion,
@@ -31,7 +32,8 @@ const INDEXING_TONE = {
 /** US-DOC-03 (view) and US-DOC-04/05/06 (versions, withdraw, indexing). */
 export default function DocumentScreen() {
   const { t } = useTranslation();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `page` comes from an assistant citation (US-AI-01): the viewer opens at that page.
+  const { id, page } = useLocalSearchParams<{ id: string; page?: string }>();
   const { canManage } = useModuleAccess('documents');
   const document = useDocument(id);
   const versions = useDocumentVersions(id, canManage);
@@ -92,7 +94,7 @@ export default function DocumentScreen() {
             setOpening(true);
             try {
               // A fresh 5-minute link every time (NFR-DOC-02).
-              await WebBrowser.openBrowserAsync(await freshUrl(id));
+              await WebBrowser.openBrowserAsync(withPage(await freshUrl(id), page));
             } finally {
               setOpening(false);
             }

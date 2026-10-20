@@ -71,12 +71,12 @@ Specification: [05-invoices-and-delivery-notes](requirements/05-invoices-and-del
 Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assistant](requirements/07-ai-assistant.md)
 
 - [ ] Member area: capital movements and read access.
-- [ ] Language model port and adapter.
-- [ ] Tools filtered by permissions reusing the use cases.
-- [ ] RAG with citations.
-- [ ] Conversations and usage limit.
-- [ ] Evaluation set of 20 questions.
-- [ ] App: chat with citations and links.
+- [x] Language model port and adapter (Gemini, ADR-009).
+- [x] Tools filtered by permissions reusing the use cases (`my_contributions` waits for the member area).
+- [x] RAG with citations.
+- [x] Conversations and usage limit.
+- [x] Evaluation set of 20 questions (`pnpm --filter @multicooperativa/api ai:eval`).
+- [x] App: chat with citations and links.
 
 ## Milestone 6 · Notifications and feature freeze (20–22 Oct)
 

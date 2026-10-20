@@ -22,14 +22,24 @@ describe('loadEnv', () => {
       OLLAMA_URL: 'http://localhost:11434',
       EMBEDDING_MODEL: 'bge-m3',
       GEMINI_MODEL: 'gemini-3.8-flash',
+      ASSISTANT_MESSAGE_LIMIT_PER_HOUR: 30,
     });
   });
 
-  it('reads the Gemini key and model for document extraction (NFR-INV-05)', () => {
-    expect(loadEnv({ ...required, GEMINI_API_KEY: 'key-test', GEMINI_MODEL: 'm' })).toMatchObject({
-      GEMINI_API_KEY: 'key-test',
-      GEMINI_MODEL: 'm',
+  it('NFR-AI-03: the Gemini key is optional and the assistant limit and model are configurable', () => {
+    expect(loadEnv(required).GEMINI_API_KEY).toBeUndefined();
+    const configured = loadEnv({
+      ...required,
+      GEMINI_API_KEY: 'gemini-test-key',
+      GEMINI_MODEL: 'gemini-3.5-flash-lite',
+      ASSISTANT_MESSAGE_LIMIT_PER_HOUR: '10',
     });
+    expect(configured).toMatchObject({
+      GEMINI_API_KEY: 'gemini-test-key',
+      GEMINI_MODEL: 'gemini-3.5-flash-lite',
+      ASSISTANT_MESSAGE_LIMIT_PER_HOUR: 10,
+    });
+    expect(() => loadEnv({ ...required, ASSISTANT_MESSAGE_LIMIT_PER_HOUR: '0' })).toThrow();
   });
 
   it('converts the port to a number', () => {

@@ -39,9 +39,12 @@ const envSchema = z
     /** Ollama service that computes the embeddings (ADR-006). */
     OLLAMA_URL: z.url({ protocol: /^https?$/ }).optional(),
     EMBEDDING_MODEL: z.string().min(1).default('bge-m3'),
-    /** Gemini key for reading scanned documents (ADR-009). Without it, extraction answers 503. */
+    /** Gemini API key (ADR-009), shared by the AI assistant and document extraction. Without it both answer 503; the rest works. */
     GEMINI_API_KEY: z.string().min(1).optional(),
+    /** Gemini model shared by the assistant and document extraction: Flash class, free tier. */
     GEMINI_MODEL: z.string().min(1).default('gemini-3.8-flash'),
+    /** BR-AI-08: messages per user and hour. */
+    ASSISTANT_MESSAGE_LIMIT_PER_HOUR: z.coerce.number().int().min(1).default(30),
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV !== 'production') return;

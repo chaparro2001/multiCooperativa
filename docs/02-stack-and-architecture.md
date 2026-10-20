@@ -16,6 +16,7 @@ The underlying decisions are reasoned in the ADRs. This document is the snapshot
 | Backend             | Node + TypeScript, modular monolith with Clean Architecture and internal events                                                         |
 | API                 | REST documented with OpenAPI, JWT authentication; stable error codes plus English developer messages (ADR-008)                          |
 | Persistence         | PostgreSQL with Prisma; pgvector for RAG                                                                                                |
+| Language model      | Gemini (free tier) behind ports: assistant with function calling, invoice vision extraction (ADR-009)                                   |
 | Embeddings          | Local `bge-m3` model served by Ollama, behind a port (ADR-006)                                                                          |
 | Files               | S3-compatible object storage, with signed URLs that expire (ADR-005); RustFS in development                                             |
 | Tests               | Vitest in domain and backend; React Native Testing Library in the app; Maestro for E2E                                                  |

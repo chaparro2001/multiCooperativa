@@ -2,7 +2,7 @@
 
 **Date**: 2026-10-04
 
-**Status**: Accepted
+**Status**: Superseded by [ADR-009](ADR-009-gemini-language-and-vision-model.md)
 
 ## Context
 

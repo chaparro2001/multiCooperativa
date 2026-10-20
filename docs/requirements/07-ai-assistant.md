@@ -1,6 +1,6 @@
 # Requirements · 07 · AI assistant
 
-**Date**: 2026-10-04 · **Status**: Draft to validate
+**Date**: 2026-10-04 · **Status**: Accepted in essence. Implemented except `my_contributions` (waits for the member area) and the conversation history screen.
 
 Conversational assistant that answers the user's questions about their cooperative by combining two sources:
 
@@ -77,7 +77,7 @@ As a user, I want to ask follow-up questions without repeating the context.
 | BR-AI-05 | Answers based on documents include at least one citation. Without relevant chunks, the assistant says so.                             |
 | BR-AI-06 | Content retrieved from documents is treated as data, not as instructions.                                                             |
 | BR-AI-07 | Conversations are stored per user and cooperative, and only their author sees them.                                                   |
-| BR-AI-08 | Limit of 30 messages per user and hour.                                                                                               |
+| BR-AI-08 | Limit of 30 messages per user and hour (per membership: user and cooperative), configurable with `ASSISTANT_MESSAGE_LIMIT_PER_HOUR`.  |
 
 ## 3. Tools
 
@@ -163,6 +163,9 @@ erDiagram
 | GET    | `/cooperatives/{cooperativeId}/assistant/conversations`                           | My conversations    |
 | POST   | `/cooperatives/{cooperativeId}/assistant/conversations/{conversationId}/messages` | Send message        |
 | POST   | `/cooperatives/{cooperativeId}/assistant/messages/{messageId}/rating`             | Rate answer         |
+| GET    | `/cooperatives/{cooperativeId}/assistant/conversations/{conversationId}`          | Messages of one     |
+
+The last route is not in the first draft: the app needs it to reopen a conversation. Over the limit the API answers 429 with `Retry-After`; without `GEMINI_API_KEY`, 503 `assistant_unavailable` ([ADR-009](../adr/ADR-009-gemini-language-and-vision-model.md)).
 
 ## 9. Screens
 
@@ -174,5 +177,5 @@ erDiagram
 - **Unit**: tool selection according to permissions for the 4 profiles.
 - **Integration with a simulated model**: each tool invokes its use case with the correct context.
 - **Isolation**: two cooperatives with almost identical documents; no question retrieves chunks from the other.
-- **Evaluation**: set of questions with expected answer (faithfulness and presence of citation), with LangSmith or a custom script.
+- **Evaluation**: 20 questions with expected tools, citations and facts (`modules/assistant/evaluation`). They run in CI through the production use case with fixed data and a rule-based model, and against the real model with `pnpm --filter @multicooperativa/api ai:eval`.
 - **Injection**: test document with malicious instructions; the assistant neither follows them nor widens its access.
