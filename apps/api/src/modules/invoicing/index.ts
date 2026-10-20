@@ -4,6 +4,7 @@ import type { EventPublisher } from '../../shared/events';
 import type { FileStorage } from '../../shared/files/file-storage';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
 import { runDueDates } from './application/due-dates';
+import type { DiscrepancyExplainer } from './application/ports/discrepancy-explainer';
 import type { DocumentExtractor } from './application/ports/document-extractor';
 import type { InvoicingEvent } from './application/events';
 import { createExtractionsRouter } from './infrastructure/http/extractions-router';
@@ -15,12 +16,20 @@ import {
   PrismaInvoiceStore,
   PrismaInvoicingSettingsStore,
 } from './infrastructure/prisma-document-stores';
-import { UnavailableDocumentExtractor } from './infrastructure/claude-ai';
+import {
+  UnavailableDiscrepancyExplainer,
+  UnavailableDocumentExtractor,
+} from './infrastructure/gemini-ai';
 import { PrismaDueDatesStore } from './infrastructure/prisma-due-dates-store';
 import { PrismaThirdPartyStore } from './infrastructure/prisma-third-party-store';
 
+export type { DiscrepancyExplainer } from './application/ports/discrepancy-explainer';
 export type { DocumentExtractor, RawExtraction } from './application/ports/document-extractor';
-export { ClaudeDocumentExtractor, createClaudeClient } from './infrastructure/claude-ai';
+export {
+  GeminiDiscrepancyExplainer,
+  GeminiDocumentExtractor,
+  createGeminiClient,
+} from './infrastructure/gemini-ai';
 export { FakeDocumentExtractor } from './infrastructure/fake-document-extractor';
 export type {
   DeliveryNoteRegistered,
@@ -55,8 +64,10 @@ export function createInvoicingModule(deps: {
   files: FileStorage;
   events: EventPublisher<InvoicingEvent>;
   requireCooperative: RequestHandler;
-  /** Reads photos and PDFs (ADR-007); the unavailable one answers 503. */
+  /** Reads photos and PDFs (ADR-009); the unavailable one answers 503. */
   extractor?: DocumentExtractor;
+  /** Drafts the plain-language explanation of discrepancies (ADR-009); optional. */
+  explainer?: DiscrepancyExplainer;
   /** From the access module: the cooperative's own tax id, to tell sales from purchases. */
   cooperativeTaxId(cooperativeId: string): Promise<string | null>;
   now?: () => Date;
@@ -74,6 +85,7 @@ export function createInvoicingModule(deps: {
     events: deps.events,
     now,
     today: () => todayInSpain(now()),
+    explainer: deps.explainer ?? new UnavailableDiscrepancyExplainer(),
   };
 
   const router = Router();

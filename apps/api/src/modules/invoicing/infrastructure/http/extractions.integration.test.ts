@@ -16,6 +16,9 @@ const env = loadEnv(process.env);
 const prisma = createTestPrisma();
 const extractor = new FakeDocumentExtractor(null);
 const invitationSender = { send: async () => {} };
+const explainer = {
+  explain: async (facts: unknown[]) => facts.map(() => 'Billed more than delivered.'),
+};
 const { app } = createApi({
   prisma,
   jwtSecret: env.JWT_SECRET,
@@ -23,9 +26,10 @@ const { app } = createApi({
   files: new InMemoryFileStorage(),
   embedder: new HashingEmbedder(),
   documentExtractor: extractor,
+  discrepancyExplainer: explainer,
   authRateLimits: false,
 });
-// No extractor configured: ADR-007 says 503 and the rest keeps working.
+// No extractor configured: ADR-009 says 503 and the rest keeps working.
 const { app: appWithoutAi } = createApi({
   prisma,
   jwtSecret: env.JWT_SECRET,
@@ -168,5 +172,66 @@ describe('POST /extractions (US-INV-05)', () => {
 
     expect(response.status).toBe(503);
     expect(response.body.error).toBe('extraction_unavailable');
+  });
+});
+
+describe('POST /invoices/:id/explanations (US-INV-04, BR-INV-12)', () => {
+  async function invoiceWithDiscrepancy(target = app) {
+    const party = await request(target)
+      .post(`/cooperatives/${coop}/third-parties`)
+      .set(as(manager))
+      .send({ nif: 'A58818501', name: 'North Diesel', isSupplier: true, isCustomer: false });
+    const post = (path: string, data: unknown) =>
+      request(target)
+        .post(`/cooperatives/${coop}${path}`)
+        .set(as(manager))
+        .field('data', JSON.stringify(data));
+    const note = await post('/delivery-notes', {
+      thirdPartyId: party.body.id,
+      operation: 'purchase',
+      number: 'A-1',
+      date: '2026-10-01',
+      lines: [{ concept: 'Diesel', quantity: '1000', unit: 'l' }],
+    });
+    const created = await post('/invoices', {
+      thirdPartyId: party.body.id,
+      operation: 'purchase',
+      number: 'F-1',
+      issueDate: '2026-10-05',
+      dueDate: '2026-11-05',
+      base: '1000.00',
+      vatRate: '21',
+      total: '1210.00',
+      lines: [{ concept: 'Diesel', quantity: '1050', unit: 'l' }],
+      deliveryNoteIds: [note.body.id],
+    });
+    return created.body.id as string;
+  }
+
+  it('drafts the text next to the numeric detail; the board can ask for it and the status is untouched', async () => {
+    const id = await invoiceWithDiscrepancy();
+
+    const response = await request(app)
+      .post(`/cooperatives/${coop}/invoices/${id}/explanations`)
+      .set(as(board));
+
+    expect(response.status).toBe(200);
+    expect(response.body.reconciliationStatus).toBe('with_discrepancy');
+    expect(response.body.discrepancies[0]).toMatchObject({
+      deliveredQuantity: '1000',
+      invoicedQuantity: '1050',
+      explanation: 'Billed more than delivered.',
+    });
+  });
+
+  it('without a provider the explanation stays empty and the answer is still 200', async () => {
+    const id = await invoiceWithDiscrepancy(appWithoutAi);
+
+    const response = await request(appWithoutAi)
+      .post(`/cooperatives/${coop}/invoices/${id}/explanations`)
+      .set(as(board));
+
+    expect(response.status).toBe(200);
+    expect(response.body.discrepancies[0].explanation).toBeNull();
   });
 });
