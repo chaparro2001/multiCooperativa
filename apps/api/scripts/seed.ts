@@ -4,10 +4,21 @@
  *   pnpm --filter @multicooperativa/api db:seed
  *
  * All users get the password from SEED_PASSWORD or, if it is not set, the
- * demo password printed at the end. It is idempotent: a cooperative that
- * already exists is left untouched. It refuses to run in production.
+ * demo password printed at the end. It is idempotent and additive: a cooperative
+ * that already exists is left untouched and nothing is ever deleted.
+ *
+ * Against the hosted demo (docs/04-deployment.md), with the direct Neon URL:
+ *
+ *   DATABASE_URL='postgresql://…neon…' SEED_PASSWORD='…' \
+ *     pnpm --filter @multicooperativa/api db:seed --allow-production
+ *
+ * Without the flag it refuses any database that is not local, and NODE_ENV=production.
+ * The sample documents and announcements go through the API: see seed-content.ts.
  */
+import { randomBytes } from 'node:crypto';
+
 import { seedDemoData } from '../src/dev/demo-seed';
+import { ALLOW_PRODUCTION_FLAG, seedRefusal } from '../src/dev/seed-guard';
 import { loadEnv } from '../src/config/env';
 import {
   createAccessModule,
@@ -18,11 +29,26 @@ import { createPrismaClient } from '../src/shared/infrastructure/prisma';
 
 const DEMO_PASSWORD = 'demo-cooperativa-2026';
 
-const env = loadEnv(process.env);
-if (env.NODE_ENV === 'production') {
-  console.error('Sample data is not loaded in production.');
+// The guard runs first, on the raw environment: a production-like one would otherwise fail
+// validation for variables (S3) that seeding does not use.
+const refusal = process.env.DATABASE_URL
+  ? seedRefusal({
+      nodeEnv: process.env.NODE_ENV ?? 'development',
+      databaseUrl: process.env.DATABASE_URL,
+      allowProduction: process.argv.includes(ALLOW_PRODUCTION_FLAG),
+    })
+  : null;
+if (refusal) {
+  console.error(refusal);
   process.exit(1);
 }
+
+// Seeding issues no tokens and touches no storage: no JWT_SECRET or S3 settings are needed.
+const env = loadEnv({
+  JWT_SECRET: randomBytes(32).toString('hex'),
+  ...process.env,
+  NODE_ENV: 'development',
+});
 
 const password = process.env.SEED_PASSWORD || DEMO_PASSWORD;
 const prisma = createPrismaClient(env.DATABASE_URL);

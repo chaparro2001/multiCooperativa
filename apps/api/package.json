@@ -16,7 +16,8 @@
     "db:seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
     "ai:eval": "tsx --env-file-if-exists=.env scripts/assistant-eval.ts",
     "jobs:due-dates": "tsx --env-file-if-exists=.env scripts/due-dates.ts",
-    "start:prod": "prisma migrate deploy && node --import tsx src/main.ts"
+    "start:prod": "prisma migrate deploy && node --import tsx src/main.ts",
+    "db:seed:content": "tsx --env-file-if-exists=.env scripts/seed-content.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1146.0",
@@ -30,6 +31,7 @@
     "express-rate-limit": "^8.7.0",
     "jose": "^6.2.12",
     "multer": "^2.4.0",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.23.1",
     "prisma": "^7.10.0",
     "tsx": "^4.23.15",
@@ -41,7 +43,6 @@
     "@types/multer": "^2.3.0",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
-    "pdf-lib": "^1.17.1",
     "supertest": "^7.3.1"
   }
 }
