@@ -2,7 +2,7 @@ import { createApi } from './api';
 import { loadEnv } from './config/env';
 import { ConsoleInvitationSender, UnavailableInvitationSender } from './modules/access';
 import { createGeminiLanguageModel } from './modules/assistant';
-import { OllamaEmbedder } from './modules/documents';
+import { GeminiEmbedder, OllamaEmbedder } from './modules/documents';
 import {
   GeminiDiscrepancyExplainer,
   GeminiDocumentExtractor,
@@ -24,7 +24,12 @@ const { app, indexing, runDueDates } = createApi({
   prisma: createPrismaClient(env.DATABASE_URL),
   jwtSecret: env.JWT_SECRET,
   files,
-  embedder: new OllamaEmbedder({ url: env.OLLAMA_URL, model: env.EMBEDDING_MODEL }),
+  // Ollama locally (ADR-006); Gemini in the hosted demo (ADR-010). Vectors of different models
+  // are not comparable: each environment indexes its documents with its own provider.
+  embedder:
+    env.EMBEDDINGS_PROVIDER === 'gemini' && gemini
+      ? new GeminiEmbedder(gemini, env.GEMINI_EMBEDDING_MODEL)
+      : new OllamaEmbedder({ url: env.OLLAMA_URL, model: env.EMBEDDING_MODEL }),
   // Scanned documents are read by Gemini (ADR-009); without a key, extraction answers 503.
   documentExtractor: gemini && new GeminiDocumentExtractor(gemini, env.GEMINI_MODEL),
   discrepancyExplainer: gemini && new GeminiDiscrepancyExplainer(gemini, env.GEMINI_MODEL),
@@ -36,8 +41,10 @@ const { app, indexing, runDueDates } = createApi({
   // No email provider yet: in development the link is printed to the console;
   // in production inviting returns 503 until one is configured.
   invitationSender: production ? new UnavailableInvitationSender() : new ConsoleInvitationSender(),
-  // In production the API sits behind the Railway proxy: one hop.
+  // In production the API sits behind the host's proxy (Render): one hop.
   trustProxy: production ? 1 : false,
+  corsOrigins: env.CORS_ORIGINS,
+  jobsToken: env.JOBS_TOKEN,
 });
 
 app.listen(env.PORT, () => {
@@ -50,7 +57,8 @@ indexing
   .then((count) => count > 0 && console.log(`Indexing: ${count} pending versions queued`))
   .catch((error) => console.error('Could not resume the pending indexing jobs:', error));
 
-// Invoice due dates (US-INV-07): on startup and every hour. It works by dates and is
+// Invoice due dates (US-INV-07): on startup and every hour. A free host sleeps when idle, so an
+// external cron also calls POST /jobs/due-dates. It works by dates and is
 // idempotent (NFR-INV-04), so in practice it acts once a day.
 const HOUR = 60 * 60 * 1000;
 const dueDates = () =>

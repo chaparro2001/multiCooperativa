@@ -8,6 +8,7 @@ import express, {
 
 import { MulterError } from 'multer';
 
+import { corsMiddleware } from './shared/infrastructure/http/cors';
 import { InvalidRequestError } from './shared/infrastructure/http/validation';
 
 /** Last resort: never leaks internals to the client (NFR-ACC-08 keeps tokens out of logs too). */
@@ -33,17 +34,21 @@ export interface AppOptions {
   errorHandlers?: ErrorRequestHandler[];
   /** Number of proxies in front of the API, so `req.ip` is the client's (rate limits). */
   trustProxy?: number | false;
+  /** Origins allowed to call the API from a browser (the hosted web build); none by default. */
+  corsOrigins?: readonly string[];
 }
 
 export function createApp({
   routers = [],
   errorHandlers = [],
   trustProxy = false,
+  corsOrigins = [],
 }: AppOptions = {}): Express {
   const app = express();
 
   app.disable('x-powered-by');
   app.set('trust proxy', trustProxy);
+  app.use(corsMiddleware(corsOrigins));
   app.use(express.json());
 
   app.get('/health', (_req, res) => {

@@ -19,10 +19,13 @@ describe('loadEnv', () => {
       S3_ACCESS_KEY_ID: 'multicooperativa',
       S3_SECRET_ACCESS_KEY: 'multicooperativa-dev',
       S3_FORCE_PATH_STYLE: true,
+      EMBEDDINGS_PROVIDER: 'ollama',
+      GEMINI_EMBEDDING_MODEL: 'gemini-embedding-2',
       OLLAMA_URL: 'http://localhost:11434',
       EMBEDDING_MODEL: 'bge-m3',
       GEMINI_MODEL: 'gemini-3.8-flash',
       ASSISTANT_MESSAGE_LIMIT_PER_HOUR: 30,
+      CORS_ORIGINS: ['http://localhost:8081'],
     });
   });
 
@@ -90,6 +93,56 @@ describe('loadEnv', () => {
       S3_ENDPOINT: undefined,
       S3_BUCKET: 'docs-prod',
       S3_FORCE_PATH_STYLE: false,
+    });
+  });
+
+  describe('hosted demo (ADR-010)', () => {
+    const production = {
+      ...required,
+      NODE_ENV: 'production',
+      S3_BUCKET: 'multicooperativa',
+      S3_ACCESS_KEY_ID: 'key',
+      S3_SECRET_ACCESS_KEY: 'secret',
+    };
+
+    it('production with the Gemini provider needs the key but not Ollama', () => {
+      expect(() => loadEnv({ ...production, EMBEDDINGS_PROVIDER: 'gemini' })).toThrow(
+        /GEMINI_API_KEY: required with EMBEDDINGS_PROVIDER=gemini/,
+      );
+      const env = loadEnv({
+        ...production,
+        EMBEDDINGS_PROVIDER: 'gemini',
+        GEMINI_API_KEY: 'gemini-test-key',
+      });
+      expect(env.EMBEDDINGS_PROVIDER).toBe('gemini');
+    });
+
+    it('production with the default provider still requires OLLAMA_URL', () => {
+      expect(() => loadEnv(production)).toThrow(/OLLAMA_URL: required in production/);
+    });
+
+    it('rejects an unknown embeddings provider', () => {
+      expect(() => loadEnv({ ...required, EMBEDDINGS_PROVIDER: 'openai' })).toThrow(
+        /EMBEDDINGS_PROVIDER/,
+      );
+    });
+
+    it('CORS_ORIGINS is a trimmed comma-separated list; production denies all by default', () => {
+      const base = { ...production, EMBEDDINGS_PROVIDER: 'gemini', GEMINI_API_KEY: 'k' };
+      expect(loadEnv(base).CORS_ORIGINS).toEqual([]);
+      expect(
+        loadEnv({
+          ...base,
+          CORS_ORIGINS: ' https://chaparro2001.github.io/ , http://localhost:8081 ',
+        }).CORS_ORIGINS,
+      ).toEqual(['https://chaparro2001.github.io', 'http://localhost:8081']);
+      expect(() => loadEnv({ ...base, CORS_ORIGINS: 'not a url' })).toThrow(/CORS_ORIGINS/);
+    });
+
+    it('JOBS_TOKEN must be at least 32 characters when set', () => {
+      expect(loadEnv(required).JOBS_TOKEN).toBeUndefined();
+      expect(() => loadEnv({ ...required, JOBS_TOKEN: 'short' })).toThrow(/JOBS_TOKEN/);
+      expect(loadEnv({ ...required, JOBS_TOKEN: 'j'.repeat(32) }).JOBS_TOKEN).toBe('j'.repeat(32));
     });
   });
 });

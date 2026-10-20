@@ -14,7 +14,8 @@ export default defineConfig({
     seed: 'tsx scripts/seed.ts',
   },
   datasource: {
-    // `prisma generate` does not need the database; migrations do require DATABASE_URL.
-    url: process.env.DATABASE_URL ?? '',
+    // `prisma generate` does not need the database; migrations do. With a pooled runtime URL
+    // (Neon), DIRECT_URL is the non-pooled one that migrations need; locally only DATABASE_URL.
+    url: process.env.DIRECT_URL || process.env.DATABASE_URL || '',
   },
 });

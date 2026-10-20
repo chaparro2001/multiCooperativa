@@ -14,6 +14,7 @@ import {
   runDueDatesJob,
 } from './modules/invoicing';
 import { type EventBus, InProcessEventBus } from './shared/events';
+import { createJobsRouter } from './shared/infrastructure/http/jobs-router';
 import type { FileStorage } from './shared/files/file-storage';
 import type { PrismaClient } from './shared/infrastructure/prisma';
 
@@ -39,6 +40,10 @@ export interface ApiDeps {
   assistantMessageLimitPerHour?: number;
   authRateLimits?: AuthRateLimits | false;
   trustProxy?: number | false;
+  /** Origins allowed to call the API from a browser (CORS); none when omitted. */
+  corsOrigins?: readonly string[];
+  /** Bearer secret of `POST /jobs/due-dates`, for an external scheduler; the endpoint is not mounted without it. */
+  jobsToken?: string;
 }
 
 export interface Api {
@@ -117,8 +122,13 @@ export function createApi(deps: ApiDeps): Api {
     },
   });
 
+  const runDueDates = () => runDueDatesJob({ prisma: deps.prisma, events });
+
   const app = createApp({
     routers: [
+      ...(deps.jobsToken
+        ? [createJobsRouter({ token: deps.jobsToken, dueDates: runDueDates })]
+        : []),
       access.router,
       announcements.router,
       documents.router,
@@ -135,10 +145,11 @@ export function createApi(deps: ApiDeps): Api {
       assistant.errorHandler,
     ],
     trustProxy: deps.trustProxy,
+    corsOrigins: deps.corsOrigins,
   });
   return {
     app,
     indexing: documents.indexing,
-    runDueDates: () => runDueDatesJob({ prisma: deps.prisma, events }),
+    runDueDates,
   };
 }
