@@ -176,6 +176,8 @@ The reconciliation status (no delivery notes, reconciled, with discrepancy) is i
 4. The third party is looked up by tax ID **only within the active cooperative**.
 5. The proposal is returned with a confidence level per field.
 
+**Free tier warning (ADR-009).** The Gemini API free tier may use what is sent to improve Google products. In demos and tests, do not upload real invoices or delivery notes of third parties; use fictitious documents. With a paid key this does not apply.
+
 **Personal data.** Most third parties are companies, but there may be self-employed people with a tax ID and personal address. The thesis report must justify the chosen AI provider, its retention policy and sending the minimum necessary.
 
 ## 5. Non-functional requirements
@@ -304,6 +306,7 @@ erDiagram
 | GET    | `/cooperatives/{cooperativeId}/invoices/{invoiceId}`                 | Detail with reconciliation                                               | Read   |
 | POST   | `/cooperatives/{cooperativeId}/invoices`                             | Register and reconcile                                                   | Manage |
 | POST   | `/cooperatives/{cooperativeId}/invoices/{invoiceId}/settle`          | Mark as paid or collected                                                | Manage |
+| POST   | `/cooperatives/{cooperativeId}/invoices/{invoiceId}/explanations`    | Draft (AI) the plain-language explanation of the discrepancies           | Read   |
 | POST   | `/cooperatives/{cooperativeId}/extractions`                          | Extract data from image or PDF                                           | Manage |
 | GET    | `/cooperatives/{cooperativeId}/claims`                               | List                                                                     | Read   |
 | POST   | `/cooperatives/{cooperativeId}/claims`                               | Open                                                                     | Manage |

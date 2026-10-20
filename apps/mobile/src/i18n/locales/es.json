@@ -442,7 +442,8 @@
       },
       "void": "Anular",
       "voidInvoiceMessage": "La factura quedará anulada y sus albaranes volverán a estar pendientes de facturar.",
-      "voidNoteMessage": "El albarán quedará anulado."
+      "voidNoteMessage": "El albarán quedará anulado.",
+      "explain": "Explicar con IA"
     },
     "thirdParties": {
       "title": "Proveedores y clientes",
@@ -478,7 +479,7 @@
       "choosePdf": "Elegir un PDF",
       "reading": "Leyendo el documento…",
       "cameraDenied": "No hay permiso para usar la cámara. Puedes elegir una imagen en su lugar.",
-      "privacy": "El documento se envía a nuestro servidor, que lo lee con un modelo de IA de Anthropic. No se guarda nada hasta que lo confirmes.",
+      "privacy": "El documento se envía a nuestro servidor, que lo lee con un modelo de IA de Google (Gemini). No se guarda nada hasta que lo confirmes. En la demo, no subas documentos reales de terceros.",
       "manually": "Rellenar a mano"
     },
     "form": {

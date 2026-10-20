@@ -193,6 +193,17 @@ export function useRegisterInvoice() {
   );
 }
 
+/** US-INV-04: asks the server to draft the explanations; the numeric detail still governs. */
+export function useExplainDiscrepancies() {
+  const { api } = useServices();
+  return useInvoicingMutation((id: string, base) =>
+    api.request(`${base}/invoices/${id}/explanations`, {
+      method: 'POST',
+      schema: invoiceDetailSchema,
+    }),
+  );
+}
+
 export function useSettleInvoice() {
   const { api } = useServices();
   return useInvoicingMutation(({ id, date }: { id: string; date: string }, base) =>

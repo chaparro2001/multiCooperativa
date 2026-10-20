@@ -9,6 +9,7 @@ import { subtractAmounts } from '@/features/invoicing/amounts';
 import { ConfirmButton } from '@/features/invoicing/confirm-button';
 import { Fact, PaymentBadge, ReconciliationBadge, useEuros } from '@/features/invoicing/components';
 import {
+  useExplainDiscrepancies,
   useFreshInvoiceUrl,
   useInvoice,
   useSettleInvoice,
@@ -30,6 +31,7 @@ export default function InvoiceScreen() {
   const invoice = useInvoice(id);
   const freshUrl = useFreshInvoiceUrl();
   const settle = useSettleInvoice();
+  const explain = useExplainDiscrepancies();
   const voidInvoice = useVoidDocument();
   const [settleDate, setSettleDate] = useState(() => today());
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +121,15 @@ export default function InvoiceScreen() {
               {item.explanation && <Text style={styles.explanation}>{item.explanation}</Text>}
             </View>
           ))}
+          {data.discrepancies.some((item) => !item.explanation) && (
+            <Button
+              title={t('invoicing.detail.explain')}
+              variant="secondary"
+              loading={explain.isPending}
+              onPress={() => run(() => explain.mutateAsync(id))}
+              testID="explain-discrepancies"
+            />
+          )}
           <Text style={styles.hint}>{t('invoicing.detail.numericGoverns')}</Text>
         </View>
       )}
