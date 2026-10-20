@@ -83,7 +83,7 @@ Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assis
 - [ ] Notifications module: device tokens and event consumption.
 - [ ] Push in the app and navigation to the resource from the notification.
 - [ ] Sentry in app and backend.
-- [ ] Deployment on Railway; binaries with EAS Build.
+- [ ] Free hosted demo: API on Render, Neon, Supabase Storage and the web export on GitHub Pages ([04-deployment.md](04-deployment.md), ADR-010); native binaries with EAS Build are optional.
 
 ## Milestone 7 · Quality and delivery (23–25 Oct)
 

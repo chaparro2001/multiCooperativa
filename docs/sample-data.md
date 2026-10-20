@@ -7,8 +7,9 @@ pnpm --filter @multicooperativa/api db:seed
 ```
 
 - All users have the password `demo-cooperativa-2026`, or that of `SEED_PASSWORD` if defined.
-- It is idempotent: a cooperative that already exists (by CIF, the Spanish tax ID) is left untouched. To start from scratch: `pnpm --filter @multicooperativa/api exec prisma migrate reset`, which also reloads this data.
-- It does not run in production.
+- It is idempotent: a cooperative that already exists (by CIF, the Spanish tax ID) is left untouched. To start from scratch on a local database (never on the hosted one): `pnpm --filter @multicooperativa/api exec prisma migrate reset`, which also reloads this data.
+- It is additive: it never deletes or updates anything. It refuses a database that is not local, and `NODE_ENV=production`, unless `--allow-production` is passed (see [04-deployment.md](04-deployment.md)).
+- `pnpm --filter @multicooperativa/api db:seed:content` loads sample documents (bylaws, irrigation regulation, minutes) and two announcements for Cooperativa Agrícola San Isidro **through the API**, so files go to the configured storage and are indexed with the configured embeddings provider (ADR-010). Definition: `apps/api/src/dev/sample-content.ts`.
 - The CIFs have a valid check digit. The `.test` domain is reserved and never receives real email.
 
 Definition: `apps/api/src/dev/demo-seed.ts`. Its integration test checks that each user logs in with the expected profile.

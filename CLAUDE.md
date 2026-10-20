@@ -23,7 +23,7 @@ If the code and the documentation do not match, stop and ask. If a decision chan
 - Data: PostgreSQL, Prisma, pgvector.
 - Contracts: Zod schemas in `packages/contracts`, used by app and backend.
 - Tests: Vitest, React Native Testing Library, Maestro.
-- Delivery: GitHub Actions, EAS Build, Railway, Sentry.
+- Delivery: GitHub Actions, free hosted demo (Render, Neon, Supabase Storage, GitHub Pages; `docs/04-deployment.md`), EAS Build, Sentry.
 
 ## Structure
 
@@ -66,6 +66,7 @@ pnpm db:up                   # PostgreSQL with pgvector, S3 storage (RustFS) and
 pnpm ai:pull                 # downloads the bge-m3 embeddings model into Ollama (once)
 pnpm --filter @multicooperativa/api db:migrate   # applies or creates migrations
 pnpm --filter @multicooperativa/api db:seed      # sample data (docs/sample-data.md)
+pnpm --filter @multicooperativa/api db:seed:content  # sample documents and announcements, through the API (hosted demo)
 pnpm --filter @multicooperativa/api jobs:due-dates  # invoice due dates (the API already runs it every hour)
 pnpm --filter @multicooperativa/api ai:eval      # evaluation set of the assistant (NFR-AI-05); --offline without GEMINI_API_KEY
 pnpm --filter @multicooperativa/api dev          # API at http://localhost:3000
