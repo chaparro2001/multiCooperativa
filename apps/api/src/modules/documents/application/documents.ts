@@ -246,6 +246,6 @@ export async function searchDocuments(
   query: string,
 ): Promise<FragmentHit[]> {
   requireAccess(context.permissions, 'documents', 'read');
-  const [embedding] = await deps.embedder.embed([query.trim()]);
+  const [embedding] = await deps.embedder.embed([query.trim()], 'query');
   return deps.index.search(context.cooperativeId, embedding!, SEARCH_RESULTS);
 }

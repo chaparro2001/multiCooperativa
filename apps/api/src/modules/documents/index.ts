@@ -18,9 +18,10 @@ import { PrismaIndexingStore } from './infrastructure/prisma-indexing-store';
 import { UnpdfTextExtractor } from './infrastructure/unpdf-text-extractor';
 
 export type { DocumentEvent, DocumentPublished, DocumentWithdrawn } from './application/events';
-export type { Embedder } from './application/ports/embedder';
+export type { Embedder, EmbeddingKind } from './application/ports/embedder';
 export type { FragmentHit } from './application/ports/fragment-index';
 export { EMBEDDING_DIMENSIONS } from './application/ports/embedder';
+export { GeminiEmbedder, type GeminiEmbeddingClient } from './infrastructure/gemini-embedder';
 export { OllamaEmbedder } from './infrastructure/ollama-embedder';
 /** Deterministic embedder for tests and CI, where there is no Ollama (ADR-006). */
 export { HashingEmbedder } from './application/testing/hashing-embedder';
