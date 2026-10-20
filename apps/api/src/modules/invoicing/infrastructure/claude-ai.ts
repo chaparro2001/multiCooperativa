@@ -11,7 +11,7 @@ import {
 } from '../application/ports/document-extractor';
 
 /** ADR-007: low effort; extracting and explaining need no deep reasoning, and it keeps latency down. */
-export const CLAUDE_MODEL = 'claude-opus-5-5';
+export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5-5';
 
 /** What the model returns. Numbers stay as printed; the use case normalizes and validates them. */
 const extractionSchema = z.object({
@@ -47,7 +47,10 @@ const toBase64 = (content: Uint8Array) => Buffer.from(content).toString('base64'
  * request on another model within the same call.
  */
 export class ClaudeDocumentExtractor implements DocumentExtractor {
-  constructor(private readonly client: Anthropic) {}
+  constructor(
+    private readonly client: Anthropic,
+    private readonly model: string = DEFAULT_CLAUDE_MODEL,
+  ) {}
 
   async extract(file: {
     content: Uint8Array;
@@ -67,7 +70,7 @@ export class ClaudeDocumentExtractor implements DocumentExtractor {
 
     try {
       const response = await this.client.beta.messages.parse({
-        model: CLAUDE_MODEL,
+        model: this.model,
         max_tokens: 16000,
         betas: ['server-side-fallback-2026-07-01'],
         fallbacks: 'default',

@@ -2,6 +2,7 @@ import type { ApiError } from '@multicooperativa/contracts';
 import type { ErrorRequestHandler } from 'express';
 import { MulterError } from 'multer';
 
+import { ExtractionUnavailableError } from '../../application/ports/document-extractor';
 import { InvoicingApplicationError, ThirdPartyExistsError } from '../../application/errors';
 import {
   InvalidDocumentError,
@@ -34,6 +35,12 @@ function details(error: Error): ApiError['details'] {
 export const invoicingErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
   if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
     error = new InvalidDocumentError('The file can be at most 10 MB.');
+  }
+  if (error instanceof ExtractionUnavailableError) {
+    res
+      .status(503)
+      .json({ error: 'extraction_unavailable', message: error.message } satisfies ApiError);
+    return;
   }
   const ownError =
     error instanceof InvoicingDomainError || error instanceof InvoicingApplicationError;

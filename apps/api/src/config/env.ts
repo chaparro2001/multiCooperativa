@@ -39,6 +39,9 @@ const envSchema = z
     /** Ollama service that computes the embeddings (ADR-006). */
     OLLAMA_URL: z.url({ protocol: /^https?$/ }).optional(),
     EMBEDDING_MODEL: z.string().min(1).default('bge-m3'),
+    /** Claude key for reading scanned documents (ADR-007). Without it, extraction answers 503. */
+    ANTHROPIC_API_KEY: z.string().min(1).optional(),
+    ANTHROPIC_MODEL: z.string().min(1).default('claude-opus-5-5'),
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV !== 'production') return;

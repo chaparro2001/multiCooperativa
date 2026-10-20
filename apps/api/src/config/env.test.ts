@@ -21,7 +21,14 @@ describe('loadEnv', () => {
       S3_FORCE_PATH_STYLE: true,
       OLLAMA_URL: 'http://localhost:11434',
       EMBEDDING_MODEL: 'bge-m3',
+      ANTHROPIC_MODEL: 'claude-opus-5-5',
     });
+  });
+
+  it('reads the Claude key and model for document extraction (NFR-INV-05)', () => {
+    expect(
+      loadEnv({ ...required, ANTHROPIC_API_KEY: 'sk-test', ANTHROPIC_MODEL: 'm' }),
+    ).toMatchObject({ ANTHROPIC_API_KEY: 'sk-test', ANTHROPIC_MODEL: 'm' });
   });
 
   it('converts the port to a number', () => {
