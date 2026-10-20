@@ -13,10 +13,7 @@ import { parseBody } from '../../../../shared/infrastructure/http/validation';
 import { getCooperativeContext, requirePermission } from '../../../access';
 import * as useCases from '../../application/assistant';
 import { ConversationNotFoundError } from '../../application/errors';
-import type {
-  ConversationRecord,
-  MessageRecord,
-} from '../../application/ports/conversation-store';
+import type { ConversationRecord, MessageRecord } from '../../application/ports/conversation-store';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

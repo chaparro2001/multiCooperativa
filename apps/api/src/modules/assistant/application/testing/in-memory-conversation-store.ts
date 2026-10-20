@@ -61,7 +61,13 @@ export class InMemoryConversationStore implements ConversationStore {
   }
 
   private add(conversationId: string, message: NewMessage): MessageRecord {
-    const record = { ...message, id: this.id(), conversationId, rating: null, createdAt: this.clock() };
+    const record = {
+      ...message,
+      id: this.id(),
+      conversationId,
+      rating: null,
+      createdAt: this.clock(),
+    };
     this.stored.push(record);
     return record;
   }

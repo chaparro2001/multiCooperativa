@@ -83,7 +83,10 @@ describe('GeminiLanguageModel (NFR-AI-02, NFR-AI-03, ADR-009)', () => {
 
   it('turns function calls into tool calls and sends the results back paired by name', async () => {
     const parts = [
-      { functionCall: { name: 'search_documents', args: { query: 'quorum' } }, thoughtSignature: 'sig' },
+      {
+        functionCall: { name: 'search_documents', args: { query: 'quorum' } },
+        thoughtSignature: 'sig',
+      },
     ];
     const { generateContent, client } = clientReturning(responseOf(parts));
     const model = new GeminiLanguageModel(client);
@@ -117,7 +120,11 @@ describe('GeminiLanguageModel (NFR-AI-02, NFR-AI-03, ADR-009)', () => {
       role: 'user',
       parts: [
         {
-          functionResponse: { id: 'call_1', name: 'search_documents', response: { output: 'data' } },
+          functionResponse: {
+            id: 'call_1',
+            name: 'search_documents',
+            response: { output: 'data' },
+          },
         },
         {
           functionResponse: { id: 'call_2', name: 'list_invoices', response: { error: 'denied' } },

@@ -13,7 +13,12 @@ export interface UpcomingAssembly {
   firstCallAt: string;
   secondCallAt: string | null;
   place: string;
-  points: { title: string; votable: boolean; majority: string | null; votingStatus: string | null }[];
+  points: {
+    title: string;
+    votable: boolean;
+    majority: string | null;
+    votingStatus: string | null;
+  }[];
 }
 
 export interface AssemblyResults {

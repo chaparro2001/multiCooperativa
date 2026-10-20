@@ -148,7 +148,9 @@ describe('retry after (BR-AI-08)', () => {
 
 describe('conversation title (US-AI-04)', () => {
   it('is the first message, collapsed and cut', () => {
-    expect(conversationTitle('  When is\nthe next   assembly?  ')).toBe('When is the next assembly?');
+    expect(conversationTitle('  When is\nthe next   assembly?  ')).toBe(
+      'When is the next assembly?',
+    );
     expect(conversationTitle('x'.repeat(300))).toHaveLength(80);
   });
 });

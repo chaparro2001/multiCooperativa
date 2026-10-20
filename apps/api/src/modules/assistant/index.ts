@@ -65,3 +65,8 @@ export function createAssistantModule(deps: {
 
 export type { DataSources } from './application/tool-executors';
 export type { RequestMetrics } from './application/assistant';
+
+/** Evaluation set of NFR-AI-05, runnable against any model (`ai:eval` for the real one). */
+export { EVALUATION_CASES } from './evaluation/cases';
+export { RuleBasedLanguageModel } from './evaluation/rule-based-model';
+export { runEvaluation } from './evaluation/run-evaluation';

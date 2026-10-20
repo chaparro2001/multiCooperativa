@@ -110,7 +110,8 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
   },
   {
     name: 'upcoming_assemblies',
-    description: 'Assemblies already called that have not happened yet, with date, place and agenda items (and which are voted).',
+    description:
+      'Assemblies already called that have not happened yet, with date, place and agenda items (and which are voted).',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     requires: { module: 'assemblies', level: 'read' },
   },
@@ -130,7 +131,9 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
     description: 'The most recent published announcements of the cooperative.',
     inputSchema: {
       type: 'object',
-      properties: { n: { type: 'integer', minimum: 1, maximum: 10, description: 'How many (default 5).' } },
+      properties: {
+        n: { type: 'integer', minimum: 1, maximum: 10, description: 'How many (default 5).' },
+      },
       additionalProperties: false,
     },
     requires: { module: 'announcements', level: 'read' },

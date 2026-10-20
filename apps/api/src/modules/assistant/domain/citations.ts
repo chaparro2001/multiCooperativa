@@ -1,10 +1,5 @@
 export type SourceKind =
-  | 'document'
-  | 'invoice'
-  | 'delivery_note'
-  | 'third_party'
-  | 'assembly'
-  | 'announcement';
+  'document' | 'invoice' | 'delivery_note' | 'third_party' | 'assembly' | 'announcement';
 
 /** A record a tool returned that the answer may be based on. */
 export interface Source {

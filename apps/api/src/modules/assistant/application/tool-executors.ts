@@ -138,7 +138,11 @@ export function createToolExecutors(src: DataSources): Record<ToolName, ToolExec
       return {
         items: rows.map((row) => ({
           data: { ...row, id: undefined },
-          source: record('delivery_note', row.id, `Delivery note ${row.number} · ${row.thirdParty}`),
+          source: record(
+            'delivery_note',
+            row.id,
+            `Delivery note ${row.number} · ${row.thirdParty}`,
+          ),
         })),
       };
     },
@@ -166,7 +170,11 @@ export function createToolExecutors(src: DataSources): Record<ToolName, ToolExec
       return {
         items: rows.map((row) => ({
           data: { ...row, id: undefined },
-          source: record('assembly', row.id, `Assembly ${row.firstCallAt.slice(0, 10)} · ${row.place}`),
+          source: record(
+            'assembly',
+            row.id,
+            `Assembly ${row.firstCallAt.slice(0, 10)} · ${row.place}`,
+          ),
         })),
       };
     },

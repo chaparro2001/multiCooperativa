@@ -20,7 +20,12 @@ import {
 import type { ToolResult } from './ports/language-model';
 import type { ToolExecutor, ToolOutput } from './tool-executors';
 import { InMemoryConversationStore } from './testing/in-memory-conversation-store';
-import { callTools, say, ScriptedLanguageModel, toolResultsIn } from './testing/scripted-language-model';
+import {
+  callTools,
+  say,
+  ScriptedLanguageModel,
+  toolResultsIn,
+} from './testing/scripted-language-model';
 
 const COOP = '11111111-1111-4111-8111-111111111111';
 const grant = (module: string) => ({ module, level: 'read', scope: 'all' }) as const;
@@ -344,7 +349,11 @@ describe('BR-AI-08 · usage limit', () => {
   });
 
   it('BR-AI-08: the limit is per membership, not shared with other members', async () => {
-    const { deps } = build(new ScriptedLanguageModel(() => say('ok')), {}, { messageLimitPerHour: 1 });
+    const { deps } = build(
+      new ScriptedLanguageModel(() => say('ok')),
+      {},
+      { messageLimitPerHour: 1 },
+    );
     await ask(deps, socio, 'mine');
 
     const other = contextOf(['documents'], { membershipId: 'm2' });
@@ -405,9 +414,13 @@ describe('NFR-AI-04 · metrics without personal content', () => {
       callTools({ name: 'search_documents', input: { query: 'quorum' } }),
       say('Respuesta secreta [S1].'),
     ]);
-    const { deps } = build(model, { search_documents: async () => documentHit }, {
-      onMetrics: (metrics) => seen.push(metrics),
-    });
+    const { deps } = build(
+      model,
+      { search_documents: async () => documentHit },
+      {
+        onMetrics: (metrics) => seen.push(metrics),
+      },
+    );
 
     await ask(deps, socio, 'Pregunta secreta');
 

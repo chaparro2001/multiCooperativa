@@ -56,7 +56,10 @@ function toContents(messages: ModelMessage[]): Content[] {
   });
 }
 
-function stopReasonOf(response: GenerateContentResponse, calls: FunctionCall[]): ModelTurn['stopReason'] {
+function stopReasonOf(
+  response: GenerateContentResponse,
+  calls: FunctionCall[],
+): ModelTurn['stopReason'] {
   if (response.promptFeedback?.blockReason) return 'refusal';
   if (calls.length > 0) return 'tool_use';
   const finish = response.candidates?.[0]?.finishReason;

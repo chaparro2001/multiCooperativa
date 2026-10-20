@@ -12,7 +12,14 @@ import type {
 const citationsSchema = z.array(
   z.object({
     ref: z.string(),
-    kind: z.enum(['document', 'invoice', 'delivery_note', 'third_party', 'assembly', 'announcement']),
+    kind: z.enum([
+      'document',
+      'invoice',
+      'delivery_note',
+      'third_party',
+      'assembly',
+      'announcement',
+    ]),
     resourceId: z.string(),
     title: z.string(),
     page: z.number().nullable(),

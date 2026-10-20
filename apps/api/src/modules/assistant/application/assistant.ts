@@ -147,7 +147,10 @@ async function runTool(
   sources: Map<string, Source>,
 ): Promise<ToolResult> {
   if (!offered.has(call.name)) {
-    return fail(call, 'This tool is not available to the user. Tell them you cannot access that information.');
+    return fail(
+      call,
+      'This tool is not available to the user. Tell them you cannot access that information.',
+    );
   }
   try {
     const executor = deps.executors[call.name as ToolName];
@@ -159,11 +162,17 @@ async function runTool(
     };
   } catch (error) {
     if (error instanceof ModuleAccessDeniedError) {
-      return fail(call, 'The user has no access to this information. Tell them you cannot access it.');
+      return fail(
+        call,
+        'The user has no access to this information. Tell them you cannot access it.',
+      );
     }
     if (error instanceof InvalidToolInputError) return fail(call, error.message);
     // The model never sees internals; the operator does.
-    console.error(`Assistant tool ${call.name} failed:`, error instanceof Error ? error.message : error);
+    console.error(
+      `Assistant tool ${call.name} failed:`,
+      error instanceof Error ? error.message : error,
+    );
     return fail(call, 'The information is temporarily unavailable.');
   }
 }
@@ -267,11 +276,16 @@ export async function sendMessage(
   });
 
   const { text, citations } = extractCitations(answerText, sources);
-  const stored = await deps.conversations.appendExchange(cooperativeId, membershipId, conversationId, {
-    user: { role: 'user', content, citations: [], tools: [] },
-    answer: { role: 'assistant', content: text, citations, tools: used_tools },
-    title: conversationTitle(content),
-  });
+  const stored = await deps.conversations.appendExchange(
+    cooperativeId,
+    membershipId,
+    conversationId,
+    {
+      user: { role: 'user', content, citations: [], tools: [] },
+      answer: { role: 'assistant', content: text, citations, tools: used_tools },
+      title: conversationTitle(content),
+    },
+  );
   if (!stored) throw new ConversationNotFoundError();
   return stored;
 }
