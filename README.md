@@ -1,0 +1,327 @@
+# multiCooperativa
+
+[English version](README.en.md) · Versión en español
+
+Trabajo Fin de Máster del Máster en Desarrollo con IA (BIG school). Aplicación móvil multi-cooperativa para iOS y Android (Expo) con backend Node + TypeScript, pensada para conectar a cada cooperativa con sus socios y para controlar albaranes y facturas con un asistente de IA que respeta los permisos de cada usuario.
+
+Entrega: 26/10/2026 · Cierre de funcionalidad: 22/10/2026.
+
+## Entregables
+
+| Entregable            | Enlace                                           |
+| --------------------- | ------------------------------------------------ |
+| Demo (web)            | https://chaparro2001.github.io/multiCooperativa/ |
+| API (Render)          | <!-- TODO: URL de la API en Render -->           |
+| Presentación (slides) | <!-- TODO: URL de las slides -->                 |
+| Vídeo de la demo      | <!-- TODO: URL del vídeo -->                     |
+| Documentación         | [docs/README.md](docs/README.md)                 |
+
+## Índice
+
+1. [Descripción general](#1-descripción-general-del-proyecto)
+2. [Stack tecnológico](#2-stack-tecnológico)
+3. [Instalación y ejecución local](#3-instalación-y-ejecución-local)
+4. [Estructura del proyecto](#4-estructura-del-proyecto)
+5. [Funcionalidades principales](#5-funcionalidades-principales)
+6. [Limitaciones y trabajo futuro](#6-limitaciones-y-trabajo-futuro)
+7. [Usuarios y contraseña de prueba](#7-usuarios-y-contraseña-de-prueba)
+8. [Despliegue de la demo](#8-despliegue-de-la-demo)
+9. [Arquitectura](#9-arquitectura)
+10. [Decisiones (ADRs)](#10-decisiones-adrs)
+11. [Calidad](#11-calidad)
+12. [Desarrollo asistido por IA](#12-desarrollo-asistido-por-ia)
+13. [Relación con el máster](#13-relación-con-el-máster)
+
+## 1. Descripción general del proyecto
+
+### Problema
+
+El socio de una cooperativa participa poco y está mal informado:
+
+- Las convocatorias llegan por carta o tablón de anuncios.
+- Estatutos, reglamentos y actas no están a mano.
+- Los albaranes y facturas con proveedores y clientes viven en papel, y los descuadres entre ellos, los impagos y los cobros pendientes se detectan tarde o nunca.
+
+### Solución
+
+Una aplicación estándar, válida para cualquier tipo de cooperativa (agrícola, vivienda, trabajo, consumo), sin funcionalidad sectorial. Un mismo usuario puede pertenecer a varias cooperativas con un perfil distinto en cada una, y los datos de cada cooperativa están aislados de las demás.
+
+### Los 4 perfiles
+
+| Perfil         | Quién es                                     | Qué necesita                                                       |
+| -------------- | -------------------------------------------- | ------------------------------------------------------------------ |
+| Socio          | Socio de la cooperativa                      | Informarse, votar y leer documentos                                |
+| Consejo rector | Órgano de gobierno                           | Publicar comunicados, convocar asambleas y vigilar pagos y cobros  |
+| Gestor         | Personal administrativo (puede no ser socio) | Registrar y conciliar albaranes y facturas, controlar vencimientos |
+| Administrador  | Responsable de la cooperativa en la app      | Dar acceso a los usuarios y asignar perfiles                       |
+
+Los permisos se definen por módulo, nivel y alcance (ADR-004). El backend decide; la app solo oculta.
+
+### Diferenciadores de IA
+
+- **Extracción de facturas y albaranes con visión**: se fotografía o sube el documento y Gemini extrae los datos. El resultado se valida con un esquema Zod y **nunca se guarda sin confirmación humana**.
+- **Explicación de discrepancias**: cuando un albarán y una factura no cuadran, la IA explica en lenguaje natural dónde está la diferencia.
+- **Búsqueda semántica en documentos** (RAG): los documentos se trocean, se vectorizan y se indexan en pgvector, siempre filtrados por cooperativa.
+- **Asistente conversacional** con citas a las fuentes y herramientas de solo lectura que reutilizan los casos de uso con los permisos del usuario: no puede ver nada que el usuario no pueda ver.
+
+## 2. Stack tecnológico
+
+| Capa               | Elección                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| App móvil          | Expo + React Native + TypeScript, Expo Router                                          |
+| Datos del cliente  | TanStack Query; tokens en el almacenamiento seguro del dispositivo                     |
+| Textos de usuario  | i18next + react-i18next + expo-localization; `es` por defecto (ADR-008)                |
+| Contratos          | Paquete compartido con esquemas Zod (validan en servidor y tipan la app)               |
+| Backend            | Node + TypeScript, monolito modular con Clean Architecture y eventos internos          |
+| API                | REST, autenticación JWT, códigos de error estables                                     |
+| Persistencia       | PostgreSQL + Prisma; pgvector para RAG                                                 |
+| Modelo de lenguaje | Gemini (capa gratuita) tras puertos: asistente con function calling y visión (ADR-009) |
+| Embeddings         | `bge-m3` local con Ollama (ADR-006); Gemini embeddings en la demo alojada (ADR-010)    |
+| Ficheros           | Almacenamiento compatible S3 con URLs firmadas que caducan (ADR-005); RustFS en local  |
+| Tests              | Vitest y React Native Testing Library                                                  |
+| Calidad            | ESLint, Prettier, Husky (pre-commit), regla propia de límites entre módulos            |
+| Entrega            | GitHub Actions; demo en Render (API), Neon, Supabase Storage y GitHub Pages (web)      |
+
+## 3. Instalación y ejecución local
+
+### Requisitos
+
+- Node 24 (fichero `.nvmrc`: `nvm use`).
+- pnpm.
+- Docker (PostgreSQL con pgvector, almacenamiento S3 con RustFS y Ollama).
+
+### Pasos
+
+```bash
+pnpm install                 # instala y genera el cliente de Prisma
+pnpm db:up                   # PostgreSQL + pgvector, S3 (RustFS) y Ollama con Docker Compose
+pnpm ai:pull                 # descarga el modelo de embeddings bge-m3 en Ollama (una vez)
+
+cp apps/api/.env.example apps/api/.env
+cp apps/mobile/.env.example apps/mobile/.env
+
+pnpm --filter @multicooperativa/api db:migrate        # aplica las migraciones
+pnpm --filter @multicooperativa/api db:seed           # cooperativas y usuarios de prueba
+
+pnpm --filter @multicooperativa/api dev               # API en http://localhost:3000
+pnpm --filter @multicooperativa/mobile start          # app Expo
+```
+
+Opcional, con la API arrancada, para cargar documentos y comunicados de ejemplo a través de la API (se indexan con el proveedor de embeddings configurado):
+
+```bash
+API_URL=http://localhost:3000 pnpm --filter @multicooperativa/api db:seed:content
+```
+
+### Clave de Gemini (opcional)
+
+Para activar el asistente, la extracción de facturas y la explicación de discrepancias, define `GEMINI_API_KEY` en `apps/api/.env` (clave gratuita de Google AI Studio, sin tarjeta). Opcionales: `GEMINI_MODEL` y `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` (por defecto 30).
+
+Sin la clave, el asistente responde 503 y **el resto de la aplicación funciona con normalidad**. Las funciones de IA que usan Gemini (extracción de facturas, explicación de discrepancias) tampoco están disponibles. Los embeddings en local los sirve Ollama, no Gemini.
+
+### Tests y comprobaciones
+
+```bash
+pnpm lint                    # ESLint (incluye los límites entre módulos)
+pnpm format:check            # Prettier (pnpm format para aplicar)
+pnpm typecheck
+pnpm test                    # tests unitarios, sin base de datos
+pnpm test:integration        # contra la BD multicooperativa_test y el bucket de pruebas (requiere pnpm db:up)
+pnpm --filter @multicooperativa/api ai:eval          # evaluación del asistente (añade --offline si no hay clave)
+```
+
+## 4. Estructura del proyecto
+
+```
+apps/
+  mobile/              App Expo (iOS, Android y web)
+  api/                 Backend Node + TypeScript
+    src/modules/       Un directorio por módulo de negocio
+    prisma/            Esquema y migraciones
+packages/
+  contracts/           Esquemas Zod y tipos compartidos entre app y backend
+docs/                  Visión, stack, plan, despliegue, ADRs, requisitos y datos de ejemplo
+tools/eslint/          Regla propia de límites entre módulos
+.github/workflows/     CI, despliegue de GitHub Pages y cron de vencimientos
+docker-compose.yml     PostgreSQL + pgvector, RustFS y Ollama para desarrollo
+render.yaml            Blueprint de Render para la API
+CLAUDE.md              Contrato de trabajo con el agente de IA
+```
+
+Módulos del backend (`apps/api/src/modules/`): `access`, `announcements`, `documents`, `assemblies`, `invoicing`, `assistant`.
+
+### Capas de Clean Architecture por módulo
+
+```
+modules/<modulo>/
+  domain/           Reglas de negocio puras: sin Prisma, HTTP ni SDK externos
+  application/      Casos de uso; reciben el contexto (usuario, cooperativa, permisos) y deniegan por defecto
+  infrastructure/   Adaptadores: Prisma, HTTP, Gemini, S3, Ollama
+  index.ts          Única interfaz pública del módulo
+```
+
+Los módulos solo se comunican a través de su `index.ts` o de eventos internos, nunca por las tablas de otro módulo. Una regla de ESLint propia lo hace cumplir.
+
+## 5. Funcionalidades principales
+
+El estado de cada tarea está en [docs/03-implementation-plan.md](docs/03-implementation-plan.md); las especificaciones, en [docs/requirements/](docs/requirements/).
+
+- **Acceso y perfiles**: login con bloqueo por intentos fallidos, refresh token rotatorio, cierre de sesión, aceptación de invitaciones, selector de cooperativa, navegación según permisos y biometría en nativo. Gestión de miembros: listar, invitar, cambiar perfil, suspender y reactivar. Endpoint de permisos efectivos del usuario.
+- **Comunicados**: publicación por el consejo, listado y detalle, marca de leído y evento `AnnouncementPublished`.
+- **Documentos con búsqueda semántica**: repositorio con versiones, URLs firmadas, extracción de texto, troceado, embeddings y pgvector filtrado por cooperativa.
+- **Asambleas**: convocatoria con orden del día y censo, votación con restricción única en base de datos, cálculo de quórum y mayorías, resultados y control de votación para el consejo.
+- **Facturas y albaranes**: terceros (proveedores y clientes), albaranes y facturas de compra y venta con importes en decimal exacto, conciliación con tolerancia, estados, resumen de pagos y cobros, proceso idempotente de vencimientos (cada hora), captura con cámara y revisión, **extracción con IA** (Gemini visión, validada con Zod y confirmada por una persona) y **explicación de discrepancias con IA**.
+- **Asistente de IA**: chat con citas y enlaces a los recursos, RAG sobre los documentos, herramientas de solo lectura filtradas por permisos (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`), conversaciones, límite de uso por hora y conjunto de evaluación de 20 preguntas.
+
+## 6. Limitaciones y trabajo futuro
+
+Lo siguiente **no está implementado** en la entrega:
+
+- **Área del socio** (movimientos de capital y consulta). Por eso la herramienta `my_contributions` del asistente tampoco existe.
+- **Notificaciones push** (módulo de notificaciones, tokens de dispositivo, navegación desde la notificación).
+- **Sentry** en app y backend.
+- **Tests E2E con Maestro**.
+- **Reclamaciones** de facturas.
+- **Binarios nativos con EAS Build**: la demo es el export web; la app nativa se ejecuta con Expo en local.
+- Invitaciones por correo: no hay proveedor de email, `POST .../members` responde 503 en producción.
+- En la versión web no hay biometría ni captura con cámara (se usa el selector de ficheros) y la sesión se guarda en `sessionStorage`.
+
+El resto de limitaciones de la demo alojada están en [docs/04-deployment.md](docs/04-deployment.md).
+
+## 7. Usuarios y contraseña de prueba
+
+Datos definidos en el seed (`apps/api/src/dev/demo-seed.ts`) y descritos en [docs/sample-data.md](docs/sample-data.md).
+
+**Contraseña**:
+
+- Local: `demo-cooperativa-2026` (valor por defecto del seed, o el de `SEED_PASSWORD` si está definido).
+- Demo alojada: <!-- TODO: contraseña demo -->
+
+### Cooperativa Agrícola San Isidro (CIF F12345674)
+
+| Email                     | Nombre       | Perfil         | Estado     |
+| ------------------------- | ------------ | -------------- | ---------- |
+| admin@sanisidro.test      | Ana Torres   | Administrador  | Activo     |
+| consejo@sanisidro.test    | Carlos Ruiz  | Consejo rector | Activo     |
+| gestor@sanisidro.test     | Elena Gómez  | Gestor         | Activo     |
+| socio@sanisidro.test      | Javier López | Socio          | Activo     |
+| lucia@demo.test           | Lucía Martín | Socio          | Activo     |
+| suspendido@sanisidro.test | Pedro Sanz   | Socio          | Suspendido |
+| invitada@sanisidro.test   | Marta Díaz   | Socio          | Invitada   |
+
+### Cooperativa Olivarera La Esperanza (CIF F76543214)
+
+| Email                   | Nombre        | Perfil         | Estado |
+| ----------------------- | ------------- | -------------- | ------ |
+| admin@laesperanza.test  | Rosa Navarro  | Administrador  | Activo |
+| lucia@demo.test         | Lucía Martín  | Consejo rector | Activo |
+| gestor@laesperanza.test | Miguel Ortega | Gestor         | Activo |
+| socio@laesperanza.test  | Isabel Romero | Socio          | Activo |
+
+`lucia@demo.test` pertenece a las dos cooperativas con un perfil distinto en cada una (selector de cooperativa). Los gestores no son socios, por lo que no pueden votar. El dominio `.test` está reservado y nunca recibe correo real.
+
+## 8. Despliegue de la demo
+
+Resumen de [docs/04-deployment.md](docs/04-deployment.md). Coste de 0 EUR y sin tarjeta.
+
+| Pieza                         | Servicio                                                  |
+| ----------------------------- | --------------------------------------------------------- |
+| App web                       | GitHub Pages (export web de Expo, despliegue por Actions) |
+| API                           | Render, servicio web gratuito con Docker                  |
+| Base de datos                 | Neon (Postgres 17 con pgvector)                           |
+| Ficheros                      | Supabase Storage (protocolo S3, bucket privado)           |
+| Lenguaje, visión y embeddings | Gemini API (clave gratuita)                               |
+| Tarea programada              | Cron de GitHub Actions cada hora (vencimientos)           |
+
+Avisos:
+
+- **Arranque en frío**: Render duerme la API tras 15 minutos sin tráfico y la primera petición tarda aproximadamente 1 minuto.
+- **Uso de datos en la capa gratuita de Gemini**: Google puede usar el contenido para mejorar sus productos. **No subas facturas, albaranes ni documentos reales de terceros**; usa los datos de ejemplo.
+- Es una demo, no un sistema de registro: los datos pueden perderse.
+
+## 9. Arquitectura
+
+```mermaid
+flowchart LR
+    subgraph Mobile["App Expo (iOS, Android, web)"]
+        UI[Pantallas]
+        Client[Cliente API tipado con contratos Zod]
+    end
+
+    subgraph Backend["Backend: monolito modular"]
+        Access[Acceso y perfiles]
+        Announcements[Comunicados]
+        Documents[Documentos]
+        Assemblies[Asambleas]
+        Invoicing[Facturas y albaranes]
+        Assistant[Asistente de IA]
+        Bus((Eventos internos))
+    end
+
+    DB[(PostgreSQL + pgvector)]
+    Files[(Almacenamiento S3)]
+    LLM[Gemini: lenguaje y visión]
+    Emb[Embeddings: Ollama o Gemini]
+
+    UI --> Client --> Backend
+    Announcements --> Bus
+    Assemblies --> Bus
+    Invoicing --> Bus
+    Backend --> DB
+    Documents --> Files
+    Invoicing --> Files
+    Documents --> Emb
+    Assistant --> LLM
+    Invoicing --> LLM
+```
+
+Reglas transversales: el backend es la autoridad de permisos (deniega por defecto), doble aislamiento por cooperativa (también en el RAG y en las herramientas del asistente), dominio sin dependencias, importes en decimal exacto y servicios de IA siempre detrás de puertos. Más detalle en [docs/02-stack-and-architecture.md](docs/02-stack-and-architecture.md).
+
+## 10. Decisiones (ADRs)
+
+Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
+
+- [ADR-001](docs/adr/ADR-001-hybrid-app-with-expo.md): app híbrida con Expo que genera las apps nativas.
+- [ADR-002](docs/adr/ADR-002-modular-monolith.md): backend como monolito modular con Clean Architecture.
+- [ADR-003](docs/adr/ADR-003-multi-cooperative.md): multi-cooperativa con base de datos compartida.
+- [ADR-004](docs/adr/ADR-004-profile-based-access-control.md): control de acceso por perfiles con permisos por módulo, nivel y alcance.
+- [ADR-005](docs/adr/ADR-005-s3-file-storage.md): almacenamiento de ficheros compatible S3 tras un puerto.
+- [ADR-006](docs/adr/ADR-006-local-model-embeddings.md): embeddings con un modelo local servido por Ollama.
+- [ADR-007](docs/adr/ADR-007-claude-for-vision-and-drafting.md): Claude para visión y redacción (sustituido por ADR-009).
+- [ADR-008](docs/adr/ADR-008-english-codebase-and-localized-ui.md): código y documentación en inglés, interfaz localizada con i18n.
+- [ADR-009](docs/adr/ADR-009-gemini-language-and-vision-model.md): Gemini como modelo de lenguaje y visión.
+- [ADR-010](docs/adr/ADR-010-gemini-embeddings-for-the-hosted-demo.md): embeddings de Gemini para la demo alojada.
+- [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): README raíz bilingüe para la entrega del TFM (excepción acotada a ADR-008).
+
+## 11. Calidad
+
+- **Tests unitarios** (`pnpm test`): 613 tests en 67 ficheros, todos en verde a fecha 2026-10-20.
+- **Tests de integración** (`pnpm test:integration`): contra PostgreSQL y almacenamiento S3 reales, incluido el test de aislamiento entre cooperativas. No se indica recuento porque no se ejecutaron al redactar este README.
+- **CI** (GitHub Actions, en cada push y pull request): comprobación de formato, lint, typecheck, tests, migraciones sobre un Postgres con pgvector y tests de integración. Hay además workflows de despliegue de GitHub Pages y de cron de vencimientos.
+- **Puerta de calidad local**: Husky ejecuta lint, typecheck y tests en el pre-commit.
+- **Límites entre módulos**: regla ESLint propia (`tools/eslint/module-boundaries.js`, con sus tests) que impide importar un módulo del backend por una ruta distinta de su `index.ts` (ADR-002).
+- **Seguridad**: denegación por defecto en cada caso de uso, 404 para recursos de otra cooperativa y 403 para módulos sin permiso, Argon2id para contraseñas, JWT con refresh rotatorio, bloqueo por intentos fallidos, tests parametrizados de la matriz perfiles x módulos, tests de aislamiento, CORS configurable por entorno y secretos fuera del repositorio (solo `.env.example`).
+- **IA**: conjunto de evaluación de 20 preguntas para el asistente (`ai:eval`).
+
+## 12. Desarrollo asistido por IA
+
+El proyecto se ha construido con Spec Driven Development usando Claude Code:
+
+- **Especificación primero**: visión, stack, plan por hitos y requisitos por módulo (historias de usuario con criterios Dado/Cuando/Entonces, reglas de negocio y requisitos no funcionales) se escribieron antes del código. Ver [docs/](docs/).
+- **`CLAUDE.md` como contrato con el agente**: reglas no negociables (permisos en el backend, aislamiento, dominio puro, importes exactos, IA con confirmación humana, secretos), forma de trabajar y comandos.
+- **TDD en el dominio**: test primero a partir de los criterios de la especificación.
+- **Trazabilidad**: los identificadores de la especificación (`US-ACC-02`, `BR-INV-06`, `NFR-AI-05`) aparecen en nombres de tests y mensajes de commit, con Conventional Commits.
+- **Autoría compartida**: 59 de los 60 commits de la rama `hito-0-cimientos` llevan el trailer `Co-Authored-By` del agente (recuento con `git log` a fecha 2026-10-20).
+
+## 13. Relación con el máster
+
+| Tema del máster                      | Evidencia en el proyecto                                                                                                                                                         |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Spec Driven Development              | `docs/requirements/`, plan por hitos con tareas marcadas, IDs de especificación en tests y commits                                                                               |
+| ADRs y Docs as Code                  | `docs/adr/` (11 ADR inmutables), documentación versionada junto al código, diagramas Mermaid                                                                                     |
+| Clean Architecture con TypeScript    | Capas `domain/application/infrastructure` por módulo, puertos y adaptadores, regla ESLint de límites entre módulos                                                               |
+| Testing, TDD y puerta de calidad     | Vitest, tests de dominio primero, tests de integración, Husky en pre-commit                                                                                                      |
+| CI/CD con GitHub Actions             | `ci.yml` (formato, lint, typecheck, tests, migraciones, integración), despliegue de Pages y cron                                                                                 |
+| OWASP y seguridad                    | Denegación por defecto, Argon2id, rotación de JWT, tests de aislamiento, CORS, gestión de secretos                                                                               |
+| RAG, embeddings e integración de LLM | pgvector filtrado por cooperativa, embeddings tras un puerto (Ollama o Gemini), function calling, citas, evaluación                                                              |
+| IA responsable                       | Confirmación humana antes de persistir datos extraídos, herramientas de solo lectura con permisos del usuario, minimización de datos y aviso de uso de datos en la capa gratuita |
