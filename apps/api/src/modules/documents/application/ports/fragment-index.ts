@@ -9,6 +9,8 @@ export interface IndexedFragment {
 
 export interface FragmentHit {
   documentId: string;
+  /** Version the fragment was extracted from, so a citation can name it (BR-AI-05). */
+  versionId: string;
   title: string;
   category: DocumentCategory;
   page: number;

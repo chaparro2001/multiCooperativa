@@ -3,6 +3,7 @@ import { type RequestHandler, Router } from 'express';
 import type { EventPublisher } from '../../shared/events';
 import type { FileStorage } from '../../shared/files/file-storage';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
+import { createInvoicingReads } from './application/assistant-reads';
 import { runDueDates } from './application/due-dates';
 import type { InvoicingEvent } from './application/events';
 import { createInvoicingDocumentsRouter } from './infrastructure/http/documents-router';
@@ -16,6 +17,7 @@ import {
 import { PrismaDueDatesStore } from './infrastructure/prisma-due-dates-store';
 import { PrismaThirdPartyStore } from './infrastructure/prisma-third-party-store';
 
+export type { InvoicingReads } from './application/assistant-reads';
 export type {
   DeliveryNoteRegistered,
   DiscrepancyDetected,
@@ -70,5 +72,10 @@ export function createInvoicingModule(deps: {
   router.use(createThirdPartiesRouter({ thirdParties }, deps.requireCooperative));
   router.use(createInvoicingDocumentsRouter(useCaseDeps, deps.requireCooperative));
 
-  return { router, errorHandler: invoicingErrorHandler };
+  return {
+    router,
+    errorHandler: invoicingErrorHandler,
+    /** For the AI assistant's tools (requirements/07): same use cases and permissions. */
+    reads: createInvoicingReads(useCaseDeps),
+  };
 }

@@ -52,6 +52,7 @@ export class PgVectorFragmentIndex implements FragmentIndex {
     const rows = await this.prisma.$queryRaw<
       {
         documentId: string;
+        versionId: string;
         title: string;
         category: DocumentCategory;
         page: number;
@@ -59,7 +60,7 @@ export class PgVectorFragmentIndex implements FragmentIndex {
         score: number;
       }[]
     >`
-      SELECT c."documentId", d.title, d.category::text AS category, c.page, c.content,
+      SELECT c."documentId", c."versionId", d.title, d.category::text AS category, c.page, c.content,
              1 - (c.embedding <=> ${vector}::vector) AS score
       FROM "DocumentChunk" c
       JOIN "Document" d ON d.id = c."documentId"

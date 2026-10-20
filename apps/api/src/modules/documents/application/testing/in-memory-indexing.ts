@@ -83,6 +83,7 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
         return [
           {
             documentId: f.documentId,
+            versionId: f.versionId,
             title: row.title,
             category: row.category,
             page: f.page,
