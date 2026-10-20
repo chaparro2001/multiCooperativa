@@ -152,6 +152,9 @@
       "third_party_exists": "Ya existe un proveedor o cliente con ese NIF.",
       "duplicate_number": "Ya existe un documento con ese número.",
       "invalid_invoice_transition": "Ese cambio no es posible con el estado actual de la factura.",
+      "usage_limit_exceeded": "Has alcanzado el límite de mensajes por hora al asistente. Inténtalo más tarde.",
+      "assistant_unavailable": "El asistente no está disponible ahora mismo. Inténtalo más tarde.",
+      "assistant_refused": "El asistente no puede responder a esta pregunta.",
       "internal_error": "Ha ocurrido un error en el servidor. Inténtalo de nuevo."
     }
   },
@@ -200,6 +203,28 @@
       "screenTitle": "Tus cooperativas",
       "none": "No tienes acceso a ninguna cooperativa.",
       "prompt": "Hola, {{name}}. ¿En qué cooperativa quieres trabajar?"
+    }
+  },
+  "assistant": {
+    "emptyTitle": "¿En qué puedo ayudarte?",
+    "emptyHint": "Pregunta por los documentos de tu cooperativa o por los datos a los que tu perfil tiene acceso.",
+    "suggestions": {
+      "documentsQuorum": "¿Cuál es el quórum de la asamblea según los estatutos?",
+      "nextAssembly": "¿Cuándo es la próxima asamblea y qué se vota?",
+      "latestNews": "¿Cuáles son los últimos comunicados?",
+      "invoicesDue": "¿Qué facturas de proveedores vencen esta semana?",
+      "owedToSuppliers": "¿Cuánto tenemos pendiente de pagar y de cobrar?"
+    },
+    "placeholder": "Escribe tu pregunta",
+    "send": "Enviar",
+    "thinking": "Pensando…",
+    "newConversation": "Nueva",
+    "sources": "Fuentes",
+    "citationPage": "{{title}} · pág. {{page}}",
+    "openSource": "Abrir {{title}}",
+    "rating": {
+      "helpful": "Útil",
+      "not_helpful": "No útil"
     }
   },
   "modulePlaceholder": {
