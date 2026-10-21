@@ -117,6 +117,8 @@ API_URL=http://localhost:3000 pnpm --filter @multicooperativa/api db:seed:conten
 
 To enable the assistant (with the default provider), invoice extraction and discrepancy explanation, set `GEMINI_API_KEY` in `apps/api/.env` (free key from Google AI Studio, no card). Optional: `GEMINI_MODEL` and `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` (default 30).
 
+**Model per cooperative (ADR-014)**: with the local provider, each cooperative's administrator chooses the assistant's model in Settings among `ASSISTANT_OLLAMA_MODELS` (only models installed in Ollama are offered; the app never downloads one).
+
 **Assistant on a local model (ADR-013)**: with `ASSISTANT_LLM_PROVIDER=ollama` the assistant answers with an Ollama model (`ASSISTANT_OLLAMA_MODEL`, default `qwen3:8b`; `pnpm ai:pull:chat` downloads it), uses no Gemini quota and sends no question to the cloud. This is what the home-server demo uses. Gemini stays for invoice extraction (vision) and discrepancy explanations. With the local model a question takes about 7 s on average on a 12-core CPU (p90 26 s) and it passes 19 of the 22 evaluation questions.
 
 Without the Gemini key (and with the `gemini` provider) the assistant answers 503 and **the rest of the app works normally**. The AI features that use Gemini (invoice extraction, discrepancy explanation) are not available either. Local embeddings are served by Ollama, not Gemini.
@@ -174,7 +176,7 @@ The status of each task is in [docs/03-implementation-plan.md](docs/03-implement
 - **Documents with semantic search**: repository with versions, signed URLs, text extraction, chunking, embeddings and pgvector filtered by cooperative.
 - **Assemblies**: call to meeting with agenda and census, voting with a unique constraint in the database, quorum and majority calculation, results and voting control for the board.
 - **Invoices and delivery notes**: third parties (suppliers and customers), purchase and sales delivery notes and invoices with exact decimal amounts, reconciliation with tolerance, statuses, payments and collections summary, idempotent due-dates process (hourly), camera capture and review, **AI extraction** (Gemini vision, validated with Zod and confirmed by a person) and **AI discrepancy explanation**.
-- **AI assistant**: chat with citations and links to resources, RAG over documents, read-only tools filtered by permissions (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`), conversations, hourly usage limit and an evaluation set of 20 questions.
+- **AI assistant**: chat with citations and links to resources, RAG over documents, read-only tools filtered by permissions (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`), conversations, hourly usage limit, an evaluation set of 20 questions and, for each cooperative's administrator, the choice of the local model in Settings (US-AI-07, ADR-014).
 
 ## 6. Limitations and future work
 
@@ -298,6 +300,7 @@ ADRs are immutable: a decision that changes produces a new ADR.
 - [ADR-009](docs/adr/ADR-009-gemini-language-and-vision-model.md): Gemini as language and vision model.
 - [ADR-010](docs/adr/ADR-010-gemini-embeddings-for-the-hosted-demo.md): Gemini embeddings for the hosted demo.
 - [ADR-013](docs/adr/ADR-013-local-language-model-for-the-assistant.md): local language model (Ollama) for the assistant on the home server; Gemini stays for vision.
+- [ADR-014](docs/adr/ADR-014-per-cooperative-assistant-model.md): per-cooperative choice of the assistant's local model, from an operator allowlist.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): bilingual root README for the thesis delivery (bounded exception to ADR-008).
 
 ## 11. Quality

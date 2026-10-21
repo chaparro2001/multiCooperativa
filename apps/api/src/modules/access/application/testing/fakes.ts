@@ -220,4 +220,6 @@ export class InMemoryMemberStore implements MemberStore {
   async listAudit() {
     return [];
   }
+
+  async recordAudit() {}
 }

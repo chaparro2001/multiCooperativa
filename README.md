@@ -117,6 +117,8 @@ API_URL=http://localhost:3000 pnpm --filter @multicooperativa/api db:seed:conten
 
 Para activar el asistente (con el proveedor por defecto), la extracción de facturas y la explicación de discrepancias, define `GEMINI_API_KEY` en `apps/api/.env` (clave gratuita de Google AI Studio, sin tarjeta). Opcionales: `GEMINI_MODEL` y `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` (por defecto 30).
 
+**Modelo por cooperativa (ADR-014)**: con el proveedor local, el administrador de cada cooperativa elige el modelo del asistente en Ajustes entre los de `ASSISTANT_OLLAMA_MODELS` (solo se ofrecen los instalados en Ollama; la app nunca descarga ninguno).
+
 **Asistente con modelo local (ADR-013)**: con `ASSISTANT_LLM_PROVIDER=ollama` el asistente responde con un modelo de Ollama (`ASSISTANT_OLLAMA_MODEL`, por defecto `qwen3:8b`; `pnpm ai:pull:chat` lo descarga) y no usa la cuota de Gemini ni envía las preguntas a la nube. Es lo que usa el servidor propio de la demo. Gemini se queda para la extracción de facturas (visión) y las explicaciones de discrepancias. Con el modelo local, una pregunta tarda unos 7 s de media en una CPU de 12 núcleos (p90 26 s) y supera 19 de las 22 preguntas del conjunto de evaluación.
 
 Sin la clave de Gemini (y con el proveedor `gemini`), el asistente responde 503 y **el resto de la aplicación funciona con normalidad**. Las funciones de IA que usan Gemini (extracción de facturas, explicación de discrepancias) tampoco están disponibles. Los embeddings en local los sirve Ollama, no Gemini.
@@ -174,7 +176,7 @@ El estado de cada tarea está en [docs/03-implementation-plan.md](docs/03-implem
 - **Documentos con búsqueda semántica**: repositorio con versiones, URLs firmadas, extracción de texto, troceado, embeddings y pgvector filtrado por cooperativa.
 - **Asambleas**: convocatoria con orden del día y censo, votación con restricción única en base de datos, cálculo de quórum y mayorías, resultados y control de votación para el consejo.
 - **Facturas y albaranes**: terceros (proveedores y clientes), albaranes y facturas de compra y venta con importes en decimal exacto, conciliación con tolerancia, estados, resumen de pagos y cobros, proceso idempotente de vencimientos (cada hora), captura con cámara y revisión, **extracción con IA** (Gemini visión, validada con Zod y confirmada por una persona) y **explicación de discrepancias con IA**.
-- **Asistente de IA**: chat con citas y enlaces a los recursos, RAG sobre los documentos, herramientas de solo lectura filtradas por permisos (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`), conversaciones, límite de uso por hora y conjunto de evaluación de 20 preguntas.
+- **Asistente de IA**: chat con citas y enlaces a los recursos, RAG sobre los documentos, herramientas de solo lectura filtradas por permisos (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`), conversaciones, límite de uso por hora, conjunto de evaluación de 20 preguntas y, para el administrador de cada cooperativa, la elección del modelo local en Ajustes (US-AI-07, ADR-014).
 
 ## 6. Limitaciones y trabajo futuro
 
@@ -299,6 +301,7 @@ Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
 - [ADR-010](docs/adr/ADR-010-gemini-embeddings-for-the-hosted-demo.md): embeddings de Gemini para la demo alojada.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): README raíz bilingüe para la entrega del TFM (excepción acotada a ADR-008).
 - [ADR-013](docs/adr/ADR-013-local-language-model-for-the-assistant.md): modelo de lenguaje local (Ollama) para el asistente en el servidor propio; Gemini sigue en visión.
+- [ADR-014](docs/adr/ADR-014-per-cooperative-assistant-model.md): elección por cooperativa del modelo local del asistente, entre los permitidos por el operador.
 
 ## 11. Calidad
 

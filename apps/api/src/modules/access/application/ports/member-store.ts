@@ -88,4 +88,6 @@ export interface MemberStore {
     decide: (snapshot: MemberSnapshot) => MemberUpdate,
   ): Promise<MemberRecord | null>;
   listAudit(cooperativeId: string, limit: number): Promise<AuditRecord[]>;
+  /** An audit event raised by another module (e.g. a cooperative setting), with the actor as subject. */
+  recordAudit(cooperativeId: string, targetUserId: string, audit: AuditInput): Promise<void>;
 }

@@ -5,6 +5,8 @@ import { StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useBiometrics } from '@/auth/biometrics';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
+import { AssistantModelSection } from '@/features/assistant/model-settings-section';
+import { canChooseAssistantModel } from '@/features/assistant/model-settings';
 import { useSession } from '@/session/session-context';
 import { Button } from '@/ui/button';
 import { ErrorText, Screen } from '@/ui/screen';
@@ -12,7 +14,7 @@ import { colors } from '@/ui/theme';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
-  const { me, cooperative } = useActiveCooperative();
+  const { me, cooperative, permissions } = useActiveCooperative();
   const { signOut } = useSession();
   const biometrics = useBiometrics();
   const [biometricsError, setBiometricsError] = useState<string | null>(null);
@@ -57,6 +59,9 @@ export default function SettingsScreen() {
         </View>
       )}
       {biometricsError && <ErrorText>{biometricsError}</ErrorText>}
+
+      {/* US-AI-07: only the administrator sees it; the API enforces it. */}
+      {canChooseAssistantModel(permissions?.permissions) && <AssistantModelSection />}
 
       <Button
         title={t('settings.signOut')}

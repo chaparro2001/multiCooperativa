@@ -156,6 +156,11 @@ export function createAccessModule(deps: AccessModuleDeps) {
       provisionCooperative({ store: provisioningStore, hasher }, input),
     requireSession,
     requireCooperative,
+    /** Lets another module leave a trace in the cooperative's audit log (US-ACC-12); the actor is also the subject. */
+    recordAudit: (
+      cooperativeId: string,
+      event: { actorUserId: string; action: string; detail: Record<string, unknown> },
+    ) => memberDeps.members.recordAudit(cooperativeId, event.actorUserId, event),
     /** Member data for other modules, always scoped to a cooperative. */
     directory: new PrismaMemberDirectory(deps.prisma),
     router,
