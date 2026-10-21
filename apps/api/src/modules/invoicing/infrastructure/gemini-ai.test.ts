@@ -1,6 +1,7 @@
 import type { GoogleGenAI } from '@google/genai';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ExtractionUnavailableError } from '../application/ports/document-extractor';
 import { GeminiDocumentExtractor, GeminiDiscrepancyExplainer } from './gemini-ai';
 
 const reading = {
@@ -72,6 +73,52 @@ describe('Gemini explainer (BR-INV-12)', () => {
     ).toEqual(['Facturado de más.']);
     expect(
       await new GeminiDiscrepancyExplainer(clientReturning('{"x":1}').client).explain(facts),
+    ).toBeNull();
+  });
+});
+
+describe('Gemini overload resilience (ADR-009)', () => {
+  const fast = { sleep: async () => undefined, onRetry: () => undefined };
+  const overloaded = Object.assign(new Error('{"status":"UNAVAILABLE"}'), { status: 503 });
+  const clientFailingFor = (...failing: string[]) => {
+    const generateContent = vi.fn(async ({ model }: { model: string }) => {
+      if (failing.includes(model)) throw overloaded;
+      return { text: JSON.stringify(reading) };
+    });
+    return { client: { models: { generateContent } } as unknown as GoogleGenAI, generateContent };
+  };
+
+  it('the extractor falls back to the next model when the primary is overloaded', async () => {
+    const { client, generateContent } = clientFailingFor('primary');
+
+    const result = await new GeminiDocumentExtractor(client, 'primary', ['backup'], fast).extract(
+      file,
+    );
+
+    expect(result?.number).toBe('F-1');
+    expect(generateContent.mock.calls.at(-1)?.[0].model).toBe('backup');
+  });
+
+  it('the extractor reports unavailable once every model is overloaded', async () => {
+    const { client } = clientFailingFor('primary', 'backup');
+
+    await expect(
+      new GeminiDocumentExtractor(client, 'primary', ['backup'], fast).extract(file),
+    ).rejects.toBeInstanceOf(ExtractionUnavailableError);
+  });
+
+  it('the explainer retries and then answers; if all fail it returns null', async () => {
+    const ok = clientFailingFor();
+    ok.generateContent
+      .mockRejectedValueOnce(overloaded)
+      .mockResolvedValueOnce({ text: '{"explanations":["uno"]}' });
+    expect(
+      await new GeminiDiscrepancyExplainer(ok.client, 'primary', [], fast).explain([]),
+    ).toEqual(['uno']);
+
+    const down = clientFailingFor('primary');
+    expect(
+      await new GeminiDiscrepancyExplainer(down.client, 'primary', [], fast).explain([]),
     ).toBeNull();
   });
 });

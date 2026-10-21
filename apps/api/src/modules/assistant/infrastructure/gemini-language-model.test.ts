@@ -157,4 +157,54 @@ describe('GeminiLanguageModel (NFR-AI-02, NFR-AI-03, ADR-009)', () => {
 
     expect((await new GeminiLanguageModel(client).generate(request)).stopReason).toBe('max_tokens');
   });
+
+  describe('overload resilience (ADR-009)', () => {
+    const fast = { sleep: async () => undefined, onRetry: () => undefined };
+    const overloaded = Object.assign(new Error('{"status":"UNAVAILABLE"}'), { status: 503 });
+
+    it('retries a 503 and returns the answer', async () => {
+      const generateContent = vi
+        .fn()
+        .mockRejectedValueOnce(overloaded)
+        .mockResolvedValue(responseOf([{ text: 'Hola' }]));
+      const client = { models: { generateContent } } as unknown as Pick<GoogleGenAI, 'models'>;
+
+      const turn = await new GeminiLanguageModel(client, 'primary', [], fast).generate(request);
+
+      expect(turn.text).toBe('Hola');
+      expect(generateContent).toHaveBeenCalledTimes(2);
+    });
+
+    it('falls back to the next model when the primary stays overloaded', async () => {
+      const generateContent = vi.fn(async ({ model }: { model: string }) => {
+        if (model === 'primary') throw overloaded;
+        return responseOf([{ text: `from ${model}` }]);
+      });
+      const client = { models: { generateContent } } as unknown as Pick<GoogleGenAI, 'models'>;
+
+      const turn = await new GeminiLanguageModel(client, 'primary', ['backup'], fast).generate(
+        request,
+      );
+
+      expect(turn.text).toBe('from backup');
+      expect(generateContent.mock.calls.map(([params]) => params.model)).toEqual([
+        'primary',
+        'primary',
+        'primary',
+        'backup',
+      ]);
+    });
+
+    it('does not retry a rejected key', async () => {
+      const generateContent = vi
+        .fn()
+        .mockRejectedValue(Object.assign(new Error('x'), { status: 403 }));
+      const client = { models: { generateContent } } as unknown as Pick<GoogleGenAI, 'models'>;
+
+      await expect(
+        new GeminiLanguageModel(client, 'primary', ['backup'], fast).generate(request),
+      ).rejects.toThrow();
+      expect(generateContent).toHaveBeenCalledTimes(1);
+    });
+  });
 });

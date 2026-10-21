@@ -68,6 +68,7 @@ Create a key in Google AI Studio (no card). It is `GEMINI_API_KEY`. The same key
 | `S3_FORCE_PATH_STYLE`              | `true`                                                       | in `render.yaml`                               |
 | `GEMINI_API_KEY`                   | key                                                          | Google AI Studio                               |
 | `GEMINI_MODEL`                     | `gemini-3.8-flash`                                           | in `render.yaml`                               |
+| `GEMINI_FALLBACK_MODELS`           | `gemini-3.6-flash,gemini-3.1-flash-lite`                     | in `render.yaml` (empty disables the fallback) |
 | `EMBEDDINGS_PROVIDER`              | `gemini`                                                     | in `render.yaml`                               |
 | `GEMINI_EMBEDDING_MODEL`           | `gemini-embedding-2`                                         | in `render.yaml`                               |
 | `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` | `30`                                                         | in `render.yaml`                               |
@@ -75,6 +76,8 @@ Create a key in Google AI Studio (no card). It is `GEMINI_API_KEY`. The same key
 | `JOBS_TOKEN`                       | random string of 32+ characters, e.g. `openssl rand -hex 32` | you generate it; the same value goes to GitHub |
 
 Render sets `PORT` itself. On every start the container runs `prisma migrate deploy` with `DIRECT_URL`, then starts the API (free plans have no pre-deploy command).
+
+The free Gemini tier answers `503 UNAVAILABLE` or `429` in bursts. Every Gemini call (assistant, extraction, explanations, embeddings) is retried with exponential backoff and jitter (3 attempts per model, 4 for embeddings, at most about 20 s of waiting, 30 s for embeddings; honoring `Retry-After` and `retryDelay`). If `GEMINI_MODEL` keeps failing, the models of `GEMINI_FALLBACK_MODELS` are tried in order (embeddings are never switched to another model: their vectors would not be comparable). Each retry logs one `gemini_retry` line without content. Changing the variable needs a redeploy.
 
 3. When the deploy is live, `https://<service>.onrender.com/health` answers `{"status":"ok"}`. That URL (no trailing slash) is `API_URL` below.
 

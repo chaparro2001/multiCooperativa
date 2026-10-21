@@ -101,4 +101,40 @@ describe('GeminiEmbedder (ADR-010)', () => {
       EmbeddingUnavailableError,
     );
   });
+
+  it('retries an overloaded service and keeps the same model (ADR-010)', async () => {
+    const { client, requests } = fakeClient();
+    const embedContent = client.models.embedContent.bind(client.models);
+    let failures = 2;
+    client.models.embedContent = async (params) => {
+      if (failures-- > 0)
+        throw Object.assign(new Error('{"status":"UNAVAILABLE"}'), { status: 503 });
+      return embedContent(params);
+    };
+    const fast = { sleep: async () => undefined, onRetry: () => undefined };
+
+    const vectors = await new GeminiEmbedder(client, 'gemini-embedding-2', fast).embed(['x']);
+
+    expect(vectors).toHaveLength(1);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.model).toBe('gemini-embedding-2');
+  });
+
+  it('gives up with EmbeddingUnavailableError when the overload persists', async () => {
+    let calls = 0;
+    const client: GeminiEmbeddingClient = {
+      models: {
+        async embedContent() {
+          calls++;
+          throw Object.assign(new Error('x'), { status: 503 });
+        },
+      },
+    };
+    const fast = { sleep: async () => undefined, onRetry: () => undefined };
+
+    await expect(
+      new GeminiEmbedder(client, 'gemini-embedding-2', fast).embed(['x']),
+    ).rejects.toBeInstanceOf(EmbeddingUnavailableError);
+    expect(calls).toBe(4);
+  });
 });

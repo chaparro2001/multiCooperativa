@@ -29,7 +29,11 @@ if (!offline && !env.GEMINI_API_KEY) {
 
 const model = offline
   ? new RuleBasedLanguageModel()
-  : createGeminiLanguageModel({ apiKey: env.GEMINI_API_KEY!, model: env.GEMINI_MODEL });
+  : createGeminiLanguageModel({
+      apiKey: env.GEMINI_API_KEY!,
+      model: env.GEMINI_MODEL,
+      fallbackModels: env.GEMINI_FALLBACK_MODELS,
+    });
 
 const results = await runEvaluation({ model, pauseMs: pause });
 for (const result of results) {

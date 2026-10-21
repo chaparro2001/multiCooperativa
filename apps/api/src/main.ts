@@ -31,11 +31,17 @@ const { app, indexing, runDueDates } = createApi({
       ? new GeminiEmbedder(gemini, env.GEMINI_EMBEDDING_MODEL)
       : new OllamaEmbedder({ url: env.OLLAMA_URL, model: env.EMBEDDING_MODEL }),
   // Scanned documents are read by Gemini (ADR-009); without a key, extraction answers 503.
-  documentExtractor: gemini && new GeminiDocumentExtractor(gemini, env.GEMINI_MODEL),
-  discrepancyExplainer: gemini && new GeminiDiscrepancyExplainer(gemini, env.GEMINI_MODEL),
+  documentExtractor:
+    gemini && new GeminiDocumentExtractor(gemini, env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODELS),
+  discrepancyExplainer:
+    gemini && new GeminiDiscrepancyExplainer(gemini, env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODELS),
   // Without a key the assistant answers 503 and the rest of the app keeps working (ADR-009).
   languageModel: env.GEMINI_API_KEY
-    ? createGeminiLanguageModel({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL })
+    ? createGeminiLanguageModel({
+        apiKey: env.GEMINI_API_KEY,
+        model: env.GEMINI_MODEL,
+        fallbackModels: env.GEMINI_FALLBACK_MODELS,
+      })
     : null,
   assistantMessageLimitPerHour: env.ASSISTANT_MESSAGE_LIMIT_PER_HOUR,
   // No email provider yet: in development the link is printed to the console;

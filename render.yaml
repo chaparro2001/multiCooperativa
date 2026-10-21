@@ -43,6 +43,9 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-3.8-flash
+      # Free-tier models tried in order when GEMINI_MODEL keeps answering 503/429 (ADR-009).
+      - key: GEMINI_FALLBACK_MODELS
+        value: gemini-3.6-flash,gemini-3.1-flash-lite
       - key: EMBEDDINGS_PROVIDER
         value: gemini
       - key: GEMINI_EMBEDDING_MODEL

@@ -20,10 +20,13 @@ export { MESSAGE_LIMIT_PER_HOUR } from './domain/usage';
 export function createGeminiLanguageModel(settings: {
   apiKey: string;
   model?: string;
+  /** Tried in order when the model keeps answering overloaded (GEMINI_FALLBACK_MODELS). */
+  fallbackModels?: readonly string[];
 }): LanguageModel {
   return new GeminiLanguageModel(
     new GoogleGenAI({ apiKey: settings.apiKey, httpOptions: { timeout: 60_000 } }),
     settings.model ?? DEFAULT_GEMINI_MODEL,
+    settings.fallbackModels,
   );
 }
 

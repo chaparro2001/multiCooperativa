@@ -1,6 +1,12 @@
 import { ApiError, GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
 
+import {
+  callWithFallback,
+  isTransientError,
+  modelChain,
+  type ResilienceOptions,
+} from '../../../shared/infrastructure/resilient-call';
 import type {
   DiscrepancyExplainer,
   DiscrepancyFact,
@@ -64,6 +70,8 @@ export class GeminiDocumentExtractor implements DocumentExtractor {
   constructor(
     private readonly client: GoogleGenAI,
     private readonly model: string = DEFAULT_GEMINI_MODEL,
+    private readonly fallbackModels: readonly string[] = [],
+    private readonly resilience: Partial<ResilienceOptions> = {},
   ) {}
 
   async extract(file: {
@@ -71,27 +79,34 @@ export class GeminiDocumentExtractor implements DocumentExtractor {
     mediaType: ExtractableMediaType;
   }): Promise<RawExtraction | null> {
     try {
-      const response = await this.client.models.generateContent({
-        model: this.model,
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                inlineData: {
-                  mimeType: file.mediaType,
-                  data: Buffer.from(file.content).toString('base64'),
-                },
+      const contents = [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType: file.mediaType,
+                data: Buffer.from(file.content).toString('base64'),
               },
-              { text: EXTRACTION_INSTRUCTIONS },
-            ],
-          },
-        ],
-        config: jsonConfig(extractionSchema),
-      });
+            },
+            { text: EXTRACTION_INSTRUCTIONS },
+          ],
+        },
+      ];
+      const response = await callWithFallback(
+        modelChain(this.model, this.fallbackModels),
+        (model) =>
+          this.client.models.generateContent({
+            model,
+            contents,
+            config: jsonConfig(extractionSchema),
+          }),
+        this.resilience,
+      );
       return parseJson(response.text, extractionSchema);
     } catch (error) {
-      if (error instanceof ApiError) throw new ExtractionUnavailableError(undefined, error);
+      if (error instanceof ApiError || isTransientError(error))
+        throw new ExtractionUnavailableError(undefined, error);
       throw error;
     }
   }
@@ -102,18 +117,26 @@ export class GeminiDiscrepancyExplainer implements DiscrepancyExplainer {
   constructor(
     private readonly client: GoogleGenAI,
     private readonly model: string = DEFAULT_GEMINI_MODEL,
+    private readonly fallbackModels: readonly string[] = [],
+    private readonly resilience: Partial<ResilienceOptions> = {},
   ) {}
 
   async explain(facts: DiscrepancyFact[]): Promise<string[] | null> {
     try {
-      const response = await this.client.models.generateContent({
-        model: this.model,
-        contents: `${EXPLANATION_INSTRUCTIONS}\n\n${JSON.stringify(facts)}`,
-        config: jsonConfig(explanationSchema),
-      });
+      const contents = `${EXPLANATION_INSTRUCTIONS}\n\n${JSON.stringify(facts)}`;
+      const response = await callWithFallback(
+        modelChain(this.model, this.fallbackModels),
+        (model) =>
+          this.client.models.generateContent({
+            model,
+            contents,
+            config: jsonConfig(explanationSchema),
+          }),
+        this.resilience,
+      );
       return parseJson(response.text, explanationSchema)?.explanations ?? null;
     } catch (error) {
-      if (error instanceof ApiError) return null;
+      if (error instanceof ApiError || isTransientError(error)) return null;
       throw error;
     }
   }

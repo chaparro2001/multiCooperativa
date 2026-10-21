@@ -14,6 +14,9 @@ const LOCAL_OLLAMA_URL = 'http://localhost:11434';
 /** Web dev server of Expo: the only cross-origin caller outside production. */
 const LOCAL_CORS_ORIGINS = ['http://localhost:8081'];
 
+/** Flash / Flash-Lite generateContent models with a free tier, each with its own quota (ADR-009). */
+const DEFAULT_FALLBACK_MODELS = 'gemini-3.6-flash,gemini-3.1-flash-lite';
+
 const REQUIRED_IN_PRODUCTION = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'] as const;
 
 const envSchema = z
@@ -45,6 +48,17 @@ const envSchema = z
     GEMINI_API_KEY: z.string().min(1).optional(),
     /** Gemini model shared by the assistant and document extraction: Flash class, free tier. */
     GEMINI_MODEL: z.string().min(1).default('gemini-3.8-flash'),
+    /** Comma-separated Gemini models (free tier) tried in order when GEMINI_MODEL keeps answering overloaded (503/429). Empty string: no fallback. */
+    GEMINI_FALLBACK_MODELS: z
+      .string()
+      .default(DEFAULT_FALLBACK_MODELS)
+      .transform((value) =>
+        value
+          .split(',')
+          .map((model) => model.trim())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.string().regex(/^[\w.-]+$/, 'must be a model id such as gemini-3.6-flash'))),
     /** BR-AI-08: messages per user and hour. */
     ASSISTANT_MESSAGE_LIMIT_PER_HOUR: z.coerce.number().int().min(1).default(30),
     /** Comma-separated origins allowed by CORS (the hosted web app). Empty denies every browser origin. */

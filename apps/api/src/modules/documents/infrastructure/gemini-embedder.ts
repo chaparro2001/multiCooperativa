@@ -1,4 +1,9 @@
 import {
+  callWithFallback,
+  EMBEDDING_RESILIENCE,
+  type ResilienceOptions,
+} from '../../../shared/infrastructure/resilient-call';
+import {
   EMBEDDING_DIMENSIONS,
   type Embedder,
   type EmbeddingKind,
@@ -33,6 +38,7 @@ export class GeminiEmbedder implements Embedder {
   constructor(
     private readonly client: GeminiEmbeddingClient,
     private readonly model = 'gemini-embedding-2',
+    private readonly resilience: Partial<ResilienceOptions> = {},
   ) {}
 
   async embed(texts: string[], kind: EmbeddingKind = 'document'): Promise<number[][]> {
@@ -48,16 +54,22 @@ export class GeminiEmbedder implements Embedder {
     const contents = legacy ? input : input.map((text) => withPrefix(text, kind));
     let response: Awaited<ReturnType<GeminiEmbeddingClient['models']['embedContent']>>;
     try {
-      response = await this.client.models.embedContent({
-        model: this.model,
-        contents,
-        config: {
-          outputDimensionality: EMBEDDING_DIMENSIONS,
-          ...(legacy && {
-            taskType: kind === 'query' ? 'RETRIEVAL_QUERY' : 'RETRIEVAL_DOCUMENT',
+      // Vectors of different models are not comparable: no fallback model here, only retries.
+      response = await callWithFallback(
+        [this.model],
+        (model) =>
+          this.client.models.embedContent({
+            model,
+            contents,
+            config: {
+              outputDimensionality: EMBEDDING_DIMENSIONS,
+              ...(legacy && {
+                taskType: kind === 'query' ? 'RETRIEVAL_QUERY' : 'RETRIEVAL_DOCUMENT',
+              }),
+            },
           }),
-        },
-      });
+        { ...EMBEDDING_RESILIENCE, ...this.resilience },
+      );
     } catch (error) {
       throw new EmbeddingUnavailableError('Cannot reach the Gemini embeddings service.', error);
     }

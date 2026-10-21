@@ -6,6 +6,11 @@ import {
   type GoogleGenAI,
 } from '@google/genai';
 
+import {
+  callWithFallback,
+  modelChain,
+  type ResilienceOptions,
+} from '../../../shared/infrastructure/resilient-call';
 import type {
   LanguageModel,
   ModelMessage,
@@ -77,11 +82,23 @@ export class GeminiLanguageModel implements LanguageModel {
   constructor(
     private readonly client: Pick<GoogleGenAI, 'models'>,
     private readonly model: string = DEFAULT_GEMINI_MODEL,
+    private readonly fallbackModels: readonly string[] = [],
+    private readonly resilience: Partial<ResilienceOptions> = {},
   ) {}
 
   async generate(request: ModelRequest): Promise<ModelTurn> {
-    const response = await this.client.models.generateContent({
-      model: this.model,
+    // Overload (503/429) and network failures are retried, then the fallback models are tried.
+    const response = await callWithFallback(
+      modelChain(this.model, this.fallbackModels),
+      (model) => this.client.models.generateContent(this.params(model, request)),
+      this.resilience,
+    );
+    return this.toTurn(response);
+  }
+
+  private params(model: string, request: ModelRequest) {
+    return {
+      model,
       contents: toContents(request.messages),
       config: {
         systemInstruction: request.system,
@@ -98,8 +115,10 @@ export class GeminiLanguageModel implements LanguageModel {
             ]
           : undefined,
       },
-    });
+    };
+  }
 
+  private toTurn(response: GenerateContentResponse): ModelTurn {
     const content = response.candidates?.[0]?.content;
     const calls = response.functionCalls ?? [];
     // Thought parts are the model's reasoning, not the answer.
