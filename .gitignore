@@ -8,3 +8,6 @@ coverage/
 *.log
 .expo/
 generated/
+
+# Local Claude Code state (agent worktrees)
+.claude/
