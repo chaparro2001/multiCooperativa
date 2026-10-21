@@ -1,7 +1,7 @@
 name: Deploy web demo
 
 # Expo web export hosted on GitHub Pages (docs/04-deployment.md).
-# Repository variable required: API_URL (the Render URL, no trailing slash).
+# Repository variable required: API_URL (the public API URL, no trailing slash).
 on:
   push:
     branches: [main]

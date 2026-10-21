@@ -42,6 +42,8 @@ COPY --chown=node:node packages/contracts packages/contracts
 COPY --chown=node:node tsconfig.base.json ./
 COPY --chown=node:node apps/api/tsconfig.json apps/api/
 COPY --chown=node:node apps/api/src apps/api/src
+# The seed scripts (`db:seed`, `db:seed:content`) run inside the container on the home server.
+COPY --chown=node:node apps/api/scripts apps/api/scripts
 
 WORKDIR /app/apps/api
 EXPOSE 3000

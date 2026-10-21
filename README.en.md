@@ -11,7 +11,7 @@ Delivery: 26/10/2026 · Feature freeze: 22/10/2026.
 | Deliverable   | Link                                                                                                                                                                                 |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Demo (web)    | https://chaparro2001.github.io/multiCooperativa/                                                                                                                                     |
-| API (Render)  | <!-- TODO: Render API URL -->                                                                                                                                                        |
+| API           | https://api-cooperativa.chaparro2001.com                                                                                                                                             |
 | Slides        | [docs/slides/multicooperativa-tfm.pptx](docs/slides/multicooperativa-tfm.pptx) ([PDF](docs/slides/multicooperativa-tfm.pdf), [video script, in Spanish](docs/slides/guion-video.md)) |
 | Demo video    | <!-- TODO: video URL -->                                                                                                                                                             |
 | Documentation | [docs/README.md](docs/README.md)                                                                                                                                                     |
@@ -66,21 +66,21 @@ Permissions are defined by module, level and scope (ADR-004). The backend decide
 
 ## 2. Tech stack
 
-| Layer            | Choice                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------- |
-| Mobile app       | Expo + React Native + TypeScript, Expo Router                                         |
-| Client data      | TanStack Query; tokens in the device's secure storage                                 |
-| User-facing text | i18next + react-i18next + expo-localization; `es` default (ADR-008)                   |
-| Contracts        | Shared package with Zod schemas (validate on the server and type the app)             |
-| Backend          | Node + TypeScript, modular monolith with Clean Architecture and internal events       |
-| API              | REST, JWT authentication, stable error codes                                          |
-| Persistence      | PostgreSQL + Prisma; pgvector for RAG                                                 |
-| Language model   | Gemini (free tier) behind ports: assistant with function calling and vision (ADR-009) |
-| Embeddings       | Local `bge-m3` with Ollama (ADR-006); Gemini embeddings in the hosted demo (ADR-010)  |
-| Files            | S3-compatible storage with expiring signed URLs (ADR-005); RustFS locally             |
-| Tests            | Vitest and React Native Testing Library                                               |
-| Quality          | ESLint, Prettier, Husky (pre-commit), custom module-boundaries rule                   |
-| Delivery         | GitHub Actions; demo on Render (API), Neon, Supabase Storage and GitHub Pages (web)   |
+| Layer            | Choice                                                                                        |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| Mobile app       | Expo + React Native + TypeScript, Expo Router                                                 |
+| Client data      | TanStack Query; tokens in the device's secure storage                                         |
+| User-facing text | i18next + react-i18next + expo-localization; `es` default (ADR-008)                           |
+| Contracts        | Shared package with Zod schemas (validate on the server and type the app)                     |
+| Backend          | Node + TypeScript, modular monolith with Clean Architecture and internal events               |
+| API              | REST, JWT authentication, stable error codes                                                  |
+| Persistence      | PostgreSQL + Prisma; pgvector for RAG                                                         |
+| Language model   | Gemini (free tier) behind ports: assistant with function calling and vision (ADR-009)         |
+| Embeddings       | Local `bge-m3` with Ollama (ADR-006); Gemini embeddings in the hosted demo (ADR-010)          |
+| Files            | S3-compatible storage with expiring signed URLs (ADR-005); RustFS locally                     |
+| Tests            | Vitest and React Native Testing Library                                                       |
+| Quality          | ESLint, Prettier, Husky (pre-commit), custom module-boundaries rule                           |
+| Delivery         | GitHub Actions; demo with the API on a home server (Cloudflare Tunnel) and GitHub Pages (web) |
 
 ## 3. Local setup and run
 
@@ -144,7 +144,8 @@ docs/                  Vision, stack, plan, deployment, ADRs, requirements and s
 tools/eslint/          Custom module-boundaries rule
 .github/workflows/     CI, GitHub Pages deploy and due-dates cron
 docker-compose.yml     PostgreSQL + pgvector, RustFS and Ollama for development
-render.yaml            Render blueprint for the API
+deploy/home-server/     Docker stack of the home server (API, PostgreSQL, RustFS, Ollama, cloudflared)
+render.yaml            Render blueprint (optional cloud alternative)
 CLAUDE.md              Working contract with the AI agent
 ```
 
@@ -222,20 +223,21 @@ Data defined in the seed (`apps/api/src/dev/demo-seed.ts`) and described in [doc
 
 ## 8. Demo deployment
 
-Summary of [docs/04-deployment.md](docs/04-deployment.md). Cost: 0 EUR, no card.
+Summary of [docs/04-deployment.md](docs/04-deployment.md). Cost: 0 EUR, no credit card: the API runs on a home server (ADR-012) because Render and Railway ask for a card.
 
-| Piece                        | Service                                             |
-| ---------------------------- | --------------------------------------------------- |
-| Web app                      | GitHub Pages (Expo web export, deployed by Actions) |
-| API                          | Render free web service with Docker                 |
-| Database                     | Neon (Postgres 17 with pgvector)                    |
-| Files                        | Supabase Storage (S3 protocol, private bucket)      |
-| Language, vision, embeddings | Gemini API (free key)                               |
-| Scheduled job                | GitHub Actions cron every hour (due dates)          |
+| Piece               | Service                                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
+| Web app             | GitHub Pages (Expo web export, deployed by Actions)                                                    |
+| API                 | Docker container on a home server, exposed with Cloudflare Tunnel (`api-cooperativa.chaparro2001.com`) |
+| Database            | PostgreSQL 17 with pgvector (container)                                                                |
+| Files               | RustFS, S3-compatible (container)                                                                      |
+| Embeddings          | Ollama with bge-m3 (container, ADR-006)                                                                |
+| Language and vision | Gemini API (free key)                                                                                  |
+| Scheduled job       | GitHub Actions cron every hour (due dates)                                                             |
 
 Warnings:
 
-- **Cold start**: Render puts the API to sleep after 15 minutes without traffic and the first request takes about 1 minute.
+- **Availability**: the API only answers while the home server is on and online. There is no cold start.
 - **Data use on the Gemini free tier**: Google may use the content to improve its products. **Do not upload real invoices, delivery notes or third-party documents**; use the sample data.
 - It is a demo, not a system of record: data may be lost.
 
