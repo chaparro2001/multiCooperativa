@@ -1,10 +1,12 @@
 import { Fragment } from 'react';
-import { Platform, StyleSheet, Text, type TextStyle, View } from 'react-native';
+import { Platform, StyleSheet, type TextStyle, View } from 'react-native';
+
+import { Text } from '@/ui/paper';
 
 import { type Inline, parseMarkdown } from './markdown';
 
 /** Renders an assistant answer: the Markdown subset of `markdown.ts`, selectable. */
-export function MarkdownText({ source, style }: { source: string; style: TextStyle }) {
+export function MarkdownText({ source, style }: { source: string; style?: TextStyle }) {
   const blocks = parseMarkdown(source);
   return (
     <View style={styles.blocks}>
@@ -13,17 +15,22 @@ export function MarkdownText({ source, style }: { source: string; style: TextSty
         if (block.kind === 'bullet' || block.kind === 'numbered') {
           return (
             <View key={index} style={styles.item}>
-              <Text style={[style, styles.marker]}>
+              <Text variant="bodyLarge" style={[style, styles.marker]}>
                 {block.kind === 'bullet' ? '•' : block.marker}
               </Text>
-              <Text style={[style, styles.itemText]} selectable>
+              <Text variant="bodyLarge" style={[style, styles.itemText]} selectable>
                 {content}
               </Text>
             </View>
           );
         }
         return (
-          <Text key={index} style={[style, block.kind === 'heading' && styles.bold]} selectable>
+          <Text
+            key={index}
+            variant="bodyLarge"
+            style={[style, block.kind === 'heading' && styles.bold]}
+            selectable
+          >
             {content}
           </Text>
         );

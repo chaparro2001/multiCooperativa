@@ -1,6 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
-
-import { colors } from './theme';
+import { StyleSheet, View } from 'react-native';
+import { Badge } from 'react-native-paper';
 
 import { badgeText } from './badge-count';
 
@@ -19,23 +18,15 @@ export function CountBadge({ count, testID }: { count: number; testID?: string }
       importantForAccessibility="no-hide-descendants"
       testID={testID}
     >
-      <Text style={styles.text}>{text}</Text>
+      {/* Paper's Badge is the error-coloured pill (the theme's `error`). */}
+      <Badge size={26} style={styles.pill}>
+        {text}
+      </Badge>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  badge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    minWidth: 26,
-    height: 26,
-    paddingHorizontal: 6,
-    borderRadius: 13,
-    backgroundColor: colors.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: { color: '#fff', fontSize: 13, fontWeight: '700', lineHeight: 16 },
+  badge: { position: 'absolute', top: 8, right: 8 },
+  pill: { alignSelf: 'auto', fontSize: 13, fontWeight: '700', minWidth: 26 },
 });

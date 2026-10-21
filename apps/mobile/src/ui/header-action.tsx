@@ -1,11 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type Href, Link } from 'expo-router';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import { type ComponentProps, createElement, type ReactNode } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
+import { createElement, type ReactNode } from 'react';
+import { IconButton } from 'react-native-paper';
 
 import { useBrandColor } from '@/branding/brand';
 
-export type IconName = ComponentProps<typeof Ionicons>['name'];
+import type { IconName } from './paper-settings';
+
+export type { IconName };
 
 interface HeaderActionBase {
   /**
@@ -18,7 +20,7 @@ interface HeaderActionBase {
   /** Runs an action (role "button"). */
   onPress?: () => void;
   testID?: string;
-  /** Ionicons name, tinted with the brand color (decorative: the label names the action). */
+  /** MaterialCommunityIcons name, tinted with the brand color (decorative: the label names the action). */
   icon: IconName;
 }
 
@@ -28,30 +30,26 @@ export const HEADER_ACTION_SIZE = 44;
 /** Icon action for a Stack `headerRight`; vector icons use the cooperative's brand color. */
 export function HeaderAction({ label, href, onPress, testID, icon }: HeaderActionBase) {
   const color = useBrandColor();
-  const glyph = <Ionicons name={icon} size={24} color={color} />;
+  const button = (role: 'link' | 'button') => (
+    <IconButton
+      icon={icon}
+      iconColor={color}
+      size={24}
+      accessibilityLabel={label}
+      accessibilityRole={role}
+      style={styles.target}
+      onPress={onPress}
+      testID={testID}
+    />
+  );
 
   const action =
     href !== undefined ? (
       <Link href={href} asChild>
-        <Pressable
-          accessibilityRole="link"
-          accessibilityLabel={label}
-          style={styles.target}
-          testID={testID}
-        >
-          {glyph}
-        </Pressable>
+        {button('link')}
       </Link>
     ) : (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        style={styles.target}
-        onPress={onPress}
-        testID={testID}
-      >
-        {glyph}
-      </Pressable>
+      button('button')
     );
   return withTooltip(label, action);
 }
@@ -79,10 +77,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: Platform.OS === 'web' ? 8 : 0,
   },
-  target: {
-    minWidth: HEADER_ACTION_SIZE,
-    minHeight: HEADER_ACTION_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  target: { width: HEADER_ACTION_SIZE, height: HEADER_ACTION_SIZE, margin: 0 },
 });

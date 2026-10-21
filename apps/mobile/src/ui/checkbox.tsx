@@ -1,11 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Checkbox as PaperCheckbox } from 'react-native-paper';
 
-import { useBrandColor } from '@/branding/brand';
-
-import { colors } from './theme';
-
-/** A labelled box that is checked or not (role "checkbox"). */
+/** A labelled box that is checked or not (role "checkbox"); it takes the brand colour from the theme. */
 export function Checkbox({
   label,
   checked,
@@ -17,35 +12,16 @@ export function Checkbox({
   onChange(checked: boolean): void;
   testID?: string;
 }) {
-  const brand = useBrandColor();
   return (
-    <Pressable
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
-      accessibilityLabel={label}
+    <PaperCheckbox.Item
+      label={label}
+      status={checked ? 'checked' : 'unchecked'}
       onPress={() => onChange(!checked)}
-      style={styles.row}
+      position="leading"
+      labelVariant="bodyLarge"
+      labelStyle={{ textAlign: 'left', flexGrow: 1 }}
+      style={{ paddingVertical: 0, paddingHorizontal: 0 }}
       testID={testID}
-    >
-      <View style={[styles.box, checked && { backgroundColor: brand, borderColor: brand }]}>
-        {checked && <Ionicons name="checkmark" size={16} color="#fff" />}
-      </View>
-      <Text style={styles.label}>{label}</Text>
-    </Pressable>
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
-  box: {
-    width: 22,
-    height: 22,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  label: { flex: 1, fontSize: 15, color: colors.text },
-});

@@ -1,8 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text } from 'react-native';
-
 import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
 import {
@@ -17,9 +15,9 @@ import { Checkbox } from '@/ui/checkbox';
 import { confirmAction } from '@/ui/confirm';
 import { DateField } from '@/ui/date-field';
 import { FormSummary } from '@/ui/field';
+import { Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
 
 const HALF_AN_HOUR = 30 * 60 * 1000;
 const REASON_MAX_LENGTH = 500;
@@ -27,6 +25,7 @@ const REASON_MAX_LENGTH = 500;
 /** US-ASM-09: new date and place for a convened assembly, with an optional notice to the members. */
 export default function RescheduleAssemblyScreen() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const assembly = useAssembly(id);
   const reschedule = useRescheduleAssembly();
@@ -101,13 +100,15 @@ export default function RescheduleAssemblyScreen() {
   return (
     <Screen testID="reschedule-screen" form={form}>
       <Stack.Screen options={{ title: t('assemblies.reschedule.title') }} />
-      <Text style={styles.current}>
+      <Text variant="titleSmall">
         {t('assemblies.reschedule.current', {
           date: formatDateTime(current.firstCallAt),
           place: current.place,
         })}
       </Text>
-      <Text style={styles.hint}>{t('assemblies.reschedule.noticeHint')}</Text>
+      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        {t('assemblies.reschedule.noticeHint')}
+      </Text>
       <DateField
         label={t('assemblies.editor.firstCall')}
         mode="datetime"
@@ -158,7 +159,7 @@ export default function RescheduleAssemblyScreen() {
         testID="notify-members"
       />
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('assemblies.reschedule.submit')}
@@ -169,8 +170,3 @@ export default function RescheduleAssemblyScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  current: { fontSize: 15, fontWeight: '600', color: colors.text },
-  hint: { fontSize: 13, color: colors.muted },
-});

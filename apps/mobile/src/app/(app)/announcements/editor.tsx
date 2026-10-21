@@ -1,7 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
@@ -22,10 +22,9 @@ import { pickPdf } from '@/features/shared/pdf-upload';
 import { formatSize } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { FormSummary } from '@/ui/field';
+import { Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { useBrandColor } from '@/branding/brand';
-import { colors } from '@/ui/theme';
 
 const TITLE_MAX = 120;
 const BODY_MAX = 5000;
@@ -33,7 +32,7 @@ const MAX_ATTACHMENTS = 3;
 
 /** US-ANN-01 and US-ANN-05: draft, attachments (up to 3 PDF) and publish. */
 export default function AnnouncementEditorScreen() {
-  const brand = useBrandColor();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string }>();
   const [id, setId] = useState(params.id);
@@ -124,23 +123,25 @@ export default function AnnouncementEditorScreen() {
         style={styles.body}
         testID="body-field"
       />
-      {status === 'published' && (
-        <Text style={styles.hint}>{t('announcements.editor.publishedHint')}</Text>
-      )}
+      {status === 'published' ? (
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          {t('announcements.editor.publishedHint')}
+        </Text>
+      ) : null}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
+        <Text variant="titleSmall">
           {t('announcements.editor.attachments', {
             current: attachments.length,
             max: MAX_ATTACHMENTS,
           })}
         </Text>
         {attachments.map((attachment) => (
-          <Text key={attachment.id} style={styles.attachment}>
+          <Text key={attachment.id} variant="bodyMedium">
             {attachment.name} · {formatSize(attachment.size)}
           </Text>
         ))}
-        {attachments.length < MAX_ATTACHMENTS && (
+        {attachments.length < MAX_ATTACHMENTS ? (
           <Button
             title={t('announcements.editor.addPdf')}
             variant="secondary"
@@ -156,12 +157,16 @@ export default function AnnouncementEditorScreen() {
             }
             testID="add-attachment"
           />
-        )}
+        ) : null}
       </View>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
-      {notice && <Text style={[styles.notice, { color: brand }]}>{notice}</Text>}
+      {notice ? (
+        <Text variant="bodyMedium" style={{ color: colors.primary }}>
+          {notice}
+        </Text>
+      ) : null}
 
       <Button
         title={
@@ -180,7 +185,7 @@ export default function AnnouncementEditorScreen() {
         }
         testID="save-announcement"
       />
-      {status === 'draft' && (
+      {status === 'draft' ? (
         <Button
           title={t('common.actions.publish')}
           loading={action.isPending}
@@ -194,16 +199,12 @@ export default function AnnouncementEditorScreen() {
           }
           testID="publish-from-editor"
         />
-      )}
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   body: { minHeight: 200, paddingTop: 12 },
-  hint: { fontSize: 13, color: colors.muted },
   section: { gap: 8 },
-  sectionTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
-  attachment: { fontSize: 14, color: colors.text },
-  notice: { color: colors.primary },
 });

@@ -2,7 +2,7 @@ import type { DocumentCategory } from '@multicooperativa/contracts';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
@@ -18,14 +18,12 @@ import { formatSize, today } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
 import { FieldGroup, FormSummary } from '@/ui/field';
+import { Chip, Text } from '@/ui/paper';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { useBrandColor } from '@/branding/brand';
-import { colors } from '@/ui/theme';
 
 /** US-DOC-01: PDF of up to 20 MB with title, category and date. */
 export default function UploadDocumentScreen() {
-  const brand = useBrandColor();
   const { t } = useTranslation();
   const upload = useUploadDocument();
   const [title, setTitle] = useState('');
@@ -83,12 +81,12 @@ export default function UploadDocumentScreen() {
           onPress={choose}
           testID="choose-pdf"
         />
-        {pdf && (
-          <Text style={styles.file}>
+        {pdf ? (
+          <Text variant="bodyMedium">
             {pdf.name}
             {pdf.size !== null ? ` · ${formatSize(pdf.size)}` : ''}
           </Text>
-        )}
+        ) : null}
       </FieldGroup>
       <TextField
         label={t('documents.upload.title')}
@@ -98,24 +96,17 @@ export default function UploadDocumentScreen() {
         maxLength={150}
         testID="document-title-field"
       />
-      <Text style={styles.label}>{t('documents.upload.category')}</Text>
+      <Text variant="labelLarge">{t('documents.upload.category')}</Text>
       <FieldGroup name="category" style={styles.chips}>
         {DOCUMENT_CATEGORIES.map((value) => (
-          <Pressable
+          <Chip
             key={value}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: category === value }}
+            selected={category === value}
+            showSelectedOverlay
             onPress={() => setCategory(value)}
-            style={[
-              styles.chip,
-              category === value && styles.chipSelected,
-              category === value && { backgroundColor: brand, borderColor: brand },
-            ]}
           >
-            <Text style={[styles.chipText, category === value && styles.chipTextSelected]}>
-              {categoryTitle(value)}
-            </Text>
-          </Pressable>
+            {categoryTitle(value)}
+          </Chip>
         ))}
       </FieldGroup>
       <DateField
@@ -126,7 +117,7 @@ export default function UploadDocumentScreen() {
         onChange={(date) => date && setDocumentDate(date)}
         testID="document-date-field"
       />
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('documents.upload.submit')}
@@ -140,17 +131,5 @@ export default function UploadDocumentScreen() {
 
 const styles = StyleSheet.create({
   fileGroup: { gap: 8 },
-  file: { fontSize: 14, color: colors.text },
-  label: { fontSize: 14, fontWeight: '500', color: colors.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.text },
-  chipTextSelected: { color: '#fff', fontWeight: '600' },
 });

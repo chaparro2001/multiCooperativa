@@ -1,13 +1,12 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { Button, Text, useTheme } from 'react-native-paper';
 
 import { currentLocale, formatDate, formatTime } from '@/i18n/format';
 
-import { useBrandColor } from '../branding/brand';
 import { FieldGroup } from './field';
-import { colors } from './theme';
 import { fromInputValue, toInputValue } from './web-date-input';
 
 export interface DateFieldProps {
@@ -45,21 +44,16 @@ export function DateField({
   error,
 }: DateFieldProps) {
   const { t } = useTranslation();
-  const brand = useBrandColor();
   const initial = () => suggested?.() ?? minimumDate ?? new Date();
 
   return (
     <View style={styles.field} testID={testID}>
-      <Text style={styles.label}>{label}</Text>
+      <Text variant="labelLarge">{label}</Text>
       <FieldGroup name={name} error={error} testID={testID ? `${testID}-group` : undefined}>
         {value === null ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => onChange(initial())}
-            style={[styles.add, { borderColor: brand }]}
-          >
-            <Text style={[styles.addText, { color: brand }]}>{t('common.actions.add')}</Text>
-          </Pressable>
+          <Button mode="outlined" onPress={() => onChange(initial())} style={styles.add}>
+            {t('common.actions.add')}
+          </Button>
         ) : (
           <View style={styles.row}>
             {Platform.OS === 'web' ? (
@@ -89,15 +83,21 @@ export function DateField({
                 onChange={onChange}
               />
             )}
-            {optional && (
-              <Pressable accessibilityRole="button" onPress={() => onChange(null)} hitSlop={8}>
-                <Text style={styles.remove}>{t('common.actions.remove')}</Text>
-              </Pressable>
-            )}
+            {optional && <RemoveButton onPress={() => onChange(null)} />}
           </View>
         )}
       </FieldGroup>
     </View>
+  );
+}
+
+function RemoveButton({ onPress }: { onPress(): void }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  return (
+    <Button mode="text" textColor={colors.error} onPress={onPress}>
+      {t('common.actions.remove')}
+    </Button>
   );
 }
 
@@ -151,6 +151,7 @@ function WebPicker({
   label: string;
   onChange(value: Date): void;
 }) {
+  const { colors } = useTheme();
   return createElement('input', {
     type: mode === 'date' ? 'date' : 'datetime-local',
     value: toInputValue(value, mode),
@@ -158,11 +159,11 @@ function WebPicker({
     'aria-label': label,
     style: {
       minHeight: 48,
-      border: `1px solid ${colors.border}`,
+      border: `1px solid ${colors.outline}`,
       borderRadius: 10,
       padding: '0 12px',
       fontSize: 16,
-      color: colors.text,
+      color: colors.onSurface,
       backgroundColor: 'transparent',
     },
     onChange: (event: { target: { value: string } }) => {
@@ -201,36 +202,16 @@ function AndroidPicker({
     });
 
   return (
-    <Pressable accessibilityRole="button" onPress={openDate} style={styles.android}>
-      <Text style={styles.androidText}>
-        {formatDate(value)}
-        {mode === 'datetime' ? ` · ${formatTime(value)}` : ''}
-      </Text>
-    </Pressable>
+    <Button mode="outlined" onPress={openDate} contentStyle={styles.androidContent}>
+      {formatDate(value)}
+      {mode === 'datetime' ? ` · ${formatTime(value)}` : ''}
+    </Button>
   );
 }
 
 const styles = StyleSheet.create({
   field: { gap: 6 },
-  label: { fontSize: 14, fontWeight: '500', color: colors.text },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  add: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  addText: { color: colors.primary, fontWeight: '500' },
-  remove: { color: colors.danger },
-  android: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-  },
-  androidText: { fontSize: 16, color: colors.text },
+  add: { alignSelf: 'flex-start' },
+  androidContent: { minHeight: 48 },
 });

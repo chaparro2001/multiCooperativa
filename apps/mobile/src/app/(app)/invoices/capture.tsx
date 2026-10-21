@@ -2,7 +2,7 @@ import type { Operation } from '@multicooperativa/contracts';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { draftFromExtraction, setPendingDraft } from '@/features/invoicing/draft';
@@ -16,15 +16,14 @@ import {
 } from '@/features/shared/scan-file';
 import { Button } from '@/ui/button';
 import { ErrorText, Screen } from '@/ui/screen';
-import { useBrandColor } from '@/branding/brand';
-import { colors } from '@/ui/theme';
+import { Text, useTheme } from '@/ui/paper';
 
 /**
  * US-INV-05: photograph (devices), choose from the gallery / files (web too) or pick a PDF.
  * The backend reads it and returns a proposal; nothing is saved until it is confirmed in the form (BR-INV-11).
  */
 export default function CaptureScreen() {
-  const brand = useBrandColor();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ operation?: Operation; kind?: string }>();
   const fallbackOperation: Operation = params.operation === 'sale' ? 'sale' : 'purchase';
@@ -67,7 +66,7 @@ export default function CaptureScreen() {
   const busy = extract.isPending;
   return (
     <Screen testID="capture-screen">
-      <Text style={styles.intro}>{t('invoicing.capture.intro')}</Text>
+      <Text variant="bodyLarge">{t('invoicing.capture.intro')}</Text>
       {cameraAvailable && (
         <Button
           title={t('invoicing.capture.takePhoto')}
@@ -94,7 +93,8 @@ export default function CaptureScreen() {
       />
       {busy && (
         <Text
-          style={[styles.status, { color: brand }]}
+          variant="bodyLarge"
+          style={[styles.status, { color: colors.primary }]}
           accessibilityLiveRegion="polite"
           testID="extracting"
         >
@@ -102,8 +102,10 @@ export default function CaptureScreen() {
         </Text>
       )}
       {denied && <ErrorText>{t('invoicing.capture.cameraDenied')}</ErrorText>}
-      {error && <ErrorText>{error}</ErrorText>}
-      <Text style={styles.privacy}>{t('invoicing.capture.privacy')}</Text>
+      {error ? <ErrorText>{error}</ErrorText> : null}
+      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        {t('invoicing.capture.privacy')}
+      </Text>
       <Button
         title={t('invoicing.capture.manually')}
         variant="secondary"
@@ -116,7 +118,5 @@ export default function CaptureScreen() {
 }
 
 const styles = StyleSheet.create({
-  intro: { fontSize: 15, color: colors.text },
-  status: { fontSize: 15, color: colors.primary, fontWeight: '500' },
-  privacy: { fontSize: 12, color: colors.muted },
+  status: { fontWeight: '500' },
 });

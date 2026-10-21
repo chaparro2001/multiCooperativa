@@ -2,7 +2,7 @@ import type { AssemblyDetail, VotingView } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { ASSEMBLY_STATUS_TONE, participation } from '@/features/assemblies/agenda';
@@ -18,9 +18,8 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
+import { Card, Divider, List, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
-import { useBrandColor } from '@/branding/brand';
-import { colors } from '@/ui/theme';
 import { openUrl } from '@/ui/open-url';
 import { confirmAction } from '@/ui/confirm';
 
@@ -29,6 +28,7 @@ type Point = AssemblyDetail['points'][number];
 /** US-ASM-03 (agenda), US-ASM-04 (control), US-ASM-06 (results). */
 export default function AssemblyScreen() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { canManage } = useModuleAccess('assemblies');
   const assembly = useAssembly(id);
@@ -79,7 +79,7 @@ export default function AssemblyScreen() {
             ? () => (
                 <HeaderActions>
                   <HeaderAction
-                    icon="calendar-outline"
+                    icon="calendar-month-outline"
                     label={t('assemblies.detail.reschedule')}
                     href={{ pathname: '/assemblies/reschedule', params: { id } }}
                     testID="reschedule-assembly"
@@ -93,38 +93,44 @@ export default function AssemblyScreen() {
         label={t(`enums.assemblyStatus.${data.status}`)}
         tone={ASSEMBLY_STATUS_TONE[data.status]}
       />
-      <Text style={styles.title}>{t(`enums.assemblyType.${data.type}`)}</Text>
-      <Text style={styles.meta}>
+      <Text variant="headlineSmall">{t(`enums.assemblyType.${data.type}`)}</Text>
+      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
         {t('assemblies.detail.firstCall', { date: formatDateTime(data.firstCallAt) })}
       </Text>
-      {data.secondCallAt && (
-        <Text style={styles.meta}>
+      {data.secondCallAt ? (
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
           {t('assemblies.detail.secondCall', { date: formatDateTime(data.secondCallAt) })}
         </Text>
-      )}
-      <Text style={styles.meta}>{data.place}</Text>
-      {moved && (
-        <View style={styles.note} testID="rescheduled-note">
-          <Text style={styles.noteTitle}>
-            {t('assemblies.detail.rescheduledNote', {
-              at: formatDateTime(moved.at),
-              date: formatDateTime(moved.firstCallAt),
-            })}
-          </Text>
-          {moved.place !== data.place && (
-            <Text style={styles.meta}>
-              {t('assemblies.detail.rescheduledPlace', { place: moved.place })}
+      ) : null}
+      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        {data.place}
+      </Text>
+      {moved ? (
+        <Card mode="contained" testID="rescheduled-note">
+          <Card.Content style={styles.noteContent}>
+            <Text variant="titleSmall">
+              {t('assemblies.detail.rescheduledNote', {
+                at: formatDateTime(moved.at),
+                date: formatDateTime(moved.firstCallAt),
+              })}
             </Text>
-          )}
-          {moved.reason && (
-            <Text style={styles.meta}>
-              {t('assemblies.detail.rescheduledReason', { reason: moved.reason })}
-            </Text>
-          )}
-        </View>
-      )}
+            {moved.place !== data.place ? (
+              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                {t('assemblies.detail.rescheduledPlace', { place: moved.place })}
+              </Text>
+            ) : null}
+            {moved.reason ? (
+              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                {t('assemblies.detail.rescheduledReason', { reason: moved.reason })}
+              </Text>
+            ) : null}
+          </Card.Content>
+        </Card>
+      ) : null}
 
-      <Text style={styles.section}>{t('assemblies.agenda')}</Text>
+      <Text variant="titleSmall" style={styles.section}>
+        {t('assemblies.agenda')}
+      </Text>
       {data.points.map((point) => (
         <PointCard
           key={point.id}
@@ -143,9 +149,9 @@ export default function AssemblyScreen() {
         />
       ))}
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
 
-      {canManage && (
+      {canManage ? (
         <View style={styles.actions}>
           {data.status === 'draft' && (
             <>
@@ -196,7 +202,7 @@ export default function AssemblyScreen() {
             </>
           )}
         </View>
-      )}
+      ) : null}
     </Screen>
   );
 }
@@ -214,7 +220,7 @@ function PointCard({
   onError(message: string | null): void;
   onOpenAttachment(attachmentId: string): Promise<void>;
 }) {
-  const brand = useBrandColor();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const control = useVotingControl();
   const addDocument = useAddPointDocument();
@@ -230,122 +236,128 @@ function PointCard({
   }
 
   return (
-    <View style={styles.point} testID={`point-${point.position}`}>
-      <Text style={styles.pointTitle}>
-        {point.position}. {point.title}
-      </Text>
-      {point.description ? <Text style={styles.body}>{point.description}</Text> : null}
-      {point.votable && (
-        <Text style={styles.meta}>
-          {t('assemblies.detail.votedByMajority', {
-            majority: t(
-              point.majority === 'reinforced'
-                ? 'assemblies.detail.majorityReinforced'
-                : 'assemblies.detail.majoritySimple',
-            ),
-          })}
+    <Card mode="contained" testID={`point-${point.position}`}>
+      <Card.Content style={styles.pointContent}>
+        <Text variant="titleMedium">
+          {point.position}. {point.title}
         </Text>
-      )}
+        {point.description ? <Text variant="bodyMedium">{point.description}</Text> : null}
+        {point.votable ? (
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+            {t('assemblies.detail.votedByMajority', {
+              majority: t(
+                point.majority === 'reinforced'
+                  ? 'assemblies.detail.majorityReinforced'
+                  : 'assemblies.detail.majoritySimple',
+              ),
+            })}
+          </Text>
+        ) : null}
 
-      {point.attachments.map((attachment) => (
-        <Pressable
-          key={attachment.id}
-          accessibilityRole="button"
-          onPress={() => run(() => onOpenAttachment(attachment.id))}
-          style={({ pressed }) => [styles.attachment, pressed && styles.pressed]}
-        >
-          <Text style={[styles.attachmentName, { color: brand }]}>{attachment.name}</Text>
-          <Text style={styles.meta}>{formatSize(attachment.size)}</Text>
-        </Pressable>
-      ))}
-      {canEditDocs && (
-        <Button
-          title={t('assemblies.detail.addDocumentation')}
-          variant="secondary"
-          loading={addDocument.isPending}
-          onPress={() =>
-            run(async () => {
-              const pdf = await pickPdf();
-              if (pdf) await addDocument.mutateAsync({ pointId: point.id, pdf });
-            })
-          }
-        />
-      )}
+        {point.attachments.map((attachment) => (
+          <List.Item
+            key={attachment.id}
+            accessibilityRole="button"
+            onPress={() => run(() => onOpenAttachment(attachment.id))}
+            title={attachment.name}
+            titleStyle={{ color: colors.primary }}
+            description={formatSize(attachment.size)}
+            left={(props) => <List.Icon {...props} icon="file-pdf-box" />}
+            style={[styles.attachment, { backgroundColor: colors.surface }]}
+          />
+        ))}
+        {canEditDocs ? (
+          <Button
+            title={t('assemblies.detail.addDocumentation')}
+            variant="secondary"
+            loading={addDocument.isPending}
+            onPress={() =>
+              run(async () => {
+                const pdf = await pickPdf();
+                if (pdf) await addDocument.mutateAsync({ pointId: point.id, pdf });
+              })
+            }
+          />
+        ) : null}
 
-      {point.voting && <VotingBlock pointId={point.id} voting={point.voting} />}
+        {point.voting ? <VotingBlock pointId={point.id} voting={point.voting} /> : null}
 
-      {canManage && point.voting && assemblyStatus === 'convened' && (
-        <>
-          {point.voting.status === 'pending' && (
-            <Button
-              title={t('assemblies.detail.openVoting')}
-              loading={control.isPending}
-              onPress={() => run(() => control.mutateAsync({ pointId: point.id, action: 'open' }))}
-              testID={`open-voting-${point.position}`}
-            />
-          )}
-          {point.voting.status === 'open' && (
-            <Button
-              title={t('assemblies.detail.closeVoting')}
-              variant="secondary"
-              loading={control.isPending}
-              onPress={() =>
-                confirmAction({
-                  title: t('assemblies.detail.closeVotingTitle'),
-                  message: t('assemblies.detail.closeVotingMessage'),
-                  confirmLabel: t('common.actions.close'),
-                  cancelLabel: t('common.actions.cancel'),
-                  destructive: true,
-                  onConfirm: () =>
-                    run(() => control.mutateAsync({ pointId: point.id, action: 'close' })),
-                })
-              }
-              testID={`close-voting-${point.position}`}
-            />
-          )}
-        </>
-      )}
-    </View>
+        {canManage && point.voting && assemblyStatus === 'convened' ? (
+          <>
+            {point.voting.status === 'pending' && (
+              <Button
+                title={t('assemblies.detail.openVoting')}
+                loading={control.isPending}
+                onPress={() =>
+                  run(() => control.mutateAsync({ pointId: point.id, action: 'open' }))
+                }
+                testID={`open-voting-${point.position}`}
+              />
+            )}
+            {point.voting.status === 'open' && (
+              <Button
+                title={t('assemblies.detail.closeVoting')}
+                variant="secondary"
+                loading={control.isPending}
+                onPress={() =>
+                  confirmAction({
+                    title: t('assemblies.detail.closeVotingTitle'),
+                    message: t('assemblies.detail.closeVotingMessage'),
+                    confirmLabel: t('common.actions.close'),
+                    cancelLabel: t('common.actions.cancel'),
+                    destructive: true,
+                    onConfirm: () =>
+                      run(() => control.mutateAsync({ pointId: point.id, action: 'close' })),
+                  })
+                }
+                testID={`close-voting-${point.position}`}
+              />
+            )}
+          </>
+        ) : null}
+      </Card.Content>
+    </Card>
   );
 }
 
 function VotingBlock({ pointId, voting }: { pointId: string; voting: VotingView }) {
-  const brand = useBrandColor();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   if (voting.status === 'pending') {
     return <Badge label={t('enums.votingStatus.pending')} />;
   }
   return (
     <View style={styles.voting}>
+      <Divider />
       <View style={styles.row}>
         <Badge
           label={t(`enums.votingStatus.${voting.status}`)}
           tone={voting.status === 'open' ? 'warning' : 'neutral'}
         />
-        {voting.result && (
+        {voting.result ? (
           <Badge
             label={t(`enums.votingOutcome.${voting.result.outcome}`)}
             tone={voting.result.outcome === 'approved' ? 'info' : 'danger'}
           />
-        )}
+        ) : null}
       </View>
-      <Text style={styles.meta}>
+      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
         {t('assemblies.detail.participation', {
           value: participation(voting.votesCast, voting.censusSize),
         })}
       </Text>
       {/* BR-ASM-11: the server hides the tally while open without the manage level. */}
-      {voting.tally && (
-        <Text style={styles.tally} testID="tally">
+      {voting.tally ? (
+        <Text variant="bodyMedium" testID="tally">
           {t('assemblies.detail.tally', {
             inFavor: voting.tally.inFavor,
             against: voting.tally.against,
             abstentions: voting.tally.abstentions,
           })}
         </Text>
-      )}
-      {voting.result && (
-        <Text style={styles.meta}>
+      ) : null}
+      {voting.result ? (
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
           {t(
             voting.result.quorumReached
               ? 'assemblies.detail.quorumReached'
@@ -353,38 +365,29 @@ function VotingBlock({ pointId, voting }: { pointId: string; voting: VotingView 
             { call: t(`enums.call.${voting.result.call}`) },
           )}
         </Text>
-      )}
-      {voting.myVote && (
-        <Text style={[styles.myVote, { color: brand }]}>
+      ) : null}
+      {voting.myVote ? (
+        <Text variant="titleSmall" style={{ color: colors.primary }}>
           {t('assemblies.detail.myVote', { choice: t(`enums.voteChoice.${voting.myVote}`) })}
         </Text>
-      )}
-      {voting.canVote && (
+      ) : null}
+      {voting.canVote ? (
         <Button
           title={t('assemblies.detail.vote')}
           onPress={() => router.push({ pathname: '/assemblies/vote', params: { pointId } })}
           testID="go-to-vote"
         />
-      )}
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700', color: colors.text },
-  meta: { fontSize: 13, color: colors.muted },
-  section: { fontSize: 15, fontWeight: '600', color: colors.text, marginTop: 8 },
-  point: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 8 },
-  pointTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
-  body: { fontSize: 15, color: colors.text, lineHeight: 22 },
-  attachment: { backgroundColor: '#fff', borderRadius: 8, padding: 10, gap: 2 },
-  attachmentName: { fontSize: 14, color: colors.primary, fontWeight: '500' },
-  pressed: { opacity: 0.7 },
-  voting: { gap: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: colors.border },
+  section: { marginTop: 8 },
+  pointContent: { gap: 8 },
+  attachment: { borderRadius: 8 },
+  voting: { gap: 6, paddingTop: 6 },
   row: { flexDirection: 'row', gap: 6 },
-  tally: { fontSize: 14, color: colors.text },
-  myVote: { fontSize: 14, color: colors.primary, fontWeight: '600' },
   actions: { gap: 10, marginTop: 8 },
-  note: { backgroundColor: colors.surface, borderRadius: 10, padding: 12, gap: 4 },
-  noteTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
+  noteContent: { gap: 4 },
 });

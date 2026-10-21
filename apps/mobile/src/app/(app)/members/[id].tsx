@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
@@ -14,12 +14,11 @@ import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { confirmAction } from '@/ui/confirm';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
-import { useBrandColor } from '@/branding/brand';
-import { colors } from '@/ui/theme';
+import { Text, useTheme } from '@/ui/paper';
 
 /** US-ACC-09 (profile), US-ACC-10 (suspend, reactivate), US-ACC-08 (resend). */
 export default function MemberScreen() {
-  const brand = useBrandColor();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { me } = useActiveCooperative();
@@ -49,6 +48,7 @@ export default function MemberScreen() {
     );
   }
 
+  const muted = { color: colors.onSurfaceVariant };
   const actions = memberActions(member, me?.id, canManage);
   const selectedProfile = profileId ?? member.profileId;
 
@@ -96,21 +96,23 @@ export default function MemberScreen() {
   return (
     <Screen testID="member-screen">
       <View style={styles.header}>
-        <Text style={styles.name}>{member.name}</Text>
-        <Text style={styles.detail}>{member.email}</Text>
+        <Text variant="headlineSmall">{member.name}</Text>
+        <Text variant="bodyLarge" style={muted}>
+          {member.email}
+        </Text>
         <View style={styles.meta}>
           <Badge label={member.profileName} />
-          {member.isPartner && <Badge label={t('members.fields.isPartner')} />}
+          {member.isPartner ? <Badge label={t('members.fields.isPartner')} /> : null}
           <Badge
             label={t(`enums.membershipStatus.${member.status}`)}
             tone={statusTone(member.status)}
           />
         </View>
-        {member.partnerNumber && (
-          <Text style={styles.detail}>
+        {member.partnerNumber ? (
+          <Text variant="bodyLarge" style={muted}>
             {t('members.fields.partnerNumber')}: {member.partnerNumber}
           </Text>
-        )}
+        ) : null}
       </View>
 
       {actions.changeProfile && (
@@ -154,7 +156,9 @@ export default function MemberScreen() {
       )}
       {actions.resendInvitation && (
         <View style={styles.section}>
-          <Text style={styles.detail}>{t('members.detail.invitedExplanation')}</Text>
+          <Text variant="bodyLarge" style={muted}>
+            {t('members.detail.invitedExplanation')}
+          </Text>
           <Button
             title={t('members.detail.resend')}
             variant="secondary"
@@ -173,28 +177,28 @@ export default function MemberScreen() {
         </View>
       )}
       {member.userId === me?.id && (
-        <Text style={styles.detail}>{t('members.detail.ownMembership')}</Text>
+        <Text variant="bodyLarge" style={muted}>
+          {t('members.detail.ownMembership')}
+        </Text>
       )}
 
-      {notice && (
+      {notice ? (
         <Text
           accessibilityRole="alert"
-          style={[styles.notice, { color: brand }]}
+          variant="bodyLarge"
+          style={{ color: colors.primary }}
           testID="member-notice"
         >
           {notice}
         </Text>
-      )}
-      {error && <ErrorText>{error}</ErrorText>}
+      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   header: { gap: 4 },
-  name: { fontSize: 22, fontWeight: '700', color: colors.text },
-  detail: { fontSize: 15, color: colors.muted },
   meta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   section: { gap: 12 },
-  notice: { color: colors.primary, fontSize: 15 },
 });

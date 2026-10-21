@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { validateLogin } from '@/auth/form-validation';
@@ -9,13 +9,14 @@ import { useSession } from '@/session/session-context';
 import { Button } from '@/ui/button';
 import { FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
+import { Text, useTheme } from '@/ui/paper';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
 
 /** US-ACC-02. */
 export default function LoginScreen() {
   const { t } = useTranslation();
   const { signIn } = useSession();
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -38,8 +39,12 @@ export default function LoginScreen() {
 
   return (
     <Screen testID="login-screen" form={form}>
-      <Text style={styles.title}>multiCooperativa</Text>
-      <Text style={styles.subtitle}>{t('auth.login.subtitle')}</Text>
+      <Text variant="headlineLarge" style={[styles.title, { color: colors.primary }]}>
+        multiCooperativa
+      </Text>
+      <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
+        {t('auth.login.subtitle')}
+      </Text>
       <TextField
         label={t('auth.fields.email')}
         name="email"
@@ -62,7 +67,7 @@ export default function LoginScreen() {
         onSubmitEditing={submit}
         testID="password-field"
       />
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('auth.login.submit')}
@@ -70,13 +75,14 @@ export default function LoginScreen() {
         loading={submitting}
         testID="login-button"
       />
-      <Text style={styles.hint}>{t('auth.login.invitedHint')}</Text>
+      <Text variant="bodyMedium" style={[styles.hint, { color: colors.onSurfaceVariant }]}>
+        {t('auth.login.invitedHint')}
+      </Text>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', color: colors.primary, marginTop: 48 },
-  subtitle: { fontSize: 16, color: colors.muted },
-  hint: { fontSize: 14, color: colors.muted, textAlign: 'center' },
+  title: { marginTop: 48 },
+  hint: { textAlign: 'center' },
 });

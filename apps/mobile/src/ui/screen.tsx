@@ -1,18 +1,8 @@
 import { type ReactNode, useCallback, useRef } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Text, useTheme } from 'react-native-paper';
 
 import { type FormApi, FormScope, ScrollerProvider } from '@/forms/use-form';
-
-import { useBrandColor } from '../branding/brand';
-import { colors } from './theme';
 
 export const SCREEN_PADDING = 24;
 export const SCREEN_MAX_WIDTH = 960;
@@ -33,6 +23,7 @@ export function Screen({
   testID?: string;
   form?: FormApi;
 }) {
+  const { colors } = useTheme();
   const scroll = useRef<ScrollView>(null);
   const offset = useRef(0);
 
@@ -50,7 +41,7 @@ export function Screen({
 
   const body = (
     <KeyboardAvoidingView
-      style={styles.flex}
+      style={[styles.flex, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
@@ -71,24 +62,30 @@ export function Screen({
 }
 
 export function Loading() {
-  const brand = useBrandColor();
+  const { colors } = useTheme();
   return (
-    <View style={styles.center}>
-      <ActivityIndicator size="large" color={brand} />
+    <View style={[styles.center, { backgroundColor: colors.background }]}>
+      <ActivityIndicator size="large" />
     </View>
   );
 }
 
 export function ErrorText({ children }: { children: ReactNode }) {
+  const { colors } = useTheme();
   return (
-    <Text accessibilityRole="alert" style={styles.error} testID="error-message">
+    <Text
+      variant="bodyMedium"
+      accessibilityRole="alert"
+      style={{ color: colors.error }}
+      testID="error-message"
+    >
       {children}
     </Text>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#fff' },
+  flex: { flex: 1 },
   // Capped and centred so wide browser windows (web build) keep a readable column; no effect on phones.
   content: {
     padding: SCREEN_PADDING,
@@ -97,6 +94,5 @@ const styles = StyleSheet.create({
     maxWidth: SCREEN_MAX_WIDTH,
     alignSelf: 'center',
   },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  error: { color: colors.danger, fontSize: 14 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

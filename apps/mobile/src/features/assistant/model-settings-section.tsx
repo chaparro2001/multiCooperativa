@@ -1,17 +1,16 @@
 import type { AssistantSource } from '@multicooperativa/contracts';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { routeServerError } from '@/forms/server-errors';
 import { FormScope, useForm } from '@/forms/use-form';
-import { useBrandColor } from '@/branding/brand';
 import { Button } from '@/ui/button';
 import { FieldGroup, FormSummary } from '@/ui/field';
+import { ActivityIndicator, Chip, Icon, List, Text, useTheme } from '@/ui/paper';
 import { ErrorText } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
 import {
   HOSTED_FIELDS,
   HOSTED_SERVER_MAPPING,
@@ -32,7 +31,7 @@ import { useAssistantModelSettings, useUpdateAssistantModel } from './queries';
  */
 export function AssistantModelSection() {
   const { t } = useTranslation();
-  const brand = useBrandColor();
+  const { colors } = useTheme();
   const query = useAssistantModelSettings();
   const update = useUpdateAssistantModel();
   const [selected, setSelected] = useState<string | null>(null);
@@ -59,13 +58,21 @@ export function AssistantModelSection() {
 
   if (query.isError) return <ErrorText>{messageFor(query.error)}</ErrorText>;
   if (!settings) return <ActivityIndicator />;
+  const muted = { color: colors.onSurfaceVariant };
   const isOllama = settings.provider === 'ollama';
   // With Gemini and no external provider there is nothing to choose: say so instead of a dead control.
   if (!isOllama && !settings.hostedAvailable) {
     return (
-      <View style={styles.section} testID="assistant-model-section">
-        <Text style={styles.label}>{t('settings.assistantModel.title')}</Text>
-        <Text style={styles.detail}>{t('settings.assistantModel.notLocal')}</Text>
+      <View
+        style={[styles.section, { borderBottomColor: colors.outlineVariant }]}
+        testID="assistant-model-section"
+      >
+        <Text variant="labelMedium" style={[styles.label, muted]}>
+          {t('settings.assistantModel.title')}
+        </Text>
+        <Text variant="bodyMedium" style={muted}>
+          {t('settings.assistantModel.notLocal')}
+        </Text>
       </View>
     );
   }
@@ -98,70 +105,54 @@ export function AssistantModelSection() {
 
   return (
     <FormScope form={form}>
-      <View style={styles.section} testID="assistant-model-section">
-        <Text style={styles.label}>{t('settings.assistantModel.title')}</Text>
-        <Text style={styles.detail}>{t('settings.assistantModel.description')}</Text>
+      <View
+        style={[styles.section, { borderBottomColor: colors.outlineVariant }]}
+        testID="assistant-model-section"
+      >
+        <Text variant="labelMedium" style={[styles.label, muted]}>
+          {t('settings.assistantModel.title')}
+        </Text>
+        <Text variant="bodyMedium" style={muted}>
+          {t('settings.assistantModel.description')}
+        </Text>
 
         {settings.hostedAvailable && (
           <View accessibilityRole="radiogroup" style={styles.options}>
             {(['local', 'hosted'] as const).map((choice) => (
-              <Pressable
+              <OptionRow
                 key={choice}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: source === choice }}
+                title={t(`settings.assistantModel.source.${choice}`)}
+                active={source === choice}
                 onPress={() => {
                   setSource(choice);
                   setSaved(false);
                 }}
-                style={[
-                  styles.option,
-                  source === choice && [styles.optionActive, { borderColor: brand }],
-                ]}
                 testID={`assistant-source-${choice}`}
-              >
-                <View
-                  style={[
-                    styles.radio,
-                    source === choice && { borderColor: brand, backgroundColor: brand },
-                  ]}
-                />
-                <Text style={[styles.name, styles.optionText]}>
-                  {t(`settings.assistantModel.source.${choice}`)}
-                </Text>
-              </Pressable>
+              />
             ))}
           </View>
         )}
 
         {source === 'hosted' ? (
           <View style={styles.hosted} testID="assistant-hosted-form">
-            <Text style={styles.detail}>{t('settings.assistantModel.hosted.description')}</Text>
-            <Text style={styles.fieldLabel}>{t('settings.assistantModel.hosted.provider')}</Text>
+            <Text variant="bodyMedium" style={muted}>
+              {t('settings.assistantModel.hosted.description')}
+            </Text>
+            <Text variant="labelLarge">{t('settings.assistantModel.hosted.provider')}</Text>
             <FieldGroup name="provider" style={styles.options}>
               {settings.providers.map((candidate) => {
                 const active = draft.provider === candidate.id;
                 return (
-                  <Pressable
+                  <OptionRow
                     key={candidate.id}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: active }}
+                    title={t(`settings.assistantModel.hosted.providers.${candidate.id}`)}
+                    active={active}
                     onPress={() => {
                       setDraft({ ...draft, provider: candidate.id });
                       setSaved(false);
                     }}
-                    style={[styles.option, active && [styles.optionActive, { borderColor: brand }]]}
                     testID={`assistant-provider-${candidate.id}`}
-                  >
-                    <View
-                      style={[
-                        styles.radio,
-                        active && { borderColor: brand, backgroundColor: brand },
-                      ]}
-                    />
-                    <Text style={[styles.name, styles.optionText]}>
-                      {t(`settings.assistantModel.hosted.providers.${candidate.id}`)}
-                    </Text>
-                  </Pressable>
+                  />
                 );
               })}
             </FieldGroup>
@@ -182,20 +173,21 @@ export function AssistantModelSection() {
             />
             {provider && provider.suggestedModels.length > 0 && (
               <View style={styles.suggestions}>
-                <Text style={styles.detail}>{t('settings.assistantModel.hosted.suggestions')}</Text>
+                <Text variant="bodyMedium" style={muted}>
+                  {t('settings.assistantModel.hosted.suggestions')}
+                </Text>
                 {provider.suggestedModels.map((suggestion) => (
-                  <Pressable
+                  <Chip
                     key={suggestion}
-                    accessibilityRole="button"
+                    compact
                     onPress={() => {
                       setDraft({ ...draft, model: suggestion });
                       setSaved(false);
                     }}
-                    style={styles.chip}
                     testID={`assistant-suggestion-${suggestion}`}
                   >
-                    <Text style={styles.chipText}>{suggestion}</Text>
-                  </Pressable>
+                    {suggestion}
+                  </Chip>
                 ))}
               </View>
             )}
@@ -215,16 +207,18 @@ export function AssistantModelSection() {
               testID="assistant-hosted-key"
             />
             {settings.hosted && !keyNeeded && (
-              <Text style={styles.detail} testID="assistant-hosted-saved-key">
+              <Text variant="bodyMedium" style={muted} testID="assistant-hosted-saved-key">
                 {t('settings.assistantModel.hosted.savedKey', { hint: settings.hosted.keyHint })}
                 {' · '}
                 {t('settings.assistantModel.hosted.keepKey')}
               </Text>
             )}
-            <Text style={styles.detail} testID="assistant-hosted-privacy">
+            <Text variant="bodyMedium" style={muted} testID="assistant-hosted-privacy">
               {t('settings.assistantModel.hosted.privacy')}
             </Text>
-            <Text style={styles.detail}>{t('settings.assistantModel.hosted.fallback')}</Text>
+            <Text variant="bodyMedium" style={muted}>
+              {t('settings.assistantModel.hosted.fallback')}
+            </Text>
           </View>
         ) : isOllama ? (
           <>
@@ -233,51 +227,40 @@ export function AssistantModelSection() {
                 const hint = modelHint(option.id);
                 const active = selected === option.id;
                 return (
-                  <Pressable
+                  <OptionRow
                     key={option.id}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: active }}
+                    title={`${option.id}${
+                      option.id === settings.current && settings.source === 'local'
+                        ? ` · ${t('settings.assistantModel.current')}`
+                        : ''
+                    }`}
+                    description={hint ? t(`settings.assistantModel.hints.${hint}`) : undefined}
+                    active={active}
                     onPress={() => {
                       setSelected(option.id);
                       setSaved(false);
                     }}
-                    style={[styles.option, active && [styles.optionActive, { borderColor: brand }]]}
                     testID={`assistant-model-${option.id}`}
-                  >
-                    <View
-                      style={[
-                        styles.radio,
-                        active && { borderColor: brand, backgroundColor: brand },
-                      ]}
-                    />
-                    <View style={styles.optionText}>
-                      <Text style={styles.name}>
-                        {option.id}
-                        {option.id === settings.current && settings.source === 'local'
-                          ? ` · ${t('settings.assistantModel.current')}`
-                          : ''}
-                      </Text>
-                      {hint && (
-                        <Text style={styles.detail}>
-                          {t(`settings.assistantModel.hints.${hint}`)}
-                        </Text>
-                      )}
-                    </View>
-                  </Pressable>
+                  />
                 );
               })}
             </View>
-            <Text style={styles.detail}>{t('settings.assistantModel.firstAnswerSlower')}</Text>
+            <Text variant="bodyMedium" style={muted}>
+              {t('settings.assistantModel.firstAnswerSlower')}
+            </Text>
           </>
         ) : (
-          <Text style={styles.detail}>{t('settings.assistantModel.notLocal')}</Text>
+          <Text variant="bodyMedium" style={muted}>
+            {t('settings.assistantModel.notLocal')}
+          </Text>
         )}
 
-        {banner && <ErrorText>{banner}</ErrorText>}
+        {banner ? <ErrorText>{banner}</ErrorText> : null}
         <FormSummary form={form} />
         {saved && (
           <Text
-            style={[styles.success, { color: brand }]}
+            variant="bodyMedium"
+            style={{ color: colors.primary }}
             accessibilityLiveRegion="polite"
             testID="assistant-model-saved"
           >
@@ -296,40 +279,60 @@ export function AssistantModelSection() {
   );
 }
 
+/** One choice of a radio group: a bordered row, filled radio icon and brand border when active. */
+function OptionRow({
+  title,
+  description,
+  active,
+  onPress,
+  testID,
+}: {
+  title: string;
+  description?: string;
+  active: boolean;
+  onPress(): void;
+  testID: string;
+}) {
+  const { colors } = useTheme();
+  const radio = useCallback(
+    () => (
+      <View style={styles.radio}>
+        <Icon
+          source={active ? 'radiobox-marked' : 'radiobox-blank'}
+          size={24}
+          color={active ? colors.primary : colors.outline}
+        />
+      </View>
+    ),
+    [active, colors.primary, colors.outline],
+  );
+  return (
+    <List.Item
+      title={title}
+      description={description}
+      descriptionNumberOfLines={3}
+      left={radio}
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: active }}
+      style={[
+        styles.option,
+        {
+          borderColor: active ? colors.primary : colors.outlineVariant,
+          backgroundColor: active ? colors.surfaceVariant : undefined,
+        },
+      ]}
+      testID={testID}
+    />
+  );
+}
+
 const styles = StyleSheet.create({
-  section: { gap: 8, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  label: { fontSize: 13, color: colors.muted, textTransform: 'uppercase' },
-  fieldLabel: { fontSize: 14, fontWeight: '500', color: colors.text },
-  name: { fontSize: 17, fontWeight: '600', color: colors.text },
-  detail: { fontSize: 14, color: colors.muted },
-  success: { fontSize: 14 },
+  section: { gap: 8, paddingBottom: 16, borderBottomWidth: 1 },
+  label: { textTransform: 'uppercase' },
   options: { gap: 8 },
   hosted: { gap: 12 },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-  },
-  optionActive: { backgroundColor: colors.surface },
-  optionText: { flex: 1, gap: 2 },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
+  option: { borderWidth: 1, borderRadius: 8, paddingVertical: 4 },
+  radio: { justifyContent: 'center', paddingLeft: 8 },
   suggestions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-  },
-  chipText: { fontSize: 13, color: colors.text },
 });

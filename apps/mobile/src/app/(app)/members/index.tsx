@@ -1,8 +1,8 @@
 import type { Member } from '@multicooperativa/contracts';
 import { router, Stack } from 'expo-router';
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import {
@@ -15,10 +15,10 @@ import { useMembers } from '@/features/members/queries';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
+import { Card, Chip, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading } from '@/ui/screen';
 import { SCREEN_MAX_WIDTH } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 /** US-ACC-10: members of the cooperative with their profile and status; invite with manage level. */
@@ -28,9 +28,11 @@ export default function MembersScreen() {
   const members = useMembers();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
+  const { colors } = useTheme();
+  const renderItem = useCallback(({ item }: { item: Member }) => <MemberRow member={item} />, []);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <Stack.Screen
         options={{
           headerRight: canManage
@@ -38,7 +40,7 @@ export default function MembersScreen() {
                 <HeaderActions>
                   <HeaderAction
                     href="/members/invite"
-                    icon="person-add-outline"
+                    icon="account-plus-outline"
                     label={t('members.list.invite')}
                     testID="invite-member"
                   />
@@ -59,20 +61,17 @@ export default function MembersScreen() {
             returnKeyType="search"
             testID="member-search"
           />
-          <View style={styles.filters} accessibilityRole="tablist">
+          <View style={styles.filters} accessibilityRole="radiogroup">
             {STATUS_FILTERS.map((value) => (
-              <Pressable
+              <Chip
                 key={value}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: status === value }}
+                selected={status === value}
                 onPress={() => setStatus(value)}
-                style={[styles.filter, status === value && styles.filterSelected]}
+                accessibilityLabel={t(`members.filters.${value}`)}
                 testID={`filter-${value}`}
               >
-                <Text style={[styles.filterText, status === value && styles.filterTextSelected]}>
-                  {t(`members.filters.${value}`)}
-                </Text>
-              </Pressable>
+                {t(`members.filters.${value}`)}
+              </Chip>
             ))}
           </View>
         </View>
@@ -89,8 +88,12 @@ export default function MembersScreen() {
             data={filterMembers(members.data, search, status)}
             keyExtractor={(member) => member.membershipId}
             contentContainerStyle={styles.list}
-            ListEmptyComponent={<Text style={styles.empty}>{t('members.list.empty')}</Text>}
-            renderItem={({ item }) => <MemberRow member={item} />}
+            ListEmptyComponent={
+              <Text variant="bodyLarge" style={[styles.empty, { color: colors.onSurfaceVariant }]}>
+                {t('members.list.empty')}
+              </Text>
+            }
+            renderItem={renderItem}
           />
         )}
       </View>
@@ -98,44 +101,42 @@ export default function MembersScreen() {
   );
 }
 
-function MemberRow({ member }: { member: Member }) {
+const MemberRow = memo(function MemberRow({ member }: { member: Member }) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   return (
-    <Pressable
+    <Card
+      mode="contained"
       accessibilityRole="button"
       onPress={() => router.push(`/members/${member.membershipId}`)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       testID={`member-${member.email}`}
     >
-      <Text style={styles.name}>{member.name}</Text>
-      <Text style={styles.detail}>{member.email}</Text>
-      <View style={styles.meta}>
-        <Badge label={member.profileName} />
-        {member.isPartner && <Badge label={t('members.fields.isPartner')} />}
-        <Badge
-          label={t(`enums.membershipStatus.${member.status}`)}
-          tone={statusTone(member.status)}
-        />
-      </View>
-    </Pressable>
+      <Card.Content style={styles.rowContent}>
+        <Text variant="titleMedium">{member.name}</Text>
+        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+          {member.email}
+        </Text>
+        <View style={styles.meta}>
+          <Badge label={member.profileName} />
+          {member.isPartner ? <Badge label={t('members.fields.isPartner')} /> : null}
+          <Badge
+            label={t(`enums.membershipStatus.${member.status}`)}
+            tone={statusTone(member.status)}
+          />
+        </View>
+      </Card.Content>
+    </Card>
   );
-}
+});
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff' },
+  screen: { flex: 1 },
   // Same readable column as the Screen component on wide windows.
   column: { flex: 1, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   search: { padding: 16, paddingBottom: 8, gap: 10 },
-  filters: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 10, padding: 3 },
-  filter: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  filterSelected: { backgroundColor: '#fff' },
-  filterText: { color: colors.muted, fontWeight: '500', fontSize: 13 },
-  filterTextSelected: { color: colors.text },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   list: { padding: 16, paddingTop: 0, gap: 10 },
-  empty: { color: colors.muted, fontSize: 15, padding: 16, textAlign: 'center' },
-  row: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 4 },
-  pressed: { opacity: 0.7 },
-  name: { fontSize: 16, fontWeight: '600', color: colors.text },
-  detail: { fontSize: 14, color: colors.muted },
+  empty: { padding: 16, textAlign: 'center' },
+  rowContent: { gap: 4 },
   meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 4 },
 });

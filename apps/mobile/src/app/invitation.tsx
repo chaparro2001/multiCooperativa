@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text } from 'react-native';
 
 import {
   INVITATION_FIELDS,
@@ -14,14 +13,15 @@ import { useSession } from '@/session/session-context';
 import { Button } from '@/ui/button';
 import { FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
+import { Text, useTheme } from '@/ui/paper';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
 
 /** US-ACC-01: opened from multicooperativa://invitation?token=… */
 export default function InvitationScreen() {
   const { t } = useTranslation();
   const { token } = useLocalSearchParams<{ token?: string }>();
   const { status, acceptInvitation } = useSession();
+  const { colors } = useTheme();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -65,8 +65,8 @@ export default function InvitationScreen() {
     // Existing account: the link does not open a session by itself.
     return (
       <Screen testID="invitation-activated">
-        <Text style={styles.title}>{t('auth.invitation.activatedTitle')}</Text>
-        <Text style={styles.text}>
+        <Text variant="headlineSmall">{t('auth.invitation.activatedTitle')}</Text>
+        <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
           {status === 'signedIn'
             ? t('auth.invitation.activatedSignedIn')
             : t('auth.invitation.activatedSignedOut')}
@@ -85,8 +85,10 @@ export default function InvitationScreen() {
 
   return (
     <Screen testID="invitation-screen" form={form}>
-      <Text style={styles.title}>{t('auth.invitation.title')}</Text>
-      <Text style={styles.text}>{t('auth.invitation.instructions')}</Text>
+      <Text variant="headlineSmall">{t('auth.invitation.title')}</Text>
+      <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
+        {t('auth.invitation.instructions')}
+      </Text>
       <TextField
         label={t('auth.fields.password')}
         name="password"
@@ -108,7 +110,7 @@ export default function InvitationScreen() {
         onSubmitEditing={submit}
         testID="confirm-password-field"
       />
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('auth.invitation.submit')}
@@ -119,8 +121,3 @@ export default function InvitationScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  title: { fontSize: 24, fontWeight: '700', color: colors.text },
-  text: { fontSize: 16, color: colors.muted },
-});

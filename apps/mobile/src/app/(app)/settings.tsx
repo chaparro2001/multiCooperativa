@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { useBiometrics } from '@/auth/biometrics';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
@@ -13,13 +13,14 @@ import { AssistantModelSection } from '@/features/assistant/model-settings-secti
 import { canChooseAssistantModel } from '@/features/assistant/model-settings';
 import { useSession } from '@/session/session-context';
 import { Button } from '@/ui/button';
+import { Divider, Switch, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Screen } from '@/ui/screen';
-import { colors } from '@/ui/theme';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const { me, cooperative, permissions } = useActiveCooperative();
   const { signOut } = useSession();
+  const { colors } = useTheme();
   const biometrics = useBiometrics();
   const [biometricsError, setBiometricsError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
@@ -33,13 +34,18 @@ export default function SettingsScreen() {
   return (
     <Screen testID="settings-screen">
       <View style={styles.section}>
-        <Text style={styles.name}>{me?.name}</Text>
-        <Text style={styles.detail}>{me?.email}</Text>
+        <Text variant="titleMedium">{me?.name}</Text>
+        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+          {me?.email}
+        </Text>
       </View>
+      <Divider />
 
       <View style={styles.section}>
-        <Text style={styles.label}>{t('settings.cooperative')}</Text>
-        <Text style={styles.name}>{cooperative?.cooperativeName}</Text>
+        <Text variant="labelMedium" style={[styles.label, { color: colors.onSurfaceVariant }]}>
+          {t('settings.cooperative')}
+        </Text>
+        <Text variant="titleMedium">{cooperative?.cooperativeName}</Text>
         {(me?.memberships.length ?? 0) > 1 && (
           <Button
             title={t('settings.switchCooperative')}
@@ -49,11 +55,12 @@ export default function SettingsScreen() {
           />
         )}
       </View>
+      <Divider />
 
       {/* US-ACC-04: without biometrics set up on the device, the option is not offered. */}
       {biometrics.available && (
         <View style={[styles.section, styles.row]}>
-          <Text style={styles.name}>{t('settings.biometrics')}</Text>
+          <Text variant="titleMedium">{t('settings.biometrics')}</Text>
           <Switch
             value={biometrics.enabled}
             onValueChange={toggleBiometrics}
@@ -62,7 +69,8 @@ export default function SettingsScreen() {
           />
         </View>
       )}
-      {biometricsError && <ErrorText>{biometricsError}</ErrorText>}
+      {biometrics.available && <Divider />}
+      {biometricsError ? <ErrorText>{biometricsError}</ErrorText> : null}
 
       {/* US-ACC-14: only the administrator sees it; the API enforces it. */}
       {canEditBranding(permissions?.permissions) && <AppearanceSection />}
@@ -88,9 +96,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: 6, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  section: { gap: 6 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  label: { fontSize: 13, color: colors.muted, textTransform: 'uppercase' },
-  name: { fontSize: 17, fontWeight: '600', color: colors.text },
-  detail: { fontSize: 14, color: colors.muted },
+  label: { textTransform: 'uppercase' },
 });

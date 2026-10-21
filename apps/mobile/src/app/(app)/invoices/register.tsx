@@ -2,7 +2,7 @@ import type { ExtractionField, Operation } from '@multicooperativa/contracts';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { routeServerError } from '@/forms/server-errors';
@@ -36,7 +36,7 @@ import { DayField } from '@/ui/date-field';
 import { FieldGroup, FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { useBrandColor } from '@/branding/brand';
+import { Card, Text, TouchableRipple, useTheme } from '@/ui/paper';
 import { colors } from '@/ui/theme';
 
 /**
@@ -45,7 +45,7 @@ import { colors } from '@/ui/theme';
  * attached to the record that gets created.
  */
 export default function RegisterScreen() {
-  const brand = useBrandColor();
+  const { colors: theme } = useTheme();
   const { t } = useTranslation();
   const params = useLocalSearchParams<{
     operation?: Operation;
@@ -102,12 +102,12 @@ export default function RegisterScreen() {
   return (
     <Screen testID="register-screen" form={form}>
       {params.noData === '1' && (
-        <Text style={styles.notice} testID="no-data">
+        <Text variant="bodyMedium" style={styles.notice} testID="no-data">
           {t('invoicing.form.noData')}
         </Text>
       )}
       {draft.lowConfidence.length > 0 && (
-        <Text style={styles.notice} testID="low-confidence">
+        <Text variant="bodyMedium" style={styles.notice} testID="low-confidence">
           {t('invoicing.form.reviewFields')}
         </Text>
       )}
@@ -188,13 +188,16 @@ export default function RegisterScreen() {
             keyboardType="decimal-pad"
             testID="form-total"
           />
-          {suggestedTotal && draft.total !== suggestedTotal && (
-            <Pressable onPress={() => patch({ total: suggestedTotal })} accessibilityRole="button">
-              <Text style={[styles.link, { color: brand }]}>
+          {suggestedTotal && draft.total !== suggestedTotal ? (
+            <TouchableRipple
+              onPress={() => patch({ total: suggestedTotal })}
+              accessibilityRole="button"
+            >
+              <Text variant="bodyMedium" style={{ color: theme.primary }}>
                 {t('invoicing.form.useComputedTotal', { total: suggestedTotal })}
               </Text>
-            </Pressable>
-          )}
+            </TouchableRipple>
+          ) : null}
         </>
       )}
 
@@ -216,16 +219,18 @@ export default function RegisterScreen() {
 
       {draft.scan && (
         <View style={styles.scan}>
-          <Text style={styles.scanText}>
+          <Text variant="bodyMedium" style={styles.scanText}>
             {t('invoicing.form.attached', { name: draft.scan.name })}
           </Text>
-          <Pressable onPress={() => patch({ scan: null })} accessibilityRole="button">
-            <Text style={styles.remove}>{t('common.actions.remove')}</Text>
-          </Pressable>
+          <TouchableRipple onPress={() => patch({ scan: null })} accessibilityRole="button">
+            <Text variant="bodyMedium" style={styles.remove}>
+              {t('common.actions.remove')}
+            </Text>
+          </TouchableRipple>
         </View>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('invoicing.form.confirm')}
@@ -246,7 +251,7 @@ function PartyPicker({
   patch(change: Partial<RegistrationDraft>): void;
   warn: boolean;
 }) {
-  const brand = useBrandColor();
+  const { colors: theme } = useTheme();
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const create = useCreateThirdParty();
@@ -275,26 +280,28 @@ function PartyPicker({
 
   return (
     <FieldGroup name="thirdPartyId" style={styles.group} testID="party-picker">
-      <Text style={styles.label}>
+      <Text variant="labelLarge">
         {warn ? `${t('invoicing.form.thirdParty')} ⚠` : t('invoicing.form.thirdParty')}
       </Text>
       {draft.suggestedParty && !draft.thirdPartyId && (
-        <View style={styles.suggestion}>
-          <Text style={styles.scanText}>
-            {t('invoicing.form.unknownParty', {
-              name: draft.suggestedParty.name,
-              nif: draft.suggestedParty.nif,
-            })}
-          </Text>
-          <Button
-            title={t('invoicing.form.createParty')}
-            variant="secondary"
-            loading={create.isPending}
-            onPress={createSuggested}
-            testID="create-suggested-party"
-          />
-          {error && <ErrorText>{error}</ErrorText>}
-        </View>
+        <Card mode="contained">
+          <Card.Content style={styles.boxContent}>
+            <Text variant="bodyMedium">
+              {t('invoicing.form.unknownParty', {
+                name: draft.suggestedParty.name,
+                nif: draft.suggestedParty.nif,
+              })}
+            </Text>
+            <Button
+              title={t('invoicing.form.createParty')}
+              variant="secondary"
+              loading={create.isPending}
+              onPress={createSuggested}
+              testID="create-suggested-party"
+            />
+            {error ? <ErrorText>{error}</ErrorText> : null}
+          </Card.Content>
+        </Card>
       )}
       <TextField
         label={t('invoicing.form.searchParty')}
@@ -316,18 +323,20 @@ function PartyPicker({
             />
           ))}
       </View>
-      {selected && (
-        <Text style={styles.scanText}>
+      {selected ? (
+        <Text variant="bodyMedium">
           {selected.name} · {selected.nif}
         </Text>
-      )}
+      ) : null}
       {parties.data && parties.data.items.length === 0 && (
-        <Pressable
+        <TouchableRipple
           onPress={() => router.push('/invoices/third-parties/editor')}
           accessibilityRole="button"
         >
-          <Text style={[styles.link, { color: brand }]}>{t('invoicing.form.noParties')}</Text>
-        </Pressable>
+          <Text variant="bodyMedium" style={{ color: theme.primary }}>
+            {t('invoicing.form.noParties')}
+          </Text>
+        </TouchableRipple>
       )}
     </FieldGroup>
   );
@@ -350,48 +359,52 @@ function LinesEditor({
 
   return (
     <FieldGroup name="lines" style={styles.group} testID="lines">
-      <Text style={styles.label}>
+      <Text variant="labelLarge">
         {warn ? `${t('invoicing.form.lines')} ⚠` : t('invoicing.form.lines')}
         {required ? ' *' : ''}
       </Text>
       {lines.map((line, index) => (
-        <View key={index} style={styles.line}>
-          <TextField
-            label={t('invoicing.form.concept')}
-            name={`lines.${index}.concept`}
-            value={line.concept}
-            onChangeText={(concept) => update(index, { concept })}
-            testID={`line-concept-${index}`}
-          />
-          <View style={styles.lineRow}>
-            <View style={styles.flex}>
-              <TextField
-                label={t('invoicing.form.quantity')}
-                name={`lines.${index}.quantity`}
-                value={line.quantity}
-                onChangeText={(quantity) => update(index, { quantity })}
-                keyboardType="decimal-pad"
-                testID={`line-quantity-${index}`}
-              />
+        <Card key={index} mode="contained">
+          <Card.Content style={styles.boxContent}>
+            <TextField
+              label={t('invoicing.form.concept')}
+              name={`lines.${index}.concept`}
+              value={line.concept}
+              onChangeText={(concept) => update(index, { concept })}
+              testID={`line-concept-${index}`}
+            />
+            <View style={styles.lineRow}>
+              <View style={styles.flex}>
+                <TextField
+                  label={t('invoicing.form.quantity')}
+                  name={`lines.${index}.quantity`}
+                  value={line.quantity}
+                  onChangeText={(quantity) => update(index, { quantity })}
+                  keyboardType="decimal-pad"
+                  testID={`line-quantity-${index}`}
+                />
+              </View>
+              <View style={styles.flex}>
+                <TextField
+                  label={t('invoicing.form.unit')}
+                  name={`lines.${index}.unit`}
+                  value={line.unit}
+                  onChangeText={(unit) => update(index, { unit })}
+                  autoCapitalize="none"
+                  testID={`line-unit-${index}`}
+                />
+              </View>
             </View>
-            <View style={styles.flex}>
-              <TextField
-                label={t('invoicing.form.unit')}
-                name={`lines.${index}.unit`}
-                value={line.unit}
-                onChangeText={(unit) => update(index, { unit })}
-                autoCapitalize="none"
-                testID={`line-unit-${index}`}
-              />
-            </View>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => onChange(lines.filter((_, i) => i !== index))}
-          >
-            <Text style={styles.remove}>{t('invoicing.form.removeLine')}</Text>
-          </Pressable>
-        </View>
+            <TouchableRipple
+              accessibilityRole="button"
+              onPress={() => onChange(lines.filter((_, i) => i !== index))}
+            >
+              <Text variant="bodyMedium" style={styles.remove}>
+                {t('invoicing.form.removeLine')}
+              </Text>
+            </TouchableRipple>
+          </Card.Content>
+        </Card>
       ))}
       <Button
         title={t('invoicing.form.addLine')}
@@ -421,7 +434,7 @@ function NotesToGroup({
   if (items.length === 0) return null;
   return (
     <FieldGroup name="deliveryNoteIds" style={styles.group} testID="notes-to-group">
-      <Text style={styles.label}>{t('invoicing.form.groupNotes')}</Text>
+      <Text variant="labelLarge">{t('invoicing.form.groupNotes')}</Text>
       <View style={styles.chips}>
         {items.map((note) => (
           <Chip
@@ -445,23 +458,19 @@ function NotesToGroup({
 
 const styles = StyleSheet.create({
   notice: {
-    backgroundColor: '#fff4d6',
-    color: '#7a5600',
+    backgroundColor: colors.warningContainer,
+    color: colors.warning,
     borderRadius: 10,
     padding: 10,
-    fontSize: 14,
   },
   group: { gap: 8 },
-  label: { fontSize: 14, fontWeight: '500', color: colors.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  suggestion: { backgroundColor: colors.surface, borderRadius: 10, padding: 12, gap: 8 },
-  line: { backgroundColor: colors.surface, borderRadius: 10, padding: 12, gap: 8 },
+  boxContent: { gap: 8 },
   lineRow: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
-  link: { color: colors.primary, fontSize: 14 },
-  remove: { color: colors.danger, fontSize: 14 },
+  remove: { color: colors.danger },
   scan: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, alignItems: 'center' },
-  scanText: { fontSize: 14, color: colors.text, flexShrink: 1 },
+  scanText: { flexShrink: 1 },
 });
 
 /** Usual payment term: 30 days after the issue date (or today while it is empty). */

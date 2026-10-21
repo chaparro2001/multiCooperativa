@@ -1,19 +1,9 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
-import { useBrandColor, useBrandTint } from '@/branding/brand';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { type ChatMessage, citationTarget, suggestedQuestions } from '@/features/assistant/chat';
 import { MarkdownText } from '@/features/assistant/markdown-text';
@@ -26,8 +16,8 @@ import {
 } from '@/features/assistant/queries';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 import { Button } from '@/ui/button';
+import { Card, Chip, Text, TextInput, useTheme } from '@/ui/paper';
 import { ErrorText } from '@/ui/screen';
-import { colors } from '@/ui/theme';
 
 /**
  * Keyed by cooperative: switching cooperative mounts a new chat, so a new conversation
@@ -41,8 +31,7 @@ export default function AssistantScreen() {
 function Chat() {
   const { t } = useTranslation();
   const { permissions } = useActiveCooperative();
-  const brand = useBrandColor();
-  const tint = useBrandTint();
+  const { colors } = useTheme();
   const createConversation = useCreateConversation();
   const sendMessage = useSendMessage();
   const rateMessage = useRateMessage();
@@ -148,7 +137,7 @@ function Chat() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
+      style={[styles.screen, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={90}
     >
@@ -158,14 +147,14 @@ function Chat() {
             <HeaderActions>
               <HeaderAction
                 href="/assistant/history"
-                icon="time-outline"
+                icon="history"
                 label={t('assistant.history.open')}
                 testID="assistant-history"
               />
               {messages.length > 0 && (
                 <HeaderAction
                   onPress={reset}
-                  icon="create-outline"
+                  icon="square-edit-outline"
                   label={t('assistant.newConversation')}
                   testID="new-conversation"
                 />
@@ -183,18 +172,23 @@ function Chat() {
         onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>{t('assistant.emptyTitle')}</Text>
-            <Text style={styles.muted}>{t('assistant.emptyHint')}</Text>
+            <Text variant="titleLarge">{t('assistant.emptyTitle')}</Text>
+            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+              {t('assistant.emptyHint')}
+            </Text>
             {suggestions.map((key) => (
-              <Pressable
+              <Card
                 key={key}
+                mode="outlined"
                 accessibilityRole="button"
                 onPress={() => send(t(`assistant.suggestions.${key}`))}
-                style={[styles.suggestion, { borderColor: brand, backgroundColor: tint }]}
+                style={{ borderColor: colors.primary, backgroundColor: colors.primaryContainer }}
                 testID={`suggestion-${key}`}
               >
-                <Text style={styles.suggestionText}>{t(`assistant.suggestions.${key}`)}</Text>
-              </Pressable>
+                <Card.Content style={styles.suggestion}>
+                  <Text variant="bodyMedium">{t(`assistant.suggestions.${key}`)}</Text>
+                </Card.Content>
+              </Card>
             ))}
           </View>
         }
@@ -202,16 +196,22 @@ function Chat() {
           <MessageBubble message={item} onRate={(rating) => rate(item.id, rating)} />
         )}
         ListFooterComponent={
-          busy ? <Text style={styles.muted}>{t('assistant.thinking')}</Text> : null
+          busy ? (
+            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+              {t('assistant.thinking')}
+            </Text>
+          ) : null
         }
       />
-      {error && (
+      {error ? (
         <View style={styles.error}>
           <ErrorText>{error}</ErrorText>
         </View>
-      )}
-      <View style={styles.composer}>
+      ) : null}
+      <View style={[styles.composer, { borderTopColor: colors.outlineVariant }]}>
         <TextInput
+          mode="outlined"
+          dense
           style={styles.input}
           value={draft}
           onChangeText={setDraft}
@@ -243,61 +243,71 @@ function MessageBubble({
 }) {
   const { t } = useTranslation();
   const mine = message.role === 'user';
-  const brand = useBrandColor();
+  const { colors } = useTheme();
   return (
     <View
       style={[
         styles.bubble,
-        mine ? [styles.mine, { backgroundColor: brand }] : styles.theirs,
+        mine
+          ? [styles.mine, { backgroundColor: colors.primary }]
+          : [styles.theirs, { backgroundColor: colors.surfaceVariant }],
         message.pending && styles.dim,
       ]}
     >
       {mine ? (
-        <Text style={styles.mineText} selectable>
+        <Text variant="bodyLarge" style={{ color: colors.onPrimary }} selectable>
           {message.content}
         </Text>
       ) : (
-        <MarkdownText source={message.content} style={styles.text} />
+        <MarkdownText source={message.content} />
       )}
       {message.citations.length > 0 && (
         <View style={styles.citations} testID="citations">
-          <Text style={styles.sources}>{t('assistant.sources')}</Text>
+          <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant }}>
+            {t('assistant.sources')}
+          </Text>
           {message.citations.map((citation) => (
-            <Pressable
+            <Card
               key={citation.ref}
+              mode="outlined"
               accessibilityRole="link"
               accessibilityLabel={t('assistant.openSource', { title: citation.title })}
               onPress={() => router.push(citationTarget(citation))}
-              style={styles.citation}
+              style={{ backgroundColor: colors.surface }}
               testID={`citation-${citation.ref}`}
             >
-              <Text style={[styles.citationTitle, { color: brand }]}>
-                {citation.page
-                  ? t('assistant.citationPage', { title: citation.title, page: citation.page })
-                  : citation.title}
-              </Text>
-              {citation.excerpt && (
-                <Text style={styles.excerpt} numberOfLines={2}>
-                  {citation.excerpt}
+              <Card.Content style={styles.citation}>
+                <Text variant="labelLarge" style={{ color: colors.primary }}>
+                  {citation.page
+                    ? t('assistant.citationPage', { title: citation.title, page: citation.page })
+                    : citation.title}
                 </Text>
-              )}
-            </Pressable>
+                {citation.excerpt ? (
+                  <Text
+                    variant="bodySmall"
+                    style={{ color: colors.onSurfaceVariant }}
+                    numberOfLines={2}
+                  >
+                    {citation.excerpt}
+                  </Text>
+                ) : null}
+              </Card.Content>
+            </Card>
           ))}
         </View>
       )}
       {!mine && !message.pending && (
         <View style={styles.rating}>
           {(['helpful', 'not_helpful'] as const).map((rating) => (
-            <Pressable
+            <Chip
               key={rating}
-              accessibilityRole="button"
-              accessibilityState={{ selected: message.rating === rating }}
+              compact
+              selected={message.rating === rating}
               onPress={() => onRate(rating)}
-              style={[styles.rate, message.rating === rating && styles.rateSelected]}
               testID={`rate-${rating}`}
             >
-              <Text style={styles.rateText}>{t(`assistant.rating.${rating}`)}</Text>
-            </Pressable>
+              {t(`assistant.rating.${rating}`)}
+            </Chip>
           ))}
         </View>
       )}
@@ -306,47 +316,17 @@ function MessageBubble({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff' },
+  screen: { flex: 1 },
   messages: { padding: 16, gap: 12, flexGrow: 1 },
   empty: { gap: 12, paddingTop: 24 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
-  muted: { color: colors.muted, fontSize: 14 },
-  suggestion: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    padding: 12,
-    backgroundColor: colors.surface,
-  },
-  suggestionText: { color: colors.text, fontSize: 15 },
+  suggestion: { paddingVertical: 12 },
   bubble: { borderRadius: 14, padding: 12, gap: 8, maxWidth: '92%' },
   mine: { alignSelf: 'flex-end' },
-  theirs: { alignSelf: 'flex-start', backgroundColor: colors.surface },
+  theirs: { alignSelf: 'flex-start' },
   dim: { opacity: 0.6 },
-  text: { color: colors.text, fontSize: 16 },
-  mineText: { color: '#fff', fontSize: 16 },
   citations: { gap: 6 },
-  sources: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-  citation: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 8,
-    backgroundColor: '#fff',
-    gap: 2,
-  },
-  citationTitle: { fontSize: 14, fontWeight: '600' },
-  excerpt: { color: colors.muted, fontSize: 12 },
+  citation: { paddingVertical: 8, gap: 2 },
   rating: { flexDirection: 'row', gap: 8 },
-  rate: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  rateSelected: { backgroundColor: colors.border },
-  rateText: { color: colors.muted, fontSize: 12 },
   error: { paddingHorizontal: 16 },
   composer: {
     flexDirection: 'row',
@@ -354,17 +334,6 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
-  input: {
-    flex: 1,
-    maxHeight: 120,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 16,
-    color: colors.text,
-  },
+  input: { flex: 1, maxHeight: 120 },
 });

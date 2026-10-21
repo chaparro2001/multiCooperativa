@@ -1,7 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { withPage } from '@/features/assistant/chat';
@@ -18,8 +18,8 @@ import { formatDateTime, formatDay, formatSize } from '@/i18n/format';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
+import { Card, Divider, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
-import { colors } from '@/ui/theme';
 import { openUrl } from '@/ui/open-url';
 import { confirmAction } from '@/ui/confirm';
 
@@ -33,6 +33,7 @@ const INDEXING_TONE = {
 /** US-DOC-03 (view) and US-DOC-04/05/06 (versions, withdraw, indexing). */
 export default function DocumentScreen() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   // `page` comes from an assistant citation (US-AI-01): the viewer opens at that page.
   const { id, page } = useLocalSearchParams<{ id: string; page?: string }>();
   const { canManage } = useModuleAccess('documents');
@@ -94,13 +95,13 @@ export default function DocumentScreen() {
   return (
     <Screen testID="document-screen">
       <Stack.Screen options={{ title: categoryTitle(data.category) }} />
-      <Text style={styles.title}>{data.title}</Text>
-      <Text style={styles.meta}>
+      <Text variant="headlineSmall">{data.title}</Text>
+      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
         {formatDay(data.documentDate)} · {formatSize(data.size)}
       </Text>
-      {data.status === 'withdrawn' && (
+      {data.status === 'withdrawn' ? (
         <Badge label={t('enums.documentStatus.withdrawn')} tone="danger" />
-      )}
+      ) : null}
 
       <Button
         title={t('documents.detail.open')}
@@ -119,40 +120,41 @@ export default function DocumentScreen() {
         testID="open-document"
       />
 
-      {canManage && (
+      {canManage ? (
         <View style={styles.section}>
-          {indexingStatus && (
+          <Divider />
+          {indexingStatus ? (
             <View style={styles.indexing}>
               <Badge
                 label={t(`enums.indexingStatus.${indexingStatus}`)}
                 tone={INDEXING_TONE[indexingStatus]}
               />
               {(indexingStatus === 'error' || indexingStatus === 'not_indexable') &&
-                data.status === 'published' && (
-                  <Button
-                    title={t('documents.detail.retryIndexing')}
-                    variant="secondary"
-                    loading={action.isPending}
-                    onPress={() => run(() => action.mutateAsync({ id, action: 'reindex' }))}
-                    testID="reindex"
-                  />
-                )}
+              data.status === 'published' ? (
+                <Button
+                  title={t('documents.detail.retryIndexing')}
+                  variant="secondary"
+                  loading={action.isPending}
+                  onPress={() => run(() => action.mutateAsync({ id, action: 'reindex' }))}
+                  testID="reindex"
+                />
+              ) : null}
             </View>
-          )}
+          ) : null}
 
-          {data.status === 'withdrawn' && (
+          {data.status === 'withdrawn' ? (
             <Badge label={t('documents.list.notAvailableForAssistant')} tone="warning" />
-          )}
+          ) : null}
 
-          {republished && data.status === 'published' && (
-            <Text style={styles.success} testID="republished">
+          {republished && data.status === 'published' ? (
+            <Text variant="bodyMedium" testID="republished">
               {t('documents.detail.republished')}
             </Text>
-          )}
+          ) : null}
 
-          {error && <ErrorText>{error}</ErrorText>}
+          {error ? <ErrorText>{error}</ErrorText> : null}
 
-          {data.status === 'published' && (
+          {data.status === 'published' ? (
             <Button
               title={t('documents.detail.uploadVersion')}
               variant="secondary"
@@ -165,53 +167,53 @@ export default function DocumentScreen() {
               }
               testID="new-version"
             />
-          )}
+          ) : null}
 
-          <Text style={styles.sectionTitle}>{t('documents.detail.versionHistory')}</Text>
+          <Text variant="titleSmall" style={styles.sectionTitle}>
+            {t('documents.detail.versionHistory')}
+          </Text>
           {versions.data?.versions.map((version) => (
-            <View key={version.id} style={styles.version}>
-              <Text style={styles.versionName}>
-                {version.isCurrent
-                  ? t('documents.detail.currentVersion', { name: version.fileName })
-                  : version.fileName}
-              </Text>
-              <Text style={styles.meta}>
-                {formatDateTime(version.uploadedAt)}
-                {version.uploadedByName ? ` · ${version.uploadedByName}` : ''} ·{' '}
-                {formatSize(version.size)}
-              </Text>
-            </View>
+            <Card key={version.id} mode="contained">
+              <Card.Content style={styles.version}>
+                <Text variant="bodyLarge">
+                  {version.isCurrent
+                    ? t('documents.detail.currentVersion', { name: version.fileName })
+                    : version.fileName}
+                </Text>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                  {formatDateTime(version.uploadedAt)}
+                  {version.uploadedByName ? ` · ${version.uploadedByName}` : ''} ·{' '}
+                  {formatSize(version.size)}
+                </Text>
+              </Card.Content>
+            </Card>
           ))}
 
-          {data.status === 'withdrawn' && (
+          {data.status === 'withdrawn' ? (
             <Button
               title={t('documents.detail.republishTitle')}
               loading={action.isPending}
               onPress={confirmRepublish}
               testID="republish"
             />
-          )}
+          ) : null}
 
-          {data.status === 'published' && (
+          {data.status === 'published' ? (
             <Button
               title={t('documents.detail.withdrawTitle')}
               variant="danger"
               onPress={confirmWithdraw}
             />
-          )}
+          ) : null}
         </View>
-      )}
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700', color: colors.text },
-  meta: { fontSize: 13, color: colors.muted },
-  section: { gap: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
-  sectionTitle: { fontSize: 15, fontWeight: '600', color: colors.text, marginTop: 8 },
+  section: { gap: 10 },
+  sectionTitle: { marginTop: 8 },
   indexing: { gap: 8 },
-  success: { fontSize: 14, color: colors.text },
-  version: { backgroundColor: colors.surface, borderRadius: 10, padding: 12, gap: 2 },
-  versionName: { fontSize: 15, color: colors.text },
+  version: { gap: 2 },
 });
