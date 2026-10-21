@@ -1,6 +1,7 @@
 import type { View } from 'react-native';
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -155,6 +156,25 @@ export function useForm<V extends object>({
 
 const FormContext = createContext<FormApi | null>(null);
 export const FormProvider = FormContext.Provider;
+
+/** How the surrounding scroll view brings a field into view: set by `Screen`. */
+const ScrollerContext = createContext<((view: View) => void) | null>(null);
+export const ScrollerProvider = ScrollerContext.Provider;
+
+/**
+ * Makes a form's fields (those with a `name`) show its errors and lets it scroll to the first
+ * invalid one. `Screen` does it for the whole screen; a section with its own form (the
+ * appearance colour inside Settings) wraps itself in one.
+ */
+export function FormScope({ form, children }: { form: FormApi; children: ReactNode }) {
+  const scroller = useContext(ScrollerContext);
+  useEffect(() => {
+    form.attachScroller(scroller);
+    return () => form.attachScroller(null);
+    // The form object changes on every render; its scroller slot is stable.
+  }, [scroller]);
+  return <FormProvider value={form}>{children}</FormProvider>;
+}
 
 /** The form the field is inside of, if any (fields also work alone, with an `error` prop). */
 export function useFormContext(): FormApi | null {

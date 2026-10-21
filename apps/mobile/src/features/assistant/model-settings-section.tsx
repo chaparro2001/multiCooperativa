@@ -4,19 +4,24 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { routeServerError } from '@/forms/server-errors';
+import { FormScope, useForm } from '@/forms/use-form';
 import { useBrandColor } from '@/branding/brand';
 import { Button } from '@/ui/button';
+import { FieldGroup, FormSummary } from '@/ui/field';
 import { ErrorText } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
 import {
-  canSaveHosted,
+  HOSTED_FIELDS,
+  HOSTED_SERVER_MAPPING,
   type HostedDraft,
   hostedBody,
   hostedDraftFrom,
   isUnchangedLocal,
   keyIsRequired,
   localBody,
+  validateHosted,
 } from './hosted-settings';
 import { modelHint } from './model-settings';
 import { useAssistantModelSettings, useUpdateAssistantModel } from './queries';
@@ -34,7 +39,12 @@ export function AssistantModelSection() {
   const [source, setSource] = useState<AssistantSource>('local');
   const [draft, setDraft] = useState<HostedDraft>({ provider: null, model: '', apiKey: '' });
   const [saved, setSaved] = useState(false);
+  const [banner, setBanner] = useState<string | null>(null);
   const settings = query.data;
+  const form = useForm({
+    values: { provider: draft.provider, model: draft.model, apiKey: draft.apiKey },
+    validate: (values) => (settings ? validateHosted(values, settings) : {}),
+  });
 
   useEffect(() => {
     if (settings?.current) setSelected(settings.current);
@@ -62,204 +72,227 @@ export function AssistantModelSection() {
 
   const provider = settings.providers.find((candidate) => candidate.id === draft.provider);
   const keyNeeded = keyIsRequired(draft, settings);
-  const canSave =
-    source === 'hosted'
-      ? canSaveHosted(draft, settings)
-      : !isUnchangedLocal('local', selected, settings) && (selected !== null || !isOllama);
+  // Nothing to send while the local choice is the one already stored: that is not an error.
+  const nothingToSave =
+    source === 'local' &&
+    (isUnchangedLocal('local', selected, settings) || (selected === null && isOllama));
 
   const save = () => {
     setSaved(false);
+    setBanner(null);
+    if (source === 'hosted' && !form.validateAll()) return;
     update.mutate(source === 'hosted' ? hostedBody(draft) : localBody(selected, settings), {
       onSuccess: () => setSaved(true),
+      onError: (failure) => {
+        // A rejected key is marked on the key field, an unknown model on the model field.
+        const routed = routeServerError(
+          failure,
+          HOSTED_SERVER_MAPPING,
+          (field) => source === 'hosted' && (HOSTED_FIELDS as readonly string[]).includes(field),
+        );
+        form.setServerErrors(routed.fields);
+        setBanner(routed.banner);
+      },
     });
   };
 
   return (
-    <View style={styles.section} testID="assistant-model-section">
-      <Text style={styles.label}>{t('settings.assistantModel.title')}</Text>
-      <Text style={styles.detail}>{t('settings.assistantModel.description')}</Text>
+    <FormScope form={form}>
+      <View style={styles.section} testID="assistant-model-section">
+        <Text style={styles.label}>{t('settings.assistantModel.title')}</Text>
+        <Text style={styles.detail}>{t('settings.assistantModel.description')}</Text>
 
-      {settings.hostedAvailable && (
-        <View accessibilityRole="radiogroup" style={styles.options}>
-          {(['local', 'hosted'] as const).map((choice) => (
-            <Pressable
-              key={choice}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: source === choice }}
-              onPress={() => {
-                setSource(choice);
+        {settings.hostedAvailable && (
+          <View accessibilityRole="radiogroup" style={styles.options}>
+            {(['local', 'hosted'] as const).map((choice) => (
+              <Pressable
+                key={choice}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: source === choice }}
+                onPress={() => {
+                  setSource(choice);
+                  setSaved(false);
+                }}
+                style={[
+                  styles.option,
+                  source === choice && [styles.optionActive, { borderColor: brand }],
+                ]}
+                testID={`assistant-source-${choice}`}
+              >
+                <View
+                  style={[
+                    styles.radio,
+                    source === choice && { borderColor: brand, backgroundColor: brand },
+                  ]}
+                />
+                <Text style={[styles.name, styles.optionText]}>
+                  {t(`settings.assistantModel.source.${choice}`)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {source === 'hosted' ? (
+          <View style={styles.hosted} testID="assistant-hosted-form">
+            <Text style={styles.detail}>{t('settings.assistantModel.hosted.description')}</Text>
+            <Text style={styles.fieldLabel}>{t('settings.assistantModel.hosted.provider')}</Text>
+            <FieldGroup name="provider" style={styles.options}>
+              {settings.providers.map((candidate) => {
+                const active = draft.provider === candidate.id;
+                return (
+                  <Pressable
+                    key={candidate.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: active }}
+                    onPress={() => {
+                      setDraft({ ...draft, provider: candidate.id });
+                      setSaved(false);
+                    }}
+                    style={[styles.option, active && [styles.optionActive, { borderColor: brand }]]}
+                    testID={`assistant-provider-${candidate.id}`}
+                  >
+                    <View
+                      style={[
+                        styles.radio,
+                        active && { borderColor: brand, backgroundColor: brand },
+                      ]}
+                    />
+                    <Text style={[styles.name, styles.optionText]}>
+                      {t(`settings.assistantModel.hosted.providers.${candidate.id}`)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </FieldGroup>
+            <TextField
+              label={t('settings.assistantModel.hosted.model')}
+              name="model"
+              value={draft.model}
+              onChangeText={(model) => {
+                setDraft({ ...draft, model });
                 setSaved(false);
               }}
-              style={[
-                styles.option,
-                source === choice && [styles.optionActive, { borderColor: brand }],
-              ]}
-              testID={`assistant-source-${choice}`}
-            >
-              <View
-                style={[
-                  styles.radio,
-                  source === choice && { borderColor: brand, backgroundColor: brand },
-                ]}
-              />
-              <Text style={[styles.name, styles.optionText]}>
-                {t(`settings.assistantModel.source.${choice}`)}
+              placeholder={t('settings.assistantModel.hosted.modelPlaceholder', {
+                example: provider?.suggestedModels[0] ?? 'openai/gpt-oss-20b',
+              })}
+              autoCapitalize="none"
+              autoCorrect={false}
+              testID="assistant-hosted-model"
+            />
+            {provider && provider.suggestedModels.length > 0 && (
+              <View style={styles.suggestions}>
+                <Text style={styles.detail}>{t('settings.assistantModel.hosted.suggestions')}</Text>
+                {provider.suggestedModels.map((suggestion) => (
+                  <Pressable
+                    key={suggestion}
+                    accessibilityRole="button"
+                    onPress={() => {
+                      setDraft({ ...draft, model: suggestion });
+                      setSaved(false);
+                    }}
+                    style={styles.chip}
+                    testID={`assistant-suggestion-${suggestion}`}
+                  >
+                    <Text style={styles.chipText}>{suggestion}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            <TextField
+              label={t('settings.assistantModel.hosted.apiKey')}
+              name="apiKey"
+              value={draft.apiKey}
+              onChangeText={(apiKey) => {
+                setDraft({ ...draft, apiKey });
+                setSaved(false);
+              }}
+              placeholder={t('settings.assistantModel.hosted.apiKeyPlaceholder')}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="off"
+              testID="assistant-hosted-key"
+            />
+            {settings.hosted && !keyNeeded && (
+              <Text style={styles.detail} testID="assistant-hosted-saved-key">
+                {t('settings.assistantModel.hosted.savedKey', { hint: settings.hosted.keyHint })}
+                {' · '}
+                {t('settings.assistantModel.hosted.keepKey')}
               </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-
-      {source === 'hosted' ? (
-        <View style={styles.hosted} testID="assistant-hosted-form">
-          <Text style={styles.detail}>{t('settings.assistantModel.hosted.description')}</Text>
-          <Text style={styles.fieldLabel}>{t('settings.assistantModel.hosted.provider')}</Text>
-          <View accessibilityRole="radiogroup" style={styles.options}>
-            {settings.providers.map((candidate) => {
-              const active = draft.provider === candidate.id;
-              return (
-                <Pressable
-                  key={candidate.id}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: active }}
-                  onPress={() => {
-                    setDraft({ ...draft, provider: candidate.id });
-                    setSaved(false);
-                  }}
-                  style={[styles.option, active && [styles.optionActive, { borderColor: brand }]]}
-                  testID={`assistant-provider-${candidate.id}`}
-                >
-                  <View
-                    style={[styles.radio, active && { borderColor: brand, backgroundColor: brand }]}
-                  />
-                  <Text style={[styles.name, styles.optionText]}>
-                    {t(`settings.assistantModel.hosted.providers.${candidate.id}`)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <TextField
-            label={t('settings.assistantModel.hosted.model')}
-            value={draft.model}
-            onChangeText={(model) => {
-              setDraft({ ...draft, model });
-              setSaved(false);
-            }}
-            placeholder={t('settings.assistantModel.hosted.modelPlaceholder', {
-              example: provider?.suggestedModels[0] ?? 'openai/gpt-oss-20b',
-            })}
-            autoCapitalize="none"
-            autoCorrect={false}
-            testID="assistant-hosted-model"
-          />
-          {provider && provider.suggestedModels.length > 0 && (
-            <View style={styles.suggestions}>
-              <Text style={styles.detail}>{t('settings.assistantModel.hosted.suggestions')}</Text>
-              {provider.suggestedModels.map((suggestion) => (
-                <Pressable
-                  key={suggestion}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    setDraft({ ...draft, model: suggestion });
-                    setSaved(false);
-                  }}
-                  style={styles.chip}
-                  testID={`assistant-suggestion-${suggestion}`}
-                >
-                  <Text style={styles.chipText}>{suggestion}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-          <TextField
-            label={t('settings.assistantModel.hosted.apiKey')}
-            value={draft.apiKey}
-            onChangeText={(apiKey) => {
-              setDraft({ ...draft, apiKey });
-              setSaved(false);
-            }}
-            placeholder={t('settings.assistantModel.hosted.apiKeyPlaceholder')}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="off"
-            testID="assistant-hosted-key"
-          />
-          {settings.hosted && !keyNeeded && (
-            <Text style={styles.detail} testID="assistant-hosted-saved-key">
-              {t('settings.assistantModel.hosted.savedKey', { hint: settings.hosted.keyHint })}
-              {' · '}
-              {t('settings.assistantModel.hosted.keepKey')}
+            )}
+            <Text style={styles.detail} testID="assistant-hosted-privacy">
+              {t('settings.assistantModel.hosted.privacy')}
             </Text>
-          )}
-          <Text style={styles.detail} testID="assistant-hosted-privacy">
-            {t('settings.assistantModel.hosted.privacy')}
-          </Text>
-          <Text style={styles.detail}>{t('settings.assistantModel.hosted.fallback')}</Text>
-        </View>
-      ) : isOllama ? (
-        <>
-          <View accessibilityRole="radiogroup" style={styles.options}>
-            {settings.options.map((option) => {
-              const hint = modelHint(option.id);
-              const active = selected === option.id;
-              return (
-                <Pressable
-                  key={option.id}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: active }}
-                  onPress={() => {
-                    setSelected(option.id);
-                    setSaved(false);
-                  }}
-                  style={[styles.option, active && [styles.optionActive, { borderColor: brand }]]}
-                  testID={`assistant-model-${option.id}`}
-                >
-                  <View
-                    style={[styles.radio, active && { borderColor: brand, backgroundColor: brand }]}
-                  />
-                  <View style={styles.optionText}>
-                    <Text style={styles.name}>
-                      {option.id}
-                      {option.id === settings.current && settings.source === 'local'
-                        ? ` · ${t('settings.assistantModel.current')}`
-                        : ''}
-                    </Text>
-                    {hint && (
-                      <Text style={styles.detail}>
-                        {t(`settings.assistantModel.hints.${hint}`)}
-                      </Text>
-                    )}
-                  </View>
-                </Pressable>
-              );
-            })}
+            <Text style={styles.detail}>{t('settings.assistantModel.hosted.fallback')}</Text>
           </View>
-          <Text style={styles.detail}>{t('settings.assistantModel.firstAnswerSlower')}</Text>
-        </>
-      ) : (
-        <Text style={styles.detail}>{t('settings.assistantModel.notLocal')}</Text>
-      )}
+        ) : isOllama ? (
+          <>
+            <View accessibilityRole="radiogroup" style={styles.options}>
+              {settings.options.map((option) => {
+                const hint = modelHint(option.id);
+                const active = selected === option.id;
+                return (
+                  <Pressable
+                    key={option.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: active }}
+                    onPress={() => {
+                      setSelected(option.id);
+                      setSaved(false);
+                    }}
+                    style={[styles.option, active && [styles.optionActive, { borderColor: brand }]]}
+                    testID={`assistant-model-${option.id}`}
+                  >
+                    <View
+                      style={[
+                        styles.radio,
+                        active && { borderColor: brand, backgroundColor: brand },
+                      ]}
+                    />
+                    <View style={styles.optionText}>
+                      <Text style={styles.name}>
+                        {option.id}
+                        {option.id === settings.current && settings.source === 'local'
+                          ? ` · ${t('settings.assistantModel.current')}`
+                          : ''}
+                      </Text>
+                      {hint && (
+                        <Text style={styles.detail}>
+                          {t(`settings.assistantModel.hints.${hint}`)}
+                        </Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={styles.detail}>{t('settings.assistantModel.firstAnswerSlower')}</Text>
+          </>
+        ) : (
+          <Text style={styles.detail}>{t('settings.assistantModel.notLocal')}</Text>
+        )}
 
-      {update.isError && <ErrorText>{messageFor(update.error)}</ErrorText>}
-      {saved && (
-        <Text
-          style={[styles.success, { color: brand }]}
-          accessibilityLiveRegion="polite"
-          testID="assistant-model-saved"
-        >
-          {t('settings.assistantModel.saved')}
-        </Text>
-      )}
-      <Button
-        title={t('settings.assistantModel.save')}
-        loading={update.isPending}
-        disabled={!canSave}
-        onPress={save}
-        testID="assistant-model-save"
-      />
-    </View>
+        {banner && <ErrorText>{banner}</ErrorText>}
+        <FormSummary form={form} />
+        {saved && (
+          <Text
+            style={[styles.success, { color: brand }]}
+            accessibilityLiveRegion="polite"
+            testID="assistant-model-saved"
+          >
+            {t('settings.assistantModel.saved')}
+          </Text>
+        )}
+        <Button
+          title={t('settings.assistantModel.save')}
+          loading={update.isPending}
+          disabled={nothingToSave}
+          onPress={save}
+          testID="assistant-model-save"
+        />
+      </View>
+    </FormScope>
   );
 }
 

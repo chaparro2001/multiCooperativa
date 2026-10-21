@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useRef } from 'react';
+import { type ReactNode, useCallback, useRef } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 
-import { type FormApi, FormProvider } from '@/forms/use-form';
+import { type FormApi, FormScope, ScrollerProvider } from '@/forms/use-form';
 
 import { useBrandColor } from '../branding/brand';
 import { colors } from './theme';
@@ -48,12 +48,6 @@ export function Screen({
     });
   }, []);
 
-  useEffect(() => {
-    form?.attachScroller(scrollTo);
-    return () => form?.attachScroller(null);
-    // The form object changes on every render; its scroller slot is stable.
-  }, [!!form, scrollTo]);
-
   const body = (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -69,11 +63,11 @@ export function Screen({
         scrollEventThrottle={16}
         testID={testID}
       >
-        {children}
+        {form ? <FormScope form={form}>{children}</FormScope> : children}
       </ScrollView>
     </KeyboardAvoidingView>
   );
-  return form ? <FormProvider value={form}>{body}</FormProvider> : body;
+  return <ScrollerProvider value={scrollTo}>{body}</ScrollerProvider>;
 }
 
 export function Loading() {

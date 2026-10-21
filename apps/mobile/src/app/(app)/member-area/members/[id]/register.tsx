@@ -4,13 +4,22 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
-import { MOVEMENT_TYPES, movementRequest } from '@/features/member-area/capital';
+import { routeServerError } from '@/forms/server-errors';
+import { useForm } from '@/forms/use-form';
+import {
+  MOVEMENT_FIELDS,
+  MOVEMENT_SERVER_MAPPING,
+  MOVEMENT_TYPES,
+  movementRequest,
+  validateMovement,
+} from '@/features/member-area/capital';
 import { useMemberMovements, useRegisterMovement } from '@/features/member-area/queries';
 import { useEuros } from '@/features/invoicing/components';
 import { Chip } from '@/features/invoicing/segmented';
 import { today } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
+import { FormSummary } from '@/ui/field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
@@ -29,6 +38,10 @@ export default function RegisterMovementScreen() {
   const [concept, setConcept] = useState('');
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const form = useForm({
+    values: { type, date, concept, amount },
+    validate: validateMovement,
+  });
 
   if (statement.isPending) return <Loading />;
   if (statement.isError) {
@@ -42,6 +55,7 @@ export default function RegisterMovementScreen() {
 
   async function submit() {
     setError(null);
+    if (!form.validateAll()) return;
     const draft = movementRequest({ type, date, concept, amount });
     if (!draft.ok) {
       setError(t(`memberArea.register.errors.${draft.error}`));
@@ -51,12 +65,17 @@ export default function RegisterMovementScreen() {
       await register.mutateAsync(draft.request);
       router.back();
     } catch (failure) {
-      setError(messageFor(failure));
+      // A refund over the available capital is marked on the amount field.
+      const routed = routeServerError(failure, MOVEMENT_SERVER_MAPPING, (field) =>
+        (MOVEMENT_FIELDS as readonly string[]).includes(field),
+      );
+      form.setServerErrors(routed.fields);
+      setError(routed.banner);
     }
   }
 
   return (
-    <Screen testID="screen-register-movement">
+    <Screen testID="screen-register-movement" form={form}>
       <Text style={styles.who}>{member.name}</Text>
       <Text style={styles.hint}>
         {t('memberArea.register.currentCapital', { amount: euros(capital) })}
@@ -75,6 +94,7 @@ export default function RegisterMovementScreen() {
       </View>
       <DateField
         label={t('memberArea.register.date')}
+        name="date"
         mode="date"
         value={parseDay(date)}
         onChange={(value) => value && setDate(today(value))}
@@ -82,6 +102,7 @@ export default function RegisterMovementScreen() {
       />
       <TextField
         label={t('memberArea.register.concept')}
+        name="concept"
         value={concept}
         onChangeText={setConcept}
         maxLength={200}
@@ -89,6 +110,7 @@ export default function RegisterMovementScreen() {
       />
       <TextField
         label={t('memberArea.register.amount')}
+        name="amount"
         value={amount}
         onChangeText={setAmount}
         keyboardType="numbers-and-punctuation"
@@ -100,6 +122,7 @@ export default function RegisterMovementScreen() {
         <Text style={styles.hint}>{t('memberArea.register.correctionHint')}</Text>
       )}
       {error && <ErrorText>{error}</ErrorText>}
+      <FormSummary form={form} />
       <Button
         title={t('memberArea.register.submit')}
         onPress={() => void submit()}

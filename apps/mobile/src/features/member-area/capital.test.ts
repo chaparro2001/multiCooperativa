@@ -1,7 +1,20 @@
 import type { MemberCapital } from '@multicooperativa/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { capitalChange, changeTone, filterPartners, movementRequest } from './capital';
+import { ApiError } from '@/api/api-error';
+import { messageText } from '@/forms/errors';
+import { routeServerError } from '@/forms/server-errors';
+
+import {
+  capitalChange,
+  changeTone,
+  filterPartners,
+  MOVEMENT_FIELDS,
+  MOVEMENT_SERVER_MAPPING,
+  type MovementDraft,
+  movementRequest,
+  validateMovement,
+} from './capital';
 
 describe('capital statement (US-MEM-02, BR-MEM-03)', () => {
   it('BR-MEM-03: contributions add, refunds take out, corrections keep their sign', () => {
@@ -107,5 +120,66 @@ describe('movement form (US-MEM-03)', () => {
       ok: false,
       error: 'amount_not_positive',
     });
+  });
+});
+
+describe('validateMovement (US-MEM-03: fields marked on the form)', () => {
+  const draft = (overrides: Partial<MovementDraft> = {}): MovementDraft => ({
+    type: 'mandatory_contribution',
+    date: '2026-10-01',
+    concept: 'Annual contribution',
+    amount: '600,00',
+    ...overrides,
+  });
+
+  it('accepts a valid movement', () => {
+    expect(validateMovement(draft())).toEqual({});
+    expect(validateMovement(draft({ type: 'correction', amount: '-0,50' }))).toEqual({});
+  });
+
+  it('marks the missing concept, amount and date', () => {
+    const errors = validateMovement(draft({ concept: ' ', amount: '', date: '' }));
+    expect(Object.keys(errors).sort()).toEqual(['amount', 'concept', 'date']);
+    expect(errors.amount?.key).toBe('forms.errors.required');
+  });
+
+  it('marks an unreadable, zero or negative amount with the existing texts', () => {
+    expect(validateMovement(draft({ amount: '12x' })).amount?.key).toBe(
+      'memberArea.register.errors.amount_invalid',
+    );
+    expect(validateMovement(draft({ amount: '0' })).amount?.key).toBe(
+      'memberArea.register.errors.amount_not_positive',
+    );
+    expect(validateMovement(draft({ type: 'refund', amount: '-5' })).amount?.key).toBe(
+      'memberArea.register.errors.amount_not_positive',
+    );
+  });
+
+  it('marks a concept over 200 characters', () => {
+    expect(validateMovement(draft({ concept: 'C'.repeat(201) })).concept?.key).toBe(
+      'forms.errors.tooLong',
+    );
+  });
+});
+
+describe('API errors on the movement form (BR-MEM-03)', () => {
+  const route = (error: ApiError) =>
+    routeServerError(error, MOVEMENT_SERVER_MAPPING, (f) =>
+      (MOVEMENT_FIELDS as readonly string[]).includes(f),
+    );
+
+  it('puts insufficient_capital on the amount field with the available capital', () => {
+    const { fields, banner } = route(
+      new ApiError(409, 'insufficient_capital', '', { available: '50.00' }),
+    );
+    expect(Object.keys(fields)).toEqual(['amount']);
+    expect(messageText(fields.amount!)).toContain('50.00');
+    expect(banner).toBeNull();
+  });
+
+  it('puts the rule of a field on that field', () => {
+    expect(
+      Object.keys(route(new ApiError(400, 'invalid_movement', '', { field: 'concept' })).fields),
+    ).toEqual(['concept']);
   });
 });

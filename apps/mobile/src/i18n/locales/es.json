@@ -354,6 +354,11 @@
         "privacy": "Las preguntas de los miembros y los datos que el asistente consulta para responderlas se envían a ese proveedor, fuera de tu servidor. Revisa sus condiciones: algunos planes gratuitos pueden usar los datos para entrenar modelos.",
         "fallback": "Si el proveedor falla o rechaza la clave, el asistente responde con el modelo del servidor.",
         "unavailable": "Este servidor no tiene activados los proveedores externos."
+      },
+      "errors": {
+        "provider": "Elige un proveedor.",
+        "modelSpaces": "El identificador del modelo no puede llevar espacios.",
+        "keySpaces": "La clave de API no puede llevar espacios."
       }
     },
     "appearance": {

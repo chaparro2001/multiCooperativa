@@ -5,6 +5,10 @@ import type {
   UpdateAssistantModelBody,
 } from '@multicooperativa/contracts';
 
+import { collect, type FieldErrors, required } from '@/forms/errors';
+import { tooLong } from '@/forms/rules';
+import type { ServerMapping } from '@/forms/server-errors';
+
 import { modelToSave } from './model-settings';
 
 /** What the administrator is typing for an external provider (US-AI-07, ADR-019). The key is never kept after saving. */
@@ -67,4 +71,47 @@ export function isUnchangedLocal(
 ): boolean {
   if (source !== 'local' || settings.source !== 'local') return false;
   return settings.provider !== 'ollama' || selected === settings.current;
+}
+
+/** Fields of the external provider form. */
+export const HOSTED_FIELDS = ['provider', 'model', 'apiKey'] as const;
+
+/** Where the API's errors about the external provider land (ADR-019). */
+export const HOSTED_SERVER_MAPPING: ServerMapping = {
+  codes: {
+    assistant_api_key_required: 'apiKey',
+    assistant_provider_key_invalid: 'apiKey',
+    assistant_model_not_available: 'model',
+  },
+};
+
+/**
+ * US-AI-07: every wrong field of the external provider form: the provider, a model id without
+ * spaces, and the key (required the first time or when the provider changes).
+ */
+export function validateHosted(draft: HostedDraft, settings: AssistantModelSettings): FieldErrors {
+  const model = draft.model.trim();
+  const key = draft.apiKey.trim();
+  return collect({
+    provider:
+      draft.provider === null ? { key: 'settings.assistantModel.errors.provider' } : undefined,
+    model: !model
+      ? required
+      : /\s/.test(model)
+        ? { key: 'settings.assistantModel.errors.modelSpaces' }
+        : model.length > 200
+          ? tooLong(200)
+          : undefined,
+    apiKey: !key
+      ? keyIsRequired(draft, settings)
+        ? { key: 'errors.codes.assistant_api_key_required' }
+        : undefined
+      : /\s/.test(key)
+        ? { key: 'settings.assistantModel.errors.keySpaces' }
+        : key.length < 8
+          ? { key: 'forms.errors.tooShort', params: { min: 8 } }
+          : key.length > 500
+            ? tooLong(500)
+            : undefined,
+  });
 }
