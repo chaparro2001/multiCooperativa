@@ -1,13 +1,13 @@
 import type { CapitalMovement, MemberRecord } from '@multicooperativa/contracts';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { useBrandColor } from '@/branding/brand';
 import { useEuros } from '@/features/invoicing/components';
 import { Fact } from '@/features/invoicing/components';
 import { formatDay } from '@/i18n/format';
 import { Badge } from '@/ui/badge';
-import { colors } from '@/ui/theme';
+import { Card, Text, useTheme } from '@/ui/paper';
+import { colors as fixed } from '@/ui/theme';
 
 import { capitalChange, changeTone } from './capital';
 
@@ -22,27 +22,31 @@ const STATUS_TONE = {
 export function RecordCard({ member }: { member: MemberRecord }) {
   const { t } = useTranslation();
   return (
-    <View style={styles.card} testID="member-record">
-      <View style={styles.titleRow}>
-        <Text style={styles.name}>{member.name}</Text>
-        <Badge
-          label={t(`enums.membershipStatus.${member.status}`)}
-          tone={STATUS_TONE[member.status]}
-        />
-      </View>
-      {member.isPartner && (
-        <Fact label={t('memberArea.fields.partnerNumber')}>
-          {member.partnerNumber ?? t('memberArea.fields.noPartnerNumber')}
-        </Fact>
-      )}
-      <Fact label={t('memberArea.fields.joinedAt')}>{formatDay(member.joinedAt)}</Fact>
-      <Fact label={t('memberArea.fields.profile')}>{member.profileName}</Fact>
-      <Fact label={t('memberArea.fields.email')}>{member.email}</Fact>
-    </View>
+    <Card mode="contained" testID="member-record">
+      <Card.Content style={styles.card}>
+        <View style={styles.titleRow}>
+          <Text variant="titleLarge" style={styles.name}>
+            {member.name}
+          </Text>
+          <Badge
+            label={t(`enums.membershipStatus.${member.status}`)}
+            tone={STATUS_TONE[member.status]}
+          />
+        </View>
+        {member.isPartner ? (
+          <Fact label={t('memberArea.fields.partnerNumber')}>
+            {member.partnerNumber ?? t('memberArea.fields.noPartnerNumber')}
+          </Fact>
+        ) : null}
+        <Fact label={t('memberArea.fields.joinedAt')}>{formatDay(member.joinedAt)}</Fact>
+        <Fact label={t('memberArea.fields.profile')}>{member.profileName}</Fact>
+        <Fact label={t('memberArea.fields.email')}>{member.email}</Fact>
+      </Card.Content>
+    </Card>
   );
 }
 
-/** The total share capital, large. */
+/** The total share capital, large; keeps the brand colour (theme primary, ADR-018). */
 export function CapitalTotal({
   label,
   amount,
@@ -53,14 +57,18 @@ export function CapitalTotal({
   testID?: string;
 }) {
   const euros = useEuros();
-  const brand = useBrandColor();
+  const { colors } = useTheme();
   return (
-    <View style={[styles.total, { backgroundColor: brand }]}>
-      <Text style={styles.totalLabel}>{label}</Text>
-      <Text style={styles.totalAmount} testID={testID}>
-        {euros(amount)}
-      </Text>
-    </View>
+    <Card mode="contained" style={{ backgroundColor: colors.primary }}>
+      <Card.Content style={styles.total}>
+        <Text variant="bodyMedium" style={[styles.totalLabel, { color: colors.onPrimary }]}>
+          {label}
+        </Text>
+        <Text variant="displaySmall" style={{ color: colors.onPrimary }} testID={testID}>
+          {euros(amount)}
+        </Text>
+      </Card.Content>
+    </Card>
   );
 }
 
@@ -68,10 +76,14 @@ export function CapitalTotal({
 export function MovementList({ movements }: { movements: CapitalMovement[] }) {
   const { t } = useTranslation();
   const euros = useEuros();
-  const brand = useBrandColor();
+  const { colors } = useTheme();
   if (movements.length === 0) {
     return (
-      <Text style={styles.empty} testID="no-movements">
+      <Text
+        variant="bodyLarge"
+        style={[styles.empty, { color: colors.onSurfaceVariant }]}
+        testID="no-movements"
+      >
         {t('memberArea.movements.empty')}
       </Text>
     );
@@ -82,55 +94,45 @@ export function MovementList({ movements }: { movements: CapitalMovement[] }) {
         const change = capitalChange(movement.type, movement.amount);
         const tone = changeTone(change);
         return (
-          <View key={movement.id} style={styles.row} testID={`movement-${movement.id}`}>
-            <View style={styles.rowText}>
-              <Text style={styles.concept}>{movement.concept}</Text>
-              <Text style={styles.detail}>
-                {formatDay(movement.date)} · {t(`enums.capitalMovementType.${movement.type}`)}
+          <Card key={movement.id} mode="contained" testID={`movement-${movement.id}`}>
+            <Card.Content style={styles.row}>
+              <View style={styles.rowText}>
+                <Text variant="titleMedium">{movement.concept}</Text>
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                  {formatDay(movement.date)} · {t(`enums.capitalMovementType.${movement.type}`)}
+                </Text>
+              </View>
+              <Text
+                variant="titleMedium"
+                style={[
+                  styles.amount,
+                  { color: tone === 'danger' ? fixed.danger : colors.primary },
+                ]}
+                accessibilityLabel={t('memberArea.movements.amountLabel', {
+                  amount: euros(change),
+                })}
+              >
+                {tone === 'info' ? '+' : ''}
+                {euros(change)}
               </Text>
-            </View>
-            <Text
-              style={[styles.amount, { color: brand }, tone === 'danger' && styles.amountOut]}
-              accessibilityLabel={t('memberArea.movements.amountLabel', { amount: euros(change) })}
-            >
-              {tone === 'info' ? '+' : ''}
-              {euros(change)}
-            </Text>
-          </View>
+            </Card.Content>
+          </Card>
         );
       })}
     </View>
   );
 }
 
-export const memberAreaStyles = StyleSheet.create({
-  section: { fontSize: 18, fontWeight: '700', color: colors.text },
-  muted: { fontSize: 15, color: colors.muted },
-  error: { color: colors.danger, fontSize: 14 },
-});
-
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, gap: 10 },
+  card: { gap: 10 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  name: { fontSize: 18, fontWeight: '700', color: colors.text, flexShrink: 1 },
-  total: { backgroundColor: colors.primary, borderRadius: 12, padding: 16, gap: 4 },
-  totalLabel: { fontSize: 14, color: '#fff', opacity: 0.9 },
-  totalAmount: { fontSize: 32, fontWeight: '700', color: '#fff' },
-  empty: { color: colors.muted, fontSize: 15, paddingVertical: 8 },
+  name: { flexShrink: 1 },
+  total: { gap: 4 },
+  totalLabel: { opacity: 0.9 },
+  empty: { paddingVertical: 8 },
   list: { gap: 8 },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 14,
-  },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   rowText: { flex: 1, gap: 2 },
-  concept: { fontSize: 16, fontWeight: '600', color: colors.text },
-  detail: { fontSize: 13, color: colors.muted },
   // Never wraps: "-100,00 €" split over two lines reads as two numbers.
-  amount: { fontSize: 16, fontWeight: '600', color: colors.primary, flexShrink: 0 },
-  amountOut: { color: colors.danger },
+  amount: { flexShrink: 0 },
 });

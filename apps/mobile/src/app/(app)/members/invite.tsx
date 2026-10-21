@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
@@ -15,13 +15,14 @@ import { ProfilePicker } from '@/features/members/profile-picker';
 import { useInviteMember } from '@/features/members/queries';
 import { Button } from '@/ui/button';
 import { FormSummary } from '@/ui/field';
+import { Switch, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
 
 /** US-ACC-08: email, name (used if the email is new on the platform), profile and partner flag. */
 export default function InviteMemberScreen() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const invite = useInviteMember();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -65,15 +66,15 @@ export default function InviteMemberScreen() {
   if (sent) {
     return (
       <Screen testID="invite-sent">
-        <Text style={styles.title}>{t('members.invite.sentTitle')}</Text>
-        <Text style={styles.text}>
+        <Text variant="headlineSmall">{t('members.invite.sentTitle')}</Text>
+        <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
           {t(sent.invitationUrl ? 'members.invite.sentMessage' : 'members.invite.sentNoLink', {
             email: sent.email,
           })}
         </Text>
-        {sent.invitationUrl && (
+        {sent.invitationUrl ? (
           <InvitationLinkCard url={sent.invitationUrl} expiresAt={sent.expiresAt} />
-        )}
+        ) : null}
         <Button title={t('members.invite.backToList')} onPress={() => router.back()} />
       </Screen>
     );
@@ -100,10 +101,12 @@ export default function InviteMemberScreen() {
         maxLength={200}
         testID="invite-name"
       />
-      <Text style={styles.hint}>{t('members.invite.nameHint')}</Text>
+      <Text variant="bodySmall" style={[styles.hint, { color: colors.onSurfaceVariant }]}>
+        {t('members.invite.nameHint')}
+      </Text>
       <ProfilePicker name="profileId" value={profileId} onChange={setProfileId} />
       <View style={styles.row}>
-        <Text style={styles.label}>{t('members.fields.isPartner')}</Text>
+        <Text variant="bodyLarge">{t('members.fields.isPartner')}</Text>
         <Switch
           value={isPartner}
           onValueChange={setIsPartner}
@@ -111,7 +114,7 @@ export default function InviteMemberScreen() {
           testID="invite-partner"
         />
       </View>
-      {isPartner && (
+      {isPartner ? (
         <TextField
           label={t('members.fields.partnerNumber')}
           name="partnerNumber"
@@ -120,8 +123,8 @@ export default function InviteMemberScreen() {
           maxLength={50}
           testID="invite-partner-number"
         />
-      )}
-      {error && <ErrorText>{error}</ErrorText>}
+      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('members.invite.submit')}
@@ -134,9 +137,6 @@ export default function InviteMemberScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700', color: colors.text },
-  text: { fontSize: 16, color: colors.muted },
-  hint: { fontSize: 13, color: colors.muted, marginTop: -8 },
-  label: { fontSize: 16, color: colors.text },
+  hint: { marginTop: -8 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

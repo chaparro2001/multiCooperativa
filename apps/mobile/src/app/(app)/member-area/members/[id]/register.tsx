@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { routeServerError } from '@/forms/server-errors';
@@ -15,14 +15,13 @@ import {
 } from '@/features/member-area/capital';
 import { useMemberMovements, useRegisterMovement } from '@/features/member-area/queries';
 import { useEuros } from '@/features/invoicing/components';
-import { Chip } from '@/features/invoicing/segmented';
 import { today } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
 import { FormSummary } from '@/ui/field';
+import { Chip, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
 
 const parseDay = (day: string) => new Date(`${day}T12:00:00`);
 
@@ -30,6 +29,7 @@ const parseDay = (day: string) => new Date(`${day}T12:00:00`);
 export default function RegisterMovementScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors } = useTheme();
   const euros = useEuros();
   const statement = useMemberMovements(id);
   const register = useRegisterMovement(id);
@@ -52,6 +52,7 @@ export default function RegisterMovementScreen() {
     );
   }
   const { member, capital } = statement.data;
+  const hint = { color: colors.onSurfaceVariant };
 
   async function submit() {
     setError(null);
@@ -76,20 +77,22 @@ export default function RegisterMovementScreen() {
 
   return (
     <Screen testID="screen-register-movement" form={form}>
-      <Text style={styles.who}>{member.name}</Text>
-      <Text style={styles.hint}>
+      <Text variant="titleLarge">{member.name}</Text>
+      <Text variant="bodyMedium" style={hint}>
         {t('memberArea.register.currentCapital', { amount: euros(capital) })}
       </Text>
-      <Text style={styles.label}>{t('memberArea.register.type')}</Text>
+      <Text variant="labelLarge">{t('memberArea.register.type')}</Text>
       <View style={styles.chips}>
         {MOVEMENT_TYPES.map((value) => (
           <Chip
             key={value}
-            label={t(`enums.capitalMovementType.${value}`)}
+            mode="outlined"
             selected={type === value}
             onPress={() => setType(value)}
             testID={`type-${value}`}
-          />
+          >
+            {t(`enums.capitalMovementType.${value}`)}
+          </Chip>
         ))}
       </View>
       <DateField
@@ -117,11 +120,17 @@ export default function RegisterMovementScreen() {
         placeholder="0,00"
         testID="movement-amount"
       />
-      {type === 'refund' && <Text style={styles.hint}>{t('memberArea.register.refundHint')}</Text>}
-      {type === 'correction' && (
-        <Text style={styles.hint}>{t('memberArea.register.correctionHint')}</Text>
-      )}
-      {error && <ErrorText>{error}</ErrorText>}
+      {type === 'refund' ? (
+        <Text variant="bodyMedium" style={hint}>
+          {t('memberArea.register.refundHint')}
+        </Text>
+      ) : null}
+      {type === 'correction' ? (
+        <Text variant="bodyMedium" style={hint}>
+          {t('memberArea.register.correctionHint')}
+        </Text>
+      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('memberArea.register.submit')}
@@ -134,8 +143,5 @@ export default function RegisterMovementScreen() {
 }
 
 const styles = StyleSheet.create({
-  who: { fontSize: 20, fontWeight: '700', color: colors.text },
-  hint: { fontSize: 14, color: colors.muted },
-  label: { fontSize: 14, fontWeight: '500', color: colors.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });
