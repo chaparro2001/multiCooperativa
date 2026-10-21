@@ -1,19 +1,32 @@
 import { type Href, Link, router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { visibleModules } from '@/navigation/modules';
-import { Loading, Screen } from '@/ui/screen';
+import { Loading, Screen, SCREEN_MAX_WIDTH, SCREEN_PADDING } from '@/ui/screen';
 import { colors } from '@/ui/theme';
 
-/** Cooperative home: one cell per module of the profile, two per row (US-ACC-06). */
+const GAP = 12;
+
+/** Two columns on phones; three or four on wider windows (tablets, web build). */
+function columnsFor(width: number): number {
+  if (width >= 840) return 4;
+  if (width >= 600) return 3;
+  return 2;
+}
+
+/** Cooperative home: one cell per module of the profile (US-ACC-06). */
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { cooperative, permissions } = useActiveCooperative();
+  const { width } = useWindowDimensions();
 
   if (!permissions) return <Loading />;
   const modules = visibleModules(permissions.permissions);
+  const columns = columnsFor(width);
+  const contentWidth = Math.min(width, SCREEN_MAX_WIDTH) - 2 * SCREEN_PADDING;
+  const cellWidth = (contentWidth - GAP * (columns - 1)) / columns;
 
   return (
     <Screen testID="home-screen">
@@ -37,7 +50,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel={t(`enums.module.${entry.module}`)}
             onPress={() => router.push(entry.route as Href)}
-            style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.cell, { width: cellWidth }, pressed && styles.pressed]}
             testID={`module-${entry.module}`}
           >
             <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
@@ -54,12 +67,11 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerLink: { color: colors.primary, fontSize: 16 },
+  // The web header puts headerRight flush against the window edge.
+  headerLink: { color: colors.primary, fontSize: 16, marginRight: Platform.OS === 'web' ? 16 : 0 },
   profile: { fontSize: 15, color: colors.muted },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   cell: {
-    // Two per row; the gap between them comes from space-between.
-    width: '48.5%',
     aspectRatio: 1,
     borderRadius: 16,
     backgroundColor: colors.surface,

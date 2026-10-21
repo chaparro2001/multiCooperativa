@@ -11,6 +11,9 @@ import {
 
 import { colors } from './theme';
 
+export const SCREEN_PADDING = 24;
+export const SCREEN_MAX_WIDTH = 960;
+
 /** Scrollable screen body that keeps inputs above the keyboard. */
 export function Screen({ children, testID }: { children: ReactNode; testID?: string }) {
   return (
@@ -47,7 +50,14 @@ export function ErrorText({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 24, gap: 16 },
+  // Capped and centred so wide browser windows (web build) keep a readable column; no effect on phones.
+  content: {
+    padding: SCREEN_PADDING,
+    gap: 16,
+    width: '100%',
+    maxWidth: SCREEN_MAX_WIDTH,
+    alignSelf: 'center',
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   error: { color: colors.danger, fontSize: 14 },
 });
