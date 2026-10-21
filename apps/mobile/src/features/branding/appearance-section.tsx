@@ -2,32 +2,26 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { messageFor } from '@/api/api-error';
 import { messageText } from '@/forms/errors';
 import { routeServerError } from '@/forms/server-errors';
 import { FormScope, useForm } from '@/forms/use-form';
 import { useBrand } from '@/branding/brand';
-import { BrandLogo } from '@/branding/brand-logo';
 import { Button } from '@/ui/button';
-import { confirmAction } from '@/ui/confirm';
 import { FormSummary } from '@/ui/field';
 import { Divider, Text, useTheme } from '@/ui/paper';
 import { ErrorText } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { contrastWithWhite, MIN_CONTRAST, parseHexColor, PRESET_COLORS } from './brand-color';
 import { BRAND_FIELDS, BRAND_SERVER_MAPPING, validateBrandColor } from './form-validation';
-import { pickLogo } from './logo';
-import { useRemoveLogo, useSetBrandColor, useUploadLogo } from './queries';
+import { useSetBrandColor } from './queries';
 
-/** US-ACC-14: the administrator picks the cooperative's primary colour and logo. */
+/** US-ACC-14: the administrator picks the cooperative's primary colour. */
 export function AppearanceSection() {
   const { t, i18n } = useTranslation();
   const brand = useBrand();
   const { colors } = useTheme();
   const detailColor = { color: colors.onSurfaceVariant };
   const setColor = useSetBrandColor();
-  const uploadLogo = useUploadLogo();
-  const removeLogo = useRemoveLogo();
 
   const [text, setText] = useState(brand.primaryColor);
   const [colorSaved, setColorSaved] = useState(false);
@@ -65,23 +59,6 @@ export function AppearanceSection() {
         form.setServerErrors(routed.fields);
         setColorBanner(routed.banner);
       },
-    });
-  }
-
-  async function chooseLogo() {
-    uploadLogo.reset();
-    const result = await pickLogo();
-    if (result.kind === 'ok') uploadLogo.mutate(result.logo);
-  }
-
-  function askToRemoveLogo() {
-    confirmAction({
-      title: t('settings.appearance.logo.removeTitle'),
-      message: t('settings.appearance.logo.removeMessage'),
-      confirmLabel: t('settings.appearance.logo.remove'),
-      cancelLabel: t('common.actions.cancel'),
-      destructive: true,
-      onConfirm: () => removeLogo.mutate(),
     });
   }
 
@@ -184,48 +161,6 @@ export function AppearanceSection() {
             testID="brand-color-reset"
           />
         ) : null}
-
-        <Text variant="titleMedium" style={styles.logoTitle}>
-          {t('settings.appearance.logo.title')}
-        </Text>
-        <Text variant="bodyMedium" style={detailColor}>
-          {t('settings.appearance.logo.description')}
-        </Text>
-        {brand.logoUrl ? (
-          <View
-            style={[
-              styles.logoBox,
-              { borderColor: colors.outlineVariant, backgroundColor: colors.surface },
-            ]}
-          >
-            <BrandLogo size={96} testID="brand-logo-preview" />
-          </View>
-        ) : (
-          <Text variant="bodyMedium" style={detailColor} testID="brand-logo-none">
-            {t('settings.appearance.logo.none')}
-          </Text>
-        )}
-        {(uploadLogo.isError || removeLogo.isError) && (
-          <ErrorText>{messageFor(uploadLogo.error ?? removeLogo.error)}</ErrorText>
-        )}
-        <Button
-          title={t(
-            brand.logoUrl ? 'settings.appearance.logo.change' : 'settings.appearance.logo.choose',
-          )}
-          variant="secondary"
-          loading={uploadLogo.isPending}
-          onPress={chooseLogo}
-          testID="brand-logo-choose"
-        />
-        {brand.logoUrl ? (
-          <Button
-            title={t('settings.appearance.logo.remove')}
-            variant="secondary"
-            loading={removeLogo.isPending}
-            onPress={askToRemoveLogo}
-            testID="brand-logo-remove"
-          />
-        ) : null}
       </View>
       <Divider />
     </FormScope>
@@ -235,7 +170,6 @@ export function AppearanceSection() {
 const styles = StyleSheet.create({
   section: { gap: 10 },
   label: { textTransform: 'uppercase' },
-  logoTitle: { marginTop: 8 },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   swatchRing: {
     width: 44,
@@ -249,10 +183,4 @@ const styles = StyleSheet.create({
   swatch: { width: 32, height: 32, borderRadius: 16 },
   preview: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   previewButton: { flexGrow: 1, flexBasis: 220 },
-  logoBox: {
-    alignSelf: 'flex-start',
-    padding: 8,
-    borderWidth: 1,
-    borderRadius: 10,
-  },
 });

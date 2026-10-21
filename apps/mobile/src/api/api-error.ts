@@ -61,10 +61,6 @@ function detailedMessage(error: ApiError): string | null {
       const key = `errors.rejections.${error.code}.${String(reason)}`;
       return i18n.exists(key) ? lookup(key) : null;
     }
-    case 'logo_rejected': {
-      const key = `errors.rejections.logo_rejected.${String(reason)}`;
-      return i18n.exists(key) ? lookup(key) : null;
-    }
     case 'insufficient_contrast': {
       const ratio = Number(error.details.ratio);
       const minimum = Number(error.details.minimum);
