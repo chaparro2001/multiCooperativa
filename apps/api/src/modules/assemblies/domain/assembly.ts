@@ -2,6 +2,7 @@ import {
   InsufficientNoticeError,
   InvalidAssemblyError,
   InvalidAssemblyTransitionError,
+  VotingAlreadyOpenedError,
 } from './errors';
 import type { Majority } from './voting-result';
 
@@ -12,6 +13,7 @@ export type AssemblyStatus = 'draft' | 'convened' | 'held' | 'cancelled';
 export const PLACE_MAX_LENGTH = 200;
 export const POINT_TITLE_MAX_LENGTH = 200;
 export const POINT_DESCRIPTION_MAX_LENGTH = 5000;
+export const REASON_MAX_LENGTH = 500;
 export const DEFAULT_MIN_NOTICE_DAYS = 15;
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -84,7 +86,9 @@ function validPoints(points: PointInput[]): PointState[] {
   });
 }
 
-function validated(input: AssemblyInput): Omit<AssemblyState, 'status'> {
+type Calls = Pick<AssemblyInput, 'firstCallAt' | 'secondCallAt' | 'place'>;
+
+function validCalls(input: Calls): Calls {
   const place = input.place.trim();
   if (!place) throw new InvalidAssemblyError('The place is missing.', 'place');
   if (place.length > PLACE_MAX_LENGTH)
@@ -95,13 +99,11 @@ function validated(input: AssemblyInput): Omit<AssemblyState, 'status'> {
   if (input.secondCallAt && input.secondCallAt.getTime() <= input.firstCallAt.getTime()) {
     throw new InvalidAssemblyError('The second call must be after the first.', 'secondCallAt');
   }
-  return {
-    type: input.type,
-    firstCallAt: input.firstCallAt,
-    secondCallAt: input.secondCallAt,
-    place,
-    points: validPoints(input.points),
-  };
+  return { firstCallAt: input.firstCallAt, secondCallAt: input.secondCallAt, place };
+}
+
+function validated(input: AssemblyInput): Omit<AssemblyState, 'status'> {
+  return { type: input.type, ...validCalls(input), points: validPoints(input.points) };
 }
 
 export function createDraft(input: AssemblyInput): AssemblyState {
@@ -128,6 +130,59 @@ export function convene<T extends AssemblyState>(assembly: T, now: Date, minNoti
     throw new InsufficientNoticeError(minNoticeDays);
   }
   return { ...assembly, status: 'convened' };
+}
+
+/** What an assembly looked like before its last date change (US-ASM-09). */
+export interface RescheduledFrom {
+  firstCallAt: Date;
+  secondCallAt: Date | null;
+  place: string;
+  at: Date;
+  reason: string | null;
+}
+
+export interface RescheduleInput {
+  firstCallAt: Date;
+  secondCallAt: Date | null;
+  place: string;
+  reason: string | null;
+}
+
+/**
+ * US-ASM-09: moves a convened assembly (BR-ASM-12). Refused once any voting was
+ * opened, open or closed, because its census and votes must not change. The new
+ * date keeps the minimum notice counted from now (BR-ASM-09).
+ */
+export function reschedule<T extends AssemblyState>(
+  assembly: T,
+  input: RescheduleInput,
+  now: Date,
+  minNoticeDays: number,
+  openedVotings: number,
+): T & { rescheduledFrom: RescheduledFrom } {
+  if (assembly.status !== 'convened') {
+    throw new InvalidAssemblyTransitionError('Only a convened assembly can be rescheduled.');
+  }
+  if (openedVotings > 0) throw new VotingAlreadyOpenedError();
+  const calls = validCalls(input);
+  const reason = input.reason?.trim() || null;
+  if (reason && reason.length > REASON_MAX_LENGTH) {
+    throw new InvalidAssemblyError('The reason is too long.', 'reason');
+  }
+  if (calls.firstCallAt.getTime() - now.getTime() < minNoticeDays * DAY_IN_MS) {
+    throw new InsufficientNoticeError(minNoticeDays, 'firstCallAt');
+  }
+  return {
+    ...assembly,
+    ...calls,
+    rescheduledFrom: {
+      firstCallAt: assembly.firstCallAt,
+      secondCallAt: assembly.secondCallAt,
+      place: assembly.place,
+      at: now,
+      reason,
+    },
+  };
 }
 
 export function cancel<T extends AssemblyState>(assembly: T): T {

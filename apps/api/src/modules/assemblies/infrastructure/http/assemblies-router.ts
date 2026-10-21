@@ -3,6 +3,7 @@ import {
   assemblyInputSchema,
   type AssemblySummary,
   castVoteRequestSchema,
+  rescheduleAssemblyRequestSchema,
   type ListAssembliesResponse,
   type PointAttachment,
   type VotingView,
@@ -84,6 +85,13 @@ export function createAssembliesRouter(
       firstCallAt: detail.firstCallAt.toISOString(),
       secondCallAt: iso(detail.secondCallAt),
       place: detail.place,
+      rescheduledFrom: detail.rescheduledFrom && {
+        firstCallAt: detail.rescheduledFrom.firstCallAt.toISOString(),
+        secondCallAt: iso(detail.rescheduledFrom.secondCallAt),
+        place: detail.rescheduledFrom.place,
+        at: detail.rescheduledFrom.at.toISOString(),
+        reason: detail.rescheduledFrom.reason,
+      },
       points: detail.points.map((point) => ({
         id: point.id,
         position: point.position,
@@ -124,6 +132,24 @@ export function createAssembliesRouter(
   transition('convene', useCases.conveneAssembly);
   transition('cancel', useCases.cancelAssembly);
   transition('close', useCases.closeAssembly);
+
+  // US-ASM-09: move a convened assembly; announces it unless `notifyMembers` is false.
+  router.post(`${base}/:assemblyId/reschedule`, ...manage, async (req, res) => {
+    const body = parseBody(rescheduleAssemblyRequestSchema, req.body);
+    const updated = await useCases.rescheduleAssembly(
+      deps,
+      getCooperativeContext(res),
+      assemblyId(req.params),
+      {
+        firstCallAt: new Date(body.firstCallAt),
+        secondCallAt: body.secondCallAt ? new Date(body.secondCallAt) : null,
+        place: body.place,
+        reason: body.reason,
+        notifyMembers: body.notifyMembers,
+      },
+    );
+    res.json(toSummary(updated));
+  });
 
   // US-ASM-02: documentation of an item, PDF in the `file` field.
   router.post(`${points}/documents`, ...manage, upload, async (req, res) => {

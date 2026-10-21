@@ -21,3 +21,14 @@ export function translate(
     name in params ? String(params[name]) : placeholder,
   );
 }
+
+const INTL_LOCALE: Record<Locale, string> = { es: 'es-ES', en: 'en-GB' };
+
+/** Server-written dates for the members, in the cooperatives' time zone (Spain). */
+export function formatDateTime(locale: Locale = DEFAULT_LOCALE, date: Date): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    dateStyle: 'full',
+    timeStyle: 'short',
+    timeZone: 'Europe/Madrid',
+  }).format(date);
+}

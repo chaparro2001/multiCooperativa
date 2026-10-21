@@ -20,6 +20,7 @@ export type {
 export type {
   AssemblyConvened,
   AssemblyEvent,
+  AssemblyRescheduled,
   VotingClosed,
   VotingOpened,
 } from './application/events';

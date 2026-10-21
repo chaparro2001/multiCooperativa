@@ -12,6 +12,8 @@ import {
   editDraft,
   isVisible,
   orderForListing,
+  reschedule,
+  type RescheduleInput,
 } from '../domain/assembly';
 import {
   InvalidAssemblyError,
@@ -230,6 +232,52 @@ export async function conveneAssembly(
     },
   });
   return convened;
+}
+
+export interface RescheduleRequest extends RescheduleInput {
+  /** Publish an announcement for the members (default true at the API). */
+  notifyMembers: boolean;
+}
+
+/**
+ * US-ASM-09: moves a convened assembly with no voting opened, keeping the
+ * minimum notice from now. Emits `AssemblyRescheduled` after saving.
+ */
+export async function rescheduleAssembly(
+  deps: AssemblyDeps,
+  context: CooperativeContext,
+  id: string,
+  { notifyMembers, ...input }: RescheduleRequest,
+): Promise<AssemblyRecord> {
+  requireManage(context);
+  const now = deps.now();
+  const { minNoticeDays } = await deps.settings.get(context.cooperativeId);
+  const moved = await updateOrFail(deps, context, id, (current, _open, opened) => {
+    return reschedule(current, input, now, minNoticeDays, opened);
+  });
+  // Stored by the update above: what the assembly was before.
+  const from = moved.rescheduledFrom!;
+  await deps.events.publish({
+    type: 'AssemblyRescheduled',
+    occurredAt: now,
+    payload: {
+      cooperativeId: context.cooperativeId,
+      assemblyId: moved.id,
+      assemblyType: moved.type,
+      previous: {
+        firstCallAt: from.firstCallAt.toISOString(),
+        secondCallAt: from.secondCallAt?.toISOString() ?? null,
+        place: from.place,
+      },
+      firstCallAt: moved.firstCallAt.toISOString(),
+      secondCallAt: moved.secondCallAt?.toISOString() ?? null,
+      place: moved.place,
+      reason: from.reason,
+      notifyMembers,
+      rescheduledByMembershipId: context.membershipId,
+    },
+  });
+  return moved;
 }
 
 export async function cancelAssembly(

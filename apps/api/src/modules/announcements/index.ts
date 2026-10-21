@@ -1,8 +1,10 @@
 import type { RequestHandler } from 'express';
 
-import type { EventPublisher } from '../../shared/events';
+import type { EventHandler, EventPublisher, Unsubscribe } from '../../shared/events';
 import type { FileStorage } from '../../shared/files/file-storage';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
+import type { AssemblyRescheduled } from '../assemblies';
+import { announceAssemblyRescheduled } from './application/assembly-notices';
 import { createAnnouncementReads } from './application/assistant-reads';
 import type { AnnouncementEvent } from './application/events';
 import type { MemberDirectory } from './application/ports/member-directory';
@@ -18,6 +20,8 @@ export function createAnnouncementsModule(deps: {
   prisma: PrismaClient;
   files: FileStorage;
   events: EventPublisher<AnnouncementEvent>;
+  /** Listens to the assemblies' events (US-ASM-09). */
+  onAssemblyRescheduled(handler: EventHandler<AssemblyRescheduled>): Unsubscribe;
   /** From the access module's public interface. */
   members: MemberDirectory;
   requireCooperative: RequestHandler;
@@ -30,6 +34,9 @@ export function createAnnouncementsModule(deps: {
     events: deps.events,
     now: deps.now ?? (() => new Date()),
   };
+  deps.onAssemblyRescheduled((event) =>
+    announceAssemblyRescheduled(useCaseDeps, event.payload, event.occurredAt),
+  );
   return {
     router: createAnnouncementsRouter(useCaseDeps, deps.requireCooperative),
     errorHandler: announcementErrorHandler,
