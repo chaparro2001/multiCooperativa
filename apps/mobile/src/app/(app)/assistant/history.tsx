@@ -1,6 +1,6 @@
 import type { AssistantConversation } from '@multicooperativa/contracts';
 import { router } from 'expo-router';
-import { memo, useCallback, useState } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
@@ -106,38 +106,42 @@ const ConversationRow = memo(function ConversationRow({
   deleteLabel: string;
 }) {
   const { colors } = useTheme();
-  const right = useCallback(
-    () => (
+  return (
+    <View style={styles.row}>
+      <Card
+        mode="contained"
+        accessibilityRole="button"
+        accessibilityLabel={item.title ?? ''}
+        onPress={() => onOpen(item.id)}
+        style={[styles.rowCard, { backgroundColor: colors.surfaceVariant }]}
+        testID={`conversation-${item.title}`}
+      >
+        <Card.Title
+          title={item.title}
+          titleNumberOfLines={2}
+          subtitle={formatDateTime(item.updatedAt)}
+          // Leaves room for the delete button, which is a sibling of the card (no nested buttons).
+          style={styles.rowTitle}
+        />
+      </Card>
+      {/* Sibling of the pressable card: a button inside another button is invalid on web. */}
       <IconButton
         icon="delete-outline"
         iconColor={colors.error}
         accessibilityLabel={deleteLabel}
         onPress={() => onDelete(item)}
+        style={styles.delete}
         testID={`delete-${item.title}`}
       />
-    ),
-    [colors.error, deleteLabel, item, onDelete],
-  );
-  return (
-    <Card
-      mode="contained"
-      accessibilityRole="button"
-      accessibilityLabel={item.title ?? ''}
-      onPress={() => onOpen(item.id)}
-      style={{ backgroundColor: colors.surfaceVariant }}
-      testID={`conversation-${item.title}`}
-    >
-      <Card.Title
-        title={item.title}
-        titleNumberOfLines={2}
-        subtitle={formatDateTime(item.updatedAt)}
-        right={right}
-      />
-    </Card>
+    </View>
   );
 });
 
 const styles = StyleSheet.create({
+  row: { justifyContent: 'center' },
+  rowCard: { width: '100%' },
+  rowTitle: { paddingRight: 48, paddingVertical: 8 },
+  delete: { position: 'absolute', right: 4 },
   screen: { flex: 1 },
   top: { padding: 16, gap: 8, width: '100%', maxWidth: 720, alignSelf: 'center' },
   list: { padding: 16, paddingTop: 0, gap: 10, width: '100%', maxWidth: 720, alignSelf: 'center' },
