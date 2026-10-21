@@ -330,7 +330,11 @@ function PartyPicker({
       ) : null}
       {parties.data && parties.data.items.length === 0 && (
         <TouchableRipple
-          onPress={() => router.push('/invoices/third-parties/editor')}
+          onPress={() =>
+            router.push(
+              `/invoices/third-parties/editor?type=${draft.operation === 'purchase' ? 'supplier' : 'customer'}`,
+            )
+          }
           accessibilityRole="button"
         >
           <Text variant="bodyMedium" style={{ color: theme.primary }}>
