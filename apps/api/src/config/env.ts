@@ -61,6 +61,12 @@ const envSchema = z
           .filter(Boolean),
       )
       .pipe(z.array(z.string().regex(/^[\w.-]+$/, 'must be a model id such as gemini-3.6-flash'))),
+    /** Who answers the assistant's chat: Gemini (ADR-009) or a local model in Ollama (ADR-013). Extraction and discrepancy explanations are always Gemini. */
+    ASSISTANT_LLM_PROVIDER: z.enum(['gemini', 'ollama']).default('gemini'),
+    /** Ollama chat model with tool support. Only read with ASSISTANT_LLM_PROVIDER=ollama. */
+    ASSISTANT_OLLAMA_MODEL: z.string().min(1).default('qwen3:8b'),
+    /** Time limit of one Ollama chat call, sized for a CPU-only host. */
+    ASSISTANT_OLLAMA_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(90_000),
     /** BR-AI-08: messages per user and hour. */
     ASSISTANT_MESSAGE_LIMIT_PER_HOUR: z.coerce.number().int().min(1).default(30),
     /** Comma-separated origins allowed by CORS (the hosted web app). Empty denies every browser origin. */
@@ -83,6 +89,17 @@ const envSchema = z
         code: 'custom',
         path: ['GEMINI_API_KEY'],
         message: 'required with EMBEDDINGS_PROVIDER=gemini',
+      });
+    }
+    if (
+      env.NODE_ENV === 'production' &&
+      env.ASSISTANT_LLM_PROVIDER === 'ollama' &&
+      !env.OLLAMA_URL
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['OLLAMA_URL'],
+        message: 'required with ASSISTANT_LLM_PROVIDER=ollama',
       });
     }
     if (env.NODE_ENV !== 'production') return;

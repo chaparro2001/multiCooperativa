@@ -1,5 +1,5 @@
 import type { CooperativeContext } from '../application/data-sources';
-import { createConversation, sendMessage } from '../application/assistant';
+import { createConversation, sendMessage, type RequestMetrics } from '../application/assistant';
 import type { LanguageModel } from '../application/ports/language-model';
 import { InMemoryConversationStore } from '../application/testing/in-memory-conversation-store';
 import { createToolExecutors } from '../application/tool-executors';
@@ -45,6 +45,10 @@ export interface EvalResult {
   passed: boolean;
   failures: string[];
   answer: string;
+  durationMs: number;
+  modelCalls?: number;
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 /** What a case demands of an answer that was produced (or why none was). */
@@ -99,10 +103,15 @@ export async function runEvaluation(options: {
     today: () => '2026-10-20',
     // Each case has its own conversation; the limit must not get in the way of 20 questions.
     messageLimitPerHour: 1000,
+    onMetrics: (metrics: RequestMetrics) => (captured.metrics = metrics),
   };
+  const captured: { metrics?: RequestMetrics } = {};
+  const lastMetrics = () => captured.metrics;
   const results: EvalResult[] = [];
   for (const evalCase of options.cases ?? EVALUATION_CASES) {
     const context = contextFor(evalCase.profile);
+    const started = Date.now();
+    captured.metrics = undefined;
     try {
       const conversation = await createConversation(deps, context);
       const { answer } = await sendMessage(deps, context, conversation.id, evalCase.question);
@@ -117,6 +126,10 @@ export async function runEvaluation(options: {
         passed: failures.length === 0,
         failures,
         answer: answer.content,
+        durationMs: Date.now() - started,
+        modelCalls: lastMetrics()?.modelCalls,
+        inputTokens: lastMetrics()?.inputTokens,
+        outputTokens: lastMetrics()?.outputTokens,
       });
     } catch (error) {
       results.push({
@@ -125,6 +138,7 @@ export async function runEvaluation(options: {
         passed: false,
         failures: [`error: ${error instanceof Error ? error.message : String(error)}`],
         answer: '',
+        durationMs: Date.now() - started,
       });
     }
     if (options.pauseMs) await new Promise((resolve) => setTimeout(resolve, options.pauseMs));

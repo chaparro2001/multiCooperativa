@@ -149,10 +149,15 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
   {
     name: 'voting_result',
     description:
-      'Results of the closed votings of an assembly (or of the latest assemblies if none is given).',
+      'Results of the closed votings of an assembly. For "the last vote" or "the result of the voting" call it with no arguments: it then returns the latest assemblies. Pass an assembly id only if you already have one.',
     inputSchema: {
       type: 'object',
-      properties: { assembly_id: { type: 'string', description: 'Assembly id, if known.' } },
+      properties: {
+        assembly_id: {
+          type: 'string',
+          description: 'Optional. Leave it out unless you already have an id.',
+        },
+      },
       additionalProperties: false,
     },
     requires: { module: 'assemblies', level: 'read' },

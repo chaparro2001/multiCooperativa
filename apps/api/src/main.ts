@@ -1,7 +1,7 @@
 import { createApi } from './api';
 import { loadEnv } from './config/env';
 import { ConsoleInvitationSender, UnavailableInvitationSender } from './modules/access';
-import { createGeminiLanguageModel } from './modules/assistant';
+import { createGeminiLanguageModel, createOllamaLanguageModel } from './modules/assistant';
 import { GeminiEmbedder, OllamaEmbedder } from './modules/documents';
 import {
   GeminiDiscrepancyExplainer,
@@ -35,14 +35,22 @@ const { app, indexing, runDueDates } = createApi({
     gemini && new GeminiDocumentExtractor(gemini, env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODELS),
   discrepancyExplainer:
     gemini && new GeminiDiscrepancyExplainer(gemini, env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODELS),
-  // Without a key the assistant answers 503 and the rest of the app keeps working (ADR-009).
-  languageModel: env.GEMINI_API_KEY
-    ? createGeminiLanguageModel({
-        apiKey: env.GEMINI_API_KEY,
-        model: env.GEMINI_MODEL,
-        fallbackModels: env.GEMINI_FALLBACK_MODELS,
-      })
-    : null,
+  // The assistant runs on a local Ollama model (ADR-013) or on Gemini (ADR-009). Without the
+  // provider's key the assistant answers 503 and the rest of the app keeps working.
+  languageModel:
+    env.ASSISTANT_LLM_PROVIDER === 'ollama'
+      ? createOllamaLanguageModel({
+          url: env.OLLAMA_URL,
+          model: env.ASSISTANT_OLLAMA_MODEL,
+          timeoutMs: env.ASSISTANT_OLLAMA_TIMEOUT_MS,
+        })
+      : env.GEMINI_API_KEY
+        ? createGeminiLanguageModel({
+            apiKey: env.GEMINI_API_KEY,
+            model: env.GEMINI_MODEL,
+            fallbackModels: env.GEMINI_FALLBACK_MODELS,
+          })
+        : null,
   assistantMessageLimitPerHour: env.ASSISTANT_MESSAGE_LIMIT_PER_HOUR,
   // No email provider yet: in development the link is printed to the console;
   // in production inviting returns 503 until one is configured.

@@ -8,12 +8,17 @@ import { createToolExecutors } from './application/tool-executors';
 import type { LanguageModel } from './application/ports/language-model';
 import { MESSAGE_LIMIT_PER_HOUR } from './domain/usage';
 import { DEFAULT_GEMINI_MODEL, GeminiLanguageModel } from './infrastructure/gemini-language-model';
+import {
+  DEFAULT_OLLAMA_CHAT_MODEL,
+  OllamaLanguageModel,
+} from './infrastructure/ollama-language-model';
 import { assistantErrorHandler } from './infrastructure/http/error-handler';
 import { createAssistantRouter } from './infrastructure/http/assistant-router';
 import { PrismaConversationStore } from './infrastructure/prisma-conversation-store';
 
 export type { LanguageModel } from './application/ports/language-model';
 export { DEFAULT_GEMINI_MODEL } from './infrastructure/gemini-language-model';
+export { DEFAULT_OLLAMA_CHAT_MODEL } from './infrastructure/ollama-language-model';
 export { MESSAGE_LIMIT_PER_HOUR } from './domain/usage';
 
 /** The Gemini adapter (ADR-009). The key never leaves the backend (NFR-AI-03). */
@@ -30,6 +35,19 @@ export function createGeminiLanguageModel(settings: {
   );
 }
 
+/** A local model served by Ollama (ADR-013): no key, no quota, nothing leaves the host. */
+export function createOllamaLanguageModel(settings: {
+  url: string;
+  model?: string;
+  timeoutMs?: number;
+}): LanguageModel {
+  return new OllamaLanguageModel({
+    url: settings.url,
+    model: settings.model ?? DEFAULT_OLLAMA_CHAT_MODEL,
+    timeoutMs: settings.timeoutMs,
+  });
+}
+
 /** NFR-AI-04: one line per request, with no personal content. */
 const logMetrics = (metrics: RequestMetrics) =>
   console.info(JSON.stringify({ event: 'assistant_request', ...metrics }));
@@ -41,7 +59,7 @@ const todayInSpain = (now: Date) =>
 /** Public interface of the assistant module (requirements/07). */
 export function createAssistantModule(deps: {
   prisma: PrismaClient;
-  /** Null when there is no API key: the assistant answers 503 and the rest of the app works (ADR-009). */
+  /** Null when the provider is not configured (no Gemini key): the assistant answers 503 and the rest of the app works (ADR-009). */
   model: LanguageModel | null;
   /** The other modules, through their public interfaces (BR-AI-02). */
   sources: DataSources;

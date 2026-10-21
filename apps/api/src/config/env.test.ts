@@ -29,6 +29,9 @@ describe('loadEnv', () => {
         'gemini-3.5-flash-lite',
         'gemini-3.1-flash-lite',
       ],
+      ASSISTANT_LLM_PROVIDER: 'gemini',
+      ASSISTANT_OLLAMA_MODEL: 'qwen3:8b',
+      ASSISTANT_OLLAMA_TIMEOUT_MS: 90_000,
       ASSISTANT_MESSAGE_LIMIT_PER_HOUR: 30,
       CORS_ORIGINS: ['http://localhost:8081'],
     });
@@ -48,6 +51,28 @@ describe('loadEnv', () => {
       ASSISTANT_MESSAGE_LIMIT_PER_HOUR: 10,
     });
     expect(() => loadEnv({ ...required, ASSISTANT_MESSAGE_LIMIT_PER_HOUR: '0' })).toThrow();
+  });
+
+  it('ADR-013: the assistant provider defaults to Gemini and can be a local Ollama model', () => {
+    expect(loadEnv(required).ASSISTANT_LLM_PROVIDER).toBe('gemini');
+    expect(
+      loadEnv({
+        ...required,
+        ASSISTANT_LLM_PROVIDER: 'ollama',
+        ASSISTANT_OLLAMA_MODEL: 'llama3.2:3b',
+        ASSISTANT_OLLAMA_TIMEOUT_MS: '120000',
+      }),
+    ).toMatchObject({
+      ASSISTANT_LLM_PROVIDER: 'ollama',
+      ASSISTANT_OLLAMA_MODEL: 'llama3.2:3b',
+      ASSISTANT_OLLAMA_TIMEOUT_MS: 120_000,
+    });
+    expect(() => loadEnv({ ...required, ASSISTANT_LLM_PROVIDER: 'openai' })).toThrow(
+      /ASSISTANT_LLM_PROVIDER/,
+    );
+    expect(() => loadEnv({ ...required, ASSISTANT_OLLAMA_TIMEOUT_MS: '10' })).toThrow(
+      /ASSISTANT_OLLAMA_TIMEOUT_MS/,
+    );
   });
 
   it('parses GEMINI_FALLBACK_MODELS as a list; an empty value disables the fallback (ADR-009)', () => {
@@ -135,6 +160,13 @@ describe('loadEnv', () => {
 
     it('production with the default provider still requires OLLAMA_URL', () => {
       expect(() => loadEnv(production)).toThrow(/OLLAMA_URL: required in production/);
+    });
+
+    it('production with the Ollama assistant needs OLLAMA_URL even if embeddings use Gemini', () => {
+      const base = { ...production, EMBEDDINGS_PROVIDER: 'gemini', GEMINI_API_KEY: 'k' };
+      expect(() => loadEnv({ ...base, ASSISTANT_LLM_PROVIDER: 'ollama' })).toThrow(
+        /OLLAMA_URL: required with ASSISTANT_LLM_PROVIDER=ollama/,
+      );
     });
 
     it('rejects an unknown embeddings provider', () => {
