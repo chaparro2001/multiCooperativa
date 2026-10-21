@@ -13,6 +13,9 @@ import {
 /** Texts per request: well inside the free-tier limits, small enough to keep each call short. */
 export const BATCH_SIZE = 16;
 
+/** gemini-embedding-2 takes one text per request: how many requests run at once. */
+export const PARALLEL_REQUESTS = 4;
+
 /** The slice of `GoogleGenAI` this adapter uses; tests inject a fake (no network). */
 export interface GeminiEmbeddingClient {
   models: {
@@ -28,7 +31,8 @@ export interface GeminiEmbeddingClient {
  * Gemini embeddings (ADR-010) for the hosted demo, where Ollama is not available.
  *
  * - `gemini-embedding-2` (default) has no task type: the role goes in a text prefix and
- *   it renormalizes reduced dimensions itself.
+ *   it renormalizes reduced dimensions itself. One text per request: it fuses a list of
+ *   contents into a single embedding.
  * - `gemini-embedding-001` takes `taskType` and does not renormalize.
  *
  * Whatever the model, vectors are asked at 1024 dimensions to fit the `vector(1024)`
@@ -42,16 +46,33 @@ export class GeminiEmbedder implements Embedder {
   ) {}
 
   async embed(texts: string[], kind: EmbeddingKind = 'document'): Promise<number[][]> {
+    const size = this.legacy ? BATCH_SIZE : PARALLEL_REQUESTS;
     const vectors: number[][] = [];
-    for (let start = 0; start < texts.length; start += BATCH_SIZE) {
-      vectors.push(...(await this.batch(texts.slice(start, start + BATCH_SIZE), kind)));
+    for (let start = 0; start < texts.length; start += size) {
+      vectors.push(...(await this.batch(texts.slice(start, start + size), kind)));
     }
     return vectors;
   }
 
+  private get legacy(): boolean {
+    return this.model.includes('embedding-001');
+  }
+
   private async batch(input: string[], kind: EmbeddingKind): Promise<number[][]> {
-    const legacy = this.model.includes('embedding-001');
-    const contents = legacy ? input : input.map((text) => withPrefix(text, kind));
+    if (this.legacy) return this.request(input, input, kind);
+    // gemini-embedding-2 is multimodal: several contents in one request are fused into ONE
+    // embedding, not one per text. Each text goes in its own request, a few in parallel.
+    const vectors = await Promise.all(
+      input.map((text) => this.request([withPrefix(text, kind)], [text], kind)),
+    );
+    return vectors.flat();
+  }
+
+  private async request(
+    contents: string[],
+    input: string[],
+    kind: EmbeddingKind,
+  ): Promise<number[][]> {
     let response: Awaited<ReturnType<GeminiEmbeddingClient['models']['embedContent']>>;
     try {
       // Vectors of different models are not comparable: no fallback model here, only retries.
@@ -63,7 +84,7 @@ export class GeminiEmbedder implements Embedder {
             contents,
             config: {
               outputDimensionality: EMBEDDING_DIMENSIONS,
-              ...(legacy && {
+              ...(this.legacy && {
                 taskType: kind === 'query' ? 'RETRIEVAL_QUERY' : 'RETRIEVAL_DOCUMENT',
               }),
             },

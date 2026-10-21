@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { EMBEDDING_DIMENSIONS, EmbeddingUnavailableError } from '../application/ports/embedder';
-import { BATCH_SIZE, GeminiEmbedder, type GeminiEmbeddingClient } from './gemini-embedder';
+import {
+  BATCH_SIZE,
+  GeminiEmbedder,
+  PARALLEL_REQUESTS,
+  type GeminiEmbeddingClient,
+} from './gemini-embedder';
 
 type Params = Parameters<GeminiEmbeddingClient['models']['embedContent']>[0];
 
@@ -30,7 +35,7 @@ describe('GeminiEmbedder (ADR-010)', () => {
 
     const vectors = await new GeminiEmbedder(client).embed(['uno', 'dos']);
 
-    expect(requests).toHaveLength(1);
+    expect(requests).toHaveLength(2);
     expect(requests[0]?.model).toBe('gemini-embedding-2');
     expect(requests[0]?.config?.outputDimensionality).toBe(EMBEDDING_DIMENSIONS);
     expect(vectors).toHaveLength(2);
@@ -66,11 +71,24 @@ describe('GeminiEmbedder (ADR-010)', () => {
     ]);
   });
 
-  it('groups the texts in batches', async () => {
+  it('gemini-embedding-2 gets one text per request, because it fuses a list into one vector', async () => {
+    const { client, requests } = fakeClient();
+    const texts = Array.from({ length: PARALLEL_REQUESTS + 3 }, (_, i) => `t${i}`);
+
+    const vectors = await new GeminiEmbedder(client).embed(texts);
+
+    expect(requests.map((r) => r.contents.length)).toEqual(texts.map(() => 1));
+    expect(requests.map((r) => r.contents[0])).toEqual(
+      texts.map((t) => `title: none | text: ${t}`),
+    );
+    expect(vectors).toHaveLength(texts.length);
+  });
+
+  it('gemini-embedding-001 groups the texts in batches', async () => {
     const { client, requests } = fakeClient();
     const texts = Array.from({ length: BATCH_SIZE + 3 }, (_, i) => `t${i}`);
 
-    const vectors = await new GeminiEmbedder(client).embed(texts);
+    const vectors = await new GeminiEmbedder(client, 'gemini-embedding-001').embed(texts);
 
     expect(requests.map((r) => r.contents.length)).toEqual([BATCH_SIZE, 3]);
     expect(vectors).toHaveLength(BATCH_SIZE + 3);
