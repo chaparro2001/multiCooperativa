@@ -81,6 +81,6 @@ pnpm test:integration        # *.integration.test.ts tests against the multicoop
 
 Environment variables: copy `apps/api/.env.example` and `apps/mobile/.env.example` to `.env`.
 
-The AI assistant needs `GEMINI_API_KEY` (free key from Google AI Studio, no card; ADR-009) and optionally `GEMINI_MODEL` (default `gemini-3.8-flash`), `GEMINI_FALLBACK_MODELS` (comma-separated, default `gemini-3.6-flash,gemini-3.1-flash-lite`, tried when the main model answers 503/429 after the retries with backoff of `shared/infrastructure/resilient-call.ts`; empty disables it) and `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` (default 30). Without the key the assistant answers 503 and the rest of the app works.
+The AI assistant needs `GEMINI_API_KEY` (free key from Google AI Studio, no card; ADR-009) and optionally `GEMINI_MODEL` (default `gemini-3.8-flash`), `GEMINI_FALLBACK_MODELS` (comma-separated, default `gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite`, tried when the main model answers 503/429 after the retries with backoff of `shared/infrastructure/resilient-call.ts`; empty disables it) and `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` (default 30). Without the key the assistant answers 503 and the rest of the app works.
 
 In `apps/mobile`, dependencies are added with `pnpm exec expo install <package>` so that they match the Expo SDK.

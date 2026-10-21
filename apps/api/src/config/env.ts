@@ -15,7 +15,7 @@ const LOCAL_OLLAMA_URL = 'http://localhost:11434';
 const LOCAL_CORS_ORIGINS = ['http://localhost:8081'];
 
 /** Flash / Flash-Lite generateContent models with a free tier, each with its own quota (ADR-009). */
-const DEFAULT_FALLBACK_MODELS = 'gemini-3.6-flash,gemini-3.1-flash-lite';
+const DEFAULT_FALLBACK_MODELS = 'gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite';
 
 const REQUIRED_IN_PRODUCTION = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'] as const;
 

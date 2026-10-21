@@ -24,7 +24,11 @@ describe('loadEnv', () => {
       OLLAMA_URL: 'http://localhost:11434',
       EMBEDDING_MODEL: 'bge-m3',
       GEMINI_MODEL: 'gemini-3.8-flash',
-      GEMINI_FALLBACK_MODELS: ['gemini-3.6-flash', 'gemini-3.1-flash-lite'],
+      GEMINI_FALLBACK_MODELS: [
+        'gemini-3.6-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+      ],
       ASSISTANT_MESSAGE_LIMIT_PER_HOUR: 30,
       CORS_ORIGINS: ['http://localhost:8081'],
     });
