@@ -178,7 +178,7 @@ El estado de cada tarea está en [docs/03-implementation-plan.md](docs/03-implem
 - **Facturas y albaranes**: terceros (proveedores y clientes), albaranes y facturas de compra y venta con importes en decimal exacto, conciliación con tolerancia, estados, resumen de pagos y cobros, proceso idempotente de vencimientos (cada hora) con tres avisos configurables y desactivables por cooperativa (aviso antes del vencimiento de las facturas, plazo para facturar los albaranes y aviso previo a ese plazo) e insignias de atención en la pantalla de inicio, captura con cámara y revisión, **extracción con IA** (Gemini visión, validada con Zod y confirmada por una persona) y **explicación de discrepancias con IA**.
 - **Área del socio**: mis datos (número de socio, fecha de alta, perfil, contacto), mi capital y mis movimientos, de solo lectura para el socio (US-MEM-01, US-MEM-02); el consejo rector, el gestor y el administrador consultan el capital de todos los socios con el total de la cooperativa (US-MEM-04) y el gestor y el administrador registran aportaciones, reembolsos y correcciones (US-MEM-03). Importes en decimal exacto, movimientos inmutables, capital nunca negativo y doble aislamiento (por cooperativa y, con alcance propio, por socio).
 - **Asistente de IA**: chat con citas y enlaces a los recursos, RAG sobre los documentos, herramientas de solo lectura filtradas por permisos (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`, `my_contributions`), conversaciones con historial (reabrir y eliminar, US-AI-04), límite de uso por hora, conjunto de evaluación de 23 preguntas y, para el administrador de cada cooperativa, la elección del modelo local en Ajustes (US-AI-07, ADR-014).
-- **Apariencia por cooperativa**: el administrador elige en Ajustes el color principal (se rechaza si el texto blanco no alcanza un contraste WCAG AA de 4,5:1) y el logo (PNG o JPEG de hasta 1 MB, verificado por su contenido; el SVG se rechaza); todos los miembros ven la aplicación con ese color y el logo en el inicio (US-ACC-14, ADR-018).
+- **Apariencia por cooperativa**: el administrador elige en Ajustes el color principal (se rechaza si el texto blanco no alcanza un contraste WCAG AA de 4,5:1); todos los miembros ven la aplicación con ese color (US-ACC-14, ADR-018; el logo se eliminó en ADR-021).
 
 ## 6. Limitaciones y trabajo futuro
 
@@ -307,14 +307,15 @@ Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
 - [ADR-015](docs/adr/ADR-015-qwen3-4b-instruct-default-for-the-hosted-demo.md): `qwen3:4b-instruct` como modelo por defecto del asistente en la demo alojada.
 - [ADR-016](docs/adr/ADR-016-invitation-links-delivered-by-the-administrator.md): invitaciones como enlace que entrega el administrador (sin proveedor de correo).
 - [ADR-017](docs/adr/ADR-017-custom-domain-for-the-web-app.md): dominio propio (`cooperativa.chaparro2001.com`) para la app web.
-- [ADR-018](docs/adr/ADR-018-per-cooperative-branding.md): color principal y logo por cooperativa, configurados por su administrador.
+- [ADR-018](docs/adr/ADR-018-per-cooperative-branding.md): color principal por cooperativa (el logo se eliminó en ADR-021), configurado por su administrador.
 - [ADR-019](docs/adr/ADR-019-per-cooperative-hosted-language-model.md): proveedor externo (Groq, Mistral, NVIDIA NIM, OpenRouter) por cooperativa, con la clave de API propia de la cooperativa.
 - [ADR-020](docs/adr/ADR-020-react-native-paper-ui-kit.md): react-native-paper (Material Design 3) como kit de interfaz, con el tema generado desde el color de la cooperativa.
+- [ADR-021](docs/adr/ADR-021-remove-cooperative-logo.md): se elimina el logo por cooperativa (el color principal se mantiene).
 
 ## 11. Calidad
 
-- **Tests unitarios** (`pnpm test`): 1168 tests en 113 ficheros (API 852, app 295, contratos 21), todos en verde a fecha 2026-10-21.
-- **Tests de integración** (`pnpm test:integration`): contra PostgreSQL y almacenamiento S3 reales, incluido el test de aislamiento entre cooperativas. 477 tests en 25 ficheros, todos en verde (2026-10-21).
+- **Tests unitarios** (`pnpm test`): 1148 tests en 112 ficheros (API 832, app 295, contratos 21), todos en verde a fecha 2026-10-22.
+- **Tests de integración** (`pnpm test:integration`): contra PostgreSQL y almacenamiento S3 reales, incluido el test de aislamiento entre cooperativas. 523 tests en 27 ficheros, todos en verde (2026-10-22).
 - **CI** (GitHub Actions, en cada push y pull request): comprobación de formato, lint, typecheck, tests, migraciones sobre un Postgres con pgvector y tests de integración. Hay además workflows de despliegue de GitHub Pages y de cron de vencimientos.
 - **Puerta de calidad local**: Husky ejecuta lint, typecheck y tests en el pre-commit.
 - **Límites entre módulos**: regla ESLint propia (`tools/eslint/module-boundaries.js`, con sus tests) que impide importar un módulo del backend por una ruta distinta de su `index.ts` (ADR-002).
@@ -336,7 +337,7 @@ El proyecto se ha construido con Spec Driven Development usando Claude Code:
 | Tema del máster                      | Evidencia en el proyecto                                                                                                                                                         |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Spec Driven Development              | `docs/requirements/`, plan por hitos con tareas marcadas, IDs de especificación en tests y commits                                                                               |
-| ADRs y Docs as Code                  | `docs/adr/` (20 ADR inmutables), documentación versionada junto al código, diagramas Mermaid                                                                                     |
+| ADRs y Docs as Code                  | `docs/adr/` (21 ADR inmutables), documentación versionada junto al código, diagramas Mermaid                                                                                     |
 | Clean Architecture con TypeScript    | Capas `domain/application/infrastructure` por módulo, puertos y adaptadores, regla ESLint de límites entre módulos                                                               |
 | Testing, TDD y puerta de calidad     | Vitest, tests de dominio primero, tests de integración, Husky en pre-commit                                                                                                      |
 | CI/CD con GitHub Actions             | `ci.yml` (formato, lint, typecheck, tests, migraciones, integración), despliegue de Pages y cron                                                                                 |

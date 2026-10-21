@@ -78,17 +78,17 @@ flowchart LR
 
 Each module follows the Clean Architecture layers (domain, application, infrastructure) and only exposes a public interface to the others.
 
-| Module                      | Responsibility                                                                                                                                  |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Access and profiles         | Users, sessions, memberships, profiles and permission resolution                                                                                |
-| Announcements               | Publication and reading of announcements                                                                                                        |
-| Assemblies                  | Calls to meeting, agenda, votings, quorum and majorities                                                                                        |
-| Documents                   | Document repository and indexing for RAG                                                                                                        |
-| Invoices and delivery notes | Third parties (suppliers and customers), purchases and sales, reconciliation, due dates, claims, vision extraction                              |
-| Member area (`members`)     | Member data and capital contributions                                                                                                           |
-| AI assistant                | RAG and tool calling with the user's permissions                                                                                                |
-| Branding (`branding`)       | Per-cooperative primary colour and logo, set by its administrator and read by every member ([ADR-018](adr/ADR-018-per-cooperative-branding.md)) |
-| Notifications               | Consumes events from the other modules and sends push                                                                                           |
+| Module                      | Responsibility                                                                                                                                                                                                    |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Access and profiles         | Users, sessions, memberships, profiles and permission resolution                                                                                                                                                  |
+| Announcements               | Publication and reading of announcements                                                                                                                                                                          |
+| Assemblies                  | Calls to meeting, agenda, votings, quorum and majorities                                                                                                                                                          |
+| Documents                   | Document repository and indexing for RAG                                                                                                                                                                          |
+| Invoices and delivery notes | Third parties (suppliers and customers), purchases and sales, reconciliation, due dates, claims, vision extraction                                                                                                |
+| Member area (`members`)     | Member data and capital contributions                                                                                                                                                                             |
+| AI assistant                | RAG and tool calling with the user's permissions                                                                                                                                                                  |
+| Branding (`branding`)       | Per-cooperative primary colour, set by its administrator and read by every member ([ADR-018](adr/ADR-018-per-cooperative-branding.md); the logo was removed by [ADR-021](adr/ADR-021-remove-cooperative-logo.md)) |
+| Notifications               | Consumes events from the other modules and sends push                                                                                                                                                             |
 
 ## Cross-cutting rules
 
