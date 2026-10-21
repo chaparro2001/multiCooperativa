@@ -56,6 +56,16 @@ Each backend module lives in `apps/api/src/modules/<module>/` with the `domain/`
 - Before considering a task done: lint, typecheck and tests green.
 - Code, identifiers, documentation and commit messages in English; app texts localized through i18n (Spanish by default).
 
+## Community skills
+
+Third-party skills live in `.agents/skills/` (linked from `.claude/skills/`, pinned in `skills-lock.json`; install with `npx skills add <owner/repo@skill>`). They are general guidance: when one conflicts with this file, an ADR or a specification, this file, the ADR and the specification win. Do not edit them by hand. Known deviations:
+
+- `nodejs-backend-patterns`, `architecture-patterns`: ignore their folder layouts (`controllers/`, `services/`, `use_cases/`, `adapters/`); modules keep `domain/`, `application/`, `infrastructure/` and `index.ts`.
+- `supabase-postgres-best-practices`: isolation per cooperative is enforced in the repositories with `cooperativeId` (ADR-003), not with RLS policies. Supabase-specific notes do not apply.
+- `vercel-react-native-skills`: do not add FlashList, `expo-image`, Galeria or Nativewind without an ADR; styling uses `StyleSheet.create`.
+- `prisma-client-api`: the client is generated in `apps/api/src/generated/prisma`; amounts keep using `Decimal`.
+- No skill justifies adding a dependency: a new dependency needs a reason in the plan or an ADR.
+
 ## Commands
 
 Requirements: Node 24 (`.nvmrc`), pnpm and Docker.
