@@ -34,12 +34,17 @@ Option 2.
 - One consistent look and set of states across screens and platforms; less hand-written UI code to maintain and test.
 - The cooperative's colour reaches every Paper control through the theme, with no per-component overrides.
 - Standard accessibility roles and states on the controls, and the touch targets of Material.
+- The assistant screens and the sign-in now follow the theme too (ADR-018 listed them as not routed through the brand colour): every screen reads its colours from `useTheme()`, and the sign-in and the lock screen use the default green theme.
+- Selected chips, segmented options and vote options are the brand colour: the theme sets `secondaryContainer` to the brand with white text (the brand always reaches 4.5:1 against white), instead of Paper's derived muted tone.
 
 **Negative / to watch**
 
 - A Material look on iOS instead of the native one.
 - A new runtime dependency and a larger web bundle.
-- During the migration two styles coexist: screens not yet migrated still use `colors` from `src/ui/theme.ts` and the hand-made styles.
+- `colors` in `src/ui/theme.ts` stays only for the fixed tokens (danger, warning, defaults) that do not follow the brand.
+- The icon set changed from Ionicons to MaterialCommunityIcons everywhere (glyph names differ; new icons must be checked against its glyph map).
+- Light theme only: the app does not follow the system dark mode.
+- Paper's `Chip` always has the role `button` and reports `selected`; the former `radio`/`checkbox` roles of the choice chips are now buttons with a selected state, and segmented controls are buttons with `checked` instead of a tab list.
 - Paper's `Badge` and `IconButton` have fixed internal metrics; the kit adjusts them with style overrides.
 
 ## Relation to other ADRs
