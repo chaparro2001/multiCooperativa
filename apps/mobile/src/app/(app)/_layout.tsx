@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { messageFor } from '@/api/api-error';
 import { BrandProvider, useBrand } from '@/branding/brand';
+import { BrandPaperProvider } from '@/branding/brand-theme';
 import { ActiveCooperativeProvider, useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { HeaderBack } from '@/navigation/header-back';
 import { allScope, canAccess, canManage } from '@/navigation/modules';
@@ -14,7 +15,9 @@ export default function AppLayout() {
   return (
     <ActiveCooperativeProvider>
       <BrandProvider>
-        <CooperativeNavigator />
+        <BrandPaperProvider>
+          <CooperativeNavigator />
+        </BrandPaperProvider>
       </BrandProvider>
     </ActiveCooperativeProvider>
   );

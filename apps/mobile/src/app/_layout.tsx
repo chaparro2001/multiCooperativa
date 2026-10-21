@@ -13,12 +13,17 @@ import { AppConfigProvider } from '@/config/app-config-context';
 import { applyDeviceLanguage } from '@/i18n/device-language';
 import { SessionProvider, useSession } from '@/session/session-context';
 import { createDeviceStore } from '@/storage/secure-key-value-store';
+import { PaperProvider } from '@/ui/paper';
+import { paperSettings } from '@/ui/paper-settings';
+import { colors, createPaperTheme } from '@/ui/theme';
 
 // The UI language follows the device (Spanish is the default and the fallback).
 applyDeviceLanguage();
 
 // The only place where the app reads its environment: the rest gets the configuration injected.
 const appConfig = parseAppConfig({ apiUrl: process.env.EXPO_PUBLIC_API_URL });
+// Sign-in screens have no cooperative yet: they use the default green (the app layout re-themes).
+const defaultTheme = createPaperTheme(colors.primary);
 const services = createAppServices(appConfig.apiUrl, createDeviceStore());
 
 // The splash screen stays visible until it is known whether there is a session: a wrong screen is never shown.
@@ -67,7 +72,9 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <SessionProvider>
             <BiometricsProvider>
-              <RootNavigator />
+              <PaperProvider theme={defaultTheme} settings={paperSettings}>
+                <RootNavigator />
+              </PaperProvider>
             </BiometricsProvider>
           </SessionProvider>
         </QueryClientProvider>
