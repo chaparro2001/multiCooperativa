@@ -57,6 +57,7 @@ describe('tools available per profile (BR-AI-01, US-AI-03)', () => {
       'list_delivery_notes',
       'payments_and_collections_summary',
       'find_third_party',
+      'list_third_parties',
       'latest_announcements',
     ]);
   });

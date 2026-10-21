@@ -10,7 +10,18 @@ export interface ThirdPartyRecord extends ThirdPartyState {
 export interface ThirdPartyStore {
   list(
     cooperativeId: string,
-    query: { role?: 'supplier' | 'customer'; search?: string; includeInactive: boolean },
+    query: {
+      role?: 'supplier' | 'customer';
+      search?: string;
+      includeInactive: boolean;
+      /** Created on or after this instant. */
+      createdFrom?: Date;
+      /** Created before this instant (exclusive). */
+      createdTo?: Date;
+      /** Newest first instead of by name. */
+      newestFirst?: boolean;
+      limit?: number;
+    },
   ): Promise<ThirdPartyRecord[]>;
   find(cooperativeId: string, id: string): Promise<ThirdPartyRecord | null>;
   findByNif(cooperativeId: string, nif: string): Promise<ThirdPartyRecord | null>;

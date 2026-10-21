@@ -27,6 +27,7 @@ As a user, I want to ask about assemblies, my contributions or, if I manage, inv
 
 - **Given** a manager who asks "which supplier invoices fall due this week?", **when** they send it, **then** the assistant queries the invoices and answers with the real data and links to each one.
 - **Given** the question "when is the next assembly and what is voted on?", **when** I send it, **then** it answers with the date and the votable items.
+- **Given** a manager who asks "which is the newest supplier?" or "which suppliers did we register this week?", **when** they send it, **then** the assistant lists the third parties newest first (by creation date) with a link to each one, instead of searching by name.
 - **Given** that the tool returns no results, **when** it answers, **then** it states so clearly.
 
 #### US-AI-03 · Respect my permissions
@@ -81,17 +82,18 @@ As a user, I want to ask follow-up questions without repeating the context.
 
 ## 3. Tools
 
-| Tool                                                                 | Required module      | Returns                                         |
-| -------------------------------------------------------------------- | -------------------- | ----------------------------------------------- |
-| `search_documents(query)`                                            | Documents · read     | Chunks with document and page                   |
-| `list_invoices(operation?, status?, third_party?, from?, to?)`       | Invoices · read      | Received or issued invoices                     |
-| `list_delivery_notes(operation?, status?, third_party?, from?, to?)` | Invoices · read      | Purchase or sales delivery notes                |
-| `payments_and_collections_summary()`                                 | Invoices · read      | Pending and overdue payments and collections    |
-| `find_third_party(text)`                                             | Invoices · read      | Suppliers and customers by name or tax ID (NIF) |
-| `upcoming_assemblies()`                                              | Assemblies · read    | Called assemblies and votable items             |
-| `voting_result(assembly?)`                                           | Assemblies · read    | Results of closed votings                       |
-| `my_contributions()`                                                 | Member area · read   | The user's capital and latest movements         |
-| `latest_announcements(n?)`                                           | Announcements · read | Recent published announcements                  |
+| Tool                                                                               | Required module      | Returns                                                                                               |
+| ---------------------------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------- |
+| `search_documents(query)`                                                          | Documents · read     | Chunks with document and page                                                                         |
+| `list_invoices(operation?, status?, third_party?, from?, to?)`                     | Invoices · read      | Received or issued invoices                                                                           |
+| `list_delivery_notes(operation?, status?, third_party?, from?, to?)`               | Invoices · read      | Purchase or sales delivery notes                                                                      |
+| `payments_and_collections_summary()`                                               | Invoices · read      | Pending and overdue payments and collections                                                          |
+| `find_third_party(text)`                                                           | Invoices · read      | Suppliers and customers by name or tax ID (NIF)                                                       |
+| `list_third_parties(type?, created_from?, created_to?, include_inactive?, limit?)` | Invoices · read      | Suppliers and customers, newest first (default 10, max 50); inactive ones only if the user can manage |
+| `upcoming_assemblies()`                                                            | Assemblies · read    | Called assemblies and votable items                                                                   |
+| `voting_result(assembly?)`                                                         | Assemblies · read    | Results of closed votings                                                                             |
+| `my_contributions()`                                                               | Member area · read   | The user's capital and latest movements                                                               |
+| `latest_announcements(n?)`                                                         | Announcements · read | Recent published announcements                                                                        |
 
 ## 4. Flow
 

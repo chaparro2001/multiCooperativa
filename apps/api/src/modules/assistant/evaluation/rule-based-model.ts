@@ -19,6 +19,10 @@ function plan(question: string): { name: string; input: unknown }[] {
 
   if (q.includes('busca el proveedor')) {
     add('find_third_party', { text: question.trim().split(/\s+/).at(-1) });
+  } else if (q.includes('ultimo proveedor') || q.includes('proveedor nuevo')) {
+    add('list_third_parties', { type: 'supplier', limit: 1 });
+  } else if (q.includes('lista los clientes')) {
+    add('list_third_parties', { type: 'customer' });
   } else if (q.includes('albaran')) {
     add('list_delivery_notes', { status: 'pending_invoicing' });
   } else if (q.includes('vencidas')) {

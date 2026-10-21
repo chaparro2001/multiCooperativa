@@ -62,6 +62,13 @@ const inputs = {
   }),
   payments_and_collections_summary: z.object({}),
   find_third_party: z.object({ text: z.string().trim().min(2).max(100) }),
+  list_third_parties: z.object({
+    type: z.enum(['supplier', 'customer', 'any']).optional(),
+    created_from: day,
+    created_to: day,
+    include_inactive: z.boolean().default(false),
+    limit: z.number().int().min(1).max(50).default(10),
+  }),
   upcoming_assemblies: z.object({}),
   voting_result: z.object({ assembly_id: z.uuid().optional() }),
   latest_announcements: z.object({ n: z.number().int().min(1).max(10).default(5) }),
@@ -156,6 +163,23 @@ export function createToolExecutors(src: DataSources): Record<ToolName, ToolExec
     async find_third_party(context, raw) {
       const { text } = parse('find_third_party', raw);
       const rows = await src.invoicing.findThirdParties(context, text);
+      return {
+        items: rows.map((row) => ({
+          data: { ...row, id: undefined },
+          source: record('third_party', row.id, row.name),
+        })),
+      };
+    },
+
+    async list_third_parties(context, raw) {
+      const input = parse('list_third_parties', raw);
+      const rows = await src.invoicing.listThirdParties(context, {
+        type: input.type === 'any' ? undefined : input.type,
+        createdFrom: input.created_from,
+        createdTo: input.created_to,
+        includeInactive: input.include_inactive,
+        limit: input.limit,
+      });
       return {
         items: rows.map((row) => ({
           data: { ...row, id: undefined },

@@ -30,7 +30,7 @@ export class PrismaThirdPartyStore implements ThirdPartyStore {
 
   list(
     cooperativeId: string,
-    query: { role?: 'supplier' | 'customer'; search?: string; includeInactive: boolean },
+    query: Parameters<ThirdPartyStore['list']>[1],
   ): Promise<ThirdPartyRecord[]> {
     return this.prisma.thirdParty.findMany({
       where: {
@@ -38,6 +38,12 @@ export class PrismaThirdPartyStore implements ThirdPartyStore {
         ...(!query.includeInactive && { active: true }),
         ...(query.role === 'supplier' && { isSupplier: true }),
         ...(query.role === 'customer' && { isCustomer: true }),
+        ...((query.createdFrom || query.createdTo) && {
+          createdAt: {
+            ...(query.createdFrom && { gte: query.createdFrom }),
+            ...(query.createdTo && { lt: query.createdTo }),
+          },
+        }),
         ...(query.search && {
           OR: [
             { name: { contains: query.search, mode: 'insensitive' } },
@@ -45,7 +51,8 @@ export class PrismaThirdPartyStore implements ThirdPartyStore {
           ],
         }),
       },
-      orderBy: { name: 'asc' },
+      orderBy: query.newestFirst ? [{ createdAt: 'desc' }, { name: 'asc' }] : [{ name: 'asc' }],
+      ...(query.limit && { take: query.limit }),
       select,
     });
   }

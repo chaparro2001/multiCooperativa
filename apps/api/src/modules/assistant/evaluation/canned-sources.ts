@@ -192,6 +192,53 @@ export function createCannedSources(): DataSources {
           },
         ].filter((party) => party.name.toLowerCase().includes(text.toLowerCase()));
       },
+      async listThirdParties(context, filter) {
+        guard(context, 'invoicing');
+        const parties = [
+          {
+            id: id(31),
+            name: 'Southern Fertilizers',
+            nif: 'B12345674',
+            supplier: true,
+            customer: false,
+            active: true,
+            createdAt: '2026-09-01',
+            email: 'sales@southern-fertilizers.example',
+            phone: null,
+          },
+          {
+            id: id(32),
+            name: 'Olivar Nuevo S.L.',
+            nif: 'B98765432',
+            supplier: true,
+            customer: false,
+            active: true,
+            createdAt: '2026-10-16',
+            email: null,
+            phone: '600123123',
+          },
+          {
+            id: id(33),
+            name: 'Cooperativa Vecina',
+            nif: 'F11223344',
+            supplier: false,
+            customer: true,
+            active: true,
+            createdAt: '2026-10-02',
+            email: null,
+            phone: null,
+          },
+        ];
+        return parties
+          .filter(
+            (party) =>
+              (!filter.type || (filter.type === 'supplier' ? party.supplier : party.customer)) &&
+              (!filter.createdFrom || party.createdAt >= filter.createdFrom) &&
+              (!filter.createdTo || party.createdAt <= filter.createdTo),
+          )
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+          .slice(0, filter.limit ?? 10);
+      },
     },
     assemblies: {
       async upcoming(context) {

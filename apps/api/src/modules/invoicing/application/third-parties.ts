@@ -19,13 +19,25 @@ export interface ThirdPartyDeps {
 export async function listThirdParties(
   deps: ThirdPartyDeps,
   context: CooperativeContext,
-  query: { role?: 'supplier' | 'customer'; search?: string; includeInactive?: boolean },
+  query: {
+    role?: 'supplier' | 'customer';
+    search?: string;
+    includeInactive?: boolean;
+    createdFrom?: Date;
+    createdTo?: Date;
+    newestFirst?: boolean;
+    limit?: number;
+  },
 ): Promise<ThirdPartyRecord[]> {
   requireRead(context);
   return deps.thirdParties.list(context.cooperativeId, {
     role: query.role,
     search: query.search?.trim() || undefined,
     includeInactive: Boolean(query.includeInactive) && canManage(context),
+    createdFrom: query.createdFrom,
+    createdTo: query.createdTo,
+    newestFirst: query.newestFirst,
+    limit: query.limit,
   });
 }
 

@@ -32,7 +32,7 @@ export {
   createGeminiClient,
 } from './infrastructure/gemini-ai';
 export { FakeDocumentExtractor } from './infrastructure/fake-document-extractor';
-export type { InvoicingReads } from './application/assistant-reads';
+export type { InvoicingReads, ThirdPartyLine } from './application/assistant-reads';
 export type {
   DeliveryNoteRegistered,
   DiscrepancyDetected,

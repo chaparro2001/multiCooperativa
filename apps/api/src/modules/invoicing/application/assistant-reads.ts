@@ -1,5 +1,10 @@
 import type { CooperativeContext } from '../../access';
-import type { DeliveryNoteStatus, Operation, PaymentStatus } from '../domain/documents';
+import {
+  addDays,
+  type DeliveryNoteStatus,
+  type Operation,
+  type PaymentStatus,
+} from '../domain/documents';
 import { formatMoney, formatQuantity } from '../domain/money';
 import { type Amounts, listDeliveryNotes, listInvoices, summary } from './documents';
 import { listThirdParties, type ThirdPartyDeps } from './third-parties';
@@ -61,6 +66,31 @@ export interface InvoicingReads {
     context: CooperativeContext,
     text: string,
   ): Promise<{ id: string; name: string; nif: string; supplier: boolean; customer: boolean }[]>;
+  /** Newest first by creation date; inactive ones only if the user can manage third parties. */
+  listThirdParties(
+    context: CooperativeContext,
+    filter: {
+      type?: 'supplier' | 'customer';
+      /** YYYY-MM-DD, inclusive. */
+      createdFrom?: string;
+      createdTo?: string;
+      includeInactive?: boolean;
+      limit?: number;
+    },
+  ): Promise<ThirdPartyLine[]>;
+}
+
+export interface ThirdPartyLine {
+  id: string;
+  name: string;
+  nif: string;
+  supplier: boolean;
+  customer: boolean;
+  active: boolean;
+  /** YYYY-MM-DD. */
+  createdAt: string;
+  email: string | null;
+  phone: string | null;
 }
 
 export interface AmountsView {
@@ -72,6 +102,8 @@ export interface AmountsView {
 
 /** A listing returns at most this many rows to the model. */
 export const MAX_ROWS = 25;
+export const DEFAULT_THIRD_PARTIES = 10;
+export const MAX_THIRD_PARTIES = 50;
 
 const toAmounts = (amounts: Amounts): AmountsView => ({
   pending: formatMoney(amounts.pending),
@@ -145,6 +177,31 @@ export function createInvoicingReads(deps: InvoicingDeps & ThirdPartyDeps): Invo
         nif: row.nif,
         supplier: row.isSupplier,
         customer: row.isCustomer,
+      }));
+    },
+
+    async listThirdParties(context, filter) {
+      const limit = Math.min(filter.limit ?? DEFAULT_THIRD_PARTIES, MAX_THIRD_PARTIES);
+      const rows = await listThirdParties(deps, context, {
+        role: filter.type,
+        includeInactive: filter.includeInactive,
+        createdFrom: filter.createdFrom ? new Date(`${filter.createdFrom}T00:00:00Z`) : undefined,
+        createdTo: filter.createdTo
+          ? new Date(`${addDays(filter.createdTo, 1)}T00:00:00Z`)
+          : undefined,
+        newestFirst: true,
+        limit,
+      });
+      return rows.slice(0, limit).map((row) => ({
+        id: row.id,
+        name: row.name,
+        nif: row.nif,
+        supplier: row.isSupplier,
+        customer: row.isCustomer,
+        active: row.active,
+        createdAt: row.createdAt.toISOString().slice(0, 10),
+        email: row.email ?? null,
+        phone: row.phone ?? null,
       }));
     },
   };

@@ -17,6 +17,7 @@ export const TOOL_NAMES = [
   'list_delivery_notes',
   'payments_and_collections_summary',
   'find_third_party',
+  'list_third_parties',
   'upcoming_assemblies',
   'voting_result',
   'latest_announcements',
@@ -99,11 +100,41 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
   },
   {
     name: 'find_third_party',
-    description: 'Finds suppliers and customers by name or tax ID (NIF).',
+    description:
+      'Looks up a specific supplier or customer by part of its name or its tax ID (NIF). Use it only when the user gives a name or NIF; for "newest", "recent" or "list" questions use list_third_parties.',
     inputSchema: {
       type: 'object',
       properties: { text: { type: 'string', description: 'Part of the name or the NIF.' } },
       required: ['text'],
+      additionalProperties: false,
+    },
+    requires: { module: 'invoicing', level: 'read' },
+  },
+  {
+    name: 'list_third_parties',
+    description:
+      'Lists suppliers and customers, newest registered first, with name, NIF, type, active flag, registration date and contact. Use it for "the newest/latest supplier", "suppliers registered this week", "list the customers". For a specific name or NIF use find_third_party.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['supplier', 'customer', 'any'],
+          description: 'supplier, customer or any (default).',
+        },
+        created_from: { ...day, description: 'Only those registered from this date.' },
+        created_to: { ...day, description: 'Only those registered up to this date.' },
+        include_inactive: {
+          type: 'boolean',
+          description: 'Also deactivated ones (default false).',
+        },
+        limit: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 50,
+          description: 'How many (default 10).',
+        },
+      },
       additionalProperties: false,
     },
     requires: { module: 'invoicing', level: 'read' },
