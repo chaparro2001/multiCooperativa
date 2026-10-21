@@ -68,7 +68,7 @@ Specification: [05-invoices-and-delivery-notes](requirements/05-invoices-and-del
 - [x] Vision extraction: port, adapter (Gemini, ADR-009), output validated with the Zod schema.
 - [x] AI explanation of discrepancies.
 - [x] App: summary, purchases and sales, details, third parties, camera capture and review.
-- [x] Configurable notice days per cooperative (BR-INV-15), attention counts and home badges for invoices and delivery notes (BR-INV-16), unread announcements badge (US-ANN-08).
+- [x] Three independently configurable and disableable alerts per cooperative (invoice notice, delivery note deadline and its notice, BR-INV-15), attention counts and home badges for invoices and delivery notes (BR-INV-16), unread announcements badge (US-ANN-08).
 - [ ] Claims (if there is margin).
 
 ## Milestone 5 · AI assistant and member area (17–20 Oct)
