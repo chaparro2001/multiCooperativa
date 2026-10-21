@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native';
@@ -26,7 +26,8 @@ import { Text } from '@/ui/paper';
 /** US-INV-01: create (the tax ID is validated by the server, NFR-INV-06) or edit a third party. */
 export default function ThirdPartyEditorScreen() {
   const { id, type } = useLocalSearchParams<{ id?: string; type?: string }>();
-  return id ? <Editor id={id} /> : <Form asCustomer={type === 'customer'} />;
+  const role = type === 'supplier' || type === 'customer' ? type : null;
+  return id ? <Editor id={id} /> : <Form role={role} />;
 }
 
 function Editor({ id }: { id: string }) {
@@ -44,10 +45,10 @@ function Editor({ id }: { id: string }) {
 
 function Form({
   existing,
-  asCustomer = false,
+  role = null,
 }: {
-  /** New record opened from the Customers list. */
-  asCustomer?: boolean;
+  /** New record opened from the Suppliers or Customers list: the role is fixed to that one. */
+  role?: 'supplier' | 'customer' | null;
   existing?: {
     id: string;
     nif: string;
@@ -64,9 +65,11 @@ function Form({
   const update = useUpdateThirdParty();
   const [nif, setNif] = useState(existing?.nif ?? '');
   const [name, setName] = useState(existing?.name ?? '');
-  // A new record opened from the Customers list starts as a customer; otherwise as a supplier.
-  const [isSupplier, setSupplier] = useState(existing?.isSupplier ?? !asCustomer);
-  const [isCustomer, setCustomer] = useState(existing?.isCustomer ?? asCustomer);
+  // A new record opened from the Customers list is a customer; otherwise it starts as a supplier.
+  const [isSupplier, setSupplier] = useState(existing?.isSupplier ?? role !== 'customer');
+  const [isCustomer, setCustomer] = useState(existing?.isCustomer ?? role === 'customer');
+  // With a fixed role there is nothing to choose; editing later can still add the other one.
+  const showRoles = existing !== undefined || role === null;
   const [email, setEmail] = useState(existing?.email ?? '');
   const [phone, setPhone] = useState(existing?.phone ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +122,17 @@ function Form({
 
   return (
     <Screen testID="third-party-editor" form={form}>
+      {!existing && role ? (
+        <Stack.Screen
+          options={{
+            title: t(
+              role === 'supplier'
+                ? 'invoicing.thirdParties.newSupplier'
+                : 'invoicing.thirdParties.newCustomer',
+            ),
+          }}
+        />
+      ) : null}
       <TextField
         label={t('invoicing.thirdParties.nif')}
         name="nif"
@@ -137,21 +151,25 @@ function Form({
         maxLength={200}
         testID="third-party-name"
       />
-      <Text variant="labelLarge">{t('invoicing.thirdParties.roles')}</Text>
-      <FieldGroup name="roles" style={styles.chips}>
-        <Chip
-          label={t('invoicing.thirdParties.supplier')}
-          selected={isSupplier}
-          onPress={() => setSupplier(!isSupplier)}
-          testID="role-supplier"
-        />
-        <Chip
-          label={t('invoicing.thirdParties.customer')}
-          selected={isCustomer}
-          onPress={() => setCustomer(!isCustomer)}
-          testID="role-customer"
-        />
-      </FieldGroup>
+      {showRoles ? (
+        <>
+          <Text variant="labelLarge">{t('invoicing.thirdParties.roles')}</Text>
+          <FieldGroup name="roles" style={styles.chips}>
+            <Chip
+              label={t('invoicing.thirdParties.supplier')}
+              selected={isSupplier}
+              onPress={() => setSupplier(!isSupplier)}
+              testID="role-supplier"
+            />
+            <Chip
+              label={t('invoicing.thirdParties.customer')}
+              selected={isCustomer}
+              onPress={() => setCustomer(!isCustomer)}
+              testID="role-customer"
+            />
+          </FieldGroup>
+        </>
+      ) : null}
       <TextField
         label={t('invoicing.thirdParties.email')}
         name="email"
