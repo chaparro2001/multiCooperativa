@@ -106,8 +106,6 @@ export function FieldGroup({
   );
 }
 
-export const invalidBorder = { borderColor: colors.danger } as const;
-
 const styles = StyleSheet.create({
   group: { gap: 6 },
   flush: { paddingHorizontal: 0 },

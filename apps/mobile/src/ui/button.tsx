@@ -34,7 +34,7 @@ export function Button({
       buttonColor={
         variant === 'danger' ? theme.colors.error : variant === 'primary' ? accent : undefined
       }
-      textColor={variant === 'secondary' ? accent : '#fff'}
+      textColor={variant === 'secondary' ? accent : theme.colors.onPrimary}
       style={variant === 'secondary' ? { borderColor: accent } : undefined}
       contentStyle={{ minHeight: 48 }}
       loading={loading}

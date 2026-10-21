@@ -74,8 +74,3 @@ export function useBrand(): Brand {
 export function useBrandColor(): string {
   return useContext(BrandContext).primaryColor;
 }
-
-/** A pale version of the brand colour for selected backgrounds and badges (12 % opacity). */
-export function useBrandTint(): string {
-  return `${useContext(BrandContext).primaryColor}1F`;
-}
