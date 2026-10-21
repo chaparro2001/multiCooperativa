@@ -14,6 +14,8 @@ describe('parentRoute (US-INV-06, US-ACC-08)', () => {
     ['/invoices/register', '/invoices'],
     ['/announcements/abc', '/announcements'],
     ['/assemblies/vote', '/assemblies'],
+    ['/assistant', '/'],
+    ['/assistant/history', '/assistant'],
     ['/settings', '/'],
     ['/members', '/'],
     ['/members/abc', '/members'],

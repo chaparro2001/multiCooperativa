@@ -1,5 +1,5 @@
-import { router, Stack } from 'expo-router';
-import { useRef, useState } from 'react';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
@@ -16,6 +16,8 @@ import { messageFor } from '@/api/api-error';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { type ChatMessage, citationTarget, suggestedQuestions } from '@/features/assistant/chat';
 import {
+  useConversation,
+  useConversationExists,
   useCreateConversation,
   useRateMessage,
   useSendMessage,
@@ -45,6 +47,53 @@ function Chat() {
   const [error, setError] = useState<string | null>(null);
   const list = useRef<FlatList<ChatMessage>>(null);
   const busy = createConversation.isPending || sendMessage.isPending;
+  // US-AI-04: the history opens a conversation with `conversation`, or starts a new one with `fresh`.
+  const { conversation: openId, fresh } = useLocalSearchParams<{
+    conversation?: string;
+    fresh?: string;
+  }>();
+  const opened = useConversation(openId);
+  const exists = useConversationExists();
+
+  function reset() {
+    setMessages([]);
+    setConversationId(null);
+    setError(null);
+    router.setParams({ conversation: undefined, fresh: undefined });
+  }
+
+  // Reopened conversation: its messages come from the server once, then the chat continues locally.
+  useEffect(() => {
+    if (!openId || opened.isFetching) return;
+    if (opened.data && opened.data.id !== conversationId) {
+      setConversationId(opened.data.id);
+      setMessages(opened.data.messages);
+      setError(null);
+    } else if (opened.error) {
+      setError(messageFor(opened.error));
+    }
+  }, [openId, opened.data, opened.error, opened.isFetching, conversationId]);
+
+  // "New conversation" from the history.
+  const lastFresh = useRef(fresh);
+  useEffect(() => {
+    if (fresh && fresh !== lastFresh.current) reset();
+    lastFresh.current = fresh;
+  }, [fresh]);
+
+  // Coming back from the history, the open conversation may have been deleted there.
+  useFocusEffect(
+    useCallback(() => {
+      if (!conversationId) return;
+      let current = true;
+      void exists(conversationId).then((found) => {
+        if (current && !found) reset();
+      });
+      return () => {
+        current = false;
+      };
+    }, [conversationId]),
+  );
 
   async function send(text: string) {
     const content = text.trim();
@@ -100,20 +149,22 @@ function Chat() {
     >
       <Stack.Screen
         options={{
-          headerRight: messages.length
-            ? () => (
-                <Pressable
-                  onPress={() => {
-                    setMessages([]);
-                    setConversationId(null);
-                    setError(null);
-                  }}
-                  testID="new-conversation"
-                >
+          headerRight: () => (
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => router.push('/assistant/history')}
+                testID="assistant-history"
+              >
+                <Text style={styles.headerLink}>{t('assistant.history.open')}</Text>
+              </Pressable>
+              {messages.length > 0 && (
+                <Pressable accessibilityRole="button" onPress={reset} testID="new-conversation">
                   <Text style={styles.headerLink}>{t('assistant.newConversation')}</Text>
                 </Pressable>
-              )
-            : undefined,
+              )}
+            </View>
+          ),
         }}
       />
       <FlatList
@@ -301,4 +352,5 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   headerLink: { color: colors.primary, fontSize: 16 },
+  headerActions: { flexDirection: 'row', gap: 16, paddingRight: 12 },
 });
