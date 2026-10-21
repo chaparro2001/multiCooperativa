@@ -18,7 +18,7 @@ If the code and the documentation do not match, stop and ask. If a decision chan
 
 ## Stack
 
-- App: Expo + React Native + TypeScript, Expo Router, TanStack Query, i18next + react-i18next + expo-localization.
+- App: Expo + React Native + TypeScript, Expo Router, react-native-paper (Material Design 3), TanStack Query, i18next + react-i18next + expo-localization.
 - Backend: Node + TypeScript, modular monolith with Clean Architecture.
 - Data: PostgreSQL, Prisma, pgvector.
 - Contracts: Zod schemas in `packages/contracts`, used by app and backend.
@@ -62,7 +62,7 @@ Third-party skills live in `.agents/skills/` (linked from `.claude/skills/`, pin
 
 - `nodejs-backend-patterns`, `architecture-patterns`: ignore their folder layouts (`controllers/`, `services/`, `use_cases/`, `adapters/`); modules keep `domain/`, `application/`, `infrastructure/` and `index.ts`.
 - `supabase-postgres-best-practices`: isolation per cooperative is enforced in the repositories with `cooperativeId` (ADR-003), not with RLS policies. Supabase-specific notes do not apply.
-- `vercel-react-native-skills`: do not add FlashList, `expo-image`, Galeria or Nativewind without an ADR; styling uses `StyleSheet.create`.
+- `vercel-react-native-skills`: do not add FlashList, `expo-image`, Galeria or Nativewind without an ADR; layout styling uses `StyleSheet.create`, and UI components come from `react-native-paper` (ADR-020) through `src/ui` (colours with `useTheme()`, icons are `MaterialCommunityIcons`).
 - `prisma-client-api`: the client is generated in `apps/api/src/generated/prisma`; amounts keep using `Decimal`.
 - No skill justifies adding a dependency: a new dependency needs a reason in the plan or an ADR.
 
