@@ -17,6 +17,7 @@ import {
   type InvoicingEvent,
   runDueDatesJob,
 } from './modules/invoicing';
+import { createMembersModule } from './modules/members';
 import { type EventBus, InProcessEventBus } from './shared/events';
 import { createJobsRouter } from './shared/infrastructure/http/jobs-router';
 import type { FileStorage } from './shared/files/file-storage';
@@ -115,6 +116,12 @@ export function createApi(deps: ApiDeps): Api {
     cooperativeTaxId: (id) => access.directory.cooperativeTaxId(id),
   });
 
+  const members = createMembersModule({
+    prisma: deps.prisma,
+    members: access.directory,
+    requireCooperative: access.requireCooperative,
+  });
+
   const assistant = createAssistantModule({
     prisma: deps.prisma,
     model: deps.languageModel ?? null,
@@ -142,6 +149,7 @@ export function createApi(deps: ApiDeps): Api {
       documents.router,
       assemblies.router,
       invoicing.router,
+      members.router,
       assistant.router,
     ],
     errorHandlers: [
@@ -150,6 +158,7 @@ export function createApi(deps: ApiDeps): Api {
       documents.errorHandler,
       assemblies.errorHandler,
       invoicing.errorHandler,
+      members.errorHandler,
       assistant.errorHandler,
     ],
     trustProxy: deps.trustProxy,

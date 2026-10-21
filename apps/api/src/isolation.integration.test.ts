@@ -92,6 +92,10 @@ async function snapshot() {
       orderBy: { id: 'asc' },
       include: { messages: true },
     }),
+    capitalMovements: await prisma.capitalMovement.findMany({
+      where: { cooperativeId: fieldCoop },
+      orderBy: { id: 'asc' },
+    }),
     invitations: await prisma.invitation.count(),
     audit: await prisma.auditEvent.count({ where: { cooperativeId: fieldCoop } }),
   };
@@ -208,6 +212,17 @@ beforeAll(async () => {
       reconciliationStatus: 'no_delivery_notes',
     },
   });
+  await prisma.capitalMovement.create({
+    data: {
+      cooperativeId: fieldCoop,
+      membershipId: member.id,
+      date: new Date('2026-01-01'),
+      type: 'mandatory_contribution',
+      concept: 'Contribution',
+      amount: '600.00',
+      recordedByMembershipId: member.id,
+    },
+  });
   const conversation = await prisma.assistantConversation.create({
     data: {
       cooperativeId: fieldCoop,
@@ -229,6 +244,7 @@ beforeAll(async () => {
     thirdPartyId: thirdParty.id,
     cooperativeId: fieldCoop,
     memberId: member.id,
+    membershipId: member.id,
     announcementId: announcement.id,
     documentId: document.id,
     assemblyId: assembly.id,
@@ -281,6 +297,12 @@ beforeAll(async () => {
     },
     'POST /cooperatives/:cooperativeId/assistant/messages/:messageId/rating': {
       rating: 'helpful',
+    },
+    'POST /cooperatives/:cooperativeId/member-area/members/:membershipId/movements': {
+      date: '2026-10-05',
+      type: 'voluntary_contribution',
+      concept: 'Extra',
+      amount: '50.00',
     },
     'POST /cooperatives/:cooperativeId/members': {
       email: 'new@sea.test',
