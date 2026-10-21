@@ -8,7 +8,11 @@ import {
   ASSEMBLY_SERVER_MAPPING,
   type AssemblyDraft,
   isAssemblyField,
+  isRescheduleField,
+  RESCHEDULE_SERVER_MAPPING,
+  type RescheduleDraft,
   validateAssembly,
+  validateReschedule,
 } from './form-validation';
 
 const first = new Date('2026-11-20T19:00:00Z');
@@ -94,5 +98,43 @@ describe('API errors on the assembly editor', () => {
       }),
     );
     expect(Object.keys(fields)).toEqual(['place']);
+  });
+});
+
+describe('validateReschedule (US-ASM-09)', () => {
+  const now = new Date('2026-10-01T10:00:00Z');
+  const change = (overrides: Partial<RescheduleDraft> = {}): RescheduleDraft => ({
+    firstCall: new Date('2026-11-20T19:00:00Z'),
+    secondCall: null,
+    place: 'Social hall',
+    reason: '',
+    notifyMembers: true,
+    ...overrides,
+  });
+
+  it('accepts a future date with a place; the reason is optional', () => {
+    expect(validateReschedule(change(), now)).toEqual({});
+  });
+
+  it('marks a past date, a second call before the first, a missing place and a long reason', () => {
+    const past = change({ firstCall: new Date('2026-09-01T10:00:00Z') });
+    expect(validateReschedule(past, now)).toHaveProperty('firstCall');
+    const early = change({ secondCall: new Date('2026-11-20T19:00:00Z') });
+    expect(validateReschedule(early, now)).toHaveProperty('secondCall');
+    expect(validateReschedule(change({ place: ' ' }), now)).toHaveProperty('place');
+    expect(validateReschedule(change({ reason: 'x'.repeat(501) }), now)).toHaveProperty('reason');
+  });
+
+  it('places the notice error of the API on the first call field with the minimum days', () => {
+    const routed = routeServerError(
+      new ApiError(400, 'insufficient_notice', '', { field: 'firstCallAt', minNoticeDays: 15 }),
+      RESCHEDULE_SERVER_MAPPING,
+      isRescheduleField,
+    );
+    expect(routed.banner).toBeNull();
+    expect(routed.fields.firstCall).toEqual({
+      key: 'forms.serverField.insufficient_notice.firstCallAt',
+      params: { field: 'firstCallAt', minNoticeDays: 15 },
+    });
   });
 });

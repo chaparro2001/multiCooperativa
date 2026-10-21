@@ -80,6 +80,18 @@ As a user, I want to see the result of each closed voting.
 
 - **Given** an open voting in which I have not voted, **when** 24 hours remain until its scheduled close, **then** I receive a reminder push.
 
+#### US-ASM-09 · Reschedule a called assembly
+
+As a user with manage level, I want to change the date (and, if needed, the second call and the place) of an already called assembly and let the members know, so that a postponement does not leave anyone with the old date.
+
+- **Given** a called assembly with no voting opened, **when** I send a new first call with the minimum notice counted from now, optionally a second call after it, the place and a reason, **then** the assembly stays called with the new dates, the previous first call, second call and place are kept with the date and reason of the change, and `AssemblyRescheduled` is emitted.
+- **Given** a called assembly, **when** I reschedule with `notifyMembers` true (the default), **then** an announcement "Cambio de fecha: <assembly>" is published at once with the old and new date and time, the place and the reason; **when** `notifyMembers` is false, **then** no announcement is created.
+- **Given** a new first call with less notice than configured (counted from now, not from the original call), **when** I try to reschedule, **then** it is rejected stating the minimum notice and the field `firstCallAt`.
+- **Given** a second call not after the first, or a missing place, **when** I try to reschedule, **then** it is rejected with the field that failed.
+- **Given** an assembly in which any voting was opened (open or closed), **when** I try to reschedule, **then** it is rejected (`voting_already_opened`): the census and the votes are not altered.
+- **Given** a draft, held or cancelled assembly, **when** I try to reschedule, **then** it is rejected (`invalid_assembly_transition`).
+- **Given** an assembly that was rescheduled, **when** I open it, **then** I see "Fecha cambiada el … (antes: …)" with the previous place and the reason when there are any.
+
 ### Could
 
 - Delegating the vote to another member, with a limit on representations.
@@ -94,19 +106,20 @@ As a user, I want to see the result of each closed voting.
 
 ## 3. Business rules
 
-| Id        | Rule                                                                                                                                                                        |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| BR-ASM-01 | One member, one vote, regardless of their contributions.                                                                                                                    |
-| BR-ASM-02 | The census is fixed when the voting opens with the active memberships that have member status. Later changes do not alter it.                                               |
-| BR-ASM-03 | Each member in the census votes at most once per item. The vote cannot be changed.                                                                                          |
-| BR-ASM-04 | Participation = votes cast (for, against and abstentions) / members in the census.                                                                                          |
-| BR-ASM-05 | There is quorum if participation is equal to or above the threshold. By default: 50 % of the census on first call; no minimum on second call. Configurable per cooperative. |
-| BR-ASM-06 | If the quorum is not reached, the result is "no quorum" and the item is not approved.                                                                                       |
-| BR-ASM-07 | Simple majority: approved if votes for > votes against. Abstentions do not count.                                                                                           |
-| BR-ASM-08 | Qualified majority: approved if votes for ≥ 2/3 of votes for plus against. Fraction configurable per cooperative.                                                           |
-| BR-ASM-09 | Default minimum notice between call and meeting: 15 days. Configurable per cooperative.                                                                                     |
-| BR-ASM-10 | A held or cancelled assembly does not allow changes to its agenda.                                                                                                          |
-| BR-ASM-11 | While the voting is open, the direction of the votes is only visible with manage level.                                                                                     |
+| Id        | Rule                                                                                                                                                                                                                                  |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-ASM-01 | One member, one vote, regardless of their contributions.                                                                                                                                                                              |
+| BR-ASM-02 | The census is fixed when the voting opens with the active memberships that have member status. Later changes do not alter it.                                                                                                         |
+| BR-ASM-03 | Each member in the census votes at most once per item. The vote cannot be changed.                                                                                                                                                    |
+| BR-ASM-04 | Participation = votes cast (for, against and abstentions) / members in the census.                                                                                                                                                    |
+| BR-ASM-05 | There is quorum if participation is equal to or above the threshold. By default: 50 % of the census on first call; no minimum on second call. Configurable per cooperative.                                                           |
+| BR-ASM-06 | If the quorum is not reached, the result is "no quorum" and the item is not approved.                                                                                                                                                 |
+| BR-ASM-07 | Simple majority: approved if votes for > votes against. Abstentions do not count.                                                                                                                                                     |
+| BR-ASM-08 | Qualified majority: approved if votes for ≥ 2/3 of votes for plus against. Fraction configurable per cooperative.                                                                                                                     |
+| BR-ASM-09 | Default minimum notice between call and meeting: 15 days. Configurable per cooperative.                                                                                                                                               |
+| BR-ASM-10 | A held or cancelled assembly does not allow changes to its agenda.                                                                                                                                                                    |
+| BR-ASM-11 | While the voting is open, the direction of the votes is only visible with manage level.                                                                                                                                               |
+| BR-ASM-12 | Only a called assembly can be rescheduled, and only while no voting of it has been opened (open or closed). The new first call keeps the minimum notice (BR-ASM-09) counted from the moment of the change. The previous call is kept. |
 
 ### Statuses
 
@@ -114,6 +127,7 @@ As a user, I want to see the result of each closed voting.
 stateDiagram-v2
     [*] --> Draft
     Draft --> Called: publish
+    Called --> Called: reschedule (no voting opened)
     Called --> Held: close assembly
     Called --> Cancelled: cancel
     Held --> [*]
@@ -155,6 +169,11 @@ erDiagram
         datetime secondCallAt
         string place
         enum status
+        datetime previousFirstCallAt
+        datetime previousSecondCallAt
+        string previousPlace
+        datetime rescheduledAt
+        string rescheduleReason
     }
     POINT {
         uuid id
@@ -189,28 +208,30 @@ erDiagram
 
 ## 6. Events
 
-| Event              | When                             | Consumer      |
-| ------------------ | -------------------------------- | ------------- |
-| `AssemblyConvened` | On publishing the call           | Notifications |
-| `VotingOpened`     | On opening the voting of an item | Notifications |
-| `VotingClosed`     | On closing the voting            | Notifications |
+| Event                 | When                                                                                                                                                  | Consumer                                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `AssemblyConvened`    | On publishing the call                                                                                                                                | Notifications                                                                                                          |
+| `VotingOpened`        | On opening the voting of an item                                                                                                                      | Notifications                                                                                                          |
+| `VotingClosed`        | On closing the voting                                                                                                                                 | Notifications                                                                                                          |
+| `AssemblyRescheduled` | After saving a date change (US-ASM-09), with the cooperative, assembly, type, previous and new dates, place, reason, `notifyMembers` and who moved it | Announcements: publishes "Cambio de fecha: <assembly>" at once, authored by who moved it, when `notifyMembers` is true |
 
 ## 7. API
 
-| Method | Route                                                           | Use                                          | Requirement          |
-| ------ | --------------------------------------------------------------- | -------------------------------------------- | -------------------- |
-| GET    | `/cooperatives/{cooperativeId}/assemblies`                      | List                                         | Read                 |
-| GET    | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}`         | Detail with items and status                 | Read                 |
-| POST   | `/cooperatives/{cooperativeId}/assemblies`                      | Create draft                                 | Manage               |
-| PATCH  | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}`         | Edit draft and items                         | Manage               |
-| POST   | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}/convene` | Publish                                      | Manage               |
-| POST   | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}/cancel`  | Cancel                                       | Manage               |
-| POST   | `/cooperatives/{cooperativeId}/points/{pointId}/voting/open`    | Open voting                                  | Manage               |
-| POST   | `/cooperatives/{cooperativeId}/points/{pointId}/voting/close`   | Close voting                                 | Manage               |
-| POST   | `/cooperatives/{cooperativeId}/points/{pointId}/voting/votes`   | Vote                                         | Member in the census |
-| GET    | `/cooperatives/{cooperativeId}/points/{pointId}/voting`         | Status and result                            | Read                 |
-| POST   | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}/close`   | Move to held (with no open votings)          | Manage               |
-| POST   | `/cooperatives/{cooperativeId}/points/{pointId}/documents`      | Attach documentation to an item (PDF, 10 MB) | Manage               |
+| Method | Route                                                              | Use                                              | Requirement          |
+| ------ | ------------------------------------------------------------------ | ------------------------------------------------ | -------------------- |
+| GET    | `/cooperatives/{cooperativeId}/assemblies`                         | List                                             | Read                 |
+| GET    | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}`            | Detail with items and status                     | Read                 |
+| POST   | `/cooperatives/{cooperativeId}/assemblies`                         | Create draft                                     | Manage               |
+| PATCH  | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}`            | Edit draft and items                             | Manage               |
+| POST   | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}/convene`    | Publish                                          | Manage               |
+| POST   | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}/cancel`     | Cancel                                           | Manage               |
+| POST   | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}/reschedule` | Change the date of a called assembly (US-ASM-09) | Manage               |
+| POST   | `/cooperatives/{cooperativeId}/points/{pointId}/voting/open`       | Open voting                                      | Manage               |
+| POST   | `/cooperatives/{cooperativeId}/points/{pointId}/voting/close`      | Close voting                                     | Manage               |
+| POST   | `/cooperatives/{cooperativeId}/points/{pointId}/voting/votes`      | Vote                                             | Member in the census |
+| GET    | `/cooperatives/{cooperativeId}/points/{pointId}/voting`            | Status and result                                | Read                 |
+| POST   | `/cooperatives/{cooperativeId}/assemblies/{assemblyId}/close`      | Move to held (with no open votings)              | Manage               |
+| POST   | `/cooperatives/{cooperativeId}/points/{pointId}/documents`         | Attach documentation to an item (PDF, 10 MB)     | Manage               |
 
 Contract (schemas in `packages/contracts/src/assemblies.ts`):
 
@@ -218,6 +239,8 @@ Contract (schemas in `packages/contracts/src/assemblies.ts`):
 - The "pending" voting does not exist in the database: it is born when opened, with the census and the rules in force (quorum, qualified fraction, second call) copied at that moment.
 - Each voting returns `status`, `censusSize`, `votesCast`, `tally` (null while open without manage level), `result`, `myVote` and `canVote`.
 - Voting requires no module permission, only being in the census (BR-ACC-06). The vote has a unique key per voting and membership and a foreign key to the census.
+- Rescheduling (US-ASM-09) sends `firstCallAt`, `secondCallAt` (nullable), `place`, `reason` (optional, up to 500 characters) and `notifyMembers` (default true). The detail returns `rescheduledFrom` (`firstCallAt`, `secondCallAt`, `place`, `at`, `reason`), null if the assembly was never moved; only the last change is kept. The announcement text is written by the server from its message catalog (Spanish, dates in Europe/Madrid). Assembly actions are not audited, so neither is this one.
+- Errors of rescheduling: `400 insufficient_notice` with `details.minNoticeDays` and `details.field = firstCallAt`, `400 invalid_assembly` with `details.field` (`firstCallAt`, `secondCallAt`, `place`, `reason`), `409 voting_already_opened`, `409 invalid_assembly_transition`, `404 not_found`.
 - Errors: `400 invalid_assembly`, `400 insufficient_notice` with `details.minNoticeDays`, `403 not_in_census`, `404 not_found` (also drafts without manage level), `409 already_voted` with `details.choice`, `409 voting_not_open`, `409 invalid_assembly_transition` and `409 invalid_voting_transition`.
 - Per-cooperative settings in the `AssemblySettings` table; without a row the default values apply. They have no screen in the MVP.
 

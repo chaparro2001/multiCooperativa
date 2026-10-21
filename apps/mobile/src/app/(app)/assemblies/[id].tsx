@@ -17,6 +17,7 @@ import { formatDateTime, formatSize } from '@/i18n/format';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
+import { HeaderAction, HeaderActions } from '@/ui/header-action';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
@@ -43,6 +44,11 @@ export default function AssemblyScreen() {
     );
   }
   const data = assembly.data;
+  const canReschedule =
+    canManage &&
+    data.status === 'convened' &&
+    data.points.every((point) => !point.voting || point.voting.status === 'pending');
+  const moved = data.rescheduledFrom;
 
   async function run(task: () => Promise<unknown>) {
     setError(null);
@@ -65,7 +71,23 @@ export default function AssemblyScreen() {
 
   return (
     <Screen testID="assembly-screen">
-      <Stack.Screen options={{ title: t('assemblies.detail.title') }} />
+      <Stack.Screen
+        options={{
+          title: t('assemblies.detail.title'),
+          // US-ASM-09: only while no voting was opened (the server enforces it too).
+          headerRight: canReschedule
+            ? () => (
+                <HeaderActions>
+                  <HeaderAction
+                    title={t('assemblies.detail.reschedule')}
+                    href={{ pathname: '/assemblies/reschedule', params: { id } }}
+                    testID="reschedule-assembly"
+                  />
+                </HeaderActions>
+              )
+            : undefined,
+        }}
+      />
       <Badge
         label={t(`enums.assemblyStatus.${data.status}`)}
         tone={ASSEMBLY_STATUS_TONE[data.status]}
@@ -80,6 +102,26 @@ export default function AssemblyScreen() {
         </Text>
       )}
       <Text style={styles.meta}>{data.place}</Text>
+      {moved && (
+        <View style={styles.note} testID="rescheduled-note">
+          <Text style={styles.noteTitle}>
+            {t('assemblies.detail.rescheduledNote', {
+              at: formatDateTime(moved.at),
+              date: formatDateTime(moved.firstCallAt),
+            })}
+          </Text>
+          {moved.place !== data.place && (
+            <Text style={styles.meta}>
+              {t('assemblies.detail.rescheduledPlace', { place: moved.place })}
+            </Text>
+          )}
+          {moved.reason && (
+            <Text style={styles.meta}>
+              {t('assemblies.detail.rescheduledReason', { reason: moved.reason })}
+            </Text>
+          )}
+        </View>
+      )}
 
       <Text style={styles.section}>{t('assemblies.agenda')}</Text>
       {data.points.map((point) => (
@@ -342,4 +384,6 @@ const styles = StyleSheet.create({
   tally: { fontSize: 14, color: colors.text },
   myVote: { fontSize: 14, color: colors.primary, fontWeight: '600' },
   actions: { gap: 10, marginTop: 8 },
+  note: { backgroundColor: colors.surface, borderRadius: 10, padding: 12, gap: 4 },
+  noteTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
 });

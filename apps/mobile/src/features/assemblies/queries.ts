@@ -4,6 +4,7 @@ import {
   assemblySummarySchema,
   listAssembliesResponseSchema,
   pointAttachmentSchema,
+  type RescheduleAssemblyRequest,
   type VoteChoice,
   votingViewSchema,
 } from '@multicooperativa/contracts';
@@ -74,6 +75,19 @@ export function useAssemblyAction() {
   return useAssemblyMutation(
     ({ id, action }: { id: string; action: 'convene' | 'cancel' | 'close' }) =>
       api.request(`${base}/${id}/${action}`, { method: 'POST', schema: assemblySummarySchema }),
+  );
+}
+
+/** US-ASM-09: moves a convened assembly; the API announces it unless `notifyMembers` is false. */
+export function useRescheduleAssembly() {
+  const { api } = useServices();
+  const { base } = useScope();
+  return useAssemblyMutation(({ id, input }: { id: string; input: RescheduleAssemblyRequest }) =>
+    api.request(`${base}/${id}/reschedule`, {
+      method: 'POST',
+      body: input,
+      schema: assemblySummarySchema,
+    }),
   );
 }
 
