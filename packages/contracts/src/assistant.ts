@@ -83,9 +83,26 @@ export const assistantModelOptionSchema = z.object({
   id: z.string().min(1),
 });
 
+/** Hosted OpenAI-compatible providers a cooperative can bring its own key to (US-AI-07, ADR-018). */
+export const hostedProviderIdSchema = z.enum(['groq', 'mistral', 'nvidia', 'openrouter']);
+
+/** Where the cooperative's questions go: the server's local/default model or a hosted provider. */
+export const assistantSourceSchema = z.enum(['local', 'hosted']);
+
+/** A model id typed by the administrator: no whitespace, bounded. */
+export const hostedModelIdSchema = z.string().trim().min(1).max(200).regex(/^\S+$/);
+
+export const hostedProviderOptionSchema = z.object({
+  id: hostedProviderIdSchema,
+  /** Ids the app can suggest; the administrator may type any other. */
+  suggestedModels: z.array(z.string().min(1)),
+});
+
 /**
  * GET /cooperatives/{id}/settings/assistant-model (US-AI-07).
- * With `gemini` there is nothing to choose: `current` and `default` are null and `options` empty.
+ * With `gemini` there is no local model to choose: `current` and `default` are null and `options` empty.
+ * `hosted` is the saved external provider while `source` is `hosted`; the API key is never returned,
+ * only its last characters.
  */
 export const assistantModelSettingsSchema = z.object({
   provider: assistantProviderSchema,
@@ -94,14 +111,42 @@ export const assistantModelSettingsSchema = z.object({
   /** The server default, used when the cooperative has not chosen. */
   default: z.string().nullable(),
   options: z.array(assistantModelOptionSchema),
+  source: assistantSourceSchema,
+  /** False when the server has no ASSISTANT_SECRETS_KEY: external providers cannot be used. */
+  hostedAvailable: z.boolean(),
+  hosted: z
+    .object({
+      provider: hostedProviderIdSchema,
+      model: z.string(),
+      keyHint: z.string(),
+    })
+    .nullable(),
+  providers: z.array(hostedProviderOptionSchema),
 });
 
-/** PUT /cooperatives/{id}/settings/assistant-model; `null` goes back to the server default. */
-export const updateAssistantModelBodySchema = z.strictObject({
-  model: z.string().trim().min(1).max(100).nullable(),
-});
+/**
+ * PUT /cooperatives/{id}/settings/assistant-model: a local model (`null` goes back to the server
+ * default), back to local without choosing, or an external provider with the cooperative's own key.
+ * `apiKey` is required the first time or when the provider changes; omitted, the stored key is kept.
+ */
+export const updateAssistantModelBodySchema = z.union([
+  z.strictObject({
+    model: z.string().trim().min(1).max(100).nullable(),
+  }),
+  z.strictObject({ source: z.literal('local') }),
+  z.strictObject({
+    source: z.literal('hosted'),
+    provider: hostedProviderIdSchema,
+    model: hostedModelIdSchema,
+    apiKey: z.string().trim().min(8).max(500).regex(/^\S+$/).optional(),
+  }),
+]);
 
 export type AssistantProvider = z.infer<typeof assistantProviderSchema>;
+export type HostedProviderId = z.infer<typeof hostedProviderIdSchema>;
+export type AssistantSource = z.infer<typeof assistantSourceSchema>;
+export type HostedProviderOption = z.infer<typeof hostedProviderOptionSchema>;
+export type UpdateAssistantModelBody = z.infer<typeof updateAssistantModelBodySchema>;
 export type AssistantModelOption = z.infer<typeof assistantModelOptionSchema>;
 export type AssistantModelSettings = z.infer<typeof assistantModelSettingsSchema>;
 export type Citation = z.infer<typeof citationSchema>;

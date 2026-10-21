@@ -55,6 +55,18 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...required, ASSISTANT_MESSAGE_LIMIT_PER_HOUR: '0' })).toThrow();
   });
 
+  it('ADR-018: the secrets key is optional and must be 32 bytes in base64', () => {
+    expect(loadEnv(required).ASSISTANT_SECRETS_KEY).toBeUndefined();
+    const key = Buffer.alloc(32, 7).toString('base64');
+    expect(loadEnv({ ...required, ASSISTANT_SECRETS_KEY: key }).ASSISTANT_SECRETS_KEY).toBe(key);
+    expect(() => loadEnv({ ...required, ASSISTANT_SECRETS_KEY: 'short' })).toThrow(
+      /ASSISTANT_SECRETS_KEY/,
+    );
+    expect(() =>
+      loadEnv({ ...required, ASSISTANT_SECRETS_KEY: Buffer.alloc(16).toString('base64') }),
+    ).toThrow(/ASSISTANT_SECRETS_KEY/);
+  });
+
   it('ADR-013: the assistant provider defaults to Gemini and can be a local Ollama model', () => {
     expect(loadEnv(required).ASSISTANT_LLM_PROVIDER).toBe('gemini');
     expect(

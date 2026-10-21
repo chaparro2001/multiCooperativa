@@ -8,7 +8,10 @@ import {
   usageExceeded,
   usageWindowStart,
 } from '../domain/usage';
-import { resolveCooperativeModel, type ModelSettingsDeps } from './assistant-model-settings';
+import {
+  resolveCooperativeLanguageModel,
+  type ModelSettingsDeps,
+} from './assistant-model-settings';
 import type { CooperativeContext } from './data-sources';
 import {
   AssistantRefusedError,
@@ -38,7 +41,7 @@ export interface AssistantDeps {
   conversations: ConversationStore;
   /** Null when no provider is configured (ADR-009): the assistant answers 503, the rest works. */
   model: LanguageModel | null;
-  /** With the Ollama provider each cooperative runs on its own chosen model (US-AI-07, BR-AI-09); `model` is then ignored. */
+  /** Per-cooperative model settings: the local model of each cooperative (US-AI-07, BR-AI-09; `model` is then ignored with Ollama) and its hosted provider (ADR-018). */
   localModels?: ModelSettingsDeps;
   executors: Record<ToolName, ToolExecutor>;
   now: () => Date;
@@ -195,12 +198,7 @@ export async function sendMessage(
 
   const conversation = await deps.conversations.find(cooperativeId, membershipId, conversationId);
   if (!conversation) throw new ConversationNotFoundError();
-  const local = deps.localModels?.local;
-  const model = local
-    ? local.create(
-        (await resolveCooperativeModel(deps.localModels!, cooperativeId)) ?? local.defaultModel,
-      )
-    : deps.model;
+  const model = await resolveCooperativeLanguageModel(deps.localModels, deps.model, cooperativeId);
   if (!model) throw new AssistantUnavailableError();
 
   // BR-AI-08

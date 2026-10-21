@@ -674,8 +674,19 @@ model AssistantConversation {
 /// US-AI-07: one row per cooperative that chose a local model; no row means the server default.
 model AssistantSetting {
   cooperativeId String   @id @db.Uuid
-  /// Ollama model id picked by the administrator (validated against the server allowlist on write and on use).
-  model         String
+  /// Ollama model id picked by the administrator (validated against the server allowlist on write and on use). Null when only a hosted provider is configured.
+  model         String?
+  /// 'local' (the server's model) or 'hosted' (the cooperative's own provider account, ADR-018).
+  source        String   @default("local")
+  /// Provider id of the fixed catalog (groq, mistral, nvidia, openrouter); hosted source only.
+  hostedProvider String?
+  hostedModel   String?
+  /// The cooperative's API key, AES-256-GCM encrypted with ASSISTANT_SECRETS_KEY (base64 parts). Never returned.
+  apiKeyCiphertext String?
+  apiKeyIv      String?
+  apiKeyTag     String?
+  /// Last four characters of the key: the only part shown again.
+  apiKeyHint    String?
   updatedAt     DateTime @default(now()) @updatedAt
 }
 

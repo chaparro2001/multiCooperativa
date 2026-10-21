@@ -97,7 +97,7 @@ export function createAssistantRouter(
     res.json(toMessage(message) satisfies AssistantMessage);
   });
 
-  // US-AI-07: the local model of the cooperative, for its administrators only.
+  // US-AI-07: the model of the cooperative (local, or its own hosted provider), for its administrators only.
   const settingsPath = '/cooperatives/:cooperativeId/settings/assistant-model';
   const adminGuard = [requireCooperative, requirePermission('users', 'manage')];
 
@@ -110,12 +110,14 @@ export function createAssistantRouter(
   });
 
   router.put(settingsPath, ...adminGuard, async (req, res) => {
-    const { model } = parseBody(updateAssistantModelBodySchema, req.body);
-    const settings = await modelSettings.setAssistantModel(
-      settingsDeps,
-      getCooperativeContext(res),
-      model,
-    );
+    const body = parseBody(updateAssistantModelBodySchema, req.body);
+    const context = getCooperativeContext(res);
+    const settings =
+      'model' in body && !('source' in body)
+        ? await modelSettings.setAssistantModel(settingsDeps, context, body.model)
+        : body.source === 'hosted'
+          ? await modelSettings.setHostedProvider(settingsDeps, context, body)
+          : await modelSettings.useLocalSource(settingsDeps, context);
     res.json(settings satisfies AssistantModelSettings);
   });
 

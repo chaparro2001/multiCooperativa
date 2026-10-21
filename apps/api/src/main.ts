@@ -55,6 +55,8 @@ const { app, indexing, runDueDates } = createApi({
           fallbackModels: env.GEMINI_FALLBACK_MODELS,
         })
       : null,
+  // Cooperatives can bring their own hosted provider key (ADR-018); keys are encrypted with this one.
+  assistantSecretsKey: env.ASSISTANT_SECRETS_KEY,
   assistantMessageLimitPerHour: env.ASSISTANT_MESSAGE_LIMIT_PER_HOUR,
   // No email provider (ADR-016): with `link` the administrator receives the link and passes it on;
   // `console` prints it in development and, in production, answers 503 instead of logging tokens.

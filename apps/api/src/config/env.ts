@@ -80,6 +80,15 @@ const envSchema = z
       ),
     /** Time limit of one Ollama chat call, sized for a CPU-only host. */
     ASSISTANT_OLLAMA_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(90_000),
+    /** Master key (32 random bytes, base64: `openssl rand -base64 32`) that encrypts the API keys cooperatives bring for hosted assistant providers (US-AI-07, ADR-018). Without it hosted mode is unavailable. Changing it invalidates the stored keys. */
+    ASSISTANT_SECRETS_KEY: z
+      .string()
+      .refine(
+        (value) =>
+          /^[A-Za-z0-9+/]+={0,2}$/.test(value) && Buffer.from(value, 'base64').length === 32,
+        'must be 32 bytes in base64 (openssl rand -base64 32)',
+      )
+      .optional(),
     /** BR-AI-08: messages per user and hour. */
     ASSISTANT_MESSAGE_LIMIT_PER_HOUR: z.coerce.number().int().min(1).default(30),
     /** Comma-separated origins allowed by CORS (the hosted web app). Empty denies every browser origin. */

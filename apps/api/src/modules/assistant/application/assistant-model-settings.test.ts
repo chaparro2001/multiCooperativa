@@ -87,6 +87,10 @@ describe('getAssistantModelSettings (US-AI-07)', () => {
       current: 'qwen3:8b',
       default: 'qwen3:8b',
       options: [{ id: 'qwen3:8b' }],
+      source: 'local',
+      hostedAvailable: false,
+      hosted: null,
+      providers: [],
     });
   });
 
@@ -109,6 +113,10 @@ describe('getAssistantModelSettings (US-AI-07)', () => {
       current: null,
       default: null,
       options: [],
+      source: 'local',
+      hostedAvailable: false,
+      hosted: null,
+      providers: [],
     });
   });
 
@@ -138,7 +146,7 @@ describe('setAssistantModel (US-AI-07)', () => {
         event: {
           actorUserId: 'u1',
           action: MODEL_CHANGED_ACTION,
-          detail: { from: 'qwen3:8b', to: 'qwen3:4b-instruct' },
+          detail: { from: 'local:qwen3:8b', to: 'local:qwen3:4b-instruct' },
         },
       },
     ]);
@@ -149,7 +157,10 @@ describe('setAssistantModel (US-AI-07)', () => {
     const result = await setAssistantModel(deps, admin, null);
     expect(result.current).toBe('qwen3:8b');
     expect(settings.rows.has(COOP)).toBe(false);
-    expect(audits[0]?.event.detail).toEqual({ from: 'qwen3:4b-instruct', to: 'qwen3:8b' });
+    expect(audits[0]?.event.detail).toEqual({
+      from: 'local:qwen3:4b-instruct',
+      to: 'local:qwen3:8b',
+    });
   });
 
   it('does not audit a change that changes nothing', async () => {

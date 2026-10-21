@@ -6,6 +6,7 @@ import { type AnnouncementEvent, createAnnouncementsModule } from './modules/ann
 import { type AssemblyEvent, createAssembliesModule } from './modules/assemblies';
 import {
   createAssistantModule,
+  type HostedProviderGateway,
   type LanguageModel,
   type LocalModelRuntime,
 } from './modules/assistant';
@@ -45,6 +46,10 @@ export interface ApiDeps {
   assistantMessageLimitPerHour?: number;
   /** Local models the assistant can use per cooperative (ASSISTANT_LLM_PROVIDER=ollama; ADR-014). */
   assistantLocalModels?: LocalModelRuntime;
+  /** ASSISTANT_SECRETS_KEY: encrypts the API keys of cooperatives on a hosted provider (ADR-018). Without it hosted mode is unavailable. */
+  assistantSecretsKey?: string;
+  /** Hosted providers' gateway; tests pass a fake (ADR-018). */
+  assistantHostedGateway?: HostedProviderGateway;
   authRateLimits?: AuthRateLimits | false;
   trustProxy?: number | false;
   /** Origins allowed to call the API from a browser (CORS); none when omitted. */
@@ -126,6 +131,8 @@ export function createApi(deps: ApiDeps): Api {
     prisma: deps.prisma,
     model: deps.languageModel ?? null,
     local: deps.assistantLocalModels,
+    secretsKey: deps.assistantSecretsKey,
+    hostedGateway: deps.assistantHostedGateway,
     audit: access.recordAudit,
     requireCooperative: access.requireCooperative,
     messageLimitPerHour: deps.assistantMessageLimitPerHour,

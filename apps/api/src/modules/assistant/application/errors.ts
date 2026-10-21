@@ -65,3 +65,39 @@ export class LocalModelNotInUseError extends AssistantApplicationError {
     super('The assistant is not using a local model on this server.');
   }
 }
+
+/** US-AI-07: the server has no ASSISTANT_SECRETS_KEY, so a cooperative's API key cannot be stored. */
+export class HostedProviderUnavailableError extends AssistantApplicationError {
+  readonly code = 'hosted_provider_unavailable';
+
+  constructor() {
+    super('External providers are not enabled on this server.');
+  }
+}
+
+/** US-AI-07: first time or provider changed, and the request carried no API key. */
+export class ApiKeyRequiredError extends AssistantApplicationError {
+  readonly code = 'assistant_api_key_required';
+
+  constructor() {
+    super('An API key is required for this provider.');
+  }
+}
+
+/** US-AI-07: the provider rejected the key (401/403). */
+export class ProviderKeyInvalidError extends AssistantApplicationError {
+  readonly code = 'assistant_provider_key_invalid';
+
+  constructor() {
+    super('The provider rejected the API key.');
+  }
+}
+
+/** US-AI-07: the provider could not be asked to verify the key and the model. */
+export class ProviderUnreachableError extends AssistantApplicationError {
+  readonly code = 'assistant_provider_unreachable';
+
+  constructor() {
+    super('The provider could not be reached to verify the key.');
+  }
+}

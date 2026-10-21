@@ -129,6 +129,10 @@ describe('GET /cooperatives/{id}/settings/assistant-model (US-AI-07)', () => {
       current: 'qwen3:8b',
       default: 'qwen3:8b',
       options: [{ id: 'qwen3:8b' }, { id: 'qwen3:4b-instruct' }],
+      source: 'local',
+      hostedAvailable: false,
+      hosted: null,
+      providers: [],
     });
   });
 
@@ -159,6 +163,10 @@ describe('GET /cooperatives/{id}/settings/assistant-model (US-AI-07)', () => {
       current: null,
       default: null,
       options: [],
+      source: 'local',
+      hostedAvailable: false,
+      hosted: null,
+      providers: [],
     });
   });
 });
@@ -182,7 +190,7 @@ describe('PUT /cooperatives/{id}/settings/assistant-model (US-AI-07, BR-AI-09)',
     const event = listAuditResponseSchema
       .parse(audit.body)
       .events.find((candidate) => candidate.action === 'assistant.model_changed');
-    expect(event?.detail).toEqual({ from: 'qwen3:8b', to: 'qwen3:4b-instruct' });
+    expect(event?.detail).toEqual({ from: 'local:qwen3:8b', to: 'local:qwen3:4b-instruct' });
     const adminUser = await prisma.user.findUniqueOrThrow({ where: { email: 'admin@farm.test' } });
     expect(event?.actorUserId).toBe(adminUser.id);
   });

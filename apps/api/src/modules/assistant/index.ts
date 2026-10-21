@@ -8,6 +8,9 @@ import { createToolExecutors } from './application/tool-executors';
 import type { LanguageModel } from './application/ports/language-model';
 import type { AuditRecorder, LocalModelRuntime } from './application/ports/local-models';
 import { OllamaModelRuntime } from './infrastructure/ollama-model-runtime';
+import type { HostedProviderGateway } from './application/ports/hosted-provider';
+import { AesGcmSecretCipher } from './infrastructure/aes-gcm-secret-cipher';
+import { OpenAICompatibleGateway } from './infrastructure/openai-compatible-gateway';
 import { PrismaAssistantSettingStore } from './infrastructure/prisma-setting-store';
 import { MESSAGE_LIMIT_PER_HOUR } from './domain/usage';
 import { DEFAULT_GEMINI_MODEL, GeminiLanguageModel } from './infrastructure/gemini-language-model';
@@ -21,6 +24,7 @@ import { PrismaConversationStore } from './infrastructure/prisma-conversation-st
 
 export type { LanguageModel } from './application/ports/language-model';
 export type { LocalModelRuntime } from './application/ports/local-models';
+export type { HostedProviderGateway, HostedSetting } from './application/ports/hosted-provider';
 
 /** The local models Ollama can serve for the assistant, chosen per cooperative (ADR-014). */
 export function createOllamaModelRuntime(settings: {
@@ -77,6 +81,10 @@ export function createAssistantModule(deps: {
   model: LanguageModel | null;
   /** With the Ollama provider: the models each cooperative may choose from (US-AI-07); `model` is then ignored. */
   local?: LocalModelRuntime;
+  /** ASSISTANT_SECRETS_KEY (32 bytes, base64): encrypts the API keys of cooperatives on a hosted provider (ADR-018). Without it hosted mode is unavailable. */
+  secretsKey?: string;
+  /** Talks to the hosted providers; tests pass a fake. */
+  hostedGateway?: HostedProviderGateway;
   /** Writes to the cooperative's audit log, through the access module. */
   audit: AuditRecorder;
   /** The other modules, through their public interfaces (BR-AI-02). */
@@ -87,15 +95,21 @@ export function createAssistantModule(deps: {
   now?: () => Date;
 }) {
   const now = deps.now ?? (() => new Date());
+  const settingsStore = new PrismaAssistantSettingStore(deps.prisma);
   const settingsDeps = {
     local: deps.local ?? null,
-    settings: new PrismaAssistantSettingStore(deps.prisma),
+    settings: settingsStore,
     audit: deps.audit,
+    hosted: {
+      store: settingsStore,
+      gateway: deps.hostedGateway ?? new OpenAICompatibleGateway(),
+      cipher: deps.secretsKey ? new AesGcmSecretCipher(deps.secretsKey) : null,
+    },
   };
   const useCaseDeps: AssistantDeps = {
     conversations: new PrismaConversationStore(deps.prisma),
     model: deps.model,
-    localModels: deps.local ? settingsDeps : undefined,
+    localModels: settingsDeps,
     executors: createToolExecutors(deps.sources),
     now,
     today: () => todayInSpain(now()),

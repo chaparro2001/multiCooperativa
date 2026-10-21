@@ -10,6 +10,10 @@ const STATUS_BY_CODE: Record<string, number> = {
   assistant_unavailable: 503,
   assistant_model_not_available: 422,
   local_model_not_in_use: 409,
+  hosted_provider_unavailable: 409,
+  assistant_api_key_required: 422,
+  assistant_provider_key_invalid: 422,
+  assistant_provider_unreachable: 502,
 };
 
 export const assistantErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
