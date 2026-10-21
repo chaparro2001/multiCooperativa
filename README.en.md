@@ -296,7 +296,7 @@ ADRs are immutable: a decision that changes produces a new ADR.
 ## 11. Quality
 
 - **Unit tests** (`pnpm test`): 613 tests in 67 files, all green as of 2026-10-20.
-- **Integration tests** (`pnpm test:integration`): against real PostgreSQL and S3 storage, including the isolation test between cooperatives. No count is given because they were not run when this README was written.
+- **Integration tests** (`pnpm test:integration`): against real PostgreSQL and S3 storage, including the isolation test between cooperatives. 364 tests in 20 files, all green (2026-10-21).
 - **CI** (GitHub Actions, on every push and pull request): format check, lint, typecheck, tests, migrations on a Postgres with pgvector, and integration tests. There are also workflows for the GitHub Pages deploy and the due-dates cron.
 - **Local quality gate**: Husky runs lint, typecheck and tests on pre-commit.
 - **Module boundaries**: custom ESLint rule (`tools/eslint/module-boundaries.js`, with its own tests) that forbids importing a backend module through any path other than its `index.ts` (ADR-002).
@@ -311,7 +311,7 @@ The project was built with Spec Driven Development using Claude Code:
 - **`CLAUDE.md` as the contract with the agent**: non-negotiable rules (permissions in the backend, isolation, pure domain, exact amounts, AI with human confirmation, secrets), way of working and commands.
 - **TDD in the domain**: test first from the specification's criteria.
 - **Traceability**: specification identifiers (`US-ACC-02`, `BR-INV-06`, `NFR-AI-05`) appear in test names and commit messages, using Conventional Commits.
-- **Shared authorship**: 59 of the 60 commits on the `hito-0-cimientos` branch carry the agent's `Co-Authored-By` trailer (counted with `git log` as of 2026-10-20).
+- **Shared authorship**: every commit except the initial one carries the agent's `Co-Authored-By` trailer (verifiable with `git log`).
 
 ## 13. Relation to the master's program
 

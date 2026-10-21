@@ -296,7 +296,7 @@ Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
 ## 11. Calidad
 
 - **Tests unitarios** (`pnpm test`): 613 tests en 67 ficheros, todos en verde a fecha 2026-10-20.
-- **Tests de integración** (`pnpm test:integration`): contra PostgreSQL y almacenamiento S3 reales, incluido el test de aislamiento entre cooperativas. No se indica recuento porque no se ejecutaron al redactar este README.
+- **Tests de integración** (`pnpm test:integration`): contra PostgreSQL y almacenamiento S3 reales, incluido el test de aislamiento entre cooperativas. 364 tests en 20 ficheros, todos en verde (2026-10-21).
 - **CI** (GitHub Actions, en cada push y pull request): comprobación de formato, lint, typecheck, tests, migraciones sobre un Postgres con pgvector y tests de integración. Hay además workflows de despliegue de GitHub Pages y de cron de vencimientos.
 - **Puerta de calidad local**: Husky ejecuta lint, typecheck y tests en el pre-commit.
 - **Límites entre módulos**: regla ESLint propia (`tools/eslint/module-boundaries.js`, con sus tests) que impide importar un módulo del backend por una ruta distinta de su `index.ts` (ADR-002).
@@ -311,7 +311,7 @@ El proyecto se ha construido con Spec Driven Development usando Claude Code:
 - **`CLAUDE.md` como contrato con el agente**: reglas no negociables (permisos en el backend, aislamiento, dominio puro, importes exactos, IA con confirmación humana, secretos), forma de trabajar y comandos.
 - **TDD en el dominio**: test primero a partir de los criterios de la especificación.
 - **Trazabilidad**: los identificadores de la especificación (`US-ACC-02`, `BR-INV-06`, `NFR-AI-05`) aparecen en nombres de tests y mensajes de commit, con Conventional Commits.
-- **Autoría compartida**: 59 de los 60 commits de la rama `hito-0-cimientos` llevan el trailer `Co-Authored-By` del agente (recuento con `git log` a fecha 2026-10-20).
+- **Autoría compartida**: todos los commits salvo el inicial llevan el trailer `Co-Authored-By` del agente (se puede comprobar con `git log`).
 
 ## 13. Relación con el máster
 
