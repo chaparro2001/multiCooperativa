@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
+import { AppState, Platform, StyleSheet, View } from 'react-native';
 
 import { i18n } from '@/i18n';
 
@@ -18,6 +18,7 @@ import { useServices } from '../app-services';
 import { useSession } from '../session/session-context';
 import { BIOMETRICS_KEY } from '../session/storage-keys';
 import { Button } from '../ui/button';
+import { Text, useTheme } from '../ui/paper';
 import { shouldLock } from './biometric-lock';
 
 interface BiometricsValue {
@@ -137,6 +138,7 @@ function LockScreen({
   onUsePassword(): Promise<void>;
 }) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const [message, setMessage] = useState<string | null>(null);
 
   const tryUnlock = useCallback(async () => {
@@ -153,9 +155,15 @@ function LockScreen({
   }, [tryUnlock]);
 
   return (
-    <View style={styles.lock} testID="lock-screen">
-      <Text style={styles.title}>{t('auth.lock.title')}</Text>
-      {message && <Text style={styles.message}>{message}</Text>}
+    <View style={[styles.lock, { backgroundColor: colors.background }]} testID="lock-screen">
+      <Text variant="titleLarge" style={styles.centered}>
+        {t('auth.lock.title')}
+      </Text>
+      {message && (
+        <Text variant="bodyMedium" style={[styles.centered, { color: colors.error }]}>
+          {message}
+        </Text>
+      )}
       <Button title={t('auth.lock.unlock')} onPress={tryUnlock} testID="unlock" />
       {/* US-ACC-04: when biometrics fail, the password is always a way in. */}
       <Button
@@ -182,12 +190,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     zIndex: 1000,
-    backgroundColor: '#fff',
     alignItems: 'stretch',
     justifyContent: 'center',
     gap: 16,
     padding: 32,
   },
-  title: { fontSize: 20, fontWeight: '600', textAlign: 'center' },
-  message: { color: '#b3261e', textAlign: 'center' },
+  centered: { textAlign: 'center' },
 });

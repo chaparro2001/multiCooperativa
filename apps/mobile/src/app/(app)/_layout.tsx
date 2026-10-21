@@ -9,7 +9,7 @@ import { HeaderBack } from '@/navigation/header-back';
 import { allScope, canAccess, canManage } from '@/navigation/modules';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
-import { colors } from '@/ui/theme';
+import { useTheme } from '@/ui/paper';
 
 export default function AppLayout() {
   return (
@@ -32,6 +32,7 @@ function CooperativeNavigator() {
   const { meQuery, permissionsQuery, cooperativeId, cooperative, permissions } =
     useActiveCooperative();
   const brand = useBrand();
+  const { colors } = useTheme();
   const allowed = permissions?.permissions;
 
   const failed = meQuery.isError ? meQuery : permissionsQuery.isError ? permissionsQuery : null;
@@ -57,7 +58,7 @@ function CooperativeNavigator() {
         headerBackTitle: t('common.actions.back'),
         // US-ACC-14: back arrow and header links follow the cooperative's colour; titles stay neutral.
         headerTintColor: brand.primaryColor,
-        headerTitleStyle: { color: colors.text },
+        headerTitleStyle: { color: colors.onSurface },
         // Without history (reload, deep link) the default arrow is dead: go to the logical parent.
         ...(navigation.canGoBack() ? {} : { headerLeft: () => <HeaderBack /> }),
       })}

@@ -1,17 +1,18 @@
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { useSession } from '@/session/session-context';
 import { Button } from '@/ui/button';
+import { Card, Text, useTheme } from '@/ui/paper';
 import { Loading, Screen } from '@/ui/screen';
 import { useBrandColor } from '@/branding/brand';
-import { colors } from '@/ui/theme';
 
 /** US-ACC-05: choose or switch cooperative without logging in again. */
 export default function SelectCooperativeScreen() {
   const brand = useBrandColor();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const { me, cooperativeId, select } = useActiveCooperative();
   const { signOut } = useSession();
@@ -21,7 +22,7 @@ export default function SelectCooperativeScreen() {
   if (me.memberships.length === 0) {
     return (
       <Screen>
-        <Text style={styles.text}>{t('cooperatives.select.none')}</Text>
+        <Text variant="bodyLarge">{t('cooperatives.select.none')}</Text>
         <Button title={t('settings.signOut')} variant="secondary" onPress={signOut} />
       </Screen>
     );
@@ -34,30 +35,28 @@ export default function SelectCooperativeScreen() {
 
   return (
     <Screen testID="selector-screen">
-      <Text style={styles.text}>{t('cooperatives.select.prompt', { name: me.name })}</Text>
+      <Text variant="bodyLarge">{t('cooperatives.select.prompt', { name: me.name })}</Text>
       <View style={styles.list}>
         {me.memberships.map((membership) => {
           const current = membership.cooperativeId === cooperativeId;
           return (
-            <Pressable
+            <Card
               key={membership.cooperativeId}
+              mode="contained"
               accessibilityRole="button"
               accessibilityState={{ selected: current }}
               onPress={() => choose(membership.cooperativeId)}
-              style={({ pressed }) => [
-                styles.card,
-                current && styles.current,
-                current && { borderColor: brand },
-                pressed && styles.pressed,
-              ]}
+              style={current ? [styles.current, { borderColor: brand }] : undefined}
               testID={`cooperative-${membership.cooperativeName}`}
             >
-              <Text style={styles.name}>{membership.cooperativeName}</Text>
-              <Text style={styles.detail}>
-                {membership.profileName}
-                {membership.isPartner ? ` · ${t('common.partner')}` : ''}
-              </Text>
-            </Pressable>
+              <Card.Content style={styles.card}>
+                <Text variant="titleMedium">{membership.cooperativeName}</Text>
+                <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+                  {membership.profileName}
+                  {membership.isPartner ? ` · ${t('common.partner')}` : ''}
+                </Text>
+              </Card.Content>
+            </Card>
           );
         })}
       </View>
@@ -66,11 +65,7 @@ export default function SelectCooperativeScreen() {
 }
 
 const styles = StyleSheet.create({
-  text: { fontSize: 16, color: colors.text },
   list: { gap: 12 },
-  card: { padding: 16, borderRadius: 12, backgroundColor: colors.surface, gap: 4 },
-  current: { borderWidth: 2, borderColor: colors.primary },
-  pressed: { opacity: 0.7 },
-  name: { fontSize: 17, fontWeight: '600', color: colors.text },
-  detail: { fontSize: 14, color: colors.muted },
+  card: { gap: 4 },
+  current: { borderWidth: 2 },
 });

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { messageText } from '@/forms/errors';
@@ -11,9 +11,9 @@ import { BrandLogo } from '@/branding/brand-logo';
 import { Button } from '@/ui/button';
 import { confirmAction } from '@/ui/confirm';
 import { FormSummary } from '@/ui/field';
+import { Divider, Text, useTheme } from '@/ui/paper';
 import { ErrorText } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
 import { contrastWithWhite, MIN_CONTRAST, parseHexColor, PRESET_COLORS } from './brand-color';
 import { BRAND_FIELDS, BRAND_SERVER_MAPPING, validateBrandColor } from './form-validation';
 import { pickLogo } from './logo';
@@ -23,6 +23,8 @@ import { useRemoveLogo, useSetBrandColor, useUploadLogo } from './queries';
 export function AppearanceSection() {
   const { t, i18n } = useTranslation();
   const brand = useBrand();
+  const { colors } = useTheme();
+  const detailColor = { color: colors.onSurfaceVariant };
   const setColor = useSetBrandColor();
   const uploadLogo = useUploadLogo();
   const removeLogo = useRemoveLogo();
@@ -86,10 +88,14 @@ export function AppearanceSection() {
   return (
     <FormScope form={form}>
       <View style={styles.section} testID="appearance-section">
-        <Text style={styles.label}>{t('settings.appearance.title')}</Text>
-        <Text style={styles.detail}>{t('settings.appearance.description')}</Text>
+        <Text variant="labelMedium" style={[styles.label, detailColor]}>
+          {t('settings.appearance.title')}
+        </Text>
+        <Text variant="bodyMedium" style={detailColor}>
+          {t('settings.appearance.description')}
+        </Text>
 
-        <Text style={styles.name}>{t('settings.appearance.color.title')}</Text>
+        <Text variant="titleMedium">{t('settings.appearance.color.title')}</Text>
         <View style={styles.swatches} accessibilityRole="radiogroup">
           {PRESET_COLORS.map((color) => {
             const active = candidate === color;
@@ -104,7 +110,7 @@ export function AppearanceSection() {
                   setColorSaved(false);
                   setColor.reset();
                 }}
-                style={[styles.swatchRing, active && styles.swatchRingActive]}
+                style={[styles.swatchRing, active && { borderColor: colors.onSurface }]}
                 testID={`brand-swatch-${color.slice(1)}`}
               >
                 <View style={[styles.swatch, { backgroundColor: color }]} />
@@ -129,12 +135,14 @@ export function AppearanceSection() {
           testID="brand-color-input"
         />
         {ratio !== null && readable && (
-          <Text style={styles.detail} testID="brand-color-contrast">
+          <Text variant="bodyMedium" style={detailColor} testID="brand-color-contrast">
             {t('settings.appearance.color.contrastOk', { ratio: ratioText })}
           </Text>
         )}
 
-        <Text style={styles.detail}>{t('settings.appearance.color.preview')}</Text>
+        <Text variant="bodyMedium" style={detailColor}>
+          {t('settings.appearance.color.preview')}
+        </Text>
         <View style={styles.preview}>
           <View style={styles.previewButton}>
             <Button
@@ -157,7 +165,7 @@ export function AppearanceSection() {
         {colorBanner && <ErrorText>{colorBanner}</ErrorText>}
         <FormSummary form={form} />
         {colorSaved && !colorBanner && (
-          <Text style={styles.success} accessibilityLiveRegion="polite" testID="brand-color-saved">
+          <Text variant="bodyMedium" accessibilityLiveRegion="polite" testID="brand-color-saved">
             {t('settings.appearance.color.saved')}
           </Text>
         )}
@@ -177,14 +185,23 @@ export function AppearanceSection() {
           />
         )}
 
-        <Text style={[styles.name, styles.logoTitle]}>{t('settings.appearance.logo.title')}</Text>
-        <Text style={styles.detail}>{t('settings.appearance.logo.description')}</Text>
+        <Text variant="titleMedium" style={styles.logoTitle}>
+          {t('settings.appearance.logo.title')}
+        </Text>
+        <Text variant="bodyMedium" style={detailColor}>
+          {t('settings.appearance.logo.description')}
+        </Text>
         {brand.logoUrl ? (
-          <View style={styles.logoBox}>
+          <View
+            style={[
+              styles.logoBox,
+              { borderColor: colors.outlineVariant, backgroundColor: colors.surface },
+            ]}
+          >
             <BrandLogo size={96} testID="brand-logo-preview" />
           </View>
         ) : (
-          <Text style={styles.detail} testID="brand-logo-none">
+          <Text variant="bodyMedium" style={detailColor} testID="brand-logo-none">
             {t('settings.appearance.logo.none')}
           </Text>
         )}
@@ -210,17 +227,14 @@ export function AppearanceSection() {
           />
         )}
       </View>
+      <Divider />
     </FormScope>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { gap: 10, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  label: { fontSize: 13, color: colors.muted, textTransform: 'uppercase' },
-  name: { fontSize: 17, fontWeight: '600', color: colors.text },
-  detail: { fontSize: 14, color: colors.muted },
-  warning: { fontSize: 14, color: colors.danger },
-  success: { fontSize: 14, color: colors.text },
+  section: { gap: 10 },
+  label: { textTransform: 'uppercase' },
   logoTitle: { marginTop: 8 },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   swatchRing: {
@@ -232,7 +246,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  swatchRingActive: { borderColor: colors.text },
   swatch: { width: 32, height: 32, borderRadius: 16 },
   preview: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   previewButton: { flexGrow: 1, flexBasis: 140 },
@@ -240,8 +253,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     padding: 8,
     borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: '#fff',
   },
 });

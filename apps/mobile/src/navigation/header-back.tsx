@@ -1,9 +1,9 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { useBrandColor } from '@/branding/brand';
+import { IconButton } from '@/ui/paper';
 
 import { parentRoute } from './parent-route';
 
@@ -18,19 +18,18 @@ export function HeaderBack() {
   const parent = parentRoute(pathname);
   if (parent === null) return null;
   return (
-    <Pressable
-      accessibilityRole="button"
+    <IconButton
+      icon="chevron-left"
+      size={28}
+      iconColor={brand}
       accessibilityLabel={t('common.actions.back')}
       onPress={() => (router.canGoBack() ? router.back() : router.replace(parent as '/'))}
-      hitSlop={8}
       style={styles.button}
       testID="header-back"
-    >
-      <MaterialCommunityIcons name="chevron-left" size={28} color={brand} />
-    </Pressable>
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  button: { paddingHorizontal: 8, paddingVertical: 4 },
+  button: { margin: 0 },
 });
