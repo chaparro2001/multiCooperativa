@@ -150,7 +150,6 @@ export function createApi(deps: ApiDeps): Api {
 
   const branding = createBrandingModule({
     prisma: deps.prisma,
-    files: deps.files,
     audit: access.recordAudit,
     requireCooperative: access.requireCooperative,
   });

@@ -711,9 +711,6 @@ model CooperativeBranding {
   cooperativeId   String   @id @db.Uuid
   /// #RRGGBB upper-case; white text on it reaches WCAG AA (BR-ACC-12).
   primaryColor    String?
-  /// Storage key of the logo under cooperatives/<id>/branding/ (BR-ACC-13).
-  logoKey         String?
-  logoContentType String?
   updatedAt       DateTime @default(now())
 }
 
