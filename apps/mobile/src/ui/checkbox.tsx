@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useBrandColor } from '@/branding/brand';
@@ -28,7 +28,7 @@ export function Checkbox({
       testID={testID}
     >
       <View style={[styles.box, checked && { backgroundColor: brand, borderColor: brand }]}>
-        {checked && <Check size={16} strokeWidth={3} color="#fff" aria-hidden />}
+        {checked && <Ionicons name="checkmark" size={16} color="#fff" />}
       </View>
       <Text style={styles.label}>{label}</Text>
     </Pressable>

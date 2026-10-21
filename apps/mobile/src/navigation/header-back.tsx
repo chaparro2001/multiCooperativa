@@ -1,5 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router, usePathname } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet } from 'react-native';
 
@@ -26,7 +26,7 @@ export function HeaderBack() {
       style={styles.button}
       testID="header-back"
     >
-      <ChevronLeft size={28} strokeWidth={1.75} color={brand} aria-hidden />
+      <Ionicons name="chevron-back" size={28} color={brand} />
     </Pressable>
   );
 }

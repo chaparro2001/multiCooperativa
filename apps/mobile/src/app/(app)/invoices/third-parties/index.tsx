@@ -1,4 +1,3 @@
-import { Plus } from 'lucide-react-native';
 import type { ThirdParty } from '@multicooperativa/contracts';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -46,7 +45,7 @@ export default function ThirdPartiesScreen() {
                         ? `/invoices/third-parties/editor?type=${fixed}`
                         : '/invoices/third-parties/editor'
                     }
-                    icon={Plus}
+                    icon="add"
                     label={t(
                       fixed === 'supplier'
                         ? 'invoicing.thirdParties.newSupplier'

@@ -1,9 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type Href, Link } from 'expo-router';
-import type { LucideIcon } from 'lucide-react-native';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import { createElement, type ReactNode } from 'react';
+import { type ComponentProps, createElement, type ReactNode } from 'react';
 
 import { useBrandColor } from '@/branding/brand';
+
+export type IconName = ComponentProps<typeof Ionicons>['name'];
 
 interface HeaderActionBase {
   /**
@@ -16,17 +18,17 @@ interface HeaderActionBase {
   /** Runs an action (role "button"). */
   onPress?: () => void;
   testID?: string;
-  /** Lucide icon component, tinted with the brand color (decorative: the label names the action). */
-  icon: LucideIcon;
+  /** Ionicons name, tinted with the brand color (decorative: the label names the action). */
+  icon: IconName;
 }
 
 /** Minimum touch target of an icon action (44x44, Apple HIG and WCAG 2.5.5). */
 export const HEADER_ACTION_SIZE = 44;
 
-/** Icon action for a Stack `headerRight`; icons use the cooperative's brand color. */
-export function HeaderAction({ label, href, onPress, testID, icon: Icon }: HeaderActionBase) {
+/** Icon action for a Stack `headerRight`; vector icons use the cooperative's brand color. */
+export function HeaderAction({ label, href, onPress, testID, icon }: HeaderActionBase) {
   const color = useBrandColor();
-  const glyph = <Icon size={24} strokeWidth={1.75} color={color} aria-hidden />;
+  const glyph = <Ionicons name={icon} size={24} color={color} />;
 
   const action =
     href !== undefined ? (

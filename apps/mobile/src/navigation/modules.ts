@@ -1,17 +1,6 @@
-import {
-  Bot,
-  FileText,
-  Handshake,
-  Megaphone,
-  Package,
-  Receipt,
-  Truck,
-  UserRound,
-  Users,
-  Vote,
-  type LucideIcon,
-} from 'lucide-react-native';
 import type { Module, MyPermissionsResponse } from '@multicooperativa/contracts';
+
+import type { IconName } from '@/ui/header-action';
 
 export interface ModuleEntry {
   /** Unique per home tile (key and test id); equals `module` unless a module has several tiles. */
@@ -24,8 +13,8 @@ export interface ModuleEntry {
     | 'invoicing.home.notes'
     | 'invoicing.thirdParties.filter.supplier'
     | 'invoicing.thirdParties.filter.customer';
-  /** Shown in the home grid; decorative icon, screen readers read the title (`enums.module.<module>`). */
-  icon: LucideIcon;
+  /** Ionicons name shown in the home grid; decorative, screen readers read the title (`enums.module.<module>`). */
+  icon: IconName;
   /** Screen of the module inside the cooperative. */
   route: `/${string}`;
   /** Not built yet: the home shows a "coming soon" badge and the screen a placeholder. */
@@ -34,22 +23,27 @@ export interface ModuleEntry {
 
 /** Order of the home grid. */
 export const MODULE_ENTRIES: readonly ModuleEntry[] = [
-  { id: 'announcements', module: 'announcements', icon: Megaphone, route: '/announcements' },
-  { id: 'assemblies', module: 'assemblies', icon: Vote, route: '/assemblies' },
-  { id: 'documents', module: 'documents', icon: FileText, route: '/documents' },
+  {
+    id: 'announcements',
+    module: 'announcements',
+    icon: 'megaphone-outline',
+    route: '/announcements',
+  },
+  { id: 'assemblies', module: 'assemblies', icon: 'hand-left-outline', route: '/assemblies' },
+  { id: 'documents', module: 'documents', icon: 'document-text-outline', route: '/documents' },
   // Invoices and delivery notes share one screen fixed to a kind by the query param (BR-INV-01: same permission).
   {
     id: 'invoices',
     module: 'invoicing',
     titleKey: 'invoicing.home.invoices',
-    icon: Receipt,
+    icon: 'receipt-outline',
     route: '/invoices?kind=invoice',
   },
   {
     id: 'delivery-notes',
     module: 'invoicing',
     titleKey: 'invoicing.home.notes',
-    icon: Package,
+    icon: 'cube-outline',
     route: '/invoices?kind=delivery_note',
   },
   // Suppliers and customers are master data of the invoicing module (BR-INV-01): same permission.
@@ -58,23 +52,23 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
     id: 'suppliers',
     module: 'invoicing',
     titleKey: 'invoicing.thirdParties.filter.supplier',
-    icon: Truck,
+    icon: 'business-outline',
     route: '/invoices/third-parties?type=supplier',
   },
   {
     id: 'customers',
     module: 'invoicing',
     titleKey: 'invoicing.thirdParties.filter.customer',
-    icon: Handshake,
+    icon: 'storefront-outline',
     route: '/invoices/third-parties?type=customer',
   },
-  { id: 'member-area', module: 'member-area', icon: UserRound, route: '/member-area' },
-  { id: 'assistant', module: 'assistant', icon: Bot, route: '/assistant' },
-  { id: 'users', module: 'users', icon: Users, route: '/members' },
+  { id: 'member-area', module: 'member-area', icon: 'person-outline', route: '/member-area' },
+  { id: 'assistant', module: 'assistant', icon: 'chatbubbles-outline', route: '/assistant' },
+  { id: 'users', module: 'users', icon: 'people-outline', route: '/members' },
 ];
 
 /** Icon of a home tile, shared by the places that point at the same screen (single source). */
-export function moduleIcon(id: string): LucideIcon {
+export function moduleIcon(id: string): IconName {
   const entry = MODULE_ENTRIES.find((e) => e.id === id);
   if (!entry) throw new Error(`Unknown module entry: ${id}`);
   return entry.icon;

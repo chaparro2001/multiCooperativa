@@ -1,4 +1,3 @@
-import { CalendarClock } from 'lucide-react-native';
 import type { AssemblyDetail, VotingView } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -80,7 +79,7 @@ export default function AssemblyScreen() {
             ? () => (
                 <HeaderActions>
                   <HeaderAction
-                    icon={CalendarClock}
+                    icon="calendar-outline"
                     label={t('assemblies.detail.reschedule')}
                     href={{ pathname: '/assemblies/reschedule', params: { id } }}
                     testID="reschedule-assembly"

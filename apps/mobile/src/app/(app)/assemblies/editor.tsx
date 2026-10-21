@@ -1,6 +1,6 @@
 import type { AssemblyType } from '@multicooperativa/contracts';
+import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ArrowDown, ArrowUp, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
@@ -23,6 +23,7 @@ import {
 import { useAssembly, useSaveAssembly } from '@/features/assemblies/queries';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
+import type { IconName } from '@/ui/header-action';
 import { FieldGroup, FormSummary } from '@/ui/field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
@@ -155,13 +156,13 @@ export default function AssemblyEditorScreen() {
             </Text>
             <View style={styles.pointTools}>
               <Tool
-                icon={ArrowUp}
+                icon="arrow-up"
                 accessibilityLabel={t('assemblies.editor.moveUp')}
                 onPress={() => setPoints((c) => movePoint(c, index, -1))}
                 disabled={index === 0}
               />
               <Tool
-                icon={ArrowDown}
+                icon="arrow-down"
                 accessibilityLabel={t('assemblies.editor.moveDown')}
                 onPress={() => setPoints((c) => movePoint(c, index, 1))}
                 disabled={index === points.length - 1}
@@ -251,13 +252,13 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 
 function Tool({
   label,
-  icon: Icon,
+  icon,
   accessibilityLabel,
   onPress,
   disabled = false,
 }: {
   label?: string;
-  icon?: LucideIcon;
+  icon?: IconName;
   accessibilityLabel?: string;
   onPress(): void;
   disabled?: boolean;
@@ -271,8 +272,8 @@ function Tool({
       disabled={disabled}
       style={styles.tool}
     >
-      {Icon ? (
-        <Icon size={20} strokeWidth={1.75} color={disabled ? colors.border : brand} aria-hidden />
+      {icon ? (
+        <Ionicons name={icon} size={20} color={disabled ? colors.border : brand} />
       ) : (
         <Text style={[styles.toolText, { color: brand }, disabled && styles.toolDisabled]}>
           {label}

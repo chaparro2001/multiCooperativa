@@ -1,4 +1,3 @@
-import { Plus } from 'lucide-react-native';
 import type { DocumentSearchHit, DocumentSummary } from '@multicooperativa/contracts';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
@@ -34,7 +33,7 @@ export default function DocumentListScreen() {
                 <HeaderActions>
                   <HeaderAction
                     href="/documents/upload"
-                    icon={Plus}
+                    icon="add"
                     label={t('documents.list.upload')}
                     testID="upload-document"
                   />

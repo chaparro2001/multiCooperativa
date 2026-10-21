@@ -1,4 +1,3 @@
-import { History, SquarePen } from 'lucide-react-native';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -159,14 +158,14 @@ function Chat() {
             <HeaderActions>
               <HeaderAction
                 href="/assistant/history"
-                icon={History}
+                icon="time-outline"
                 label={t('assistant.history.open')}
                 testID="assistant-history"
               />
               {messages.length > 0 && (
                 <HeaderAction
                   onPress={reset}
-                  icon={SquarePen}
+                  icon="create-outline"
                   label={t('assistant.newConversation')}
                   testID="new-conversation"
                 />
