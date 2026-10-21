@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { useBrandColor, useBrandTint } from '@/branding/brand';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { type ChatMessage, citationTarget, suggestedQuestions } from '@/features/assistant/chat';
 import {
@@ -38,6 +39,8 @@ export default function AssistantScreen() {
 function Chat() {
   const { t } = useTranslation();
   const { permissions } = useActiveCooperative();
+  const brand = useBrandColor();
+  const tint = useBrandTint();
   const createConversation = useCreateConversation();
   const sendMessage = useSendMessage();
   const rateMessage = useRateMessage();
@@ -156,11 +159,15 @@ function Chat() {
                 onPress={() => router.push('/assistant/history')}
                 testID="assistant-history"
               >
-                <Text style={styles.headerLink}>{t('assistant.history.open')}</Text>
+                <Text style={[styles.headerLink, { color: brand }]}>
+                  {t('assistant.history.open')}
+                </Text>
               </Pressable>
               {messages.length > 0 && (
                 <Pressable accessibilityRole="button" onPress={reset} testID="new-conversation">
-                  <Text style={styles.headerLink}>{t('assistant.newConversation')}</Text>
+                  <Text style={[styles.headerLink, { color: brand }]}>
+                    {t('assistant.newConversation')}
+                  </Text>
                 </Pressable>
               )}
             </View>
@@ -183,7 +190,7 @@ function Chat() {
                 key={key}
                 accessibilityRole="button"
                 onPress={() => send(t(`assistant.suggestions.${key}`))}
-                style={styles.suggestion}
+                style={[styles.suggestion, { borderColor: brand, backgroundColor: tint }]}
                 testID={`suggestion-${key}`}
               >
                 <Text style={styles.suggestionText}>{t(`assistant.suggestions.${key}`)}</Text>
@@ -236,9 +243,14 @@ function MessageBubble({
 }) {
   const { t } = useTranslation();
   const mine = message.role === 'user';
+  const brand = useBrandColor();
   return (
     <View
-      style={[styles.bubble, mine ? styles.mine : styles.theirs, message.pending && styles.dim]}
+      style={[
+        styles.bubble,
+        mine ? [styles.mine, { backgroundColor: brand }] : styles.theirs,
+        message.pending && styles.dim,
+      ]}
     >
       <Text style={mine ? styles.mineText : styles.text} selectable>
         {message.content}
@@ -255,7 +267,7 @@ function MessageBubble({
               style={styles.citation}
               testID={`citation-${citation.ref}`}
             >
-              <Text style={styles.citationTitle}>
+              <Text style={[styles.citationTitle, { color: brand }]}>
                 {citation.page
                   ? t('assistant.citationPage', { title: citation.title, page: citation.page })
                   : citation.title}
@@ -304,7 +316,7 @@ const styles = StyleSheet.create({
   },
   suggestionText: { color: colors.text, fontSize: 15 },
   bubble: { borderRadius: 14, padding: 12, gap: 8, maxWidth: '92%' },
-  mine: { alignSelf: 'flex-end', backgroundColor: colors.primary },
+  mine: { alignSelf: 'flex-end' },
   theirs: { alignSelf: 'flex-start', backgroundColor: colors.surface },
   dim: { opacity: 0.6 },
   text: { color: colors.text, fontSize: 16 },
@@ -319,7 +331,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     gap: 2,
   },
-  citationTitle: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  citationTitle: { fontSize: 14, fontWeight: '600' },
   excerpt: { color: colors.muted, fontSize: 12 },
   rating: { flexDirection: 'row', gap: 8 },
   rate: {
@@ -351,6 +363,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
-  headerLink: { color: colors.primary, fontSize: 16 },
+  headerLink: { fontSize: 16 },
   headerActions: { flexDirection: 'row', gap: 16, paddingRight: 12 },
 });

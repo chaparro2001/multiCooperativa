@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { useBrandColor } from '@/branding/brand';
 import { Button } from '@/ui/button';
 import { ErrorText } from '@/ui/screen';
 import { colors } from '@/ui/theme';
@@ -12,6 +13,7 @@ import { useAssistantModelSettings, useUpdateAssistantModel } from './queries';
 /** US-AI-07: the administrator picks the local model the cooperative's assistant runs on. */
 export function AssistantModelSection() {
   const { t } = useTranslation();
+  const brand = useBrandColor();
   const query = useAssistantModelSettings();
   const update = useUpdateAssistantModel();
   const [selected, setSelected] = useState<string | null>(null);
@@ -53,10 +55,12 @@ export function AssistantModelSection() {
                 setSelected(option.id);
                 setSaved(false);
               }}
-              style={[styles.option, active && styles.optionActive]}
+              style={[styles.option, active && [styles.optionActive, { borderColor: brand }]]}
               testID={`assistant-model-${option.id}`}
             >
-              <View style={[styles.radio, active && styles.radioActive]} />
+              <View
+                style={[styles.radio, active && { borderColor: brand, backgroundColor: brand }]}
+              />
               <View style={styles.optionText}>
                 <Text style={styles.name}>
                   {option.id}
@@ -76,7 +80,7 @@ export function AssistantModelSection() {
       {update.isError && <ErrorText>{messageFor(update.error)}</ErrorText>}
       {saved && (
         <Text
-          style={styles.success}
+          style={[styles.success, { color: brand }]}
           accessibilityLiveRegion="polite"
           testID="assistant-model-saved"
         >
@@ -103,7 +107,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, color: colors.muted, textTransform: 'uppercase' },
   name: { fontSize: 17, fontWeight: '600', color: colors.text },
   detail: { fontSize: 14, color: colors.muted },
-  success: { fontSize: 14, color: colors.primary },
+  success: { fontSize: 14 },
   options: { gap: 8 },
   option: {
     flexDirection: 'row',
@@ -114,7 +118,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 8,
   },
-  optionActive: { borderColor: colors.primary, backgroundColor: colors.surface },
+  optionActive: { backgroundColor: colors.surface },
   optionText: { flex: 1, gap: 2 },
   radio: {
     width: 20,
@@ -123,5 +127,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
   },
-  radioActive: { borderColor: colors.primary, backgroundColor: colors.primary },
 });
