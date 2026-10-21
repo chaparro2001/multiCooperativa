@@ -180,6 +180,8 @@
       "extraction_unavailable": "La lectura automática no está disponible ahora mismo. Puedes rellenar el formulario a mano.",
       "usage_limit_exceeded": "Has alcanzado el límite de mensajes por hora al asistente. Inténtalo más tarde.",
       "assistant_unavailable": "El asistente no está disponible ahora mismo. Inténtalo más tarde.",
+      "assistant_model_not_available": "Ese modelo ya no está disponible. Actualiza la pantalla y elige otro.",
+      "local_model_not_in_use": "El asistente no usa un modelo local en este servidor.",
       "assistant_refused": "El asistente no puede responder a esta pregunta.",
       "internal_error": "Ha ocurrido un error en el servidor. Inténtalo de nuevo."
     }
@@ -222,6 +224,19 @@
     "cooperative": "Cooperativa",
     "switchCooperative": "Cambiar de cooperativa",
     "biometrics": "Desbloqueo con biometría",
+    "assistantModel": {
+      "title": "Asistente IA",
+      "description": "Modelo local que responde a las preguntas del asistente en tu cooperativa.",
+      "current": "en uso",
+      "hints": {
+        "accurate": "Más preciso",
+        "fast": "Más rápido"
+      },
+      "firstAnswerSlower": "La primera respuesta tras un cambio puede tardar más, porque hay que cargar el modelo.",
+      "save": "Guardar",
+      "saved": "Modelo guardado.",
+      "notLocal": "El asistente usa un servicio en la nube en este servidor; aquí no se puede elegir un modelo local."
+    },
     "signOut": "Cerrar sesión"
   },
   "cooperatives": {
