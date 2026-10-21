@@ -58,6 +58,7 @@ export default function AssemblyListScreen() {
       />
       <FlatList
         testID="assembly-list"
+        style={{ backgroundColor: colors.background }}
         data={list.data.items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={list.data.items.length === 0 ? styles.center : styles.list}

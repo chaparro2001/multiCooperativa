@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   },
   swatch: { width: 32, height: 32, borderRadius: 16 },
   preview: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  previewButton: { flexGrow: 1, flexBasis: 140 },
+  previewButton: { flexGrow: 1, flexBasis: 220 },
   logoBox: {
     alignSelf: 'flex-start',
     padding: 8,

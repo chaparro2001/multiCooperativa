@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { BrandProvider, useBrand } from '@/branding/brand';
@@ -55,6 +56,7 @@ function CooperativeNavigator() {
   return (
     <Stack
       screenOptions={({ navigation }) => ({
+        contentStyle: { backgroundColor: colors.background },
         headerBackTitle: t('common.actions.back'),
         // US-ACC-14: back arrow and header links follow the cooperative's colour; titles stay neutral.
         headerTintColor: brand.primaryColor,
@@ -64,7 +66,14 @@ function CooperativeNavigator() {
       })}
     >
       <Stack.Protected guard={inCooperative}>
-        <Stack.Screen name="index" options={{ title: cooperative?.cooperativeName ?? '' }} />
+        <Stack.Screen
+          name="index"
+          options={{
+            title: cooperative?.cooperativeName ?? '',
+            // No back button on the home: a spacer gives the title the standard header inset.
+            headerLeft: () => <View style={{ width: 4 }} />,
+          }}
+        />
         <Stack.Screen name="settings" options={{ title: t('settings.title') }} />
         <Stack.Protected guard={canAccess(allowed, 'announcements')}>
           <Stack.Screen
