@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { FieldGroup } from '@/ui/field';
 import { ErrorText, Loading } from '@/ui/screen';
 import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
@@ -12,9 +13,12 @@ import { useProfiles } from './queries';
 export function ProfilePicker({
   value,
   onChange,
+  name,
 }: {
   value: string | null;
   onChange(profileId: string): void;
+  /** Links the picker to the surrounding form's validation state. */
+  name?: string;
 }) {
   const brand = useBrandColor();
   const { t } = useTranslation();
@@ -23,7 +27,7 @@ export function ProfilePicker({
   if (profiles.isError) return <ErrorText>{messageFor(profiles.error)}</ErrorText>;
 
   return (
-    <View style={styles.group}>
+    <FieldGroup name={name} style={styles.group}>
       <Text style={styles.label}>{t('members.fields.profile')}</Text>
       <View style={styles.chips} accessibilityRole="radiogroup">
         {profiles.data.map((profile) => (
@@ -45,7 +49,7 @@ export function ProfilePicker({
           </Pressable>
         ))}
       </View>
-    </View>
+    </FieldGroup>
   );
 }
 

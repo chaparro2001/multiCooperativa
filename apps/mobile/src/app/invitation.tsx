@@ -3,9 +3,16 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text } from 'react-native';
 
-import { ApiError, messageFor } from '@/api/api-error';
+import {
+  INVITATION_FIELDS,
+  INVITATION_SERVER_MAPPING,
+  validateInvitation,
+} from '@/auth/form-validation';
+import { routeServerError } from '@/forms/server-errors';
+import { useForm } from '@/forms/use-form';
 import { useSession } from '@/session/session-context';
 import { Button } from '@/ui/button';
+import { FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
@@ -16,9 +23,11 @@ export default function InvitationScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
   const { status, acceptInvitation } = useSession();
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [activated, setActivated] = useState(false);
+  const form = useForm({ values: { password, confirm }, validate: validateInvitation });
 
   if (!token) {
     return (
@@ -30,6 +39,7 @@ export default function InvitationScreen() {
 
   async function submit() {
     setError(null);
+    if (!form.validateAll()) return;
     setSubmitting(true);
     try {
       const result = await acceptInvitation(token!, password || undefined);
@@ -40,11 +50,12 @@ export default function InvitationScreen() {
         setActivated(true);
       }
     } catch (failure) {
-      setError(
-        failure instanceof ApiError && failure.code === 'password_required'
-          ? t('auth.invitation.passwordRequired')
-          : messageFor(failure),
+      // A new user without a password, or a weak one, is marked on the password field.
+      const routed = routeServerError(failure, INVITATION_SERVER_MAPPING, (field) =>
+        (INVITATION_FIELDS as readonly string[]).includes(field),
       );
+      form.setServerErrors(routed.fields);
+      setError(routed.banner);
     } finally {
       setSubmitting(false);
     }
@@ -73,11 +84,12 @@ export default function InvitationScreen() {
   }
 
   return (
-    <Screen testID="invitation-screen">
+    <Screen testID="invitation-screen" form={form}>
       <Text style={styles.title}>{t('auth.invitation.title')}</Text>
       <Text style={styles.text}>{t('auth.invitation.instructions')}</Text>
       <TextField
         label={t('auth.fields.password')}
+        name="password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -85,7 +97,19 @@ export default function InvitationScreen() {
         textContentType="newPassword"
         testID="new-password-field"
       />
+      <TextField
+        label={t('auth.fields.confirmPassword')}
+        name="confirm"
+        value={confirm}
+        onChangeText={setConfirm}
+        secureTextEntry
+        autoComplete="new-password"
+        textContentType="newPassword"
+        onSubmitEditing={submit}
+        testID="confirm-password-field"
+      />
       {error && <ErrorText>{error}</ErrorText>}
+      <FormSummary form={form} />
       <Button
         title={t('auth.invitation.submit')}
         onPress={submit}

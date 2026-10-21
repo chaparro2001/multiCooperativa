@@ -1,14 +1,20 @@
-import { inviteMemberRequestSchema } from '@multicooperativa/contracts';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 
-import { messageFor } from '@/api/api-error';
+import { routeServerError } from '@/forms/server-errors';
+import { useForm } from '@/forms/use-form';
+import {
+  INVITE_FIELDS,
+  INVITE_SERVER_MAPPING,
+  validateInvite,
+} from '@/features/members/form-validation';
 import { InvitationLinkCard } from '@/features/members/invitation-link-card';
 import { ProfilePicker } from '@/features/members/profile-picker';
 import { useInviteMember } from '@/features/members/queries';
 import { Button } from '@/ui/button';
+import { FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
@@ -29,22 +35,30 @@ export default function InviteMemberScreen() {
     expiresAt: string;
   } | null>(null);
 
-  const request = inviteMemberRequestSchema.safeParse({
-    email,
-    name,
-    profileId,
-    isPartner,
-    partnerNumber: isPartner ? partnerNumber : null,
+  const form = useForm({
+    values: { email, name, profileId, isPartner, partnerNumber },
+    validate: validateInvite,
   });
 
   async function submit() {
-    if (!request.success) return;
     setError(null);
+    if (!form.validateAll()) return;
     try {
-      const issued = await invite.mutateAsync(request.data);
-      setSent({ email: request.data.email, ...issued });
+      const issued = await invite.mutateAsync({
+        email: email.trim(),
+        name: name.trim(),
+        profileId: profileId!,
+        isPartner,
+        partnerNumber: isPartner ? partnerNumber.trim() || null : null,
+      });
+      setSent({ email: email.trim(), ...issued });
     } catch (failure) {
-      setError(messageFor(failure));
+      // An email that already belongs to a member is marked on the email field.
+      const routed = routeServerError(failure, INVITE_SERVER_MAPPING, (field) =>
+        (INVITE_FIELDS as readonly string[]).includes(field),
+      );
+      form.setServerErrors(routed.fields);
+      setError(routed.banner);
     }
   }
 
@@ -66,9 +80,10 @@ export default function InviteMemberScreen() {
   }
 
   return (
-    <Screen testID="invite-screen">
+    <Screen testID="invite-screen" form={form}>
       <TextField
         label={t('members.fields.email')}
+        name="email"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -79,13 +94,14 @@ export default function InviteMemberScreen() {
       />
       <TextField
         label={t('members.fields.name')}
+        name="name"
         value={name}
         onChangeText={setName}
         maxLength={200}
         testID="invite-name"
       />
       <Text style={styles.hint}>{t('members.invite.nameHint')}</Text>
-      <ProfilePicker value={profileId} onChange={setProfileId} />
+      <ProfilePicker name="profileId" value={profileId} onChange={setProfileId} />
       <View style={styles.row}>
         <Text style={styles.label}>{t('members.fields.isPartner')}</Text>
         <Switch
@@ -98,6 +114,7 @@ export default function InviteMemberScreen() {
       {isPartner && (
         <TextField
           label={t('members.fields.partnerNumber')}
+          name="partnerNumber"
           value={partnerNumber}
           onChangeText={setPartnerNumber}
           maxLength={50}
@@ -105,11 +122,11 @@ export default function InviteMemberScreen() {
         />
       )}
       {error && <ErrorText>{error}</ErrorText>}
+      <FormSummary form={form} />
       <Button
         title={t('members.invite.submit')}
         onPress={submit}
         loading={invite.isPending}
-        disabled={!request.success}
         testID="invite-submit"
       />
     </Screen>

@@ -3,8 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { validateLogin } from '@/auth/form-validation';
+import { useForm } from '@/forms/use-form';
 import { useSession } from '@/session/session-context';
 import { Button } from '@/ui/button';
+import { FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
@@ -18,8 +21,11 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const form = useForm({ values: { email, password }, validate: validateLogin });
+
   async function submit() {
     setError(null);
+    if (!form.validateAll()) return;
     setSubmitting(true);
     try {
       await signIn(email.trim(), password);
@@ -31,11 +37,12 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen testID="login-screen">
+    <Screen testID="login-screen" form={form}>
       <Text style={styles.title}>multiCooperativa</Text>
       <Text style={styles.subtitle}>{t('auth.login.subtitle')}</Text>
       <TextField
         label={t('auth.fields.email')}
+        name="email"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -46,6 +53,7 @@ export default function LoginScreen() {
       />
       <TextField
         label={t('auth.fields.password')}
+        name="password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -55,11 +63,11 @@ export default function LoginScreen() {
         testID="password-field"
       />
       {error && <ErrorText>{error}</ErrorText>}
+      <FormSummary form={form} />
       <Button
         title={t('auth.login.submit')}
         onPress={submit}
         loading={submitting}
-        disabled={!email || !password}
         testID="login-button"
       />
       <Text style={styles.hint}>{t('auth.login.invitedHint')}</Text>

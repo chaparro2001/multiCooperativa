@@ -278,7 +278,8 @@
   "auth": {
     "fields": {
       "email": "Email",
-      "password": "Contraseña"
+      "password": "Contraseña",
+      "confirmPassword": "Repite la contraseña"
     },
     "login": {
       "screenTitle": "Iniciar sesión",
@@ -297,7 +298,11 @@
       "activatedSignedIn": "La nueva cooperativa ya aparece en tu selector de cooperativas.",
       "activatedSignedOut": "Entra con tu email y tu contraseña de siempre.",
       "goToCooperatives": "Ir a mis cooperativas",
-      "goToLogin": "Iniciar sesión"
+      "goToLogin": "Iniciar sesión",
+      "errors": {
+        "passwordTooShort": "La contraseña debe tener al menos {{min}} caracteres.",
+        "confirmMismatch": "Las contraseñas no coinciden."
+      }
     },
     "lock": {
       "prompt": "Desbloquea multiCooperativa",
@@ -750,7 +755,10 @@
       "sentTitle": "Invitación registrada",
       "sentMessage": "Se ha invitado a {{email}}. Compártele el enlace de abajo para que active su acceso.",
       "sentNoLink": "Se ha invitado a {{email}}. Este servidor no muestra el enlace: en desarrollo aparece en la consola de la API.",
-      "backToList": "Volver a la lista"
+      "backToList": "Volver a la lista",
+      "errors": {
+        "profileRequired": "Elige un perfil para el nuevo miembro."
+      }
     },
     "invitationLink": {
       "explanation": "Envía este enlace a la persona; caduca el {{date}} y solo sirve una vez.",
