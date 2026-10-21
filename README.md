@@ -153,7 +153,7 @@ render.yaml            Blueprint de Render (alternativa en la nube, opcional)
 CLAUDE.md              Contrato de trabajo con el agente de IA
 ```
 
-Módulos del backend (`apps/api/src/modules/`): `access`, `announcements`, `documents`, `assemblies`, `invoicing`, `assistant`.
+Módulos del backend (`apps/api/src/modules/`): `access`, `announcements`, `documents`, `assemblies`, `invoicing`, `members`, `branding`, `assistant`.
 
 ### Capas de Clean Architecture por módulo
 
@@ -301,15 +301,19 @@ Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
 - [ADR-009](docs/adr/ADR-009-gemini-language-and-vision-model.md): Gemini como modelo de lenguaje y visión.
 - [ADR-010](docs/adr/ADR-010-gemini-embeddings-for-the-hosted-demo.md): embeddings de Gemini para la demo alojada.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): README raíz bilingüe para la entrega del TFM (excepción acotada a ADR-008).
+- [ADR-012](docs/adr/ADR-012-home-server-with-cloudflare-tunnel.md): servidor propio con Cloudflare Tunnel para la demo alojada (sin tarjeta de crédito).
 - [ADR-013](docs/adr/ADR-013-local-language-model-for-the-assistant.md): modelo de lenguaje local (Ollama) para el asistente en el servidor propio; Gemini sigue en visión.
 - [ADR-014](docs/adr/ADR-014-per-cooperative-assistant-model.md): elección por cooperativa del modelo local del asistente, entre los permitidos por el operador.
+- [ADR-015](docs/adr/ADR-015-qwen3-4b-instruct-default-for-the-hosted-demo.md): `qwen3:4b-instruct` como modelo por defecto del asistente en la demo alojada.
+- [ADR-016](docs/adr/ADR-016-invitation-links-delivered-by-the-administrator.md): invitaciones como enlace que entrega el administrador (sin proveedor de correo).
+- [ADR-017](docs/adr/ADR-017-custom-domain-for-the-web-app.md): dominio propio (`cooperativa.chaparro2001.com`) para la app web.
 - [ADR-018](docs/adr/ADR-018-per-cooperative-branding.md): color principal y logo por cooperativa, configurados por su administrador.
 - [ADR-019](docs/adr/ADR-019-per-cooperative-hosted-language-model.md): proveedor externo (Groq, Mistral, NVIDIA NIM, OpenRouter) por cooperativa, con la clave de API propia de la cooperativa.
 
 ## 11. Calidad
 
-- **Tests unitarios** (`pnpm test`): 649 tests en 68 ficheros, todos en verde a fecha 2026-10-21.
-- **Tests de integración** (`pnpm test:integration`): contra PostgreSQL y almacenamiento S3 reales, incluido el test de aislamiento entre cooperativas. 364 tests en 20 ficheros, todos en verde (2026-10-21).
+- **Tests unitarios** (`pnpm test`): 941 tests en 92 ficheros, todos en verde a fecha 2026-10-21.
+- **Tests de integración** (`pnpm test:integration`): contra PostgreSQL y almacenamiento S3 reales, incluido el test de aislamiento entre cooperativas. 477 tests en 25 ficheros, todos en verde (2026-10-21).
 - **CI** (GitHub Actions, en cada push y pull request): comprobación de formato, lint, typecheck, tests, migraciones sobre un Postgres con pgvector y tests de integración. Hay además workflows de despliegue de GitHub Pages y de cron de vencimientos.
 - **Puerta de calidad local**: Husky ejecuta lint, typecheck y tests en el pre-commit.
 - **Límites entre módulos**: regla ESLint propia (`tools/eslint/module-boundaries.js`, con sus tests) que impide importar un módulo del backend por una ruta distinta de su `index.ts` (ADR-002).
@@ -331,7 +335,7 @@ El proyecto se ha construido con Spec Driven Development usando Claude Code:
 | Tema del máster                      | Evidencia en el proyecto                                                                                                                                                         |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Spec Driven Development              | `docs/requirements/`, plan por hitos con tareas marcadas, IDs de especificación en tests y commits                                                                               |
-| ADRs y Docs as Code                  | `docs/adr/` (11 ADR inmutables), documentación versionada junto al código, diagramas Mermaid                                                                                     |
+| ADRs y Docs as Code                  | `docs/adr/` (19 ADR inmutables), documentación versionada junto al código, diagramas Mermaid                                                                                     |
 | Clean Architecture con TypeScript    | Capas `domain/application/infrastructure` por módulo, puertos y adaptadores, regla ESLint de límites entre módulos                                                               |
 | Testing, TDD y puerta de calidad     | Vitest, tests de dominio primero, tests de integración, Husky en pre-commit                                                                                                      |
 | CI/CD con GitHub Actions             | `ci.yml` (formato, lint, typecheck, tests, migraciones, integración), despliegue de Pages y cron                                                                                 |

@@ -153,7 +153,7 @@ render.yaml            Render blueprint (optional cloud alternative)
 CLAUDE.md              Working contract with the AI agent
 ```
 
-Backend modules (`apps/api/src/modules/`): `access`, `announcements`, `documents`, `assemblies`, `invoicing`, `assistant`.
+Backend modules (`apps/api/src/modules/`): `access`, `announcements`, `documents`, `assemblies`, `invoicing`, `members`, `branding`, `assistant`.
 
 ### Clean Architecture layers per module
 
@@ -300,16 +300,20 @@ ADRs are immutable: a decision that changes produces a new ADR.
 - [ADR-008](docs/adr/ADR-008-english-codebase-and-localized-ui.md): English codebase and docs, UI localized with i18n.
 - [ADR-009](docs/adr/ADR-009-gemini-language-and-vision-model.md): Gemini as language and vision model.
 - [ADR-010](docs/adr/ADR-010-gemini-embeddings-for-the-hosted-demo.md): Gemini embeddings for the hosted demo.
+- [ADR-012](docs/adr/ADR-012-home-server-with-cloudflare-tunnel.md): home server with Cloudflare Tunnel for the hosted demo (no credit card).
 - [ADR-013](docs/adr/ADR-013-local-language-model-for-the-assistant.md): local language model (Ollama) for the assistant on the home server; Gemini stays for vision.
 - [ADR-014](docs/adr/ADR-014-per-cooperative-assistant-model.md): per-cooperative choice of the assistant's local model, from an operator allowlist.
+- [ADR-015](docs/adr/ADR-015-qwen3-4b-instruct-default-for-the-hosted-demo.md): `qwen3:4b-instruct` as the default assistant model of the hosted demo.
+- [ADR-016](docs/adr/ADR-016-invitation-links-delivered-by-the-administrator.md): invitation links delivered by the administrator (no email provider).
+- [ADR-017](docs/adr/ADR-017-custom-domain-for-the-web-app.md): custom domain (`cooperativa.chaparro2001.com`) for the web app.
 - [ADR-018](docs/adr/ADR-018-per-cooperative-branding.md): per-cooperative primary colour and logo, set by its administrator.
 - [ADR-019](docs/adr/ADR-019-per-cooperative-hosted-language-model.md): per-cooperative hosted provider (Groq, Mistral, NVIDIA NIM, OpenRouter) with the cooperative's own API key.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): bilingual root README for the thesis delivery (bounded exception to ADR-008).
 
 ## 11. Quality
 
-- **Unit tests** (`pnpm test`): 649 tests in 68 files, all green as of 2026-10-21.
-- **Integration tests** (`pnpm test:integration`): against real PostgreSQL and S3 storage, including the isolation test between cooperatives. 364 tests in 20 files, all green (2026-10-21).
+- **Unit tests** (`pnpm test`): 941 tests in 92 files, all green as of 2026-10-21.
+- **Integration tests** (`pnpm test:integration`): against real PostgreSQL and S3 storage, including the isolation test between cooperatives. 477 tests in 25 files, all green (2026-10-21).
 - **CI** (GitHub Actions, on every push and pull request): format check, lint, typecheck, tests, migrations on a Postgres with pgvector, and integration tests. There are also workflows for the GitHub Pages deploy and the due-dates cron.
 - **Local quality gate**: Husky runs lint, typecheck and tests on pre-commit.
 - **Module boundaries**: custom ESLint rule (`tools/eslint/module-boundaries.js`, with its own tests) that forbids importing a backend module through any path other than its `index.ts` (ADR-002).
@@ -331,7 +335,7 @@ The project was built with Spec Driven Development using Claude Code:
 | Master's topic                      | Evidence in the project                                                                                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Spec Driven Development             | `docs/requirements/`, plan by milestones with ticked tasks, specification IDs in tests and commits                                                           |
-| ADRs and Docs as Code               | `docs/adr/` (11 immutable ADRs), documentation versioned with the code, Mermaid diagrams                                                                     |
+| ADRs and Docs as Code               | `docs/adr/` (19 immutable ADRs), documentation versioned with the code, Mermaid diagrams                                                                     |
 | Clean Architecture with TypeScript  | `domain/application/infrastructure` layers per module, ports and adapters, ESLint module-boundaries rule                                                     |
 | Testing, TDD and quality gate       | Vitest, domain tests first, integration tests, Husky on pre-commit                                                                                           |
 | CI/CD with GitHub Actions           | `ci.yml` (format, lint, typecheck, tests, migrations, integration), Pages deploy and cron                                                                    |
