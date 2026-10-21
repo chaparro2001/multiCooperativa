@@ -2,6 +2,7 @@ import {
   assistantMessageSchema,
   assistantModelSettingsSchema,
   type AssistantRating,
+  type UpdateAssistantModelBody,
   createConversationResponseSchema,
   sendMessageResponseSchema,
 } from '@multicooperativa/contracts';
@@ -75,14 +76,14 @@ export function useAssistantModelSettings() {
   });
 }
 
-/** `null` goes back to the server default. */
+/** A local model (`null` is the server default), back to local, or an external provider with the cooperative's own key. */
 export function useUpdateAssistantModel() {
   const { api } = useServices();
   const queryClient = useQueryClient();
   const { path, key } = useModelSettingsScope();
   return useMutation({
-    mutationFn: (model: string | null) =>
-      api.request(path, { method: 'PUT', body: { model }, schema: assistantModelSettingsSchema }),
+    mutationFn: (body: UpdateAssistantModelBody) =>
+      api.request(path, { method: 'PUT', body, schema: assistantModelSettingsSchema }),
     onSuccess: (settings) => queryClient.setQueryData(key, settings),
   });
 }

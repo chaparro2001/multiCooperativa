@@ -194,6 +194,10 @@
       "assistant_unavailable": "El asistente no está disponible ahora mismo. Inténtalo más tarde.",
       "assistant_model_not_available": "Ese modelo ya no está disponible. Actualiza la pantalla y elige otro.",
       "local_model_not_in_use": "El asistente no usa un modelo local en este servidor.",
+      "hosted_provider_unavailable": "Este servidor no tiene activados los proveedores externos.",
+      "assistant_api_key_required": "Introduce la clave de API de este proveedor.",
+      "assistant_provider_key_invalid": "El proveedor ha rechazado la clave de API. Revísala e inténtalo de nuevo.",
+      "assistant_provider_unreachable": "No se ha podido contactar con el proveedor para comprobar la clave. Inténtalo más tarde.",
       "assistant_refused": "El asistente no puede responder a esta pregunta.",
       "internal_error": "Ha ocurrido un error en el servidor. Inténtalo de nuevo.",
       "invalid_movement": "Revisa los datos del movimiento.",
@@ -249,7 +253,32 @@
       "firstAnswerSlower": "La primera respuesta tras un cambio puede tardar más, porque hay que cargar el modelo.",
       "save": "Guardar",
       "saved": "Modelo guardado.",
-      "notLocal": "El asistente usa un servicio en la nube en este servidor; aquí no se puede elegir un modelo local."
+      "notLocal": "El asistente usa un servicio en la nube en este servidor; aquí no se puede elegir un modelo local.",
+      "source": {
+        "label": "Quién responde",
+        "local": "Modelo local del servidor",
+        "hosted": "Proveedor externo con la clave de tu cooperativa"
+      },
+      "hosted": {
+        "description": "Usa una cuenta de tu cooperativa en un proveedor externo. Cada cooperativa aporta su propia clave, así que los límites gratuitos del proveedor son los de tu cuenta.",
+        "provider": "Proveedor",
+        "providers": {
+          "groq": "Groq",
+          "mistral": "Mistral",
+          "nvidia": "NVIDIA NIM",
+          "openrouter": "OpenRouter"
+        },
+        "model": "Modelo",
+        "modelPlaceholder": "Identificador del modelo, por ejemplo {{example}}",
+        "suggestions": "Sugerencias",
+        "apiKey": "Clave de API",
+        "apiKeyPlaceholder": "Pega aquí la clave del proveedor",
+        "savedKey": "Clave guardada …{{hint}}",
+        "keepKey": "Déjalo vacío para conservar la clave guardada.",
+        "privacy": "Las preguntas de los miembros y los datos que el asistente consulta para responderlas se envían a ese proveedor, fuera de tu servidor. Revisa sus condiciones: algunos planes gratuitos pueden usar los datos para entrenar modelos.",
+        "fallback": "Si el proveedor falla o rechaza la clave, el asistente responde con el modelo del servidor.",
+        "unavailable": "Este servidor no tiene activados los proveedores externos."
+      }
     },
     "signOut": "Cerrar sesión"
   },
