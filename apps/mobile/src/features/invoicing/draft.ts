@@ -9,6 +9,7 @@ import {
 } from '@multicooperativa/contracts';
 
 import type { ScanFile } from '@/features/shared/scan-file';
+import { today } from '@/i18n/format';
 
 import {
   computeTotal,
@@ -53,7 +54,8 @@ export function emptyDraft(
     thirdPartyId: null,
     suggestedParty: null,
     number: '',
-    date: '',
+    // A typed record is usually from today; the native picker opens on it.
+    date: today(),
     dueDate: '',
     base: '',
     vatRate: '21',

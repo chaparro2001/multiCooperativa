@@ -17,8 +17,8 @@ import {
 import { formatDay, today } from '@/i18n/format';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Button } from '@/ui/button';
+import { DayField } from '@/ui/date-field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
-import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
 import { openUrl } from '@/ui/open-url';
 
@@ -175,12 +175,10 @@ export default function InvoiceScreen() {
 
       {canManage && open && (
         <View style={styles.block}>
-          <TextField
+          <DayField
             label={t(`invoicing.detail.settleDate.${data.operation}`)}
             value={settleDate}
-            onChangeText={setSettleDate}
-            placeholder="YYYY-MM-DD"
-            autoCapitalize="none"
+            onChange={setSettleDate}
             testID="settle-date"
           />
           <Button

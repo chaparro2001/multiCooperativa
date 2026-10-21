@@ -90,6 +90,36 @@ export function DateField({
   );
 }
 
+/**
+ * DateField for a calendar day kept as `YYYY-MM-DD` text (the API format): native picker on
+ * the devices, the browser's date control on the web. An empty or invalid value shows "Add".
+ */
+export function DayField({
+  label,
+  value,
+  onChange,
+  suggested,
+  testID,
+}: {
+  label: string;
+  value: string;
+  onChange(value: string): void;
+  /** Day the picker opens on when the field is still empty. */
+  suggested?: () => Date;
+  testID?: string;
+}) {
+  return (
+    <DateField
+      label={label}
+      mode="date"
+      value={fromInputValue(value, 'date')}
+      onChange={(date) => onChange(date ? toInputValue(date, 'date') : '')}
+      suggested={suggested}
+      testID={testID}
+    />
+  );
+}
+
 /** The browser's own date control: the native pickers do not exist on the web. */
 function WebPicker({
   value,

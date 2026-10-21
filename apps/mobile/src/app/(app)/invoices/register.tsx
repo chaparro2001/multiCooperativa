@@ -25,6 +25,7 @@ import {
 import { Chip, Segmented } from '@/features/invoicing/segmented';
 import { formatDay } from '@/i18n/format';
 import { Button } from '@/ui/button';
+import { DayField } from '@/ui/date-field';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
@@ -121,26 +122,23 @@ export default function RegisterScreen() {
         maxLength={50}
         testID="form-number"
       />
-      <TextField
+      <DayField
         label={mark(
           isInvoice ? t('invoicing.form.issueDate') : t('invoicing.form.noteDate'),
           'date',
         )}
         value={draft.date}
-        onChangeText={(date) => patch({ date })}
-        placeholder="YYYY-MM-DD"
-        autoCapitalize="none"
+        onChange={(date) => patch({ date })}
         testID="form-date"
       />
 
       {isInvoice && (
         <>
-          <TextField
+          <DayField
             label={mark(t('invoicing.form.dueDate'), 'dueDate')}
             value={draft.dueDate}
-            onChangeText={(dueDate) => patch({ dueDate })}
-            placeholder="YYYY-MM-DD"
-            autoCapitalize="none"
+            onChange={(dueDate) => patch({ dueDate })}
+            suggested={() => dueDateAfter(draft.date)}
             testID="form-due-date"
           />
           <TextField
@@ -435,3 +433,11 @@ const styles = StyleSheet.create({
   scan: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, alignItems: 'center' },
   scanText: { fontSize: 14, color: colors.text, flexShrink: 1 },
 });
+
+/** Usual payment term: 30 days after the issue date (or today while it is empty). */
+function dueDateAfter(issueDate: string): Date {
+  const [year, month, day] = issueDate.split('-').map(Number);
+  const base = year && month && day ? new Date(year, month - 1, day) : new Date();
+  base.setDate(base.getDate() + 30);
+  return base;
+}
