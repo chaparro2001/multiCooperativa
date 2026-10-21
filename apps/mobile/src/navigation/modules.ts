@@ -6,7 +6,11 @@ export interface ModuleEntry {
   /** Permission module that decides whether the tile is shown. */
   module: Module;
   /** i18n key of the tile title; defaults to `enums.module.<module>`. */
-  titleKey?: 'invoicing.thirdParties.filter.supplier' | 'invoicing.thirdParties.filter.customer';
+  titleKey?:
+    | 'invoicing.home.invoices'
+    | 'invoicing.home.notes'
+    | 'invoicing.thirdParties.filter.supplier'
+    | 'invoicing.thirdParties.filter.customer';
   /** Shown in the home grid; decorative, screen readers read the title (`enums.module.<module>`). */
   emoji: string;
   /** Screen of the module inside the cooperative. */
@@ -20,7 +24,21 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
   { id: 'announcements', module: 'announcements', emoji: '📢', route: '/announcements' },
   { id: 'assemblies', module: 'assemblies', emoji: '🗳️', route: '/assemblies' },
   { id: 'documents', module: 'documents', emoji: '📄', route: '/documents' },
-  { id: 'invoicing', module: 'invoicing', emoji: '🧾', route: '/invoices' },
+  // Invoices and delivery notes share one screen fixed to a kind by the query param (BR-INV-01: same permission).
+  {
+    id: 'invoices',
+    module: 'invoicing',
+    titleKey: 'invoicing.home.invoices',
+    emoji: '🧾',
+    route: '/invoices?kind=invoice',
+  },
+  {
+    id: 'delivery-notes',
+    module: 'invoicing',
+    titleKey: 'invoicing.home.notes',
+    emoji: '📦',
+    route: '/invoices?kind=delivery_note',
+  },
   // Suppliers and customers are master data of the invoicing module (BR-INV-01): same permission.
   // One third party can be both (US-INV-01): then it shows in both lists.
   {

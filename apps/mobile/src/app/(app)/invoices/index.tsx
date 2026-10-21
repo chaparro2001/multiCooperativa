@@ -1,5 +1,5 @@
 import type { Operation } from '@multicooperativa/contracts';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -16,15 +16,25 @@ import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 import { Segmented } from '@/features/invoicing/segmented';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
-/** US-INV-06 and US-INV-07: summary, then purchases and sales with their invoices and delivery notes. */
+type Kind = 'invoice' | 'delivery_note';
+
+/**
+ * US-INV-06 and US-INV-07: summary, then purchases and sales with their invoices and delivery notes.
+ * The Invoices and Delivery notes home tiles open it fixed to one `kind`; without it, both sections show.
+ */
 export default function InvoicingHomeScreen() {
+  const { kind: kindParam } = useLocalSearchParams<{ kind?: string }>();
+  const fixed: Kind | null =
+    kindParam === 'invoice' || kindParam === 'delivery_note' ? kindParam : null;
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('invoicing');
   const summary = useInvoicingSummary();
   const [operation, setOperation] = useState<Operation>('purchase');
-  const [section, setSection] = useState<'invoices' | 'notes'>('invoices');
+  const [chosen, setChosen] = useState<'invoices' | 'notes'>('invoices');
+  const section = fixed ? (fixed === 'invoice' ? 'invoices' : 'notes') : chosen;
   const invoices = useInvoices(operation);
   const notes = useDeliveryNotes(operation);
+  const kind: Kind = fixed ?? (section === 'notes' ? 'delivery_note' : 'invoice');
   const refresh = usePullToRefresh(async () => {
     await Promise.all([summary.refetch(), invoices.refetch(), notes.refetch()]);
   });
@@ -38,6 +48,9 @@ export default function InvoicingHomeScreen() {
     >
       <Stack.Screen
         options={{
+          ...(fixed && {
+            title: t(fixed === 'invoice' ? 'invoicing.home.invoices' : 'invoicing.home.notes'),
+          }),
           headerRight: () => (
             <HeaderActions>
               <HeaderAction
@@ -49,22 +62,30 @@ export default function InvoicingHomeScreen() {
           ),
         }}
       />
-      <SummaryCards />
+      <SummaryCards kind={fixed} />
 
       {canManage && (
         <View style={styles.actions}>
           <View style={styles.action}>
             <Button
               title={t('invoicing.home.scan')}
-              onPress={() => router.push('/invoices/capture')}
+              onPress={() =>
+                router.push({ pathname: '/invoices/capture', params: { operation, kind: kind } })
+              }
               testID="scan-document"
             />
           </View>
           <View style={styles.action}>
             <Button
-              title={t('invoicing.home.register')}
+              title={t(
+                kind === 'delivery_note'
+                  ? 'invoicing.home.registerNote'
+                  : 'invoicing.home.registerInvoice',
+              )}
               variant="secondary"
-              onPress={() => router.push({ pathname: '/invoices/register', params: { operation } })}
+              onPress={() =>
+                router.push({ pathname: '/invoices/register', params: { operation, kind } })
+              }
               testID="register-document"
             />
           </View>
@@ -80,15 +101,17 @@ export default function InvoicingHomeScreen() {
         }))}
         testIDPrefix="operation"
       />
-      <Segmented<'invoices' | 'notes'>
-        value={section}
-        onChange={setSection}
-        options={(['invoices', 'notes'] as const).map((value) => ({
-          value,
-          label: t(`invoicing.home.${value}`),
-        }))}
-        testIDPrefix="section"
-      />
+      {!fixed && (
+        <Segmented<'invoices' | 'notes'>
+          value={section}
+          onChange={setChosen}
+          options={(['invoices', 'notes'] as const).map((value) => ({
+            value,
+            label: t(`invoicing.home.${value}`),
+          }))}
+          testIDPrefix="section"
+        />
+      )}
 
       {section === 'invoices' ? (
         <List query={invoices} empty={t('invoicing.home.noInvoices')}>
@@ -121,7 +144,7 @@ function List<T>({
 }
 
 /** US-INV-07: pending and overdue to pay and to collect, plus open discrepancies (US-INV-04) and old delivery notes (US-INV-09). */
-function SummaryCards() {
+function SummaryCards({ kind }: { kind: Kind | null }) {
   const { t } = useTranslation();
   const euros = useEuros();
   const summary = useInvoicingSummary();
@@ -129,36 +152,42 @@ function SummaryCards() {
   if (summary.isError) return <ErrorText>{messageFor(summary.error)}</ErrorText>;
   const { toPay, toCollect, openDiscrepancies, staleDeliveryNotes } = summary.data;
 
+  const showInvoices = kind !== 'delivery_note';
+  const showNotes = kind !== 'invoice';
+  if (!showInvoices && staleDeliveryNotes === 0) return null;
+
   return (
     <View style={styles.summary} testID="summary">
-      <View style={styles.cards}>
-        {(
-          [
-            ['toPay', toPay],
-            ['toCollect', toCollect],
-          ] as const
-        ).map(([key, amounts]) => (
-          <View key={key} style={styles.card} testID={`summary-${key}`}>
-            <Text style={styles.cardLabel}>{t(`invoicing.summary.${key}`)}</Text>
-            <Text style={styles.cardAmount}>{euros(amounts.pending)}</Text>
-            <Text style={styles.cardDetail}>
-              {t('invoicing.summary.invoices', { count: amounts.pendingCount })}
-            </Text>
-            <Text style={[styles.cardDetail, amounts.overdueCount > 0 && styles.overdue]}>
-              {t('invoicing.summary.overdue', {
-                amount: euros(amounts.overdue),
-                count: amounts.overdueCount,
-              })}
-            </Text>
-          </View>
-        ))}
-      </View>
-      {openDiscrepancies > 0 && (
+      {showInvoices && (
+        <View style={styles.cards}>
+          {(
+            [
+              ['toPay', toPay],
+              ['toCollect', toCollect],
+            ] as const
+          ).map(([key, amounts]) => (
+            <View key={key} style={styles.card} testID={`summary-${key}`}>
+              <Text style={styles.cardLabel}>{t(`invoicing.summary.${key}`)}</Text>
+              <Text style={styles.cardAmount}>{euros(amounts.pending)}</Text>
+              <Text style={styles.cardDetail}>
+                {t('invoicing.summary.invoices', { count: amounts.pendingCount })}
+              </Text>
+              <Text style={[styles.cardDetail, amounts.overdueCount > 0 && styles.overdue]}>
+                {t('invoicing.summary.overdue', {
+                  amount: euros(amounts.overdue),
+                  count: amounts.overdueCount,
+                })}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {showInvoices && openDiscrepancies > 0 && (
         <Text style={styles.alert} testID="summary-discrepancies">
           {t('invoicing.summary.openDiscrepancies', { count: openDiscrepancies })}
         </Text>
       )}
-      {staleDeliveryNotes > 0 && (
+      {showNotes && staleDeliveryNotes > 0 && (
         <Text style={styles.alert} testID="summary-stale">
           {t('invoicing.summary.staleNotes', { count: staleDeliveryNotes })}
         </Text>

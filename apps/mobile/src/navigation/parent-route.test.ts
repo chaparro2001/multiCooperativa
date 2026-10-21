@@ -6,8 +6,8 @@ describe('parentRoute (US-INV-06, US-ACC-08)', () => {
   it.each([
     ['/', null],
     ['/invoices', '/'],
-    ['/invoices/invoice/abc', '/invoices'],
-    ['/invoices/delivery-note/abc', '/invoices'],
+    ['/invoices/invoice/abc', '/invoices?kind=invoice'],
+    ['/invoices/delivery-note/abc', '/invoices?kind=delivery_note'],
     ['/invoices/third-parties', '/invoices'],
     ['/invoices/third-parties/abc', '/invoices/third-parties'],
     ['/invoices/third-parties/editor', '/invoices/third-parties'],

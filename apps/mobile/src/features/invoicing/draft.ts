@@ -72,10 +72,11 @@ export function draftFromExtraction(
   extraction: ExtractionResponse,
   scan: ScanFile,
   fallbackOperation: Operation,
+  fallbackKind: RegistrationDraft['kind'] = 'invoice',
 ): RegistrationDraft {
   const draft = emptyDraft(
     extraction.operation ?? fallbackOperation,
-    extraction.documentType ?? 'invoice',
+    extraction.documentType ?? fallbackKind,
   );
   draft.scan = scan;
   if (extraction.status === 'no_data') return draft;

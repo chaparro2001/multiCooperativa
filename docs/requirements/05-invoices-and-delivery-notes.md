@@ -328,7 +328,7 @@ Contract (schemas in `packages/contracts/src/invoicing.ts`):
 ## 9. Screens
 
 1. Summary: pending and overdue payments and collections, open discrepancies.
-2. Purchases and sales, each with delivery notes and invoices, and filters.
+2. Purchases and sales, each with delivery notes and invoices, and filters. The home has two tiles on it: **Invoices** (summary of payments and collections, open discrepancies, register and scan an invoice) and **Delivery notes** (delivery notes, the warning of more than 30 days without invoicing US-INV-09, register and scan a delivery note); both need the invoicing permission (BR-INV-01) and the list is fixed to its kind. The combined view (without `kind`) stays reachable by route.
 3. Delivery note detail.
 4. Invoice detail, with delivery notes, reconciliation and PDF.
 5. Third parties: list and record.

@@ -592,6 +592,8 @@
   "invoicing": {
     "home": {
       "thirdParties": "Terceros",
+      "registerInvoice": "Registrar factura",
+      "registerNote": "Registrar albarán",
       "scan": "Escanear",
       "register": "Registrar",
       "invoices": "Facturas",

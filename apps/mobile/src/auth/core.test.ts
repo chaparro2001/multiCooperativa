@@ -47,7 +47,22 @@ describe('navigation by permissions (US-ACC-06)', () => {
   it('flags whether the management actions can be shown', () => {
     const modules = visibleModules([{ module: 'invoicing', level: 'manage', scope: 'all' }]);
     expect(modules).toEqual([
-      { id: 'invoicing', module: 'invoicing', emoji: '🧾', route: '/invoices', canManage: true },
+      {
+        id: 'invoices',
+        module: 'invoicing',
+        titleKey: 'invoicing.home.invoices',
+        emoji: '🧾',
+        route: '/invoices?kind=invoice',
+        canManage: true,
+      },
+      {
+        id: 'delivery-notes',
+        module: 'invoicing',
+        titleKey: 'invoicing.home.notes',
+        emoji: '📦',
+        route: '/invoices?kind=delivery_note',
+        canManage: true,
+      },
       {
         id: 'suppliers',
         module: 'invoicing',
@@ -81,10 +96,10 @@ describe('navigation by permissions (US-ACC-06)', () => {
     }
   });
 
-  it('suppliers and customers have their own tiles with the invoicing permission (BR-INV-01)', () => {
+  it('invoices, delivery notes, suppliers and customers have their own tiles with the invoicing permission (BR-INV-01)', () => {
     const ids = (level: 'read' | 'manage') =>
       visibleModules([{ module: 'invoicing', level, scope: 'all' }]).map((m) => m.id);
-    expect(ids('read')).toEqual(['invoicing', 'suppliers', 'customers']);
+    expect(ids('read')).toEqual(['invoices', 'delivery-notes', 'suppliers', 'customers']);
     expect(visibleModules([...partner]).some((m) => m.module === 'invoicing')).toBe(false);
   });
 

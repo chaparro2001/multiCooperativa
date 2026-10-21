@@ -26,8 +26,10 @@ import { colors } from '@/ui/theme';
 export default function CaptureScreen() {
   const brand = useBrandColor();
   const { t } = useTranslation();
-  const params = useLocalSearchParams<{ operation?: Operation }>();
+  const params = useLocalSearchParams<{ operation?: Operation; kind?: string }>();
   const fallbackOperation: Operation = params.operation === 'sale' ? 'sale' : 'purchase';
+  // Opened from the Delivery notes screen: what the model cannot tell apart is a delivery note.
+  const fallbackKind = params.kind === 'delivery_note' ? 'delivery_note' : 'invoice';
   const extract = useExtractDocument();
   const [error, setError] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
@@ -43,7 +45,7 @@ export default function CaptureScreen() {
       }
       if (picked.kind === 'cancelled') return;
       const proposal = await extract.mutateAsync(picked.file);
-      setPendingDraft(draftFromExtraction(proposal, picked.file, fallbackOperation));
+      setPendingDraft(draftFromExtraction(proposal, picked.file, fallbackOperation, fallbackKind));
       router.replace({
         pathname: '/invoices/register',
         params: { from: 'capture', noData: proposal.status === 'no_data' ? '1' : '0' },
@@ -56,7 +58,10 @@ export default function CaptureScreen() {
 
   function manually() {
     setPendingDraft(null);
-    router.replace({ pathname: '/invoices/register', params: { operation: fallbackOperation } });
+    router.replace({
+      pathname: '/invoices/register',
+      params: { operation: fallbackOperation, kind: fallbackKind },
+    });
   }
 
   const busy = extract.isPending;

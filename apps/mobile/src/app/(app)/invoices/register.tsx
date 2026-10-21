@@ -47,11 +47,19 @@ import { colors } from '@/ui/theme';
 export default function RegisterScreen() {
   const brand = useBrandColor();
   const { t } = useTranslation();
-  const params = useLocalSearchParams<{ operation?: Operation; from?: string; noData?: string }>();
+  const params = useLocalSearchParams<{
+    operation?: Operation;
+    kind?: string;
+    from?: string;
+    noData?: string;
+  }>();
   const [draft, setDraft] = useState<RegistrationDraft>(
     () =>
       (params.from === 'capture' ? peekPendingDraft() : null) ??
-      emptyDraft(params.operation === 'sale' ? 'sale' : 'purchase'),
+      emptyDraft(
+        params.operation === 'sale' ? 'sale' : 'purchase',
+        params.kind === 'delivery_note' ? 'delivery_note' : 'invoice',
+      ),
   );
   const registerInvoice = useRegisterInvoice();
   const registerNote = useRegisterDeliveryNote();
