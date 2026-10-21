@@ -147,7 +147,8 @@ services:
       EMBEDDINGS_PROVIDER: ollama
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_MODEL: bge-m3
-      # The image caps the heap at 320 MB for Render's 512 MB; this server has room.      NODE_OPTIONS: --max-old-space-size=768
+      # The image caps the heap at 320 MB for Render's 512 MB; this server has room.
+      NODE_OPTIONS: --max-old-space-size=768
       # .env.server also holds the tunnel token: the API must not receive it.
       TUNNEL_TOKEN: ''
     # Only for debugging from this machine (never 0.0.0.0): uncomment to reach the API at
