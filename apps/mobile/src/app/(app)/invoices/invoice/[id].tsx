@@ -19,11 +19,13 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Button } from '@/ui/button';
 import { DayField } from '@/ui/date-field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 import { openUrl } from '@/ui/open-url';
 
 /** US-INV-06 (detail), US-INV-04 (reconciliation) and US-INV-07 (settle). */
 export default function InvoiceScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const euros = useEuros();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -156,7 +158,7 @@ export default function InvoiceScreen() {
               accessibilityRole="link"
               onPress={() => router.push(`/invoices/delivery-note/${note.id}`)}
             >
-              <Text style={styles.link}>
+              <Text style={[styles.link, { color: brand }]}>
                 {t('invoicing.row.noteNumber', { number: note.number })} · {formatDay(note.date)}
               </Text>
             </Pressable>
@@ -168,7 +170,7 @@ export default function InvoiceScreen() {
         accessibilityRole="link"
         onPress={() => router.push(`/invoices/third-parties/${data.thirdParty.id}`)}
       >
-        <Text style={styles.link}>{t('invoicing.detail.viewThirdParty')}</Text>
+        <Text style={[styles.link, { color: brand }]}>{t('invoicing.detail.viewThirdParty')}</Text>
       </Pressable>
 
       {error && <ErrorText>{error}</ErrorText>}

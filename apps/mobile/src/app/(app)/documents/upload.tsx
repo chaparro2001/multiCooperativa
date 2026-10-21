@@ -13,6 +13,7 @@ import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 const MAX_MB = 20;
@@ -20,6 +21,7 @@ const MAX_BYTES = MAX_MB * 1024 * 1024;
 
 /** US-DOC-01: PDF of up to 20 MB with title, category and date. */
 export default function UploadDocumentScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const upload = useUploadDocument();
   const [title, setTitle] = useState('');
@@ -87,7 +89,11 @@ export default function UploadDocumentScreen() {
             accessibilityRole="radio"
             accessibilityState={{ checked: category === value }}
             onPress={() => setCategory(value)}
-            style={[styles.chip, category === value && styles.chipSelected]}
+            style={[
+              styles.chip,
+              category === value && styles.chipSelected,
+              category === value && { backgroundColor: brand, borderColor: brand },
+            ]}
           >
             <Text style={[styles.chipText, category === value && styles.chipTextSelected]}>
               {categoryTitle(value)}

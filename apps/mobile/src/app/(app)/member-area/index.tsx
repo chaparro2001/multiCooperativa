@@ -2,6 +2,7 @@ import { Link, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text } from 'react-native';
 
+import { useBrandColor } from '@/branding/brand';
 import { messageFor } from '@/api/api-error';
 import {
   CapitalTotal,
@@ -17,6 +18,7 @@ import { ErrorText, Loading, Screen } from '@/ui/screen';
 
 /** US-MEM-01 and US-MEM-02: my record, my capital and my movements. Read-only for the member. */
 export default function MemberAreaScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { scope } = useModuleAccess('member-area');
   const mine = useMyMovements();
@@ -29,7 +31,9 @@ export default function MemberAreaScreen() {
             scope === 'all'
               ? () => (
                   <Link href="/member-area/members" testID="all-members">
-                    <Text style={listStyles.headerLink}>{t('memberArea.me.allMembers')}</Text>
+                    <Text style={[listStyles.headerLink, { color: brand }]}>
+                      {t('memberArea.me.allMembers')}
+                    </Text>
                   </Link>
                 )
               : undefined,

@@ -11,10 +11,12 @@ import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading } from '@/ui/screen';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 /** US-ANN-02: newest first, pinned on top, unread marked; more load at the end. */
 export default function AnnouncementListScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('announcements');
   const list = useAnnouncementList();
@@ -39,7 +41,9 @@ export default function AnnouncementListScreen() {
           headerRight: canManage
             ? () => (
                 <Link href="/announcements/editor" testID="new-announcement">
-                  <Text style={styles.headerLink}>{t('announcements.list.new')}</Text>
+                  <Text style={[styles.headerLink, { color: brand }]}>
+                    {t('announcements.list.new')}
+                  </Text>
                 </Link>
               )
             : undefined,
@@ -62,6 +66,7 @@ export default function AnnouncementListScreen() {
 }
 
 function AnnouncementRow({ item }: { item: AnnouncementSummary }) {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const unread = item.status === 'published' && !item.read;
   return (
@@ -75,7 +80,7 @@ function AnnouncementRow({ item }: { item: AnnouncementSummary }) {
       testID={`announcement-${item.title}`}
     >
       <View style={styles.rowHeader}>
-        {unread && <View style={styles.dot} />}
+        {unread && <View style={[styles.dot, { backgroundColor: brand }]} />}
         <Text style={[styles.title, unread && styles.unread]} numberOfLines={2}>
           {item.title || t('common.untitled')}
         </Text>

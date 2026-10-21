@@ -18,10 +18,12 @@ import { Button } from '@/ui/button';
 import { ErrorText, Loading } from '@/ui/screen';
 import { SCREEN_MAX_WIDTH } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 /** US-ACC-10: members of the cooperative with their profile and status; invite with manage level. */
 export default function MembersScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('users');
   const members = useMembers();
@@ -35,7 +37,9 @@ export default function MembersScreen() {
           headerRight: canManage
             ? () => (
                 <Link href="/members/invite" testID="invite-member">
-                  <Text style={styles.headerLink}>{t('members.list.invite')}</Text>
+                  <Text style={[styles.headerLink, { color: brand }]}>
+                    {t('members.list.invite')}
+                  </Text>
                 </Link>
               )
             : undefined,

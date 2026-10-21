@@ -1,5 +1,6 @@
 import { StyleSheet, Text } from 'react-native';
 
+import { useBrandColor, useBrandTint } from '../branding/brand';
 import { colors } from './theme';
 
 const TONES = {
@@ -10,7 +11,11 @@ const TONES = {
 } as const;
 
 export function Badge({ label, tone = 'neutral' }: { label: string; tone?: keyof typeof TONES }) {
-  const { backgroundColor, color } = TONES[tone];
+  const brand = useBrandColor();
+  const tint = useBrandTint();
+  // The info tone follows the cooperative's colour; the others keep their meaning.
+  const { backgroundColor, color } =
+    tone === 'info' ? { backgroundColor: tint, color: brand } : TONES[tone];
   return <Text style={[styles.badge, { backgroundColor, color }]}>{label}</Text>;
 }
 

@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
+import { useBrandColor } from '../branding/brand';
 import { colors } from './theme';
 
 export function Button({
@@ -8,6 +9,7 @@ export function Button({
   loading = false,
   disabled = false,
   variant = 'primary',
+  color,
   testID,
 }: {
   title: string;
@@ -15,8 +17,12 @@ export function Button({
   loading?: boolean;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'danger';
+  /** Overrides the cooperative's brand colour (the appearance preview). */
+  color?: string;
   testID?: string;
 }) {
+  const brand = useBrandColor();
+  const accent = color ?? brand;
   const inactive = disabled || loading;
   return (
     <Pressable
@@ -28,13 +34,23 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         styles[variant],
+        variant === 'primary' && { backgroundColor: accent },
+        variant === 'secondary' && { borderColor: accent },
         (pressed || inactive) && styles.dimmed,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'secondary' ? colors.primary : '#fff'} />
+        <ActivityIndicator color={variant === 'secondary' ? accent : '#fff'} />
       ) : (
-        <Text style={[styles.text, variant === 'secondary' && styles.secondaryText]}>{title}</Text>
+        <Text
+          style={[
+            styles.text,
+            variant === 'secondary' && styles.secondaryText,
+            variant === 'secondary' && { color: accent },
+          ]}
+        >
+          {title}
+        </Text>
       )}
     </Pressable>
   );

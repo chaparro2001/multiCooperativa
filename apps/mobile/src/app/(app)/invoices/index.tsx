@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useBrandColor } from '@/branding/brand';
 import { messageFor } from '@/api/api-error';
 import { InvoiceRow, listStyles, NoteRow, useEuros } from '@/features/invoicing/components';
 import { useDeliveryNotes, useInvoices, useInvoicingSummary } from '@/features/invoicing/queries';
@@ -17,6 +18,7 @@ import { Segmented } from '@/features/invoicing/segmented';
 
 /** US-INV-06 and US-INV-07: summary, then purchases and sales with their invoices and delivery notes. */
 export default function InvoicingHomeScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('invoicing');
   const summary = useInvoicingSummary();
@@ -39,7 +41,9 @@ export default function InvoicingHomeScreen() {
         options={{
           headerRight: () => (
             <Link href="/invoices/third-parties" testID="third-parties-link">
-              <Text style={listStyles.headerLink}>{t('invoicing.home.thirdParties')}</Text>
+              <Text style={[listStyles.headerLink, { color: brand }]}>
+                {t('invoicing.home.thirdParties')}
+              </Text>
             </Link>
           ),
         }}

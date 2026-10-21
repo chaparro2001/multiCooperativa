@@ -2,16 +2,20 @@ import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { messageFor } from '@/api/api-error';
+import { BrandProvider, useBrand } from '@/branding/brand';
 import { ActiveCooperativeProvider, useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { HeaderBack } from '@/navigation/header-back';
 import { allScope, canAccess, canManage } from '@/navigation/modules';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { colors } from '@/ui/theme';
 
 export default function AppLayout() {
   return (
     <ActiveCooperativeProvider>
-      <CooperativeNavigator />
+      <BrandProvider>
+        <CooperativeNavigator />
+      </BrandProvider>
     </ActiveCooperativeProvider>
   );
 }
@@ -24,6 +28,7 @@ function CooperativeNavigator() {
   const { t } = useTranslation();
   const { meQuery, permissionsQuery, cooperativeId, cooperative, permissions } =
     useActiveCooperative();
+  const brand = useBrand();
   const allowed = permissions?.permissions;
 
   const failed = meQuery.isError ? meQuery : permissionsQuery.isError ? permissionsQuery : null;
@@ -40,12 +45,16 @@ function CooperativeNavigator() {
   const inCooperative = cooperativeId !== null;
   // Until the permissions arrive the guards below would hide every module and a reloaded deep link
   // would be lost (redirected to the home).
-  if (inCooperative && permissions === undefined) return <Loading />;
+  // The brand colour is awaited too, so the app does not flash the default colour first.
+  if (inCooperative && (permissions === undefined || !brand.ready)) return <Loading />;
 
   return (
     <Stack
       screenOptions={({ navigation }) => ({
         headerBackTitle: t('common.actions.back'),
+        // US-ACC-14: back arrow and header links follow the cooperative's colour; titles stay neutral.
+        headerTintColor: brand.primaryColor,
+        headerTitleStyle: { color: colors.text },
         // Without history (reload, deep link) the default arrow is dead: go to the logical parent.
         ...(navigation.canGoBack() ? {} : { headerLeft: () => <HeaderBack /> }),
       })}

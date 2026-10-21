@@ -18,6 +18,7 @@ import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 /** 20 days ahead at 19:00: past the default minimum notice of 15 days (BR-ASM-09). */
@@ -210,12 +211,17 @@ export default function AssemblyEditorScreen() {
 }
 
 function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress(): void }) {
+  const brand = useBrandColor();
   return (
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
       onPress={onPress}
-      style={[styles.chip, selected && styles.chipSelected]}
+      style={[
+        styles.chip,
+        selected && styles.chipSelected,
+        selected && { backgroundColor: brand, borderColor: brand },
+      ]}
     >
       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
     </Pressable>
@@ -233,6 +239,7 @@ function Tool({
   onPress(): void;
   disabled?: boolean;
 }) {
+  const brand = useBrandColor();
   return (
     <Pressable
       accessibilityRole="button"
@@ -241,7 +248,9 @@ function Tool({
       disabled={disabled}
       style={styles.tool}
     >
-      <Text style={[styles.toolText, disabled && styles.toolDisabled]}>{label}</Text>
+      <Text style={[styles.toolText, { color: brand }, disabled && styles.toolDisabled]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }

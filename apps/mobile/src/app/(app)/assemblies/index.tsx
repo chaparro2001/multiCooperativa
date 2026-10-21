@@ -11,11 +11,13 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading } from '@/ui/screen';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 
 /** US-ASM-03: upcoming first, then the celebrated ones (ordered by the server). */
 export default function AssemblyListScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('assemblies');
   const list = useAssemblyList();
@@ -38,7 +40,9 @@ export default function AssemblyListScreen() {
           headerRight: canManage
             ? () => (
                 <Link href="/assemblies/editor" testID="new-assembly">
-                  <Text style={styles.headerLink}>{t('assemblies.list.new')}</Text>
+                  <Text style={[styles.headerLink, { color: brand }]}>
+                    {t('assemblies.list.new')}
+                  </Text>
                 </Link>
               )
             : undefined,

@@ -2,7 +2,7 @@ import { router, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors } from '@/ui/theme';
+import { useBrandColor } from '@/branding/brand';
 
 import { parentRoute } from './parent-route';
 
@@ -13,6 +13,7 @@ import { parentRoute } from './parent-route';
 export function HeaderBack() {
   const { t } = useTranslation();
   const pathname = usePathname();
+  const brand = useBrandColor();
   const parent = parentRoute(pathname);
   if (parent === null) return null;
   return (
@@ -24,12 +25,12 @@ export function HeaderBack() {
       style={styles.button}
       testID="header-back"
     >
-      <Text style={styles.arrow}>‹</Text>
+      <Text style={[styles.arrow, { color: brand }]}>‹</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: { paddingHorizontal: 8, paddingVertical: 4 },
-  arrow: { fontSize: 32, lineHeight: 32, color: colors.primary },
+  arrow: { fontSize: 32, lineHeight: 32 },
 });
