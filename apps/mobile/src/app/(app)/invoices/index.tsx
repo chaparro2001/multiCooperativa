@@ -2,7 +2,7 @@ import type { Operation } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { InvoiceRow, listStyles, NoteRow, useEuros } from '@/features/invoicing/components';
@@ -15,6 +15,7 @@ import {
 } from '@/features/invoicing/queries';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Button } from '@/ui/button';
+import { Card, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading } from '@/ui/screen';
 import { colors } from '@/ui/theme';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
@@ -34,6 +35,7 @@ export default function InvoicingHomeScreen() {
   const fixed: Kind | null =
     kindParam === 'invoice' || kindParam === 'delivery_note' ? kindParam : null;
   const { t } = useTranslation();
+  const { colors: theme } = useTheme();
   const { canManage } = useModuleAccess('invoicing');
   const summary = useInvoicingSummary();
   const [operation, setOperation] = useState<Operation>('purchase');
@@ -57,7 +59,7 @@ export default function InvoicingHomeScreen() {
 
   return (
     <ScrollView
-      style={styles.screen}
+      style={[styles.screen, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl {...refresh} />}
       testID="invoicing-screen"
@@ -177,7 +179,11 @@ function List<T>({
   if (query.isPending) return <Loading />;
   if (query.isError) return <ErrorText>{messageFor(query.error)}</ErrorText>;
   if (!query.data || query.data.items.length === 0) {
-    return <Text style={listStyles.empty}>{empty}</Text>;
+    return (
+      <Text variant="bodyLarge" style={listStyles.empty}>
+        {empty}
+      </Text>
+    );
   }
   return <View style={styles.list}>{children(query.data.items)}</View>;
 }
@@ -186,6 +192,7 @@ function List<T>({
 function SummaryCards({ kind }: { kind: Kind | null }) {
   const { t } = useTranslation();
   const euros = useEuros();
+  const { colors: theme } = useTheme();
   const summary = useInvoicingSummary();
   if (summary.isPending) return <Loading />;
   if (summary.isError) return <ErrorText>{messageFor(summary.error)}</ErrorText>;
@@ -205,29 +212,40 @@ function SummaryCards({ kind }: { kind: Kind | null }) {
               ['toCollect', toCollect],
             ] as const
           ).map(([key, amounts]) => (
-            <View key={key} style={styles.card} testID={`summary-${key}`}>
-              <Text style={styles.cardLabel}>{t(`invoicing.summary.${key}`)}</Text>
-              <Text style={styles.cardAmount}>{euros(amounts.pending)}</Text>
-              <Text style={styles.cardDetail}>
-                {t('invoicing.summary.invoices', { count: amounts.pendingCount })}
-              </Text>
-              <Text style={[styles.cardDetail, amounts.overdueCount > 0 && styles.overdue]}>
-                {t('invoicing.summary.overdue', {
-                  amount: euros(amounts.overdue),
-                  count: amounts.overdueCount,
-                })}
-              </Text>
-            </View>
+            <Card key={key} mode="contained" style={styles.card} testID={`summary-${key}`}>
+              <Card.Content style={styles.cardContent}>
+                <Text variant="labelLarge" style={{ color: theme.onSurfaceVariant }}>
+                  {t(`invoicing.summary.${key}`)}
+                </Text>
+                <Text variant="headlineSmall" style={styles.cardAmount}>
+                  {euros(amounts.pending)}
+                </Text>
+                <Text variant="bodySmall" style={{ color: theme.onSurfaceVariant }}>
+                  {t('invoicing.summary.invoices', { count: amounts.pendingCount })}
+                </Text>
+                <Text
+                  variant="bodySmall"
+                  style={
+                    amounts.overdueCount > 0 ? styles.overdue : { color: theme.onSurfaceVariant }
+                  }
+                >
+                  {t('invoicing.summary.overdue', {
+                    amount: euros(amounts.overdue),
+                    count: amounts.overdueCount,
+                  })}
+                </Text>
+              </Card.Content>
+            </Card>
           ))}
         </View>
       )}
       {showInvoices && openDiscrepancies > 0 && (
-        <Text style={styles.alert} testID="summary-discrepancies">
+        <Text variant="bodyMedium" style={styles.alert} testID="summary-discrepancies">
           {t('invoicing.summary.openDiscrepancies', { count: openDiscrepancies })}
         </Text>
       )}
       {showNotes && staleDeliveryNotes > 0 && (
-        <Text style={styles.alert} testID="summary-stale">
+        <Text variant="bodyMedium" style={styles.alert} testID="summary-stale">
           {t('invoicing.summary.staleNotes', { count: staleDeliveryNotes })}
         </Text>
       )}
@@ -236,21 +254,19 @@ function SummaryCards({ kind }: { kind: Kind | null }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff' },
+  screen: { flex: 1 },
   content: { padding: 16, gap: 14 },
   summary: { gap: 8 },
   cards: { flexDirection: 'row', gap: 10 },
-  card: { flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 12, gap: 2 },
-  cardLabel: { fontSize: 13, color: colors.muted, fontWeight: '500' },
-  cardAmount: { fontSize: 20, fontWeight: '700', color: colors.text },
-  cardDetail: { fontSize: 12, color: colors.muted },
+  card: { flex: 1 },
+  cardContent: { gap: 2 },
+  cardAmount: { fontWeight: '700' },
   overdue: { color: colors.danger, fontWeight: '600' },
   alert: {
-    backgroundColor: '#fff4d6',
-    color: '#7a5600',
+    backgroundColor: colors.warningContainer,
+    color: colors.warning,
     borderRadius: 10,
     padding: 10,
-    fontSize: 14,
   },
   actions: { flexDirection: 'row', gap: 10 },
   action: { flex: 1 },

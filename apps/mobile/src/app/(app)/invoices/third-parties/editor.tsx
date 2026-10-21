@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { ApiError, messageFor } from '@/api/api-error';
 import { routeServerError } from '@/forms/server-errors';
@@ -21,7 +21,7 @@ import { Button } from '@/ui/button';
 import { FieldGroup, FormSummary } from '@/ui/field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
+import { Text } from '@/ui/paper';
 
 /** US-INV-01: create (the tax ID is validated by the server, NFR-INV-06) or edit a third party. */
 export default function ThirdPartyEditorScreen() {
@@ -137,7 +137,7 @@ function Form({
         maxLength={200}
         testID="third-party-name"
       />
-      <Text style={styles.label}>{t('invoicing.thirdParties.roles')}</Text>
+      <Text variant="labelLarge">{t('invoicing.thirdParties.roles')}</Text>
       <FieldGroup name="roles" style={styles.chips}>
         <Chip
           label={t('invoicing.thirdParties.supplier')}
@@ -189,6 +189,5 @@ function Form({
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 14, fontWeight: '500', color: colors.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

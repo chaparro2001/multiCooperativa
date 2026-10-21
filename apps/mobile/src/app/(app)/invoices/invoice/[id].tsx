@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { collect } from '@/forms/errors';
@@ -23,13 +23,13 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Button } from '@/ui/button';
 import { DayField } from '@/ui/date-field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
-import { useBrandColor } from '@/branding/brand';
-import { colors } from '@/ui/theme';
 import { openUrl } from '@/ui/open-url';
+import { Card, Text, useTheme } from '@/ui/paper';
+import { colors } from '@/ui/theme';
 
 /** US-INV-06 (detail), US-INV-04 (reconciliation) and US-INV-07 (settle). */
 export default function InvoiceScreen() {
-  const brand = useBrandColor();
+  const theme = useTheme();
   const { t } = useTranslation();
   const euros = useEuros();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -86,8 +86,8 @@ export default function InvoiceScreen() {
 
   return (
     <Screen testID="invoice-screen" form={form}>
-      <Text style={styles.title}>{data.thirdParty.name}</Text>
-      <Text style={styles.subtitle}>
+      <Text variant="titleLarge">{data.thirdParty.name}</Text>
+      <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
         {t('invoicing.detail.invoiceTitle', { number: data.number })} ·{' '}
         {t(`enums.operation.${data.operation}`)}
       </Text>
@@ -134,19 +134,30 @@ export default function InvoiceScreen() {
 
       {data.reconciliationStatus === 'with_discrepancy' && (
         <View style={styles.block} testID="discrepancies">
-          <Text style={styles.sectionTitle}>{t('invoicing.detail.discrepancies')}</Text>
+          <Text
+            variant="labelLarge"
+            style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+          >
+            {t('invoicing.detail.discrepancies')}
+          </Text>
           {data.discrepancies.map((item) => (
-            <View key={item.id} style={styles.discrepancy}>
-              <Text style={styles.concept}>{item.concept}</Text>
-              <Text style={styles.detail}>
-                {t('invoicing.detail.deliveredVsInvoiced', {
-                  delivered: item.deliveredQuantity,
-                  invoiced: item.invoicedQuantity,
-                  unit: item.unit,
-                })}
-              </Text>
-              {item.explanation && <Text style={styles.explanation}>{item.explanation}</Text>}
-            </View>
+            <Card key={item.id} mode="contained" style={styles.discrepancy}>
+              <Card.Content style={styles.discrepancyContent}>
+                <Text variant="titleSmall">{item.concept}</Text>
+                <Text variant="bodyMedium">
+                  {t('invoicing.detail.deliveredVsInvoiced', {
+                    delivered: item.deliveredQuantity,
+                    invoiced: item.invoicedQuantity,
+                    unit: item.unit,
+                  })}
+                </Text>
+                {item.explanation && (
+                  <Text variant="bodyMedium" style={styles.explanation}>
+                    {item.explanation}
+                  </Text>
+                )}
+              </Card.Content>
+            </Card>
           ))}
           {data.discrepancies.some((item) => !item.explanation) && (
             <Button
@@ -157,15 +168,22 @@ export default function InvoiceScreen() {
               testID="explain-discrepancies"
             />
           )}
-          <Text style={styles.hint}>{t('invoicing.detail.numericGoverns')}</Text>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            {t('invoicing.detail.numericGoverns')}
+          </Text>
         </View>
       )}
 
       {data.lines.length > 0 && (
         <View style={styles.block}>
-          <Text style={styles.sectionTitle}>{t('invoicing.detail.lines')}</Text>
+          <Text
+            variant="labelLarge"
+            style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+          >
+            {t('invoicing.detail.lines')}
+          </Text>
           {data.lines.map((line, index) => (
-            <Text key={index} style={styles.detail}>
+            <Text key={index} variant="bodyMedium">
               {line.concept} · {line.quantity} {line.unit}
             </Text>
           ))}
@@ -173,9 +191,14 @@ export default function InvoiceScreen() {
       )}
 
       <View style={styles.block}>
-        <Text style={styles.sectionTitle}>{t('invoicing.detail.deliveryNotes')}</Text>
+        <Text
+          variant="labelLarge"
+          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+        >
+          {t('invoicing.detail.deliveryNotes')}
+        </Text>
         {data.deliveryNotes.length === 0 ? (
-          <Text style={styles.detail}>{t('invoicing.detail.noDeliveryNotes')}</Text>
+          <Text variant="bodyMedium">{t('invoicing.detail.noDeliveryNotes')}</Text>
         ) : (
           data.deliveryNotes.map((note) => (
             <Pressable
@@ -183,7 +206,7 @@ export default function InvoiceScreen() {
               accessibilityRole="link"
               onPress={() => router.push(`/invoices/delivery-note/${note.id}`)}
             >
-              <Text style={[styles.link, { color: brand }]}>
+              <Text variant="bodyLarge" style={{ color: theme.colors.primary }}>
                 {t('invoicing.row.noteNumber', { number: note.number })} · {formatDay(note.date)}
               </Text>
             </Pressable>
@@ -195,7 +218,9 @@ export default function InvoiceScreen() {
         accessibilityRole="link"
         onPress={() => router.push(`/invoices/third-parties/${data.thirdParty.id}`)}
       >
-        <Text style={[styles.link, { color: brand }]}>{t('invoicing.detail.viewThirdParty')}</Text>
+        <Text variant="bodyLarge" style={{ color: theme.colors.primary }}>
+          {t('invoicing.detail.viewThirdParty')}
+        </Text>
       </Pressable>
 
       {error && <ErrorText>{error}</ErrorText>}
@@ -234,20 +259,10 @@ export default function InvoiceScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700', color: colors.text },
-  subtitle: { fontSize: 14, color: colors.muted },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   block: { gap: 8 },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.muted,
-    textTransform: 'uppercase',
-  },
-  detail: { fontSize: 14, color: colors.text },
-  hint: { fontSize: 12, color: colors.muted },
-  link: { fontSize: 15, color: colors.primary },
-  discrepancy: { backgroundColor: '#fff4d6', borderRadius: 10, padding: 10, gap: 4 },
-  concept: { fontSize: 15, fontWeight: '600', color: colors.text },
-  explanation: { fontSize: 14, color: colors.text, fontStyle: 'italic' },
+  sectionTitle: { textTransform: 'uppercase' },
+  discrepancy: { backgroundColor: colors.warningContainer },
+  discrepancyContent: { gap: 4 },
+  explanation: { fontStyle: 'italic' },
 });

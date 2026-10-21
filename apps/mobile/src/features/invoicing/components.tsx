@@ -6,12 +6,13 @@ import type {
   ReconciliationStatus,
 } from '@multicooperativa/contracts';
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { currentLocale, formatDay } from '@/i18n/format';
 import { Badge } from '@/ui/badge';
+import { Card, Text, useTheme } from '@/ui/paper';
 import { colors } from '@/ui/theme';
 
 import { formatEuros } from './amounts';
@@ -87,33 +88,34 @@ export function InvoiceRow({
 }) {
   const { t } = useTranslation();
   const euros = useEuros();
+  const muted = useMutedText();
   return (
-    <Pressable
-      accessibilityRole="button"
+    <Card
+      mode="contained"
       onPress={() => router.push(`/invoices/invoice/${invoice.id}`)}
-      style={({ pressed }) => [
-        styles.row,
-        attention && styles.attention,
-        pressed && styles.pressed,
-      ]}
+      style={attention ? styles.attention : undefined}
       testID={`invoice-${invoice.number}`}
     >
-      <View style={styles.rowTop}>
-        <Text style={styles.title}>{invoice.thirdParty.name}</Text>
-        <Text style={styles.amount}>{euros(invoice.total)}</Text>
-      </View>
-      <Text style={styles.detail}>
-        {t('invoicing.row.invoiceNumber', { number: invoice.number })} ·{' '}
-        {t('invoicing.row.due', { date: formatDay(invoice.dueDate) })}
-      </Text>
-      <View style={styles.badges}>
-        {attention?.kind === 'overdue' ? null : (
-          <PaymentBadge status={invoice.paymentStatus} operation={invoice.operation} />
-        )}
-        {attention && <InvoiceAttentionBadge attention={attention} />}
-        <ReconciliationBadge status={invoice.reconciliationStatus} />
-      </View>
-    </Pressable>
+      <Card.Content style={styles.rowContent}>
+        <View style={styles.rowTop}>
+          <Text variant="titleMedium" style={styles.title}>
+            {invoice.thirdParty.name}
+          </Text>
+          <Text variant="titleMedium">{euros(invoice.total)}</Text>
+        </View>
+        <Text variant="bodySmall" style={muted}>
+          {t('invoicing.row.invoiceNumber', { number: invoice.number })} ·{' '}
+          {t('invoicing.row.due', { date: formatDay(invoice.dueDate) })}
+        </Text>
+        <View style={styles.badges}>
+          {attention?.kind === 'overdue' ? null : (
+            <PaymentBadge status={invoice.paymentStatus} operation={invoice.operation} />
+          )}
+          {attention && <InvoiceAttentionBadge attention={attention} />}
+          <ReconciliationBadge status={invoice.reconciliationStatus} />
+        </View>
+      </Card.Content>
+    </Card>
   );
 }
 
@@ -126,45 +128,55 @@ export function NoteRow({
   attention?: NoteAttention | null;
 }) {
   const { t } = useTranslation();
+  const muted = useMutedText();
   return (
-    <Pressable
-      accessibilityRole="button"
+    <Card
+      mode="contained"
       onPress={() => router.push(`/invoices/delivery-note/${note.id}`)}
-      style={({ pressed }) => [
-        styles.row,
-        attention && styles.attention,
-        pressed && styles.pressed,
-      ]}
+      style={attention ? styles.attention : undefined}
       testID={`delivery-note-${note.number}`}
     >
-      <Text style={styles.title}>{note.thirdParty.name}</Text>
-      <Text style={styles.detail}>
-        {t('invoicing.row.noteNumber', { number: note.number })} · {formatDay(note.date)}
-      </Text>
-      <View style={styles.badges}>
-        <Badge
-          label={t(`enums.deliveryNoteStatus.${note.status}`)}
-          tone={note.status === 'pending_invoicing' ? 'warning' : 'neutral'}
-        />
-        {attention && (
+      <Card.Content style={styles.rowContent}>
+        <Text variant="titleMedium">{note.thirdParty.name}</Text>
+        <Text variant="bodySmall" style={muted}>
+          {t('invoicing.row.noteNumber', { number: note.number })} · {formatDay(note.date)}
+        </Text>
+        <View style={styles.badges}>
           <Badge
-            label={t('invoicing.attention.noteDays', { count: attention.days })}
-            tone={attention.stale ? 'danger' : 'warning'}
+            label={t(`enums.deliveryNoteStatus.${note.status}`)}
+            tone={note.status === 'pending_invoicing' ? 'warning' : 'neutral'}
           />
-        )}
-      </View>
-    </Pressable>
+          {attention && (
+            <Badge
+              label={t('invoicing.attention.noteDays', { count: attention.days })}
+              tone={attention.stale ? 'danger' : 'warning'}
+            />
+          )}
+        </View>
+      </Card.Content>
+    </Card>
   );
 }
 
 /** Label / value line of a detail screen. */
 export function Fact({ label, children }: { label: string; children: ReactNode }) {
+  const muted = useMutedText();
   return (
     <View style={styles.fact}>
-      <Text style={styles.factLabel}>{label}</Text>
-      <Text style={styles.factValue}>{children}</Text>
+      <Text variant="bodyMedium" style={muted}>
+        {label}
+      </Text>
+      <Text variant="bodyMedium" style={styles.factValue}>
+        {children}
+      </Text>
     </View>
   );
+}
+
+/** Secondary text colour from the theme, memoized so rows keep stable style references. */
+function useMutedText() {
+  const { colors: theme } = useTheme();
+  return useMemo(() => ({ color: theme.onSurfaceVariant }), [theme.onSurfaceVariant]);
 }
 
 export const listStyles = StyleSheet.create({
@@ -172,21 +184,11 @@ export const listStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  row: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 6 },
   attention: { borderLeftWidth: 4, borderLeftColor: colors.danger },
-  pressed: { opacity: 0.7 },
+  rowContent: { gap: 6 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
-  title: { fontSize: 16, fontWeight: '600', color: colors.text, flexShrink: 1 },
-  amount: { fontSize: 16, fontWeight: '600', color: colors.text },
-  detail: { fontSize: 13, color: colors.muted },
+  title: { flexShrink: 1 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   fact: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  factLabel: { fontSize: 14, color: colors.muted },
-  factValue: {
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '500',
-    flexShrink: 1,
-    textAlign: 'right',
-  },
+  factValue: { fontWeight: '500', flexShrink: 1, textAlign: 'right' },
 });

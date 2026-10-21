@@ -1,7 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { Fact, InvoiceRow, NoteRow, useEuros } from '@/features/invoicing/components';
@@ -10,11 +10,12 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
-import { colors } from '@/ui/theme';
+import { Text, useTheme } from '@/ui/paper';
 
 /** US-INV-06: record of a third party with its documents and outstanding balance. BR-INV-14: it is deactivated, not deleted. */
 export default function ThirdPartyScreen() {
   const { t } = useTranslation();
+  const theme = useTheme();
   const euros = useEuros();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { canManage } = useModuleAccess('invoicing');
@@ -52,7 +53,7 @@ export default function ThirdPartyScreen() {
   return (
     <Screen testID="third-party-screen">
       <Stack.Screen options={{ title: party.name }} />
-      <Text style={styles.title}>{party.name}</Text>
+      <Text variant="titleLarge">{party.name}</Text>
       <View style={styles.badges}>
         {party.isSupplier && <Badge label={t('invoicing.thirdParties.supplier')} tone="info" />}
         {party.isCustomer && <Badge label={t('invoicing.thirdParties.customer')} tone="info" />}
@@ -65,7 +66,12 @@ export default function ThirdPartyScreen() {
       </View>
 
       <View style={styles.block} testID="balance">
-        <Text style={styles.sectionTitle}>{t('invoicing.thirdParties.balance')}</Text>
+        <Text
+          variant="labelLarge"
+          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+        >
+          {t('invoicing.thirdParties.balance')}
+        </Text>
         {party.isSupplier && (
           <Fact label={t('invoicing.summary.toPay')}>{euros(party.balance.toPay.pending)}</Fact>
         )}
@@ -76,16 +82,30 @@ export default function ThirdPartyScreen() {
         )}
       </View>
 
-      <Text style={styles.sectionTitle}>{t('invoicing.home.invoices')}</Text>
+      <Text
+        variant="labelLarge"
+        style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+      >
+        {t('invoicing.home.invoices')}
+      </Text>
       {party.invoices.length === 0 && (
-        <Text style={styles.detail}>{t('invoicing.home.noInvoices')}</Text>
+        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          {t('invoicing.home.noInvoices')}
+        </Text>
       )}
       {party.invoices.map((invoice) => (
         <InvoiceRow key={invoice.id} invoice={invoice} />
       ))}
-      <Text style={styles.sectionTitle}>{t('invoicing.home.notes')}</Text>
+      <Text
+        variant="labelLarge"
+        style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+      >
+        {t('invoicing.home.notes')}
+      </Text>
       {party.deliveryNotes.length === 0 && (
-        <Text style={styles.detail}>{t('invoicing.home.noNotes')}</Text>
+        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          {t('invoicing.home.noNotes')}
+        </Text>
       )}
       {party.deliveryNotes.map((note) => (
         <NoteRow key={note.id} note={note} />
@@ -120,14 +140,7 @@ export default function ThirdPartyScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700', color: colors.text },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   block: { gap: 8 },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.muted,
-    textTransform: 'uppercase',
-  },
-  detail: { fontSize: 14, color: colors.muted },
+  sectionTitle: { textTransform: 'uppercase' },
 });

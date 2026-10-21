@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Button } from '@/ui/button';
-import { colors } from '@/ui/theme';
+import { Surface, Text, useTheme } from '@/ui/paper';
 
 /**
  * Destructive action with an inline confirmation. `Alert.alert` buttons do not
@@ -23,6 +23,7 @@ export function ConfirmButton({
   testID?: string;
 }) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const [asking, setAsking] = useState(false);
 
   if (!asking) {
@@ -31,8 +32,11 @@ export function ConfirmButton({
     );
   }
   return (
-    <View style={styles.box}>
-      <Text style={styles.message}>{message}</Text>
+    <Surface
+      mode="flat"
+      style={[styles.box, { borderColor: colors.error, backgroundColor: colors.surface }]}
+    >
+      <Text variant="bodyMedium">{message}</Text>
       <Button
         title={t('common.actions.confirm')}
         variant="danger"
@@ -48,11 +52,10 @@ export function ConfirmButton({
         variant="secondary"
         onPress={() => setAsking(false)}
       />
-    </View>
+    </Surface>
   );
 }
 
 const styles = StyleSheet.create({
-  box: { gap: 10, borderWidth: 1, borderColor: colors.danger, borderRadius: 10, padding: 12 },
-  message: { color: colors.text, fontSize: 14 },
+  box: { gap: 10, borderWidth: 1, borderRadius: 10, padding: 12 },
 });

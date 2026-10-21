@@ -1,10 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
-import { useBrandColor } from '@/branding/brand';
 import { FieldGroup } from '@/ui/field';
-import { colors } from '@/ui/theme';
+import { Chip as PaperChip, SegmentedButtons } from '@/ui/paper';
 
-/** Two or three exclusive choices as a pill row. */
+/** Two or three exclusive choices as a segmented control. */
 export function Segmented<T extends string>({
   value,
   onChange,
@@ -22,22 +19,15 @@ export function Segmented<T extends string>({
   error?: string;
 }) {
   const row = (
-    <View style={styles.row} accessibilityRole="tablist">
-      {options.map((option) => (
-        <Pressable
-          key={option.value}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: value === option.value }}
-          onPress={() => onChange(option.value)}
-          style={[styles.option, value === option.value && styles.selected]}
-          testID={`${testIDPrefix}-${option.value}`}
-        >
-          <Text style={[styles.text, value === option.value && styles.selectedText]}>
-            {option.label}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
+    <SegmentedButtons
+      value={value}
+      onValueChange={(next) => onChange(next as T)}
+      buttons={options.map((option) => ({
+        value: option.value,
+        label: option.label,
+        testID: `${testIDPrefix}-${option.value}`,
+      }))}
+    />
   );
   return name || error ? (
     <FieldGroup name={name} error={error}>
@@ -48,15 +38,7 @@ export function Segmented<T extends string>({
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 10, padding: 3 },
-  option: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  selected: { backgroundColor: '#fff' },
-  text: { color: colors.muted, fontWeight: '500' },
-  selectedText: { color: colors.text },
-});
-
-/** Toggle pill for multi-select choices (roles, delivery notes to group). */
+/** Toggle chip for multi-select choices (roles, delivery notes to group). */
 export function Chip({
   label,
   selected,
@@ -68,33 +50,9 @@ export function Chip({
   onPress(): void;
   testID?: string;
 }) {
-  const brand = useBrandColor();
   return (
-    <Pressable
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected }}
-      onPress={onPress}
-      style={[
-        chipStyles.chip,
-        selected && chipStyles.chipSelected,
-        selected && { backgroundColor: brand, borderColor: brand },
-      ]}
-      testID={testID}
-    >
-      <Text style={[chipStyles.text, selected && chipStyles.textSelected]}>{label}</Text>
-    </Pressable>
+    <PaperChip mode="outlined" selected={selected} onPress={onPress} testID={testID}>
+      {label}
+    </PaperChip>
   );
 }
-
-const chipStyles = StyleSheet.create({
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  text: { color: colors.text },
-  textSelected: { color: '#fff', fontWeight: '600' },
-});

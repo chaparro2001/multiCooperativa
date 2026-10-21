@@ -1,9 +1,9 @@
 import type { ThirdParty } from '@multicooperativa/contracts';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { listStyles } from '@/features/invoicing/components';
@@ -13,7 +13,7 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { ErrorText, Loading } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
+import { Card, Text, useTheme } from '@/ui/paper';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 
 type Filter = 'all' | 'supplier' | 'customer';
@@ -21,6 +21,7 @@ type Filter = 'all' | 'supplier' | 'customer';
 /** US-INV-01: suppliers and customers of the cooperative. */
 export default function ThirdPartiesScreen() {
   const { t } = useTranslation();
+  const theme = useTheme();
   const { canManage } = useModuleAccess('invoicing');
   // Opened from the Suppliers or Customers tile: the list is fixed to that type.
   const { type } = useLocalSearchParams<{ type?: string }>();
@@ -30,9 +31,10 @@ export default function ThirdPartiesScreen() {
   const [search, setSearch] = useState('');
   const list = useThirdParties(filter === 'all' ? undefined : filter, search);
   const { refreshing, onRefresh } = usePullToRefresh(list.refetch);
+  const renderItem = useCallback(({ item }: { item: ThirdParty }) => <PartyRow party={item} />, []);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen
         options={{
           ...(fixed && { title: t(`invoicing.thirdParties.filter.${fixed}`) }),
@@ -92,7 +94,7 @@ export default function ThirdPartiesScreen() {
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <Text style={listStyles.empty}>
+            <Text variant="bodyLarge" style={listStyles.empty}>
               {fixed === 'supplier'
                 ? t('invoicing.thirdParties.emptySupplier')
                 : fixed === 'customer'
@@ -100,40 +102,40 @@ export default function ThirdPartiesScreen() {
                   : t('invoicing.thirdParties.empty')}
             </Text>
           }
-          renderItem={({ item }) => <PartyRow party={item} />}
+          renderItem={renderItem}
         />
       )}
     </View>
   );
 }
 
-export function PartyRow({ party }: { party: ThirdParty }) {
+export const PartyRow = memo(function PartyRow({ party }: { party: ThirdParty }) {
   const { t } = useTranslation();
+  const onPress = useCallback(() => router.push(`/invoices/third-parties/${party.id}`), [party.id]);
   return (
-    <Pressable
+    <Card
+      mode="contained"
       accessibilityRole="button"
-      onPress={() => router.push(`/invoices/third-parties/${party.id}`)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      onPress={onPress}
       testID={`third-party-${party.nif}`}
     >
-      <Text style={styles.name}>{party.name}</Text>
-      <Text style={styles.detail}>{party.nif}</Text>
-      <View style={styles.badges}>
-        {party.isSupplier && <Badge label={t('invoicing.thirdParties.supplier')} tone="info" />}
-        {party.isCustomer && <Badge label={t('invoicing.thirdParties.customer')} tone="info" />}
-        {!party.active && <Badge label={t('invoicing.thirdParties.inactive')} tone="danger" />}
-      </View>
-    </Pressable>
+      <Card.Content style={styles.rowContent}>
+        <Text variant="titleMedium">{party.name}</Text>
+        <Text variant="bodySmall">{party.nif}</Text>
+        <View style={styles.badges}>
+          {party.isSupplier && <Badge label={t('invoicing.thirdParties.supplier')} tone="info" />}
+          {party.isCustomer && <Badge label={t('invoicing.thirdParties.customer')} tone="info" />}
+          {!party.active && <Badge label={t('invoicing.thirdParties.inactive')} tone="danger" />}
+        </View>
+      </Card.Content>
+    </Card>
   );
-}
+});
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff' },
+  screen: { flex: 1 },
   filters: { padding: 16, paddingBottom: 8, gap: 10 },
   list: { padding: 16, paddingTop: 0, gap: 10 },
-  row: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 4 },
-  pressed: { opacity: 0.7 },
-  name: { fontSize: 16, fontWeight: '600', color: colors.text },
-  detail: { fontSize: 13, color: colors.muted },
+  rowContent: { gap: 4 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 });

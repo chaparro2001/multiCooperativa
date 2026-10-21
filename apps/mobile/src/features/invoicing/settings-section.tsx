@@ -1,7 +1,7 @@
 import type { InvoicingSettings } from '@multicooperativa/contracts';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { routeServerError } from '@/forms/server-errors';
@@ -11,7 +11,7 @@ import { Checkbox } from '@/ui/checkbox';
 import { FormSummary } from '@/ui/field';
 import { ErrorText } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
+import { Card, Divider, Text, useTheme } from '@/ui/paper';
 
 import { useInvoicingSettings, useUpdateInvoicingSettings } from './queries';
 import {
@@ -36,6 +36,7 @@ const BLOCKS: readonly Block[] = ['invoiceNotice', 'noteDeadline', 'noteNotice']
  */
 export function InvoicingSettingsSection() {
   const { t } = useTranslation();
+  const theme = useTheme();
   const settings = useInvoicingSettings();
   const update = useUpdateInvoicingSettings();
   const [draft, setDraft] = useState<InvoicingSettingsDraft | null>(null);
@@ -75,8 +76,12 @@ export function InvoicingSettingsSection() {
   return (
     <FormScope form={form}>
       <View style={styles.section} testID="invoicing-settings-section">
-        <Text style={styles.label}>{t('settings.invoicing.title')}</Text>
-        <Text style={styles.detail}>{t('settings.invoicing.description')}</Text>
+        <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+          {t('settings.invoicing.title')}
+        </Text>
+        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          {t('settings.invoicing.description')}
+        </Text>
         {settings.isError && <ErrorText>{messageFor(settings.error)}</ErrorText>}
         {draft &&
           BLOCKS.map((block) => (
@@ -91,7 +96,7 @@ export function InvoicingSettingsSection() {
         {banner && <ErrorText>{banner}</ErrorText>}
         <FormSummary form={form} />
         {saved && !banner && (
-          <Text style={styles.success} accessibilityLiveRegion="polite" testID="invoicing-saved">
+          <Text variant="bodyMedium" accessibilityLiveRegion="polite" testID="invoicing-saved">
             {t('settings.invoicing.saved')}
           </Text>
         )}
@@ -102,6 +107,7 @@ export function InvoicingSettingsSection() {
           onPress={save}
           testID="invoicing-save"
         />
+        <Divider />
       </View>
     </FormScope>
   );
@@ -120,54 +126,57 @@ function AlertBlock({
   onChange(changes: Partial<InvoicingSettingsDraft>): void;
 }) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const enabledKey = `${block}Enabled` as keyof InvoicingSettings & keyof InvoicingSettingsDraft;
   const daysKey = `${block}Days` as keyof InvoicingSettings & keyof InvoicingSettingsDraft;
   const enabled = draft[enabledKey] as boolean;
   const text = draft[daysKey] as string;
   const inactive = !enabled || deadlineOff;
+  const muted = { color: theme.colors.onSurfaceVariant };
   return (
-    <View style={styles.block} testID={`${block}-block`}>
-      <Text style={styles.blockTitle}>{t(`settings.invoicing.${block}.title`)}</Text>
-      <Checkbox
-        label={t('settings.invoicing.enabled')}
-        checked={enabled}
-        onChange={(checked) => onChange({ [enabledKey]: checked })}
-        testID={`${block}-enabled`}
-      />
-      <View style={inactive && styles.inactive}>
-        <TextField
-          label={t('settings.invoicing.days')}
-          name={daysKey}
-          value={text}
-          onChangeText={(value) => onChange({ [daysKey]: value })}
-          keyboardType="number-pad"
-          inputMode="numeric"
-          maxLength={3}
-          editable={!inactive}
-          testID={`${block}-days`}
+    <Card mode="outlined" testID={`${block}-block`}>
+      <Card.Content style={styles.block}>
+        <Text variant="titleSmall">{t(`settings.invoicing.${block}.title`)}</Text>
+        <Checkbox
+          label={t('settings.invoicing.enabled')}
+          checked={enabled}
+          onChange={(checked) => onChange({ [enabledKey]: checked })}
+          testID={`${block}-enabled`}
         />
-      </View>
-      <Text style={styles.detail}>{t(`settings.invoicing.${block}.hint`)}</Text>
-      {!enabled && <Text style={styles.detail}>{t(`settings.invoicing.${block}.off`)}</Text>}
-      {enabled && deadlineOff && (
-        <Text style={styles.detail}>{t('settings.invoicing.noteNotice.deadlineOff')}</Text>
-      )}
-    </View>
+        <View style={inactive && styles.inactive}>
+          <TextField
+            label={t('settings.invoicing.days')}
+            name={daysKey}
+            value={text}
+            onChangeText={(value) => onChange({ [daysKey]: value })}
+            keyboardType="number-pad"
+            inputMode="numeric"
+            maxLength={3}
+            editable={!inactive}
+            testID={`${block}-days`}
+          />
+        </View>
+        <Text variant="bodyMedium" style={muted}>
+          {t(`settings.invoicing.${block}.hint`)}
+        </Text>
+        {!enabled && (
+          <Text variant="bodyMedium" style={muted}>
+            {t(`settings.invoicing.${block}.off`)}
+          </Text>
+        )}
+        {enabled && deadlineOff && (
+          <Text variant="bodyMedium" style={muted}>
+            {t('settings.invoicing.noteNotice.deadlineOff')}
+          </Text>
+        )}
+      </Card.Content>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { gap: 12, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  label: { fontSize: 13, color: colors.muted, textTransform: 'uppercase' },
-  detail: { fontSize: 14, color: colors.muted },
-  success: { fontSize: 14, color: colors.text },
-  block: {
-    gap: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-  },
-  blockTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+  section: { gap: 12 },
+  label: { textTransform: 'uppercase' },
+  block: { gap: 8 },
   inactive: { opacity: 0.5 },
 });
