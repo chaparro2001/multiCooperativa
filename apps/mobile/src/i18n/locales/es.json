@@ -558,7 +558,10 @@
       "category": "Categoría",
       "date": "Fecha del documento",
       "submit": "Subir y publicar",
-      "tooLarge": "El documento puede ocupar como máximo {{max}} MB."
+      "tooLarge": "El documento puede ocupar como máximo {{max}} MB.",
+      "errors": {
+        "fileRequired": "Elige el PDF del documento."
+      }
     }
   },
   "invoicing": {

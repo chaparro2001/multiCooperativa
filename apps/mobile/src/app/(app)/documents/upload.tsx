@@ -2,22 +2,26 @@ import type { DocumentCategory } from '@multicooperativa/contracts';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { messageFor } from '@/api/api-error';
+import { routeServerError } from '@/forms/server-errors';
+import { useForm } from '@/forms/use-form';
+import {
+  UPLOAD_FIELDS,
+  UPLOAD_SERVER_MAPPING,
+  validateUpload,
+} from '@/features/documents/form-validation';
 import { categoryTitle, DOCUMENT_CATEGORIES } from '@/features/documents/grouping';
 import { useUploadDocument } from '@/features/documents/queries';
 import { type PickedPdf, pickPdf } from '@/features/shared/pdf-upload';
 import { formatSize, today } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
+import { FieldGroup, FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
-
-const MAX_MB = 20;
-const MAX_BYTES = MAX_MB * 1024 * 1024;
 
 /** US-DOC-01: PDF of up to 20 MB with title, category and date. */
 export default function UploadDocumentScreen() {
@@ -29,23 +33,29 @@ export default function UploadDocumentScreen() {
   const [documentDate, setDocumentDate] = useState(() => new Date());
   const [pdf, setPdf] = useState<PickedPdf | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const form = useForm({
+    values: { title, category, date: today(documentDate), file: pdf },
+    validate: (values) =>
+      validateUpload({
+        title: values.title,
+        category: values.category,
+        documentDate: values.date,
+        file: values.file,
+      }),
+  });
 
   async function choose() {
     setError(null);
     const picked = await pickPdf();
     if (!picked) return;
-    // Checked again on the server by content (BR-DOC-02); this only saves a useless upload.
-    if (picked.size !== null && picked.size > MAX_BYTES) {
-      setError(t('documents.upload.tooLarge', { max: MAX_MB }));
-      return;
-    }
+    // Checked again on the server by content (BR-DOC-02); an oversized file is marked on the field.
     setPdf(picked);
     if (!title) setTitle(picked.name.replace(/\.pdf$/i, ''));
   }
 
   async function submit() {
-    if (!pdf) return;
     setError(null);
+    if (!form.validateAll() || !pdf) return;
     try {
       // The API takes the calendar day as YYYY-MM-DD, in the device's time zone.
       await upload.mutateAsync({
@@ -56,33 +66,40 @@ export default function UploadDocumentScreen() {
       });
       router.back();
     } catch (failure) {
-      setError(messageFor(failure));
+      const routed = routeServerError(failure, UPLOAD_SERVER_MAPPING, (field) =>
+        (UPLOAD_FIELDS as readonly string[]).includes(field),
+      );
+      form.setServerErrors(routed.fields);
+      setError(routed.banner);
     }
   }
 
   return (
-    <Screen testID="upload-document-screen">
-      <Button
-        title={pdf ? t('documents.upload.changePdf') : t('documents.upload.choosePdf')}
-        variant="secondary"
-        onPress={choose}
-        testID="choose-pdf"
-      />
-      {pdf && (
-        <Text style={styles.file}>
-          {pdf.name}
-          {pdf.size !== null ? ` · ${formatSize(pdf.size)}` : ''}
-        </Text>
-      )}
+    <Screen testID="upload-document-screen" form={form}>
+      <FieldGroup name="file" style={styles.fileGroup}>
+        <Button
+          title={pdf ? t('documents.upload.changePdf') : t('documents.upload.choosePdf')}
+          variant="secondary"
+          onPress={choose}
+          testID="choose-pdf"
+        />
+        {pdf && (
+          <Text style={styles.file}>
+            {pdf.name}
+            {pdf.size !== null ? ` · ${formatSize(pdf.size)}` : ''}
+          </Text>
+        )}
+      </FieldGroup>
       <TextField
         label={t('documents.upload.title')}
+        name="title"
         value={title}
         onChangeText={setTitle}
         maxLength={150}
         testID="document-title-field"
       />
       <Text style={styles.label}>{t('documents.upload.category')}</Text>
-      <View style={styles.chips}>
+      <FieldGroup name="category" style={styles.chips}>
         {DOCUMENT_CATEGORIES.map((value) => (
           <Pressable
             key={value}
@@ -100,20 +117,21 @@ export default function UploadDocumentScreen() {
             </Text>
           </Pressable>
         ))}
-      </View>
+      </FieldGroup>
       <DateField
         label={t('documents.upload.date')}
+        name="date"
         mode="date"
         value={documentDate}
         onChange={(date) => date && setDocumentDate(date)}
         testID="document-date-field"
       />
       {error && <ErrorText>{error}</ErrorText>}
+      <FormSummary form={form} />
       <Button
         title={t('documents.upload.submit')}
         onPress={submit}
         loading={upload.isPending}
-        disabled={!pdf || !title.trim()}
         testID="confirm-upload"
       />
     </Screen>
@@ -121,6 +139,7 @@ export default function UploadDocumentScreen() {
 }
 
 const styles = StyleSheet.create({
+  fileGroup: { gap: 8 },
   file: { fontSize: 14, color: colors.text },
   label: { fontSize: 14, fontWeight: '500', color: colors.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

@@ -39,6 +39,10 @@ export function serverMessage(error: ApiError, field?: string): FieldMessage {
   if ('ratio' in error.details) params.ratio = formatNumber(error.details.ratio);
   if ('minimum' in error.details) params.minimum = formatNumber(error.details.minimum);
   const candidates = [
+    // A refused file says why (too large, not a PDF...): the same texts the banner uses.
+    ...(typeof error.details.reason === 'string'
+      ? [`errors.rejections.${error.code}.${error.details.reason}`]
+      : []),
     ...(field ? [`forms.serverField.${error.code}.${fieldKey(field)}`] : []),
     `forms.server.${error.code}`,
     `errors.codes.${error.code}`,

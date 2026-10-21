@@ -34,8 +34,9 @@ export interface FormApi {
   /**
    * Marks the form as submitted (from now on errors are live), validates and, when something is
    * wrong, scrolls to and focuses the first invalid field. True when the form can be sent.
+   * `mode` (publish vs save draft) is remembered for the live validation that follows.
    */
-  validateAll(): boolean;
+  validateAll(mode?: string): boolean;
   /** Errors the API reported for fields: shown until the field changes or the next submit. */
   setServerErrors(errors: FieldErrors): void;
   /** @internal */
@@ -56,17 +57,19 @@ export function useForm<V extends object>({
   validate,
 }: {
   values: V;
-  validate(values: V): FieldErrors;
+  /** `mode` is what the person is trying to do (a draft save is lenient, a publish is not). */
+  validate(values: V, mode?: string): FieldErrors;
 }): FormApi {
   const [submitted, setSubmitted] = useState(false);
+  const [mode, setMode] = useState<string | undefined>(undefined);
   const [serverErrors, setServerErrorsState] = useState<FieldErrors>({});
   const fields = useRef(new Map<string, FieldHandle>());
   const scroller = useRef<((view: View) => void) | null>(null);
 
   const clientErrors = useMemo(
-    () => (submitted ? validate(values) : {}),
+    () => (submitted ? validate(values, mode) : {}),
     // `validate` is a pure function of the values; callers do not need to memoize it.
-    [submitted, values],
+    [submitted, values, mode],
   );
   const errors = useMemo(
     () => mergeErrors(clientErrors, serverErrors),
@@ -120,10 +123,11 @@ export function useForm<V extends object>({
       error: (name) => (errors[name] ? messageText(errors[name]!) : undefined),
       message: (name) => errors[name],
       invalidFields: () => Object.keys(errors),
-      validateAll() {
+      validateAll(next) {
         setSubmitted(true);
+        if (next !== undefined) setMode(next);
         setServerErrorsState({});
-        const found = validate(values);
+        const found = validate(values, next ?? mode);
         if (!hasErrors(found)) return true;
         scrollToFirst(Object.keys(found));
         return false;
