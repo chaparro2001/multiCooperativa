@@ -8,7 +8,7 @@ import type {
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { currentLocale, formatDay } from '@/i18n/format';
 import { Badge } from '@/ui/badge';
@@ -114,7 +114,8 @@ export function Fact({ label, children }: { label: string; children: ReactNode }
 
 export const listStyles = StyleSheet.create({
   empty: { color: colors.muted, fontSize: 15, padding: 16, textAlign: 'center' },
-  headerLink: { color: colors.primary, fontSize: 16 },
+  // The web header puts headerRight flush against the window edge.
+  headerLink: { color: colors.primary, fontSize: 16, marginRight: Platform.OS === 'web' ? 16 : 0 },
 });
 
 const styles = StyleSheet.create({

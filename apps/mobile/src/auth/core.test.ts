@@ -49,11 +49,19 @@ describe('navigation by permissions (US-ACC-06)', () => {
     expect(modules).toEqual([
       { id: 'invoicing', module: 'invoicing', emoji: '🧾', route: '/invoices', canManage: true },
       {
-        id: 'third-parties',
+        id: 'suppliers',
         module: 'invoicing',
-        titleKey: 'invoicing.thirdParties.title',
+        titleKey: 'invoicing.thirdParties.filter.supplier',
+        emoji: '🚚',
+        route: '/invoices/third-parties?type=supplier',
+        canManage: true,
+      },
+      {
+        id: 'customers',
+        module: 'invoicing',
+        titleKey: 'invoicing.thirdParties.filter.customer',
         emoji: '🤝',
-        route: '/invoices/third-parties',
+        route: '/invoices/third-parties?type=customer',
         canManage: true,
       },
     ]);
@@ -73,11 +81,11 @@ describe('navigation by permissions (US-ACC-06)', () => {
     }
   });
 
-  it('suppliers and customers have their own tile with the invoicing permission (BR-INV-01)', () => {
+  it('suppliers and customers have their own tiles with the invoicing permission (BR-INV-01)', () => {
     const ids = (level: 'read' | 'manage') =>
       visibleModules([{ module: 'invoicing', level, scope: 'all' }]).map((m) => m.id);
-    expect(ids('read')).toEqual(['invoicing', 'third-parties']);
-    expect(visibleModules([...partner]).some((m) => m.id === 'third-parties')).toBe(false);
+    expect(ids('read')).toEqual(['invoicing', 'suppliers', 'customers']);
+    expect(visibleModules([...partner]).some((m) => m.module === 'invoicing')).toBe(false);
   });
 
   it('canAccess denies while the permissions are not loaded yet', () => {

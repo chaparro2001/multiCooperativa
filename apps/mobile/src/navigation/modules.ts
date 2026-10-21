@@ -6,7 +6,7 @@ export interface ModuleEntry {
   /** Permission module that decides whether the tile is shown. */
   module: Module;
   /** i18n key of the tile title; defaults to `enums.module.<module>`. */
-  titleKey?: 'invoicing.thirdParties.title';
+  titleKey?: 'invoicing.thirdParties.filter.supplier' | 'invoicing.thirdParties.filter.customer';
   /** Shown in the home grid; decorative, screen readers read the title (`enums.module.<module>`). */
   emoji: string;
   /** Screen of the module inside the cooperative. */
@@ -22,12 +22,20 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
   { id: 'documents', module: 'documents', emoji: '📄', route: '/documents' },
   { id: 'invoicing', module: 'invoicing', emoji: '🧾', route: '/invoices' },
   // Suppliers and customers are master data of the invoicing module (BR-INV-01): same permission.
+  // One third party can be both (US-INV-01): then it shows in both lists.
   {
-    id: 'third-parties',
+    id: 'suppliers',
     module: 'invoicing',
-    titleKey: 'invoicing.thirdParties.title',
+    titleKey: 'invoicing.thirdParties.filter.supplier',
+    emoji: '🚚',
+    route: '/invoices/third-parties?type=supplier',
+  },
+  {
+    id: 'customers',
+    module: 'invoicing',
+    titleKey: 'invoicing.thirdParties.filter.customer',
     emoji: '🤝',
-    route: '/invoices/third-parties',
+    route: '/invoices/third-parties?type=customer',
   },
   {
     id: 'member-area',

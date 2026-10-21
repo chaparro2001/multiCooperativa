@@ -1,5 +1,5 @@
 import type { ThirdParty } from '@multicooperativa/contracts';
-import { Link, router, Stack } from 'expo-router';
+import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
@@ -21,7 +21,11 @@ type Filter = 'all' | 'supplier' | 'customer';
 export default function ThirdPartiesScreen() {
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('invoicing');
-  const [filter, setFilter] = useState<Filter>('all');
+  // Opened from the Suppliers or Customers tile: the list is fixed to that type.
+  const { type } = useLocalSearchParams<{ type?: string }>();
+  const fixed = type === 'supplier' || type === 'customer' ? type : null;
+  const [chosen, setFilter] = useState<Filter>('all');
+  const filter: Filter = fixed ?? chosen;
   const [search, setSearch] = useState('');
   const list = useThirdParties(filter === 'all' ? undefined : filter, search);
   const { refreshing, onRefresh } = usePullToRefresh(list.refetch);
@@ -30,9 +34,17 @@ export default function ThirdPartiesScreen() {
     <View style={styles.screen}>
       <Stack.Screen
         options={{
+          ...(fixed && { title: t(`invoicing.thirdParties.filter.${fixed}`) }),
           headerRight: canManage
             ? () => (
-                <Link href="/invoices/third-parties/editor" testID="new-third-party">
+                <Link
+                  href={
+                    fixed
+                      ? `/invoices/third-parties/editor?type=${fixed}`
+                      : '/invoices/third-parties/editor'
+                  }
+                  testID="new-third-party"
+                >
                   <Text style={listStyles.headerLink}>{t('invoicing.thirdParties.new')}</Text>
                 </Link>
               )
@@ -47,15 +59,17 @@ export default function ThirdPartiesScreen() {
           returnKeyType="search"
           testID="third-party-search"
         />
-        <Segmented<Filter>
-          value={filter}
-          onChange={setFilter}
-          options={(['all', 'supplier', 'customer'] as const).map((value) => ({
-            value,
-            label: t(`invoicing.thirdParties.filter.${value}`),
-          }))}
-          testIDPrefix="filter"
-        />
+        {!fixed && (
+          <Segmented<Filter>
+            value={filter}
+            onChange={setFilter}
+            options={(['all', 'supplier', 'customer'] as const).map((value) => ({
+              value,
+              label: t(`invoicing.thirdParties.filter.${value}`),
+            }))}
+            testIDPrefix="filter"
+          />
+        )}
       </View>
       {list.isPending ? (
         <Loading />
@@ -69,7 +83,13 @@ export default function ThirdPartiesScreen() {
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <Text style={listStyles.empty}>{t('invoicing.thirdParties.empty')}</Text>
+            <Text style={listStyles.empty}>
+              {fixed === 'supplier'
+                ? t('invoicing.thirdParties.emptySupplier')
+                : fixed === 'customer'
+                  ? t('invoicing.thirdParties.emptyCustomer')
+                  : t('invoicing.thirdParties.empty')}
+            </Text>
           }
           renderItem={({ item }) => <PartyRow party={item} />}
         />

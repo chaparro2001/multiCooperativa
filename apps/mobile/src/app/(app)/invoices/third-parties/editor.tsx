@@ -17,8 +17,8 @@ import { colors } from '@/ui/theme';
 
 /** US-INV-01: create (the tax ID is validated by the server, NFR-INV-06) or edit a third party. */
 export default function ThirdPartyEditorScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
-  return id ? <Editor id={id} /> : <Form />;
+  const { id, type } = useLocalSearchParams<{ id?: string; type?: string }>();
+  return id ? <Editor id={id} /> : <Form asCustomer={type === 'customer'} />;
 }
 
 function Editor({ id }: { id: string }) {
@@ -36,7 +36,10 @@ function Editor({ id }: { id: string }) {
 
 function Form({
   existing,
+  asCustomer = false,
 }: {
+  /** New record opened from the Customers list. */
+  asCustomer?: boolean;
   existing?: {
     id: string;
     nif: string;
@@ -53,8 +56,9 @@ function Form({
   const update = useUpdateThirdParty();
   const [nif, setNif] = useState(existing?.nif ?? '');
   const [name, setName] = useState(existing?.name ?? '');
-  const [isSupplier, setSupplier] = useState(existing?.isSupplier ?? true);
-  const [isCustomer, setCustomer] = useState(existing?.isCustomer ?? false);
+  // A new record opened from the Customers list starts as a customer; otherwise as a supplier.
+  const [isSupplier, setSupplier] = useState(existing?.isSupplier ?? !asCustomer);
+  const [isCustomer, setCustomer] = useState(existing?.isCustomer ?? asCustomer);
   const [email, setEmail] = useState(existing?.email ?? '');
   const [phone, setPhone] = useState(existing?.phone ?? '');
   const [error, setError] = useState<string | null>(null);

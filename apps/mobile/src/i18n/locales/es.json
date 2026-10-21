@@ -493,6 +493,8 @@
       "new": "Nuevo",
       "search": "Buscar por nombre o NIF",
       "empty": "No hay proveedores ni clientes.",
+      "emptySupplier": "No hay proveedores.",
+      "emptyCustomer": "No hay clientes.",
       "filter": {
         "all": "Todos",
         "supplier": "Proveedores",
