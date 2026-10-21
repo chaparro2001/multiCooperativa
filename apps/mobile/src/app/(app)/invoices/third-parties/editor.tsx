@@ -1,16 +1,24 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { ApiError, messageFor } from '@/api/api-error';
+import { routeServerError } from '@/forms/server-errors';
+import { useForm } from '@/forms/use-form';
 import {
   useCreateThirdParty,
   useThirdPartySheet,
   useUpdateThirdParty,
 } from '@/features/invoicing/queries';
 import { Chip } from '@/features/invoicing/segmented';
+import {
+  THIRD_PARTY_FIELDS,
+  THIRD_PARTY_SERVER_MAPPING,
+  validateThirdParty,
+} from '@/features/invoicing/third-party-validation';
 import { Button } from '@/ui/button';
+import { FieldGroup, FormSummary } from '@/ui/field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
@@ -64,11 +72,25 @@ function Form({
   const [error, setError] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState<string | null>(null);
 
+  const form = useForm({
+    values: {
+      nif,
+      name,
+      isSupplier,
+      isCustomer,
+      roles: `${isSupplier}-${isCustomer}`,
+      email,
+      phone,
+    },
+    validate: (values) => validateThirdParty(values, !existing),
+  });
+
   useEffect(() => setError(null), [nif, name, isSupplier, isCustomer]);
 
   async function submit() {
     setError(null);
     setDuplicate(null);
+    if (!form.validateAll()) return;
     const common = {
       name: name.trim(),
       isSupplier,
@@ -86,14 +108,20 @@ function Form({
       if (failure instanceof ApiError && failure.code === 'third_party_exists') {
         setDuplicate(String(failure.details.thirdPartyId ?? ''));
       }
-      setError(messageFor(failure));
+      // An invalid or duplicate NIF is marked on the NIF field, the rest on theirs.
+      const routed = routeServerError(failure, THIRD_PARTY_SERVER_MAPPING, (field) =>
+        (THIRD_PARTY_FIELDS as readonly string[]).includes(field),
+      );
+      form.setServerErrors(routed.fields);
+      setError(routed.banner);
     }
   }
 
   return (
-    <Screen testID="third-party-editor">
+    <Screen testID="third-party-editor" form={form}>
       <TextField
         label={t('invoicing.thirdParties.nif')}
+        name="nif"
         value={nif}
         onChangeText={setNif}
         autoCapitalize="characters"
@@ -103,13 +131,14 @@ function Form({
       />
       <TextField
         label={t('invoicing.thirdParties.name')}
+        name="name"
         value={name}
         onChangeText={setName}
         maxLength={200}
         testID="third-party-name"
       />
       <Text style={styles.label}>{t('invoicing.thirdParties.roles')}</Text>
-      <View style={styles.chips}>
+      <FieldGroup name="roles" style={styles.chips}>
         <Chip
           label={t('invoicing.thirdParties.supplier')}
           selected={isSupplier}
@@ -122,9 +151,10 @@ function Form({
           onPress={() => setCustomer(!isCustomer)}
           testID="role-customer"
         />
-      </View>
+      </FieldGroup>
       <TextField
         label={t('invoicing.thirdParties.email')}
+        name="email"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -133,12 +163,14 @@ function Form({
       />
       <TextField
         label={t('invoicing.thirdParties.phone')}
+        name="phone"
         value={phone}
         onChangeText={setPhone}
         keyboardType="phone-pad"
         testID="third-party-phone"
       />
       {error && <ErrorText>{error}</ErrorText>}
+      <FormSummary form={form} />
       {duplicate ? (
         <Button
           title={t('invoicing.thirdParties.openExisting')}
@@ -150,7 +182,6 @@ function Form({
         title={t('common.actions.save')}
         onPress={submit}
         loading={create.isPending || update.isPending}
-        disabled={!name.trim() || (!existing && !nif.trim()) || (!isSupplier && !isCustomer)}
         testID="save-third-party"
       />
     </Screen>

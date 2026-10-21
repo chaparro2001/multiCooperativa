@@ -21,7 +21,14 @@ const unhandledErrors: ErrorRequestHandler = (error, _req, res, _next) => {
     error?.type === 'entity.parse.failed' ||
     error instanceof MulterError
   ) {
-    res.status(400).json({ error: 'invalid_request' } satisfies ApiError);
+    const issues = error instanceof InvalidRequestError ? error.issues : [];
+    res
+      .status(400)
+      .json(
+        (issues.length > 0
+          ? { error: 'invalid_request', details: { issues } }
+          : { error: 'invalid_request' }) satisfies ApiError,
+      );
     return;
   }
   console.error(error instanceof Error ? error.stack : error);

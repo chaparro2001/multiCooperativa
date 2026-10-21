@@ -2,8 +2,12 @@
 export abstract class AssemblyDomainError extends Error {
   abstract readonly code: string;
 
-  constructor(message: string) {
+  /** Contract path of the input field the rule is about, sent as `details.field`. */
+  readonly field?: string;
+
+  constructor(message: string, field?: string) {
     super(message);
+    this.field = field;
     this.name = new.target.name;
   }
 }

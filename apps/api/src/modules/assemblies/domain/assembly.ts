@@ -53,18 +53,24 @@ function validPoints(points: PointInput[]): PointState[] {
     const title = point.title.trim();
     const description = point.description.trim();
     const where = `Item ${i + 1}`;
-    if (!title) throw new InvalidAssemblyError(`${where}: the title is missing.`);
+    if (!title)
+      throw new InvalidAssemblyError(`${where}: the title is missing.`, `points.${i}.title`);
     if (title.length > POINT_TITLE_MAX_LENGTH) {
       throw new InvalidAssemblyError(
         `${where}: the title exceeds ${POINT_TITLE_MAX_LENGTH} characters.`,
+        `points.${i}.title`,
       );
     }
     if (description.length > POINT_DESCRIPTION_MAX_LENGTH) {
-      throw new InvalidAssemblyError(`${where}: the description is too long.`);
+      throw new InvalidAssemblyError(
+        `${where}: the description is too long.`,
+        `points.${i}.description`,
+      );
     }
     if (point.votable && !point.majority) {
       throw new InvalidAssemblyError(
         `${where}: a votable item needs a simple or reinforced majority.`,
+        `points.${i}.majority`,
       );
     }
     return {
@@ -80,13 +86,14 @@ function validPoints(points: PointInput[]): PointState[] {
 
 function validated(input: AssemblyInput): Omit<AssemblyState, 'status'> {
   const place = input.place.trim();
-  if (!place) throw new InvalidAssemblyError('The place is missing.');
-  if (place.length > PLACE_MAX_LENGTH) throw new InvalidAssemblyError('The place is too long.');
+  if (!place) throw new InvalidAssemblyError('The place is missing.', 'place');
+  if (place.length > PLACE_MAX_LENGTH)
+    throw new InvalidAssemblyError('The place is too long.', 'place');
   if (!(input.firstCallAt instanceof Date) || Number.isNaN(input.firstCallAt.getTime())) {
-    throw new InvalidAssemblyError('The assembly date is not valid.');
+    throw new InvalidAssemblyError('The assembly date is not valid.', 'firstCallAt');
   }
   if (input.secondCallAt && input.secondCallAt.getTime() <= input.firstCallAt.getTime()) {
-    throw new InvalidAssemblyError('The second call must be after the first.');
+    throw new InvalidAssemblyError('The second call must be after the first.', 'secondCallAt');
   }
   return {
     type: input.type,
@@ -115,7 +122,7 @@ export function convene<T extends AssemblyState>(assembly: T, now: Date, minNoti
     throw new InvalidAssemblyTransitionError('Only a draft assembly can be convened.');
   }
   if (assembly.points.length === 0) {
-    throw new InvalidAssemblyError('The agenda needs at least one item.');
+    throw new InvalidAssemblyError('The agenda needs at least one item.', 'points');
   }
   if (assembly.firstCallAt.getTime() - now.getTime() < minNoticeDays * DAY_IN_MS) {
     throw new InsufficientNoticeError(minNoticeDays);

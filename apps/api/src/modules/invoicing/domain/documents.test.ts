@@ -252,3 +252,62 @@ describe('payments, collections and due dates (US-INV-07)', () => {
     expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
   });
 });
+
+describe('the field of a rule violation (usability of forms: details.field)', () => {
+  const field = (run: () => unknown) => {
+    try {
+      run();
+    } catch (error) {
+      return (error as { field?: string }).field;
+    }
+    return 'no error';
+  };
+  const invoice = {
+    operation: 'purchase' as const,
+    number: 'F-1',
+    issueDate: '2026-05-10',
+    dueDate: '2026-06-10',
+    base: '100.00',
+    vatRate: '21',
+    total: '121.00',
+    lines: [],
+  };
+
+  it('names the NIF, the name and the roles of a third party', () => {
+    const party = { isSupplier: true, isCustomer: false, email: null, phone: null };
+    expect(field(() => createThirdParty({ ...party, nif: 'X', name: 'A' }))).toBe('nif');
+    expect(field(() => createThirdParty({ ...party, nif: '12345678Z', name: ' ' }))).toBe('name');
+    expect(
+      field(() => createThirdParty({ ...party, nif: '12345678Z', name: 'A', isSupplier: false })),
+    ).toBe('roles');
+    expect(
+      field(() => createThirdParty({ ...party, nif: '12345678Z', name: 'A', email: 'nope' })),
+    ).toBe('email');
+  });
+
+  it('names the date, amount and number fields of an invoice', () => {
+    expect(field(() => createInvoice({ ...invoice, dueDate: '2026-05-01' }))).toBe('dueDate');
+    expect(field(() => createInvoice({ ...invoice, issueDate: 'x' }))).toBe('issueDate');
+    expect(field(() => createInvoice({ ...invoice, base: 'abc' }))).toBe('base');
+    expect(field(() => createInvoice({ ...invoice, vatRate: '150' }))).toBe('vatRate');
+    expect(field(() => createInvoice({ ...invoice, number: ' ' }))).toBe('number');
+  });
+
+  it('names the line and the column of a bad line', () => {
+    const lines = [
+      { concept: 'Oil', quantity: '1', unit: 'kg' },
+      { concept: '', quantity: '1', unit: 'kg' },
+    ];
+    expect(field(() => createInvoice({ ...invoice, lines }))).toBe('lines.1.concept');
+    expect(
+      field(() =>
+        createDeliveryNote({
+          operation: 'purchase',
+          number: 'A',
+          date: '2026-05-10',
+          lines: [{ concept: 'a', quantity: '0', unit: 'kg' }],
+        }),
+      ),
+    ).toBe('lines.0.quantity');
+  });
+});

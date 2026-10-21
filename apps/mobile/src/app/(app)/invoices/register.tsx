@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, messageFor } from '@/api/api-error';
+import { messageFor } from '@/api/api-error';
+import { routeServerError } from '@/forms/server-errors';
+import { useForm } from '@/forms/use-form';
 import { computeTotal } from '@/features/invoicing/amounts';
 import {
   buildDeliveryNoteInput,
@@ -16,6 +18,11 @@ import {
   setPendingDraft,
 } from '@/features/invoicing/draft';
 import {
+  isRegistrationField,
+  REGISTRATION_SERVER_MAPPING,
+  validateRegistration,
+} from '@/features/invoicing/form-validation';
+import {
   useCreateThirdParty,
   useDeliveryNotes,
   useRegisterDeliveryNote,
@@ -26,6 +33,7 @@ import { Chip, Segmented } from '@/features/invoicing/segmented';
 import { formatDay } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { DayField } from '@/ui/date-field';
+import { FieldGroup, FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { useBrandColor } from '@/branding/brand';
@@ -48,6 +56,7 @@ export default function RegisterScreen() {
   const registerInvoice = useRegisterInvoice();
   const registerNote = useRegisterDeliveryNote();
   const [error, setError] = useState<string | null>(null);
+  const form = useForm({ values: draft, validate: validateRegistration });
 
   const patch = (change: Partial<RegistrationDraft>) => setDraft((d) => ({ ...d, ...change }));
   const review = (field: ExtractionField) => draft.lowConfidence.includes(field);
@@ -56,6 +65,8 @@ export default function RegisterScreen() {
 
   async function submit() {
     setError(null);
+    // Every wrong field is marked, the first one is scrolled to; nothing is sent.
+    if (!form.validateAll()) return;
     try {
       if (isInvoice) {
         const record = buildInvoiceInput(draft);
@@ -71,19 +82,17 @@ export default function RegisterScreen() {
         router.replace(`/invoices/delivery-note/${created.id}`);
       }
     } catch (failure) {
-      let message = messageFor(failure);
-      // US-INV-03: a total that does not match says by how much.
-      if (failure instanceof ApiError && failure.code === 'total_mismatch') {
-        message += ` ${t('invoicing.form.expectedTotal', { expected: String(failure.details.expected ?? '') })}`;
-      }
-      setError(message);
+      // US-INV-03: a total that does not match says by how much, on the total field.
+      const routed = routeServerError(failure, REGISTRATION_SERVER_MAPPING, isRegistrationField);
+      form.setServerErrors(routed.fields);
+      setError(routed.banner);
     }
   }
 
   const suggestedTotal = computeTotal(draft.base, draft.vatRate);
 
   return (
-    <Screen testID="register-screen">
+    <Screen testID="register-screen" form={form}>
       {params.noData === '1' && (
         <Text style={styles.notice} testID="no-data">
           {t('invoicing.form.noData')}
@@ -118,6 +127,7 @@ export default function RegisterScreen() {
 
       <TextField
         label={mark(t('invoicing.form.number'), 'number')}
+        name="number"
         value={draft.number}
         onChangeText={(number) => patch({ number })}
         autoCapitalize="characters"
@@ -129,6 +139,7 @@ export default function RegisterScreen() {
           isInvoice ? t('invoicing.form.issueDate') : t('invoicing.form.noteDate'),
           'date',
         )}
+        name="date"
         value={draft.date}
         onChange={(date) => patch({ date })}
         testID="form-date"
@@ -138,6 +149,7 @@ export default function RegisterScreen() {
         <>
           <DayField
             label={mark(t('invoicing.form.dueDate'), 'dueDate')}
+            name="dueDate"
             value={draft.dueDate}
             onChange={(dueDate) => patch({ dueDate })}
             suggested={() => dueDateAfter(draft.date)}
@@ -145,6 +157,7 @@ export default function RegisterScreen() {
           />
           <TextField
             label={mark(t('invoicing.form.base'), 'base')}
+            name="base"
             value={draft.base}
             onChangeText={(base) => patch({ base })}
             keyboardType="decimal-pad"
@@ -152,6 +165,7 @@ export default function RegisterScreen() {
           />
           <TextField
             label={mark(t('invoicing.form.vatRate'), 'vatRate')}
+            name="vatRate"
             value={draft.vatRate}
             onChangeText={(vatRate) => patch({ vatRate })}
             keyboardType="decimal-pad"
@@ -159,6 +173,7 @@ export default function RegisterScreen() {
           />
           <TextField
             label={mark(t('invoicing.form.total'), 'total')}
+            name="total"
             value={draft.total}
             onChangeText={(total) => patch({ total })}
             placeholder={suggestedTotal ?? undefined}
@@ -203,6 +218,7 @@ export default function RegisterScreen() {
       )}
 
       {error && <ErrorText>{error}</ErrorText>}
+      <FormSummary form={form} />
       <Button
         title={t('invoicing.form.confirm')}
         onPress={submit}
@@ -250,7 +266,7 @@ function PartyPicker({
   }
 
   return (
-    <View style={styles.group} testID="party-picker">
+    <FieldGroup name="thirdPartyId" style={styles.group} testID="party-picker">
       <Text style={styles.label}>
         {warn ? `${t('invoicing.form.thirdParty')} ⚠` : t('invoicing.form.thirdParty')}
       </Text>
@@ -305,7 +321,7 @@ function PartyPicker({
           <Text style={[styles.link, { color: brand }]}>{t('invoicing.form.noParties')}</Text>
         </Pressable>
       )}
-    </View>
+    </FieldGroup>
   );
 }
 
@@ -325,7 +341,7 @@ function LinesEditor({
     onChange(lines.map((line, i) => (i === index ? { ...line, ...change } : line)));
 
   return (
-    <View style={styles.group} testID="lines">
+    <FieldGroup name="lines" style={styles.group} testID="lines">
       <Text style={styles.label}>
         {warn ? `${t('invoicing.form.lines')} ⚠` : t('invoicing.form.lines')}
         {required ? ' *' : ''}
@@ -334,6 +350,7 @@ function LinesEditor({
         <View key={index} style={styles.line}>
           <TextField
             label={t('invoicing.form.concept')}
+            name={`lines.${index}.concept`}
             value={line.concept}
             onChangeText={(concept) => update(index, { concept })}
             testID={`line-concept-${index}`}
@@ -342,6 +359,7 @@ function LinesEditor({
             <View style={styles.flex}>
               <TextField
                 label={t('invoicing.form.quantity')}
+                name={`lines.${index}.quantity`}
                 value={line.quantity}
                 onChangeText={(quantity) => update(index, { quantity })}
                 keyboardType="decimal-pad"
@@ -351,6 +369,7 @@ function LinesEditor({
             <View style={styles.flex}>
               <TextField
                 label={t('invoicing.form.unit')}
+                name={`lines.${index}.unit`}
                 value={line.unit}
                 onChangeText={(unit) => update(index, { unit })}
                 autoCapitalize="none"
@@ -372,7 +391,7 @@ function LinesEditor({
         onPress={() => onChange([...lines, { concept: '', quantity: '', unit: 'kg' }])}
         testID="add-line"
       />
-    </View>
+    </FieldGroup>
   );
 }
 
@@ -393,7 +412,7 @@ function NotesToGroup({
   const items = notes.data?.items ?? [];
   if (items.length === 0) return null;
   return (
-    <View style={styles.group} testID="notes-to-group">
+    <FieldGroup name="deliveryNoteIds" style={styles.group} testID="notes-to-group">
       <Text style={styles.label}>{t('invoicing.form.groupNotes')}</Text>
       <View style={styles.chips}>
         {items.map((note) => (
@@ -412,7 +431,7 @@ function NotesToGroup({
           />
         ))}
       </View>
-    </View>
+    </FieldGroup>
   );
 }
 

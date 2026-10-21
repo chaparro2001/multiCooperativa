@@ -1,4 +1,12 @@
-import type { CapitalMovementType, MemberCapital } from '@multicooperativa/contracts';
+import {
+  type CapitalMovementType,
+  type MemberCapital,
+  registerCapitalMovementRequestSchema,
+} from '@multicooperativa/contracts';
+
+import { collect, type FieldErrors, mergeErrors, required, zodFieldErrors } from '@/forms/errors';
+import { dayMessage, tooLong } from '@/forms/rules';
+import type { ServerMapping } from '@/forms/server-errors';
 
 import { normalizeAmountInput } from '@/features/invoicing/amounts';
 
@@ -71,4 +79,37 @@ export function movementRequest(draft: MovementDraft):
     return { ok: false, error: 'amount_not_positive' };
   }
   return { ok: true, request: { date: draft.date, type: draft.type, concept, amount } };
+}
+
+/** Fields of the movement form. */
+export const MOVEMENT_FIELDS = ['type', 'date', 'concept', 'amount'] as const;
+
+/** BR-MEM-03: a refund above the capital comes back from the server as an error on the amount. */
+export const MOVEMENT_SERVER_MAPPING: ServerMapping = { codes: { insufficient_capital: 'amount' } };
+
+/**
+ * US-MEM-03: every wrong field of the movement form (concept, amount, date), with the same rules
+ * as `movementRequest` plus the contract the API enforces.
+ */
+export function validateMovement(draft: MovementDraft): FieldErrors {
+  const amount = normalizeAmountInput(draft.amount);
+  const concept = draft.concept.trim();
+  const own = collect({
+    date: dayMessage(draft.date),
+    concept: !concept ? required : concept.length > 200 ? tooLong(200) : undefined,
+    amount: !draft.amount.trim()
+      ? required
+      : amount === null
+        ? { key: 'memberArea.register.errors.amount_invalid' }
+        : /^-?0+\.00$/.test(amount) || (draft.type !== 'correction' && amount.startsWith('-'))
+          ? { key: 'memberArea.register.errors.amount_not_positive' }
+          : undefined,
+  });
+  const parsed = registerCapitalMovementRequestSchema.safeParse({
+    date: draft.date,
+    type: draft.type,
+    concept,
+    amount: amount ?? draft.amount.trim(),
+  });
+  return mergeErrors(own, parsed.success ? {} : zodFieldErrors(parsed.error));
 }

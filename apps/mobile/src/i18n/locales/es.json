@@ -24,6 +24,68 @@
       "mb": "{{value}} MB"
     }
   },
+  "forms": {
+    "fixFields": "Revisa los campos marcados en rojo.",
+    "errors": {
+      "required": "Este campo es obligatorio.",
+      "invalid": "El valor no es válido.",
+      "email": "Escribe un email válido, por ejemplo nombre@dominio.es.",
+      "phone": "Escribe un teléfono válido, solo con números, espacios, + y guiones.",
+      "tooShort": "Debe tener al menos {{min}} caracteres.",
+      "tooLong": "Puede tener como máximo {{max}} caracteres.",
+      "mustBePositive": "Debe ser un número positivo.",
+      "tooSmall": "El valor mínimo es {{min}}.",
+      "tooBig": "El valor máximo es {{max}}.",
+      "tooShortOrSmall": "El valor es demasiado corto o pequeño.",
+      "tooBigOrLong": "El valor es demasiado largo o grande."
+    },
+    "server": {
+      "total_mismatch": "El total no coincide con la base más el IVA: debería ser {{expected}} €.",
+      "duplicate_number": "Ya existe un documento con este número.",
+      "third_party_exists": "Ya existe un proveedor o cliente con este NIF.",
+      "insufficient_capital": "El reembolso supera el capital disponible del socio ({{available}} €).",
+      "member_already_exists": "Este email ya pertenece a un miembro de la cooperativa."
+    },
+    "serverField": {
+      "invalid_third_party": {
+        "nif": "El NIF no es válido: revisa la letra o el dígito de control.",
+        "name": "Escribe el nombre de la empresa (máximo 200 caracteres).",
+        "roles": "Marca si es proveedor, cliente o ambos.",
+        "email": "Escribe un email válido, por ejemplo nombre@dominio.es.",
+        "thirdPartyId": "Este tercero no puede usarse aquí: está desactivado o no tiene el rol adecuado (proveedor en compras, cliente en ventas)."
+      },
+      "invalid_document": {
+        "number": "Escribe el número del documento (máximo 50 caracteres).",
+        "date": "La fecha no es válida.",
+        "issueDate": "La fecha de emisión no es válida.",
+        "dueDate": "El vencimiento no puede ser anterior a la fecha de emisión.",
+        "lines": "Añade al menos una línea con los datos de la factura.",
+        "lines_concept": "Escribe el concepto de la línea (máximo 200 caracteres).",
+        "lines_unit": "Escribe la unidad de la línea (máximo 20 caracteres).",
+        "lines_quantity": "La cantidad debe ser mayor que cero.",
+        "deliveryNoteIds": "Algún albarán elegido no se puede agrupar: es de otro tercero u operación, o ya está facturado o anulado.",
+        "title": "Escribe un título de hasta 150 caracteres.",
+        "category": "Elige una categoría válida.",
+        "documentDate": "La fecha del documento no es válida.",
+        "file": "El archivo debe ser un PDF o una foto (JPEG o PNG) de hasta 10 MB."
+      },
+      "invalid_amount": {
+        "base": "Escribe un importe válido, con hasta dos decimales.",
+        "total": "Escribe un importe válido, con hasta dos decimales.",
+        "vatRate": "El IVA debe estar entre 0 y 100.",
+        "lines_quantity": "Escribe una cantidad válida, con hasta tres decimales."
+      },
+      "invalid_assembly": {
+        "place": "Indica el lugar de la asamblea (máximo 200 caracteres).",
+        "firstCallAt": "La fecha de la primera convocatoria no es válida.",
+        "secondCallAt": "La segunda convocatoria debe ser posterior a la primera.",
+        "points_title": "Escribe el título del punto (máximo 200 caracteres).",
+        "points_description": "La descripción del punto es demasiado larga.",
+        "points_majority": "Elige la mayoría que necesita este punto votable.",
+        "points": "El orden del día necesita al menos un punto."
+      }
+    }
+  },
   "enums": {
     "module": {
       "announcements": "Comunicados",
@@ -216,7 +278,8 @@
   "auth": {
     "fields": {
       "email": "Email",
-      "password": "Contraseña"
+      "password": "Contraseña",
+      "confirmPassword": "Repite la contraseña"
     },
     "login": {
       "screenTitle": "Iniciar sesión",
@@ -235,7 +298,11 @@
       "activatedSignedIn": "La nueva cooperativa ya aparece en tu selector de cooperativas.",
       "activatedSignedOut": "Entra con tu email y tu contraseña de siempre.",
       "goToCooperatives": "Ir a mis cooperativas",
-      "goToLogin": "Iniciar sesión"
+      "goToLogin": "Iniciar sesión",
+      "errors": {
+        "passwordTooShort": "La contraseña debe tener al menos {{min}} caracteres.",
+        "confirmMismatch": "Las contraseñas no coinciden."
+      }
     },
     "lock": {
       "prompt": "Desbloquea multiCooperativa",
@@ -287,6 +354,11 @@
         "privacy": "Las preguntas de los miembros y los datos que el asistente consulta para responderlas se envían a ese proveedor, fuera de tu servidor. Revisa sus condiciones: algunos planes gratuitos pueden usar los datos para entrenar modelos.",
         "fallback": "Si el proveedor falla o rechaza la clave, el asistente responde con el modelo del servidor.",
         "unavailable": "Este servidor no tiene activados los proveedores externos."
+      },
+      "errors": {
+        "provider": "Elige un proveedor.",
+        "modelSpaces": "El identificador del modelo no puede llevar espacios.",
+        "keySpaces": "La clave de API no puede llevar espacios."
       }
     },
     "appearance": {
@@ -465,7 +537,10 @@
       "votable": "Se somete a votación",
       "addPoint": "Añadir punto",
       "saveDraft": "Guardar borrador",
-      "hint": "Después podrás convocarla desde su detalle. La documentación de cada punto se añade allí."
+      "hint": "Después podrás convocarla desde su detalle. La documentación de cada punto se añade allí.",
+      "errors": {
+        "secondBeforeFirst": "La segunda convocatoria debe ser posterior a la primera."
+      }
     }
   },
   "documents": {
@@ -508,7 +583,10 @@
       "category": "Categoría",
       "date": "Fecha del documento",
       "submit": "Subir y publicar",
-      "tooLarge": "El documento puede ocupar como máximo {{max}} MB."
+      "tooLarge": "El documento puede ocupar como máximo {{max}} MB.",
+      "errors": {
+        "fileRequired": "Elige el PDF del documento."
+      }
     }
   },
   "invoicing": {
@@ -600,7 +678,10 @@
       "balance": "Saldo pendiente",
       "deactivate": "Desactivar",
       "reactivate": "Reactivar",
-      "openExisting": "Abrir el existente"
+      "openExisting": "Abrir el existente",
+      "errors": {
+        "roles": "Marca al menos un rol: proveedor, cliente o ambos."
+      }
     },
     "capture": {
       "title": "Escanear documento",
@@ -645,7 +726,14 @@
       "attached": "Original adjunto: {{name}}",
       "confirm": "Confirmar y guardar",
       "invalid": "Revisa los datos: faltan campos o alguno no es válido.",
-      "expectedTotal": "Total esperado: {{expected}} €."
+      "expectedTotal": "Total esperado: {{expected}} €.",
+      "errors": {
+        "dueBeforeIssue": "El vencimiento no puede ser anterior a la fecha de emisión.",
+        "amount": "Escribe un importe válido, con hasta dos decimales.",
+        "vat": "Escribe un IVA válido entre 0 y 100.",
+        "linesToReconcile": "Añade las líneas facturadas: se necesitan para cuadrar con los albaranes agrupados.",
+        "linesRequired": "Añade al menos una línea."
+      }
     }
   },
   "members": {
@@ -675,7 +763,10 @@
       "sentTitle": "Invitación registrada",
       "sentMessage": "Se ha invitado a {{email}}. Compártele el enlace de abajo para que active su acceso.",
       "sentNoLink": "Se ha invitado a {{email}}. Este servidor no muestra el enlace: en desarrollo aparece en la consola de la API.",
-      "backToList": "Volver a la lista"
+      "backToList": "Volver a la lista",
+      "errors": {
+        "profileRequired": "Elige un perfil para el nuevo miembro."
+      }
     },
     "invitationLink": {
       "explanation": "Envía este enlace a la persona; caduca el {{date}} y solo sirve una vez.",

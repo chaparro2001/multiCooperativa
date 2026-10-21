@@ -46,3 +46,12 @@ export type AcceptInvitationRequest = z.infer<typeof acceptInvitationRequestSche
 export type AuthTokens = z.infer<typeof authTokensSchema>;
 export type AcceptInvitationResponse = z.infer<typeof acceptInvitationResponseSchema>;
 export type ApiError = z.infer<typeof apiErrorSchema>;
+
+/** One failed field of a request that broke its contract: `details.issues` of a 400 `invalid_request`. */
+export const validationIssueSchema = z.object({
+  /** Dot-separated path of the field, e.g. `lines.0.concept`; empty for the whole body. */
+  path: z.string(),
+  /** Zod issue code, e.g. `too_small`, `invalid_format`, `invalid_type`. */
+  code: z.string(),
+});
+export type ValidationIssue = z.infer<typeof validationIssueSchema>;

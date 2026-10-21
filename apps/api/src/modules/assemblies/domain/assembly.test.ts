@@ -179,3 +179,31 @@ describe('listing order (US-ASM-03)', () => {
     ]);
   });
 });
+
+describe('the field of a rule violation (usability of forms: details.field)', () => {
+  const fieldOf = (run: () => unknown) => {
+    try {
+      run();
+    } catch (error) {
+      return (error as { field?: string }).field;
+    }
+    return 'no error';
+  };
+
+  it('names the place, the second call and the agenda item', () => {
+    expect(fieldOf(() => createDraft(input({ place: ' ' })))).toBe('place');
+    expect(fieldOf(() => createDraft(input({ secondCallAt: inDays(1) })))).toBe('secondCallAt');
+    expect(
+      fieldOf(() =>
+        createDraft(
+          input({
+            points: [
+              { title: 'A', description: '', votable: false, majority: null },
+              { title: ' ', description: '', votable: false, majority: null },
+            ],
+          }),
+        ),
+      ),
+    ).toBe('points.1.title');
+  });
+});

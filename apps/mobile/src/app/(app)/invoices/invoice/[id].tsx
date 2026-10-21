@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { collect } from '@/forms/errors';
+import { dayMessage } from '@/forms/rules';
+import { routeServerError } from '@/forms/server-errors';
+import { useForm } from '@/forms/use-form';
 import { subtractAmounts } from '@/features/invoicing/amounts';
 import { ConfirmButton } from '@/features/invoicing/confirm-button';
 import { Fact, PaymentBadge, ReconciliationBadge, useEuros } from '@/features/invoicing/components';
@@ -38,6 +42,10 @@ export default function InvoiceScreen() {
   const [settleDate, setSettleDate] = useState(() => today());
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
+  const form = useForm({
+    values: { settleDate },
+    validate: (values) => collect({ settleDate: dayMessage(values.settleDate) }),
+  });
 
   if (invoice.isPending) return <Loading />;
   if (invoice.isError) {
@@ -59,8 +67,25 @@ export default function InvoiceScreen() {
     }
   }
 
+  async function settleInvoice() {
+    setError(null);
+    if (!form.validateAll()) return;
+    try {
+      await settle.mutateAsync({ id, date: settleDate });
+    } catch (failure) {
+      // The payment date is the only input: a rule about it is marked on the date field.
+      const routed = routeServerError(
+        failure,
+        { fields: { date: 'settleDate' } },
+        (field) => field === 'settleDate',
+      );
+      form.setServerErrors(routed.fields);
+      setError(routed.banner);
+    }
+  }
+
   return (
-    <Screen testID="invoice-screen">
+    <Screen testID="invoice-screen" form={form}>
       <Text style={styles.title}>{data.thirdParty.name}</Text>
       <Text style={styles.subtitle}>
         {t('invoicing.detail.invoiceTitle', { number: data.number })} ·{' '}
@@ -179,6 +204,7 @@ export default function InvoiceScreen() {
         <View style={styles.block}>
           <DayField
             label={t(`invoicing.detail.settleDate.${data.operation}`)}
+            name="settleDate"
             value={settleDate}
             onChange={setSettleDate}
             testID="settle-date"
@@ -186,8 +212,7 @@ export default function InvoiceScreen() {
           <Button
             title={t(`invoicing.detail.settle.${data.operation}`)}
             loading={settle.isPending}
-            disabled={!/^\d{4}-\d{2}-\d{2}$/.test(settleDate)}
-            onPress={() => run(() => settle.mutateAsync({ id, date: settleDate }))}
+            onPress={settleInvoice}
             testID="settle-invoice"
           />
           <ConfirmButton

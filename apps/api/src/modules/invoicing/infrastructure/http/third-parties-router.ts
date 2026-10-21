@@ -8,7 +8,11 @@ import {
 import { type RequestHandler, Router } from 'express';
 
 import { getCooperativeContext, requirePermission } from '../../../access';
-import { InvalidRequestError, parseBody } from '../../../../shared/infrastructure/http/validation';
+import {
+  InvalidRequestError,
+  parseBody,
+  toValidationIssues,
+} from '../../../../shared/infrastructure/http/validation';
 import type { ThirdPartyRecord } from '../../application/ports/third-party-store';
 import * as useCases from '../../application/third-parties';
 
@@ -35,7 +39,7 @@ export function createThirdPartiesRouter(
 
   router.get(base, ...read, async (req, res) => {
     const query = listThirdPartiesQuerySchema.safeParse(req.query);
-    if (!query.success) throw new InvalidRequestError();
+    if (!query.success) throw new InvalidRequestError(toValidationIssues(query.error));
     const parties = await useCases.listThirdParties(deps, getCooperativeContext(res), {
       role: query.data.type,
       search: query.data.q,

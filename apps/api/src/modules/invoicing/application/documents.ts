@@ -70,9 +70,10 @@ async function storeOriginal(
 ): Promise<StoredFile | null> {
   if (!file) return null;
   const type = detectFileType(file.content);
-  if (!type) throw new InvalidDocumentError('The file must be a PDF or a photo (JPEG or PNG).');
+  if (!type)
+    throw new InvalidDocumentError('The file must be a PDF or a photo (JPEG or PNG).', 'file');
   if (file.content.byteLength > MAX_FILE_BYTES) {
-    throw new InvalidDocumentError('The file can be at most 10 MB.');
+    throw new InvalidDocumentError('The file can be at most 10 MB.', 'file');
   }
   const key = newFileKey(context.cooperativeId, 'invoices');
   await deps.files.put(key, file.content, type);

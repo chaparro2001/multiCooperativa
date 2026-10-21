@@ -37,6 +37,11 @@ export const documentErrorHandler: ErrorRequestHandler = (error, _req, res, next
   res.status(status).json({
     error: error.code,
     message: error.message,
-    details: error instanceof DocumentFileRejectedError ? { reason: error.reason } : undefined,
+    details:
+      error instanceof DocumentFileRejectedError
+        ? { reason: error.reason }
+        : error instanceof DocumentDomainError && error.field
+          ? { field: error.field }
+          : undefined,
   } satisfies ApiError);
 };

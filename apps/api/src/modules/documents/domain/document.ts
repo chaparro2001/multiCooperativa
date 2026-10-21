@@ -40,15 +40,15 @@ export function createDocument(input: {
   documentDate: string;
 }): DocumentState {
   const title = input.title.trim();
-  if (title.length === 0) throw new InvalidDocumentError('The document title is missing.');
+  if (title.length === 0) throw new InvalidDocumentError('The document title is missing.', 'title');
   if (title.length > TITLE_MAX_LENGTH) {
-    throw new InvalidDocumentError(`The title exceeds ${TITLE_MAX_LENGTH} characters.`);
+    throw new InvalidDocumentError(`The title exceeds ${TITLE_MAX_LENGTH} characters.`, 'title');
   }
   if (!DOCUMENT_CATEGORIES.includes(input.category)) {
-    throw new InvalidDocumentError('The category is not valid.');
+    throw new InvalidDocumentError('The category is not valid.', 'category');
   }
   if (!isCalendarDate(input.documentDate)) {
-    throw new InvalidDocumentError('The document date is not valid.');
+    throw new InvalidDocumentError('The document date is not valid.', 'documentDate');
   }
   return { status: 'published', title, category: input.category, documentDate: input.documentDate };
 }

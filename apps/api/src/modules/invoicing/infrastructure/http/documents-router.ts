@@ -16,7 +16,11 @@ import multer from 'multer';
 import type { z } from 'zod';
 
 import { getCooperativeContext, requirePermission } from '../../../access';
-import { InvalidRequestError, parseBody } from '../../../../shared/infrastructure/http/validation';
+import {
+  InvalidRequestError,
+  parseBody,
+  toValidationIssues,
+} from '../../../../shared/infrastructure/http/validation';
 import * as useCases from '../../application/documents';
 import { explainDiscrepancies } from '../../application/explanations';
 import type { DiscrepancyExplainer } from '../../application/ports/discrepancy-explainer';
@@ -52,7 +56,7 @@ function multipartRecord<T extends z.ZodType>(
 
 function query<T extends z.ZodType>(schema: T, value: unknown): z.infer<T> {
   const parsed = schema.safeParse(value);
-  if (!parsed.success) throw new InvalidRequestError();
+  if (!parsed.success) throw new InvalidRequestError(toValidationIssues(parsed.error));
   return parsed.data;
 }
 

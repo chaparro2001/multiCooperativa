@@ -116,3 +116,21 @@ describe('visibility (US-DOC-03)', () => {
     expect(isVisible('withdrawn', true)).toBe(true);
   });
 });
+
+describe('the field of a rule violation (usability of forms: details.field)', () => {
+  const fieldOf = (run: () => unknown) => {
+    try {
+      run();
+    } catch (error) {
+      return (error as { field?: string }).field;
+    }
+    return 'no error';
+  };
+
+  it('names the title and the date of a document', () => {
+    expect(fieldOf(() => createDocument({ ...valid, title: ' ' }))).toBe('title');
+    expect(fieldOf(() => createDocument({ ...valid, documentDate: '2026-13-45' }))).toBe(
+      'documentDate',
+    );
+  });
+});

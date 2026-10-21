@@ -3,14 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { messageText } from '@/forms/errors';
+import { routeServerError } from '@/forms/server-errors';
+import { FormScope, useForm } from '@/forms/use-form';
 import { useBrand } from '@/branding/brand';
 import { BrandLogo } from '@/branding/brand-logo';
 import { Button } from '@/ui/button';
 import { confirmAction } from '@/ui/confirm';
+import { FormSummary } from '@/ui/field';
 import { ErrorText } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { colors } from '@/ui/theme';
 import { contrastWithWhite, MIN_CONTRAST, parseHexColor, PRESET_COLORS } from './brand-color';
+import { BRAND_FIELDS, BRAND_SERVER_MAPPING, validateBrandColor } from './form-validation';
 import { pickLogo } from './logo';
 import { useRemoveLogo, useSetBrandColor, useUploadLogo } from './queries';
 
@@ -24,6 +29,11 @@ export function AppearanceSection() {
 
   const [text, setText] = useState(brand.primaryColor);
   const [colorSaved, setColorSaved] = useState(false);
+  const [colorBanner, setColorBanner] = useState<string | null>(null);
+  const form = useForm({
+    values: { color: text },
+    validate: (values) => validateBrandColor(values, i18n.language),
+  });
 
   useEffect(() => {
     setText(brand.primaryColor);
@@ -32,9 +42,29 @@ export function AppearanceSection() {
   const candidate = parseHexColor(text);
   const ratio = candidate ? contrastWithWhite(candidate) : null;
   const readable = ratio !== null && ratio >= MIN_CONTRAST;
-  const unchanged = candidate === brand.primaryColor;
   const ratioText =
     ratio === null ? '' : ratio.toLocaleString(i18n.language, { maximumFractionDigits: 2 });
+
+  // Typed values are checked as they are typed (a colour is not a pristine form); a server
+  // verdict (contrast measured by the API) is shown on the same field.
+  const live = text.trim() ? validateBrandColor({ color: text }, i18n.language).color : undefined;
+  const colorError = form.error('color') ?? (live ? messageText(live) : undefined);
+
+  function saveColor(next: string | null) {
+    setColorSaved(false);
+    setColorBanner(null);
+    if (next !== null && !form.validateAll()) return;
+    setColor.mutate(next, {
+      onSuccess: () => setColorSaved(true),
+      onError: (failure) => {
+        const routed = routeServerError(failure, BRAND_SERVER_MAPPING, (field) =>
+          (BRAND_FIELDS as readonly string[]).includes(field),
+        );
+        form.setServerErrors(routed.fields);
+        setColorBanner(routed.banner);
+      },
+    });
+  }
 
   async function chooseLogo() {
     uploadLogo.reset();
@@ -54,146 +84,133 @@ export function AppearanceSection() {
   }
 
   return (
-    <View style={styles.section} testID="appearance-section">
-      <Text style={styles.label}>{t('settings.appearance.title')}</Text>
-      <Text style={styles.detail}>{t('settings.appearance.description')}</Text>
+    <FormScope form={form}>
+      <View style={styles.section} testID="appearance-section">
+        <Text style={styles.label}>{t('settings.appearance.title')}</Text>
+        <Text style={styles.detail}>{t('settings.appearance.description')}</Text>
 
-      <Text style={styles.name}>{t('settings.appearance.color.title')}</Text>
-      <View style={styles.swatches} accessibilityRole="radiogroup">
-        {PRESET_COLORS.map((color) => {
-          const active = candidate === color;
-          return (
-            <Pressable
-              key={color}
-              accessibilityRole="radio"
-              accessibilityLabel={color}
-              accessibilityState={{ checked: active }}
-              onPress={() => {
-                setText(color);
-                setColorSaved(false);
-                setColor.reset();
-              }}
-              style={[styles.swatchRing, active && styles.swatchRingActive]}
-              testID={`brand-swatch-${color.slice(1)}`}
-            >
-              <View style={[styles.swatch, { backgroundColor: color }]} />
-            </Pressable>
-          );
-        })}
-      </View>
-      <TextField
-        label={t('settings.appearance.color.hex')}
-        value={text}
-        onChangeText={(value) => {
-          setText(value);
-          setColorSaved(false);
-          setColor.reset();
-        }}
-        autoCapitalize="characters"
-        autoCorrect={false}
-        maxLength={7}
-        placeholder="#1E5AA8"
-        testID="brand-color-input"
-      />
-      {text.length > 0 && candidate === null && (
-        <Text style={styles.warning} testID="brand-color-invalid">
-          {t('settings.appearance.color.invalid')}
-        </Text>
-      )}
-      {ratio !== null && (
-        <Text style={readable ? styles.detail : styles.warning} testID="brand-color-contrast">
-          {t(
-            readable
-              ? 'settings.appearance.color.contrastOk'
-              : 'settings.appearance.color.contrastLow',
-            { ratio: ratioText },
-          )}
-        </Text>
-      )}
-
-      <Text style={styles.detail}>{t('settings.appearance.color.preview')}</Text>
-      <View style={styles.preview}>
-        <View style={styles.previewButton}>
-          <Button
-            title={t('settings.appearance.color.previewPrimary')}
-            color={candidate ?? brand.primaryColor}
-            onPress={() => undefined}
-            testID="brand-preview-primary"
-          />
+        <Text style={styles.name}>{t('settings.appearance.color.title')}</Text>
+        <View style={styles.swatches} accessibilityRole="radiogroup">
+          {PRESET_COLORS.map((color) => {
+            const active = candidate === color;
+            return (
+              <Pressable
+                key={color}
+                accessibilityRole="radio"
+                accessibilityLabel={color}
+                accessibilityState={{ checked: active }}
+                onPress={() => {
+                  setText(color);
+                  setColorSaved(false);
+                  setColor.reset();
+                }}
+                style={[styles.swatchRing, active && styles.swatchRingActive]}
+                testID={`brand-swatch-${color.slice(1)}`}
+              >
+                <View style={[styles.swatch, { backgroundColor: color }]} />
+              </Pressable>
+            );
+          })}
         </View>
-        <View style={styles.previewButton}>
-          <Button
-            title={t('settings.appearance.color.previewSecondary')}
-            variant="secondary"
-            color={candidate ?? brand.primaryColor}
-            onPress={() => undefined}
-          />
-        </View>
-      </View>
-
-      {setColor.isError && <ErrorText>{messageFor(setColor.error)}</ErrorText>}
-      {colorSaved && !setColor.isError && (
-        <Text style={styles.success} accessibilityLiveRegion="polite" testID="brand-color-saved">
-          {t('settings.appearance.color.saved')}
-        </Text>
-      )}
-      <Button
-        title={t('settings.appearance.color.save')}
-        loading={setColor.isPending}
-        disabled={candidate === null || unchanged}
-        onPress={() => {
-          if (!candidate) return;
-          setColorSaved(false);
-          setColor.mutate(candidate, { onSuccess: () => setColorSaved(true) });
-        }}
-        testID="brand-color-save"
-      />
-      {brand.configuredColor && (
-        <Button
-          title={t('settings.appearance.color.reset')}
-          variant="secondary"
-          loading={setColor.isPending}
-          onPress={() => {
+        <TextField
+          label={t('settings.appearance.color.hex')}
+          name="color"
+          error={colorError}
+          value={text}
+          onChangeText={(value) => {
+            setText(value);
             setColorSaved(false);
-            setColor.mutate(null, { onSuccess: () => setColorSaved(true) });
+            setColor.reset();
           }}
-          testID="brand-color-reset"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={7}
+          placeholder="#1E5AA8"
+          testID="brand-color-input"
         />
-      )}
-
-      <Text style={[styles.name, styles.logoTitle]}>{t('settings.appearance.logo.title')}</Text>
-      <Text style={styles.detail}>{t('settings.appearance.logo.description')}</Text>
-      {brand.logoUrl ? (
-        <View style={styles.logoBox}>
-          <BrandLogo size={96} testID="brand-logo-preview" />
-        </View>
-      ) : (
-        <Text style={styles.detail} testID="brand-logo-none">
-          {t('settings.appearance.logo.none')}
-        </Text>
-      )}
-      {(uploadLogo.isError || removeLogo.isError) && (
-        <ErrorText>{messageFor(uploadLogo.error ?? removeLogo.error)}</ErrorText>
-      )}
-      <Button
-        title={t(
-          brand.logoUrl ? 'settings.appearance.logo.change' : 'settings.appearance.logo.choose',
+        {ratio !== null && readable && (
+          <Text style={styles.detail} testID="brand-color-contrast">
+            {t('settings.appearance.color.contrastOk', { ratio: ratioText })}
+          </Text>
         )}
-        variant="secondary"
-        loading={uploadLogo.isPending}
-        onPress={chooseLogo}
-        testID="brand-logo-choose"
-      />
-      {brand.logoUrl && (
+
+        <Text style={styles.detail}>{t('settings.appearance.color.preview')}</Text>
+        <View style={styles.preview}>
+          <View style={styles.previewButton}>
+            <Button
+              title={t('settings.appearance.color.previewPrimary')}
+              color={candidate ?? brand.primaryColor}
+              onPress={() => undefined}
+              testID="brand-preview-primary"
+            />
+          </View>
+          <View style={styles.previewButton}>
+            <Button
+              title={t('settings.appearance.color.previewSecondary')}
+              variant="secondary"
+              color={candidate ?? brand.primaryColor}
+              onPress={() => undefined}
+            />
+          </View>
+        </View>
+
+        {colorBanner && <ErrorText>{colorBanner}</ErrorText>}
+        <FormSummary form={form} />
+        {colorSaved && !colorBanner && (
+          <Text style={styles.success} accessibilityLiveRegion="polite" testID="brand-color-saved">
+            {t('settings.appearance.color.saved')}
+          </Text>
+        )}
         <Button
-          title={t('settings.appearance.logo.remove')}
-          variant="secondary"
-          loading={removeLogo.isPending}
-          onPress={askToRemoveLogo}
-          testID="brand-logo-remove"
+          title={t('settings.appearance.color.save')}
+          loading={setColor.isPending}
+          onPress={() => saveColor(candidate ?? text)}
+          testID="brand-color-save"
         />
-      )}
-    </View>
+        {brand.configuredColor && (
+          <Button
+            title={t('settings.appearance.color.reset')}
+            variant="secondary"
+            loading={setColor.isPending}
+            onPress={() => saveColor(null)}
+            testID="brand-color-reset"
+          />
+        )}
+
+        <Text style={[styles.name, styles.logoTitle]}>{t('settings.appearance.logo.title')}</Text>
+        <Text style={styles.detail}>{t('settings.appearance.logo.description')}</Text>
+        {brand.logoUrl ? (
+          <View style={styles.logoBox}>
+            <BrandLogo size={96} testID="brand-logo-preview" />
+          </View>
+        ) : (
+          <Text style={styles.detail} testID="brand-logo-none">
+            {t('settings.appearance.logo.none')}
+          </Text>
+        )}
+        {(uploadLogo.isError || removeLogo.isError) && (
+          <ErrorText>{messageFor(uploadLogo.error ?? removeLogo.error)}</ErrorText>
+        )}
+        <Button
+          title={t(
+            brand.logoUrl ? 'settings.appearance.logo.change' : 'settings.appearance.logo.choose',
+          )}
+          variant="secondary"
+          loading={uploadLogo.isPending}
+          onPress={chooseLogo}
+          testID="brand-logo-choose"
+        />
+        {brand.logoUrl && (
+          <Button
+            title={t('settings.appearance.logo.remove')}
+            variant="secondary"
+            loading={removeLogo.isPending}
+            onPress={askToRemoveLogo}
+            testID="brand-logo-remove"
+          />
+        )}
+      </View>
+    </FormScope>
   );
 }
 

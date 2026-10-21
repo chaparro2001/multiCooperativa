@@ -209,7 +209,12 @@ describe('authentication flow (US-ACC-01, US-ACC-02, US-ACC-03)', () => {
     const response = await request(app).post(path).send(body);
 
     expect(response.status).toBe(400);
-    expect(response.body).toEqual({ error: 'invalid_request' });
+    // Usability of forms: the failed fields travel with the error (paths and codes, no values).
+    expect(response.body.error).toBe('invalid_request');
+    expect(response.body.details.issues.length).toBeGreaterThan(0);
+    for (const issue of response.body.details.issues) {
+      expect(Object.keys(issue).sort()).toEqual(['code', 'path']);
+    }
   });
 
   it('malformed JSON answers 400', async () => {

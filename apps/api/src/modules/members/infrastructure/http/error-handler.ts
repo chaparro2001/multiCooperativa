@@ -13,7 +13,7 @@ const STATUS_BY_CODE: Record<string, number> = {
 function details(error: MembersDomainError): ApiError['details'] {
   // US-MEM-03: tells the capital the refund exceeds.
   if (error instanceof InsufficientCapitalError) return { available: error.available };
-  return undefined;
+  return error.field ? { field: error.field } : undefined;
 }
 
 export const membersErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
