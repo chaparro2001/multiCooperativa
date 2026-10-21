@@ -11,6 +11,8 @@ import { OllamaModelRuntime } from './infrastructure/ollama-model-runtime';
 import type { HostedProviderGateway } from './application/ports/hosted-provider';
 import { AesGcmSecretCipher } from './infrastructure/aes-gcm-secret-cipher';
 import { OpenAICompatibleGateway } from './infrastructure/openai-compatible-gateway';
+import { OpenAICompatibleLanguageModel } from './infrastructure/openai-compatible-language-model';
+import { findHostedProvider } from './domain/hosted-provider';
 import { PrismaAssistantSettingStore } from './infrastructure/prisma-setting-store';
 import { MESSAGE_LIMIT_PER_HOUR } from './domain/usage';
 import { DEFAULT_GEMINI_MODEL, GeminiLanguageModel } from './infrastructure/gemini-language-model';
@@ -51,6 +53,22 @@ export function createGeminiLanguageModel(settings: {
     settings.model ?? DEFAULT_GEMINI_MODEL,
     settings.fallbackModels,
   );
+}
+
+/** A hosted OpenAI-compatible provider from the fixed catalog, with its own key (ADR-018). Null for an unknown provider. */
+export function createHostedLanguageModel(settings: {
+  provider: string;
+  model: string;
+  apiKey: string;
+}): LanguageModel | null {
+  const provider = findHostedProvider(settings.provider);
+  return provider
+    ? new OpenAICompatibleLanguageModel({
+        baseUrl: provider.baseUrl,
+        model: settings.model,
+        apiKey: settings.apiKey,
+      })
+    : null;
 }
 
 /** A local model served by Ollama (ADR-013): no key, no quota, nothing leaves the host. */

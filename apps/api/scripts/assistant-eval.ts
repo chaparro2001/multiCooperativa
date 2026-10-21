@@ -1,6 +1,7 @@
 import { loadEnv } from '../src/config/env';
 import {
   createGeminiLanguageModel,
+  createHostedLanguageModel,
   createOllamaLanguageModel,
   EVALUATION_CASES,
   RuleBasedLanguageModel,
@@ -11,8 +12,10 @@ import {
  * NFR-AI-05: runs the evaluation set against the real model: Gemini (needs GEMINI_API_KEY) or, with ASSISTANT_LLM_PROVIDER=ollama,
  * the local Ollama model ASSISTANT_OLLAMA_MODEL (latency per question is printed).
  * With `--offline` it uses the rule-based stand-in, which is what the unit tests run in CI.
+ * With `--hosted=<provider>/<model>` it uses a hosted provider of the catalog (ADR-018) with the key in EVAL_HOSTED_API_KEY,
+ * e.g. `--hosted=groq/openai/gpt-oss-20b`.
  *
- *   pnpm --filter @multicooperativa/api ai:eval [--offline] [--pause=4000] [--only=id1,id2]
+ *   pnpm --filter @multicooperativa/api ai:eval [--offline | --hosted=groq/openai/gpt-oss-20b] [--pause=4000] [--only=id1,id2]
  *
  * The free tier has low rate limits: `--pause` spaces the questions out (milliseconds)
  * and `--only` runs just the cases with those ids.
@@ -30,35 +33,52 @@ if (cases.length === 0) {
   process.exit(2);
 }
 
+const hosted = process.argv.find((arg) => arg.startsWith('--hosted='))?.slice('--hosted='.length);
+const hostedProvider = hosted?.split('/')[0];
+const hostedModel = hosted?.split('/').slice(1).join('/');
+
 const env = loadEnv({
   DATABASE_URL: 'postgresql://unused/unused',
   JWT_SECRET: 'x'.repeat(32),
   ...process.env,
 });
 const useOllama = env.ASSISTANT_LLM_PROVIDER === 'ollama';
-if (!offline && !useOllama && !env.GEMINI_API_KEY) {
+const hostedKey = process.env.EVAL_HOSTED_API_KEY;
+const hostedLanguageModel =
+  hostedProvider && hostedModel && hostedKey
+    ? createHostedLanguageModel({ provider: hostedProvider, model: hostedModel, apiKey: hostedKey })
+    : null;
+if (hosted && !hostedLanguageModel) {
+  console.error('--hosted needs <provider>/<model> of the catalog and EVAL_HOSTED_API_KEY.');
+  process.exit(2);
+}
+if (!offline && !hosted && !useOllama && !env.GEMINI_API_KEY) {
   console.error('GEMINI_API_KEY is not set. Use --offline to run with the rule-based model.');
   process.exit(2);
 }
 
 const label = offline
   ? 'offline'
-  : useOllama
-    ? `ollama ${env.ASSISTANT_OLLAMA_MODEL}`
-    : env.GEMINI_MODEL;
+  : hosted
+    ? `hosted ${hosted}`
+    : useOllama
+      ? `ollama ${env.ASSISTANT_OLLAMA_MODEL}`
+      : env.GEMINI_MODEL;
 const model = offline
   ? new RuleBasedLanguageModel()
-  : useOllama
-    ? createOllamaLanguageModel({
-        url: env.OLLAMA_URL,
-        model: env.ASSISTANT_OLLAMA_MODEL,
-        timeoutMs: env.ASSISTANT_OLLAMA_TIMEOUT_MS,
-      })
-    : createGeminiLanguageModel({
-        apiKey: env.GEMINI_API_KEY!,
-        model: env.GEMINI_MODEL,
-        fallbackModels: env.GEMINI_FALLBACK_MODELS,
-      });
+  : hostedLanguageModel
+    ? hostedLanguageModel
+    : useOllama
+      ? createOllamaLanguageModel({
+          url: env.OLLAMA_URL,
+          model: env.ASSISTANT_OLLAMA_MODEL,
+          timeoutMs: env.ASSISTANT_OLLAMA_TIMEOUT_MS,
+        })
+      : createGeminiLanguageModel({
+          apiKey: env.GEMINI_API_KEY!,
+          model: env.GEMINI_MODEL,
+          fallbackModels: env.GEMINI_FALLBACK_MODELS,
+        });
 
 const results = await runEvaluation({ model, cases, pauseMs: pause });
 for (const result of results) {
