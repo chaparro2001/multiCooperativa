@@ -51,7 +51,7 @@ export interface FormApi {
  * Nothing shows on a pristine form: errors appear after the first submit attempt and stay live
  * (re-validated on every change) from then on.
  */
-export function useForm<V extends Record<string, unknown>>({
+export function useForm<V extends object>({
   values,
   validate,
 }: {
@@ -81,7 +81,11 @@ export function useForm<V extends Record<string, unknown>>({
     setServerErrorsState((current) => {
       const names = Object.keys(current);
       if (names.length === 0) return current;
-      const kept = names.filter((name) => before[fieldRoot(name)] === values[fieldRoot(name)]);
+      const kept = names.filter(
+        (name) =>
+          (before as Record<string, unknown>)[fieldRoot(name)] ===
+          (values as Record<string, unknown>)[fieldRoot(name)],
+      );
       if (kept.length === names.length) return current;
       return Object.fromEntries(kept.map((name) => [name, current[name]!]));
     });

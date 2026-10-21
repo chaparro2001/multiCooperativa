@@ -18,6 +18,15 @@ export type FieldErrors = Record<string, FieldMessage>;
 export const required: FieldMessage = { key: 'forms.errors.required' };
 export const invalid: FieldMessage = { key: 'forms.errors.invalid' };
 
+/** Builds field errors from per-field results, dropping the fields that have none. */
+export function collect(results: Record<string, FieldMessage | undefined>): FieldErrors {
+  const errors: FieldErrors = {};
+  for (const [field, message] of Object.entries(results)) {
+    if (message) errors[field] = message;
+  }
+  return errors;
+}
+
 export function hasErrors(errors: FieldErrors): boolean {
   return Object.keys(errors).length > 0;
 }

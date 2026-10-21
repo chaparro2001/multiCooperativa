@@ -38,6 +38,43 @@
       "tooBig": "El valor máximo es {{max}}.",
       "tooShortOrSmall": "El valor es demasiado corto o pequeño.",
       "tooBigOrLong": "El valor es demasiado largo o grande."
+    },
+    "server": {
+      "total_mismatch": "El total no coincide con la base más el IVA: debería ser {{expected}} €.",
+      "duplicate_number": "Ya existe un documento con este número.",
+      "third_party_exists": "Ya existe un proveedor o cliente con este NIF.",
+      "insufficient_capital": "El reembolso supera el capital disponible del socio ({{available}} €).",
+      "member_already_exists": "Este email ya pertenece a un miembro de la cooperativa."
+    },
+    "serverField": {
+      "invalid_third_party": {
+        "nif": "El NIF no es válido: revisa la letra o el dígito de control.",
+        "name": "Escribe el nombre de la empresa (máximo 200 caracteres).",
+        "roles": "Marca si es proveedor, cliente o ambos.",
+        "email": "Escribe un email válido, por ejemplo nombre@dominio.es.",
+        "thirdPartyId": "Este tercero no puede usarse aquí: está desactivado o no tiene el rol adecuado (proveedor en compras, cliente en ventas)."
+      },
+      "invalid_document": {
+        "number": "Escribe el número del documento (máximo 50 caracteres).",
+        "date": "La fecha no es válida.",
+        "issueDate": "La fecha de emisión no es válida.",
+        "dueDate": "El vencimiento no puede ser anterior a la fecha de emisión.",
+        "lines": "Añade al menos una línea con los datos de la factura.",
+        "lines_concept": "Escribe el concepto de la línea (máximo 200 caracteres).",
+        "lines_unit": "Escribe la unidad de la línea (máximo 20 caracteres).",
+        "lines_quantity": "La cantidad debe ser mayor que cero.",
+        "deliveryNoteIds": "Algún albarán elegido no se puede agrupar: es de otro tercero u operación, o ya está facturado o anulado.",
+        "title": "Escribe un título de hasta 150 caracteres.",
+        "category": "Elige una categoría válida.",
+        "documentDate": "La fecha del documento no es válida.",
+        "file": "El archivo debe ser un PDF o una foto (JPEG o PNG) de hasta 10 MB."
+      },
+      "invalid_amount": {
+        "base": "Escribe un importe válido, con hasta dos decimales.",
+        "total": "Escribe un importe válido, con hasta dos decimales.",
+        "vatRate": "El IVA debe estar entre 0 y 100.",
+        "lines_quantity": "Escribe una cantidad válida, con hasta tres decimales."
+      }
     }
   },
   "enums": {
@@ -613,7 +650,10 @@
       "balance": "Saldo pendiente",
       "deactivate": "Desactivar",
       "reactivate": "Reactivar",
-      "openExisting": "Abrir el existente"
+      "openExisting": "Abrir el existente",
+      "errors": {
+        "roles": "Marca al menos un rol: proveedor, cliente o ambos."
+      }
     },
     "capture": {
       "title": "Escanear documento",
@@ -658,7 +698,14 @@
       "attached": "Original adjunto: {{name}}",
       "confirm": "Confirmar y guardar",
       "invalid": "Revisa los datos: faltan campos o alguno no es válido.",
-      "expectedTotal": "Total esperado: {{expected}} €."
+      "expectedTotal": "Total esperado: {{expected}} €.",
+      "errors": {
+        "dueBeforeIssue": "El vencimiento no puede ser anterior a la fecha de emisión.",
+        "amount": "Escribe un importe válido, con hasta dos decimales.",
+        "vat": "Escribe un IVA válido entre 0 y 100.",
+        "linesToReconcile": "Añade las líneas facturadas: se necesitan para cuadrar con los albaranes agrupados.",
+        "linesRequired": "Añade al menos una línea."
+      }
     }
   },
   "members": {
