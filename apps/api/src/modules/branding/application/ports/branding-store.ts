@@ -1,8 +1,5 @@
 export interface BrandingRecord {
   primaryColor: string | null;
-  /** Storage key of the logo; null when there is none. */
-  logoKey: string | null;
-  logoContentType: string | null;
   updatedAt: Date;
 }
 

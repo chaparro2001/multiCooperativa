@@ -30,15 +30,3 @@ export class InvalidBrandColorError extends BrandingApplicationError {
     super('The primary colour must be written as #RRGGBB.');
   }
 }
-
-export type LogoRejection =
-  'svg_not_allowed' | 'unsupported_type' | 'too_large' | 'too_large_dimensions';
-
-/** BR-ACC-17. */
-export class LogoRejectedError extends BrandingApplicationError {
-  readonly code = 'logo_rejected';
-
-  constructor(readonly reason: LogoRejection) {
-    super(`The logo was rejected: ${reason}.`);
-  }
-}

@@ -10,8 +10,6 @@ export class PrismaBrandingStore implements BrandingStore {
     if (!row) return null;
     return {
       primaryColor: row.primaryColor,
-      logoKey: row.logoKey,
-      logoContentType: row.logoContentType,
       updatedAt: row.updatedAt,
     };
   }

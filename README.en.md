@@ -178,7 +178,7 @@ The status of each task is in [docs/03-implementation-plan.md](docs/03-implement
 - **Invoices and delivery notes**: third parties (suppliers and customers), purchase and sales delivery notes and invoices with exact decimal amounts, reconciliation with tolerance, statuses, payments and collections summary, idempotent due-dates process (hourly) with three per-cooperative alerts, each configurable and switchable off (notice before invoice due dates, deadline to invoice delivery notes and notice before that deadline) and attention badges on the home, camera capture and review, **AI extraction** (Gemini vision, validated with Zod and confirmed by a person) and **AI discrepancy explanation**.
 - **Member area**: my data (partner number, joining date, profile, contact), my capital and my movements, read-only for the member (US-MEM-01, US-MEM-02); the governing board, manager and administrator consult every partner's capital with the cooperative's total (US-MEM-04), and the manager and administrator register contributions, refunds and corrections (US-MEM-03). Exact decimal amounts, immutable movements, capital never negative and double isolation (by cooperative and, with own scope, by member).
 - **AI assistant**: chat with citations and links to resources, RAG over documents, read-only tools filtered by permissions (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`, `my_contributions`), conversations with history (reopen and delete, US-AI-04), hourly usage limit, an evaluation set of 23 questions and, for each cooperative's administrator, the choice of the local model in Settings (US-AI-07, ADR-014).
-- **Per-cooperative appearance**: in Settings the administrator picks the primary colour (refused if white text over it does not reach a WCAG AA contrast of 4.5:1) and the logo (PNG or JPEG up to 1 MB, checked by content; SVG is refused); every member sees the app with that colour and the logo on the home (US-ACC-14, ADR-018).
+- **Per-cooperative appearance**: in Settings the administrator picks the primary colour (refused if white text over it does not reach a WCAG AA contrast of 4.5:1); every member sees the app with that colour (US-ACC-14, ADR-018; the logo was removed in ADR-021).
 
 ## 6. Limitations and future work
 
@@ -306,15 +306,16 @@ ADRs are immutable: a decision that changes produces a new ADR.
 - [ADR-015](docs/adr/ADR-015-qwen3-4b-instruct-default-for-the-hosted-demo.md): `qwen3:4b-instruct` as the default assistant model of the hosted demo.
 - [ADR-016](docs/adr/ADR-016-invitation-links-delivered-by-the-administrator.md): invitation links delivered by the administrator (no email provider).
 - [ADR-017](docs/adr/ADR-017-custom-domain-for-the-web-app.md): custom domain (`cooperativa.chaparro2001.com`) for the web app.
-- [ADR-018](docs/adr/ADR-018-per-cooperative-branding.md): per-cooperative primary colour and logo, set by its administrator.
+- [ADR-018](docs/adr/ADR-018-per-cooperative-branding.md): per-cooperative primary colour (the logo was removed in ADR-021), set by its administrator.
 - [ADR-019](docs/adr/ADR-019-per-cooperative-hosted-language-model.md): per-cooperative hosted provider (Groq, Mistral, NVIDIA NIM, OpenRouter) with the cooperative's own API key.
 - [ADR-020](docs/adr/ADR-020-react-native-paper-ui-kit.md): react-native-paper (Material Design 3) as the UI kit, with the theme generated from the cooperative's colour.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): bilingual root README for the thesis delivery (bounded exception to ADR-008).
+- [ADR-021](docs/adr/ADR-021-remove-cooperative-logo.md): the per-cooperative logo is removed (the primary colour stays).
 
 ## 11. Quality
 
-- **Unit tests** (`pnpm test`): 1168 tests in 113 files (API 852, app 295, contracts 21), all green as of 2026-10-21.
-- **Integration tests** (`pnpm test:integration`): against real PostgreSQL and S3 storage, including the isolation test between cooperatives. 477 tests in 25 files, all green (2026-10-21).
+- **Unit tests** (`pnpm test`): 1148 tests in 112 files (API 832, app 295, contracts 21), all green as of 2026-10-22.
+- **Integration tests** (`pnpm test:integration`): against real PostgreSQL and S3 storage, including the isolation test between cooperatives. 523 tests in 27 files, all green (2026-10-22).
 - **CI** (GitHub Actions, on every push and pull request): format check, lint, typecheck, tests, migrations on a Postgres with pgvector, and integration tests. There are also workflows for the GitHub Pages deploy and the due-dates cron.
 - **Local quality gate**: Husky runs lint, typecheck and tests on pre-commit.
 - **Module boundaries**: custom ESLint rule (`tools/eslint/module-boundaries.js`, with its own tests) that forbids importing a backend module through any path other than its `index.ts` (ADR-002).
@@ -336,7 +337,7 @@ The project was built with Spec Driven Development using Claude Code:
 | Master's topic                      | Evidence in the project                                                                                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Spec Driven Development             | `docs/requirements/`, plan by milestones with ticked tasks, specification IDs in tests and commits                                                           |
-| ADRs and Docs as Code               | `docs/adr/` (20 immutable ADRs), documentation versioned with the code, Mermaid diagrams                                                                     |
+| ADRs and Docs as Code               | `docs/adr/` (21 immutable ADRs), documentation versioned with the code, Mermaid diagrams                                                                     |
 | Clean Architecture with TypeScript  | `domain/application/infrastructure` layers per module, ports and adapters, ESLint module-boundaries rule                                                     |
 | Testing, TDD and quality gate       | Vitest, domain tests first, integration tests, Husky on pre-commit                                                                                           |
 | CI/CD with GitHub Actions           | `ci.yml` (format, lint, typecheck, tests, migrations, integration), Pages deploy and cron                                                                    |

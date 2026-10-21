@@ -215,12 +215,6 @@
         "not_pdf": "Solo se admiten adjuntos en PDF.",
         "too_large": "Cada adjunto puede ocupar como máximo 10 MB."
       },
-      "logo_rejected": {
-        "svg_not_allowed": "El logo no puede ser un SVG. Usa una imagen PNG o JPEG.",
-        "unsupported_type": "El logo debe ser una imagen PNG o JPEG.",
-        "too_large": "El logo puede ocupar como máximo 1 MB.",
-        "too_large_dimensions": "El logo puede medir como máximo 1024 x 1024 píxeles."
-      },
       "file_rejected": {
         "not_pdf": "Solo se admiten documentos en PDF.",
         "too_large": "El documento puede ocupar como máximo 20 MB.",
@@ -372,7 +366,7 @@
     },
     "appearance": {
       "title": "Apariencia",
-      "description": "El color y el logo de tu cooperativa los ven todos sus miembros en la aplicación.",
+      "description": "El color de tu cooperativa lo ven todos sus miembros en la aplicación.",
       "color": {
         "title": "Color principal",
         "hex": "Color (#RRGGBB)",
@@ -385,16 +379,6 @@
         "save": "Guardar color",
         "saved": "Color guardado.",
         "reset": "Volver al color por defecto"
-      },
-      "logo": {
-        "title": "Logo",
-        "description": "Imagen PNG o JPEG de hasta 1 MB. Se muestra en la pantalla de inicio.",
-        "none": "Tu cooperativa aún no tiene logo.",
-        "choose": "Elegir logo",
-        "change": "Cambiar logo",
-        "remove": "Quitar logo",
-        "removeTitle": "Quitar el logo",
-        "removeMessage": "La cooperativa se quedará sin logo. Puedes subir otro cuando quieras."
       }
     },
     "signOut": "Cerrar sesión",

@@ -34,8 +34,9 @@ Specification: [requirements/01-access-and-profiles.md](requirements/01-access-a
 - [x] App: login, secure token storage, automatic renewal, cooperative selector, permission-based navigation, biometrics.
 - [x] App: members screens (list with search and status filter, detail with profile change, suspend, reactivate and resend invitation, invite form; US-ACC-08 to US-ACC-10).
 - [x] Sample data: two cooperatives with users of each profile.
-- [x] Per-cooperative branding (US-ACC-14, ADR-018): `branding` module (colour with WCAG AA contrast check, PNG/JPEG logo in S3, audited), branding provider in the app that themes buttons, links, header and selected states, home logo and Settings → Appearance for administrators.
+- [x] Per-cooperative branding (US-ACC-14, ADR-018): `branding` module (colour with WCAG AA contrast check, audited; the PNG/JPEG logo of the first version was removed, see ADR-021), branding provider in the app that themes buttons, links, header and selected states and Settings → Appearance for administrators.
 - [x] App UI kit on react-native-paper (ADR-020): Material Design 3 theme derived from the cooperative's colour, `src/ui` rebuilt on Paper with the same props, MaterialCommunityIcons instead of Ionicons. All screens are migrated; light theme only.
+- [x] Remove the per-cooperative logo (ADR-021, supersedes the logo part of ADR-018; BR-ACC-17 removed): upload endpoints, validation, storage use, `logoUrl`, home logo and Settings block deleted; migration `remove_cooperative_logo` drops the two columns; the primary colour stays.
 
 ## Milestone 2 · Announcements and documents (9–11 Oct)
 

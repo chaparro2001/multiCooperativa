@@ -2,7 +2,7 @@
 
 **Date**: 2026-10-21
 
-**Status**: Accepted
+**Status**: Accepted (the logo part is superseded by [ADR-021](ADR-021-remove-cooperative-logo.md); the colour part stays in force)
 
 ## Context
 

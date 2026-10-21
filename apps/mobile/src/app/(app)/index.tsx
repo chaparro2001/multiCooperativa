@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { useBrand } from '@/branding/brand';
-import { BrandLogo } from '@/branding/brand-logo';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { tileBadge } from '@/features/home/tile-badges';
 import { useTileBadgeCounts } from '@/features/home/use-tile-badges';
@@ -56,22 +55,13 @@ export default function HomeScreen() {
         }}
       />
       <View style={styles.identity}>
-        {/* US-ACC-14: the cooperative's logo, when its administrator uploaded one. */}
-        {brand.logoUrl ? <BrandLogo size={56} testID="home-logo" /> : null}
-        <View style={styles.identityText}>
-          {brand.logoUrl ? (
-            <Text variant="titleLarge" numberOfLines={2} testID="home-cooperative-name">
-              {cooperative?.cooperativeName}
-            </Text>
-          ) : null}
-          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
-            {cooperative?.profileName}
-            {/* "Socio · Socio" when the profile is already called like that. */}
-            {permissions.isPartner && cooperative?.profileName !== t('common.partner')
-              ? ` · ${t('common.partner')}`
-              : ''}
-          </Text>
-        </View>
+        <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
+          {cooperative?.profileName}
+          {/* "Socio · Socio" when the profile is already called like that. */}
+          {permissions.isPartner && cooperative?.profileName !== t('common.partner')
+            ? ` · ${t('common.partner')}`
+            : ''}
+        </Text>
       </View>
       <View style={styles.grid}>
         {modules.map((entry) => {
@@ -116,8 +106,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  identityText: { flex: 1, gap: 2 },
+  identity: { gap: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   cell: {
     aspectRatio: 1,

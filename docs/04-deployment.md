@@ -207,6 +207,8 @@ Always from `deploy\home-server`, with `--env-file .env.server`:
 
 `docker compose down -v` deletes the volumes (all data): do not use it unless you want to start from scratch.
 
+**Orphaned logos (optional clean-up).** Before [ADR-021](adr/ADR-021-remove-cooperative-logo.md) removed the cooperative logo, administrators could upload one; those objects stay in the file storage under `cooperatives/<cooperativeId>/branding/` and nothing reads them any more. There is no deletion job. If you want the space back, delete that prefix by hand with any S3 client against the storage endpoint (for example `aws s3 rm s3://<bucket>/cooperatives/<cooperativeId>/branding/ --recursive --endpoint-url <endpoint>`). The migration that drops the logo columns is applied by the API on start, so after `git pull` and `up -d --build` nothing else is needed.
+
 ## Security notes
 
 - Only the API and the file-link hostnames are published, through the tunnel (the latter reaches RustFS, which accepts only requests with a valid presigned signature). PostgreSQL, RustFS and Ollama have no published ports and are reachable only from the other containers; the API container itself publishes nothing on the host (a commented `127.0.0.1:3000` mapping in `compose.yaml` is for local debugging).
