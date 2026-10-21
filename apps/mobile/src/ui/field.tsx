@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
+import { HelperText } from 'react-native-paper';
 
 import { type FormApi, useFormContext } from '@/forms/use-form';
 
@@ -49,22 +50,26 @@ export function FieldError({
   message,
   id,
   testID,
+  flush = false,
 }: {
   message: string | undefined;
   id?: string;
   testID?: string;
+  /** No side padding: for messages under something that is not a text box. */
+  flush?: boolean;
 }) {
   if (!message) return null;
   return (
-    <Text
+    <HelperText
+      type="error"
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
       nativeID={id}
-      style={styles.message}
+      style={flush ? styles.flush : undefined}
       testID={testID ?? 'field-error'}
     >
       {message}
-    </Text>
+    </HelperText>
   );
 }
 
@@ -91,7 +96,12 @@ export function FieldGroup({
       <View style={[style, message ? styles.invalidFrame : null]} {...accessibility}>
         {children}
       </View>
-      <FieldError message={message} id={errorId} testID={testID ? `${testID}-error` : undefined} />
+      <FieldError
+        message={message}
+        id={errorId}
+        testID={testID ? `${testID}-error` : undefined}
+        flush
+      />
     </View>
   );
 }
@@ -100,7 +110,7 @@ export const invalidBorder = { borderColor: colors.danger } as const;
 
 const styles = StyleSheet.create({
   group: { gap: 6 },
-  message: { color: colors.danger, fontSize: 13 },
+  flush: { paddingHorizontal: 0 },
   invalidFrame: {
     borderWidth: 1,
     borderColor: colors.danger,
@@ -114,13 +124,14 @@ export function FormSummary({ form }: { form: FormApi }) {
   const { t } = useTranslation();
   if (form.invalidFields().length === 0) return null;
   return (
-    <Text
+    <HelperText
+      type="error"
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
-      style={styles.message}
+      style={styles.flush}
       testID="form-summary"
     >
       {t('forms.fixFields')}
-    </Text>
+    </HelperText>
   );
 }

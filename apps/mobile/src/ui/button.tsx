@@ -1,8 +1,11 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { Button as PaperButton, useTheme } from 'react-native-paper';
 
 import { useBrandColor } from '../branding/brand';
-import { colors } from './theme';
 
+/**
+ * Variants map to Paper modes: `primary` is a filled (contained) button in the brand colour,
+ * `secondary` an outlined one, `danger` a filled one in the error colour.
+ */
 export function Button({
   title,
   onPress,
@@ -21,53 +24,27 @@ export function Button({
   color?: string;
   testID?: string;
 }) {
+  const theme = useTheme();
   const brand = useBrandColor();
   const accent = color ?? brand;
   const inactive = disabled || loading;
   return (
-    <Pressable
-      accessibilityRole="button"
+    <PaperButton
+      mode={variant === 'secondary' ? 'outlined' : 'contained'}
+      buttonColor={
+        variant === 'danger' ? theme.colors.error : variant === 'primary' ? accent : undefined
+      }
+      textColor={variant === 'secondary' ? accent : '#fff'}
+      style={variant === 'secondary' ? { borderColor: accent } : undefined}
+      contentStyle={{ minHeight: 48 }}
+      loading={loading}
+      // Loading keeps the colours of an enabled button; it only ignores presses.
+      disabled={disabled}
+      onPress={inactive ? undefined : onPress}
       accessibilityState={{ disabled: inactive, busy: loading }}
-      disabled={inactive}
-      onPress={onPress}
       testID={testID}
-      style={({ pressed }) => [
-        styles.base,
-        styles[variant],
-        variant === 'primary' && { backgroundColor: accent },
-        variant === 'secondary' && { borderColor: accent },
-        (pressed || inactive) && styles.dimmed,
-      ]}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'secondary' ? accent : '#fff'} />
-      ) : (
-        <Text
-          style={[
-            styles.text,
-            variant === 'secondary' && styles.secondaryText,
-            variant === 'secondary' && { color: accent },
-          ]}
-        >
-          {title}
-        </Text>
-      )}
-    </Pressable>
+      {title}
+    </PaperButton>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    minHeight: 48,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  primary: { backgroundColor: colors.primary },
-  secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.primary },
-  danger: { backgroundColor: colors.danger },
-  dimmed: { opacity: 0.6 },
-  text: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  secondaryText: { color: colors.primary },
-});
