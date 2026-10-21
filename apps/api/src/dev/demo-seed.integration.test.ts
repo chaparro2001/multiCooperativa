@@ -121,5 +121,47 @@ describe('sample data', () => {
     expect(again.cooperatives.map((c) => c.created)).toEqual([false, false]);
     expect(again.invitations).toEqual([]);
     expect(await prisma.membership.count()).toBe(before);
+    expect(again.capitalMovementsAdded).toBe(0);
+  });
+
+  it('US-MEM-02: the demo partner sees their own capital through the API', async () => {
+    const { accessToken } = authTokensSchema.parse((await login('socio@sanisidro.test')).body);
+
+    const response = await request(app)
+      .get(`/cooperatives/${seeded.cooperatives[0]!.id}/member-area/me/movements`)
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.capital).toBe('750.00');
+    expect(response.body.movements).toHaveLength(4);
+    expect(response.body.member.partnerNumber).toBe('003');
+  });
+
+  it('adds the capital movements to a cooperative that already existed, once and only where there are none', async () => {
+    // The hosted demo: the cooperatives exist from an earlier seed, without capital.
+    await prisma.$executeRaw`TRUNCATE "CapitalMovement"`;
+    const before = await prisma.membership.count();
+
+    const first = await seedDemoData({ prisma, access }, PASSWORD);
+    const added = await prisma.capitalMovement.count();
+    const second = await seedDemoData({ prisma, access }, PASSWORD);
+
+    expect(first.cooperatives.map((c) => c.created)).toEqual([false, false]);
+    expect(first.capitalMovementsAdded).toBe(added);
+    expect(added).toBeGreaterThan(10);
+    expect(second.capitalMovementsAdded).toBe(0);
+    expect(await prisma.capitalMovement.count()).toBe(added);
+    expect(await prisma.membership.count()).toBe(before);
+  });
+
+  it('does not touch a member who already has movements', async () => {
+    const member = await prisma.membership.findFirstOrThrow({
+      where: { user: { email: 'socio@sanisidro.test' } },
+    });
+    const before = await prisma.capitalMovement.count({ where: { membershipId: member.id } });
+
+    await seedDemoData({ prisma, access }, PASSWORD);
+
+    expect(await prisma.capitalMovement.count({ where: { membershipId: member.id } })).toBe(before);
   });
 });

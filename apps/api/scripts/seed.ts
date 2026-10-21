@@ -65,6 +65,7 @@ try {
     const state = cooperative.created ? 'created' : 'already existed, unchanged';
     console.log(`${cooperative.name} (${cooperative.id}): ${state}`);
   }
+  console.log(`Capital movements added: ${result.capitalMovementsAdded}`);
   for (const invitation of result.invitations) {
     console.log(`Pending invitation for ${invitation.email}: ${invitationLink(invitation.token)}`);
   }
