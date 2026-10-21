@@ -11,7 +11,7 @@ Entrega: 26/10/2026 · Cierre de funcionalidad: 22/10/2026.
 | Entregable            | Enlace                                                                                                                                                                      |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Demo (web)            | https://chaparro2001.github.io/multiCooperativa/                                                                                                                            |
-| API (Render)          | <!-- TODO: URL de la API en Render -->                                                                                                                                      |
+| API                   | https://api-cooperativa.chaparro2001.com                                                                                                                                    |
 | Presentación (slides) | [docs/slides/multicooperativa-tfm.pptx](docs/slides/multicooperativa-tfm.pptx) ([PDF](docs/slides/multicooperativa-tfm.pdf), [guion del vídeo](docs/slides/guion-video.md)) |
 | Vídeo de la demo      | <!-- TODO: URL del vídeo -->                                                                                                                                                |
 | Documentación         | [docs/README.md](docs/README.md)                                                                                                                                            |
@@ -66,21 +66,21 @@ Los permisos se definen por módulo, nivel y alcance (ADR-004). El backend decid
 
 ## 2. Stack tecnológico
 
-| Capa               | Elección                                                                               |
-| ------------------ | -------------------------------------------------------------------------------------- |
-| App móvil          | Expo + React Native + TypeScript, Expo Router                                          |
-| Datos del cliente  | TanStack Query; tokens en el almacenamiento seguro del dispositivo                     |
-| Textos de usuario  | i18next + react-i18next + expo-localization; `es` por defecto (ADR-008)                |
-| Contratos          | Paquete compartido con esquemas Zod (validan en servidor y tipan la app)               |
-| Backend            | Node + TypeScript, monolito modular con Clean Architecture y eventos internos          |
-| API                | REST, autenticación JWT, códigos de error estables                                     |
-| Persistencia       | PostgreSQL + Prisma; pgvector para RAG                                                 |
-| Modelo de lenguaje | Gemini (capa gratuita) tras puertos: asistente con function calling y visión (ADR-009) |
-| Embeddings         | `bge-m3` local con Ollama (ADR-006); Gemini embeddings en la demo alojada (ADR-010)    |
-| Ficheros           | Almacenamiento compatible S3 con URLs firmadas que caducan (ADR-005); RustFS en local  |
-| Tests              | Vitest y React Native Testing Library                                                  |
-| Calidad            | ESLint, Prettier, Husky (pre-commit), regla propia de límites entre módulos            |
-| Entrega            | GitHub Actions; demo en Render (API), Neon, Supabase Storage y GitHub Pages (web)      |
+| Capa               | Elección                                                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| App móvil          | Expo + React Native + TypeScript, Expo Router                                                  |
+| Datos del cliente  | TanStack Query; tokens en el almacenamiento seguro del dispositivo                             |
+| Textos de usuario  | i18next + react-i18next + expo-localization; `es` por defecto (ADR-008)                        |
+| Contratos          | Paquete compartido con esquemas Zod (validan en servidor y tipan la app)                       |
+| Backend            | Node + TypeScript, monolito modular con Clean Architecture y eventos internos                  |
+| API                | REST, autenticación JWT, códigos de error estables                                             |
+| Persistencia       | PostgreSQL + Prisma; pgvector para RAG                                                         |
+| Modelo de lenguaje | Gemini (capa gratuita) tras puertos: asistente con function calling y visión (ADR-009)         |
+| Embeddings         | `bge-m3` local con Ollama (ADR-006); Gemini embeddings en la demo alojada (ADR-010)            |
+| Ficheros           | Almacenamiento compatible S3 con URLs firmadas que caducan (ADR-005); RustFS en local          |
+| Tests              | Vitest y React Native Testing Library                                                          |
+| Calidad            | ESLint, Prettier, Husky (pre-commit), regla propia de límites entre módulos                    |
+| Entrega            | GitHub Actions; demo con la API en un servidor propio (Cloudflare Tunnel) y GitHub Pages (web) |
 
 ## 3. Instalación y ejecución local
 
@@ -144,7 +144,8 @@ docs/                  Visión, stack, plan, despliegue, ADRs, requisitos y dato
 tools/eslint/          Regla propia de límites entre módulos
 .github/workflows/     CI, despliegue de GitHub Pages y cron de vencimientos
 docker-compose.yml     PostgreSQL + pgvector, RustFS y Ollama para desarrollo
-render.yaml            Blueprint de Render para la API
+deploy/home-server/     Stack Docker del servidor propio (API, PostgreSQL, RustFS, Ollama, cloudflared)
+render.yaml            Blueprint de Render (alternativa en la nube, opcional)
 CLAUDE.md              Contrato de trabajo con el agente de IA
 ```
 
@@ -222,20 +223,21 @@ Datos definidos en el seed (`apps/api/src/dev/demo-seed.ts`) y descritos en [doc
 
 ## 8. Despliegue de la demo
 
-Resumen de [docs/04-deployment.md](docs/04-deployment.md). Coste de 0 EUR y sin tarjeta.
+Resumen de [docs/04-deployment.md](docs/04-deployment.md). Coste de 0 EUR y sin tarjeta de crédito: la API corre en un servidor doméstico (ADR-012), porque Render y Railway piden tarjeta.
 
-| Pieza                         | Servicio                                                  |
-| ----------------------------- | --------------------------------------------------------- |
-| App web                       | GitHub Pages (export web de Expo, despliegue por Actions) |
-| API                           | Render, servicio web gratuito con Docker                  |
-| Base de datos                 | Neon (Postgres 17 con pgvector)                           |
-| Ficheros                      | Supabase Storage (protocolo S3, bucket privado)           |
-| Lenguaje, visión y embeddings | Gemini API (clave gratuita)                               |
-| Tarea programada              | Cron de GitHub Actions cada hora (vencimientos)           |
+| Pieza             | Servicio                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| App web           | GitHub Pages (export web de Expo, despliegue por Actions)                                                    |
+| API               | Contenedor Docker en un servidor propio, expuesto con Cloudflare Tunnel (`api-cooperativa.chaparro2001.com`) |
+| Base de datos     | PostgreSQL 17 con pgvector (contenedor)                                                                      |
+| Ficheros          | RustFS, compatible con S3 (contenedor)                                                                       |
+| Embeddings        | Ollama con bge-m3 (contenedor, ADR-006)                                                                      |
+| Lenguaje y visión | Gemini API (clave gratuita)                                                                                  |
+| Tarea programada  | Cron de GitHub Actions cada hora (vencimientos)                                                              |
 
 Avisos:
 
-- **Arranque en frío**: Render duerme la API tras 15 minutos sin tráfico y la primera petición tarda aproximadamente 1 minuto.
+- **Disponibilidad**: la API solo responde mientras el servidor doméstico está encendido y con conexión. No hay arranque en frío.
 - **Uso de datos en la capa gratuita de Gemini**: Google puede usar el contenido para mejorar sus productos. **No subas facturas, albaranes ni documentos reales de terceros**; usa los datos de ejemplo.
 - Es una demo, no un sistema de registro: los datos pueden perderse.
 

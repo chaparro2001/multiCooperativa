@@ -1,8 +1,8 @@
 name: Hourly jobs
 
-# The free Render instance sleeps when idle, so its in-process timer does not run. This calls
+# A hosted API may sleep (the Render alternative does), so its in-process timer cannot be relied on. This calls
 # the idempotent due-dates job (US-INV-07, NFR-INV-04) every hour, which also wakes the API.
-# Repository variable API_URL and secret JOBS_TOKEN (same value as JOBS_TOKEN in Render).
+# Repository variable API_URL and secret JOBS_TOKEN (same value as JOBS_TOKEN of the server).
 # GitHub disables scheduled workflows after 60 days without repository activity.
 on:
   schedule:

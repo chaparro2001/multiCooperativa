@@ -1,132 +1,229 @@
 # Deployment of the hosted demo
 
-A free demo that needs no credit card, for the thesis delivery. The architecture decision for embeddings is in [ADR-010](adr/ADR-010-gemini-embeddings-for-the-hosted-demo.md).
+A free demo that needs no credit card, for the thesis delivery. The API and its services run in Docker on a home Windows server and reach the internet only through a Cloudflare Tunnel. The decision is in [ADR-012](adr/ADR-012-home-server-with-cloudflare-tunnel.md): Render (blueprint and manual web service) and Railway asked for a credit card in October 2026.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
   user([Browser]) --> pages["GitHub Pages<br/>Expo web export"]
-  pages -- "HTTPS + CORS" --> api["Render free web service<br/>Docker, Frankfurt"]
-  api -- "pooled URL" --> neon[("Neon Postgres 17<br/>+ pgvector, Frankfurt")]
-  api -- "S3 protocol" --> storage[("Supabase Storage<br/>private bucket")]
-  api -- "language, vision, embeddings" --> gemini["Gemini API"]
-  cron["GitHub Actions cron<br/>hourly"] -- "POST /jobs/due-dates" --> api
+  pages -- "HTTPS + CORS" --> cf["Cloudflare edge<br/>api-cooperativa.chaparro2001.com"]
+  cf -- "tunnel (outbound only)" --> cloudflared
+  subgraph server ["Windows home server: Docker Desktop (WSL2)"]
+    cloudflared["cloudflared"] --> api["api<br/>:3000"]
+    api --> pg[("PostgreSQL 17<br/>+ pgvector")]
+    api --> s3[("RustFS<br/>S3")]
+    api --> ollama["Ollama<br/>bge-m3"]
+  end
+  api -- "chat and vision" --> gemini["Gemini API"]
+  cron["GitHub Actions cron<br/>hourly"] -- "POST /jobs/due-dates" --> cf
 ```
 
-| Piece                        | Service                                  | Notes                                                                                      |
-| ---------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Web app                      | GitHub Pages (Actions deploy)            | `https://chaparro2001.github.io/multiCooperativa/`; built by `.github/workflows/pages.yml` |
-| API                          | Render free web service, Docker          | `render.yaml`; sleeps after 15 min idle (cold start about 1 min); about 512 MB RAM         |
-| Database                     | Neon Free, Postgres 17, with `vector`    | Pooled URL for the API, direct URL for migrations                                          |
-| Files                        | Supabase Storage through its S3 protocol | Private bucket `multicooperativa`; the API signs 5-minute URLs                             |
-| Language, vision, embeddings | Gemini API (free key)                    | `EMBEDDINGS_PROVIDER=gemini` (ADR-010)                                                     |
-| Scheduled job                | GitHub Actions cron                      | `.github/workflows/cron.yml`: wakes the API and runs the due-dates job each hour           |
+| Piece           | Service                                              | Notes                                                                                                       |
+| --------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Web app         | GitHub Pages (Actions deploy)                        | `https://chaparro2001.github.io/multiCooperativa/`; built by `.github/workflows/pages.yml`                  |
+| API             | Container built from `apps/api/Dockerfile`           | Public URL `https://api-cooperativa.chaparro2001.com` (Cloudflare Tunnel). No port is published on the host |
+| Database        | `pgvector/pgvector:pg17` container                   | Named volume; not reachable from outside                                                                    |
+| Files           | RustFS container (S3 protocol)                       | Private bucket `multicooperativa`, created by a one-shot container; the API signs 5-minute URLs             |
+| Embeddings      | Ollama container with `bge-m3`                       | `EMBEDDINGS_PROVIDER=ollama` ([ADR-006](adr/ADR-006-local-model-embeddings.md))                             |
+| Chat and vision | Gemini API (free key)                                | [ADR-009](adr/ADR-009-gemini-language-and-vision-model.md)                                                  |
+| Tunnel          | `cloudflared` container                              | Outbound connection to Cloudflare; the dashboard maps the public hostname to `http://api:3000`              |
+| Scheduled job   | GitHub Actions cron, plus the API's own hourly timer | `.github/workflows/cron.yml` calls `/jobs/due-dates`; the timer also runs because the server does not sleep |
 
-The native apps are not part of this demo (no EAS build); the web export is the same code.
+The native apps are not part of this demo (no EAS build); the web export is the same code. The stack is defined in [`deploy/home-server/compose.yaml`](../deploy/home-server/compose.yaml); its variables are in [`deploy/home-server/env.server.example`](../deploy/home-server/env.server.example).
 
-## Step by step
+## Step by step (Windows)
 
-Order matters: Neon, Supabase, Gemini, Render, GitHub, seed. Create the accounts yourself and paste secrets only into the dashboards named below; none goes in the repository.
+Needs: Windows 10 (22H2) or 11, 8 GB of RAM or more, about 15 GB of free disk, and an administrator account. Commands are for **PowerShell** (Start menu, type `PowerShell`; "Run as administrator" only where stated). Create the accounts yourself and paste secrets only into the places named below; none goes in the repository.
 
-### 1. Neon (database)
+### 1. Install WSL2 and Docker Desktop
 
-1. Create a project (Postgres 17, region Frankfurt, `aws-eu-central-1`).
-2. The `vector` extension is created by the first migration (`CREATE EXTENSION`), nothing to do by hand. If a migration complains about permissions, run `CREATE EXTENSION IF NOT EXISTS vector;` in the Neon SQL editor.
-3. In **Connect**, copy two connection strings of the same database and role:
-   - **Pooled** (host contains `-pooler`): this is `DATABASE_URL` in Render.
-   - **Direct** (without `-pooler`): this is `DIRECT_URL` in Render, and the one you use to seed.
+1. In an **administrator** PowerShell: `wsl --install`. Restart when asked.
+2. Install [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/) and choose the **WSL 2** backend when asked. Restart if requested and accept the licence (personal and education use is free).
+3. Docker Desktop > **Settings > General**: tick **Start Docker Desktop when you sign in to your computer**.
+4. Give WSL2 enough memory. By default it takes half of the RAM (4 GB on an 8 GB machine), which is too little for this stack (about 2.5 GB in use, limits add up to more). Create the file `%UserProfile%\.wslconfig` with Notepad:
 
-   Both must end with `?sslmode=require`.
+   ```ini
+   [wsl2]
+   memory=6GB
+   ```
 
-### 2. Supabase Storage (files)
+   Then run `wsl --shutdown` and start Docker Desktop again. On a machine with more than 8 GB you can raise the value.
 
-1. Create a project (region Central EU, Frankfurt).
-2. **Storage > New bucket**: name `multicooperativa`, **private** (not public).
-3. **Storage > S3 Connection**: enable it, copy the endpoint `https://<ref>.storage.supabase.co/storage/v1/s3` and the region, and create an access key: that gives `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`. The secret is shown once.
+5. Check: `docker run --rm hello-world` prints "Hello from Docker!".
 
-### 3. Gemini
+### 2. Install Git and get the code
 
-Create a key in Google AI Studio (no card). It is `GEMINI_API_KEY`. The same key serves the assistant, document extraction and embeddings.
+```powershell
+winget install --id Git.Git -e
+```
 
-### 4. Render (API)
+Close and reopen PowerShell, then:
 
-1. **New > Blueprint**, connect this GitHub repository, branch `main`. Render reads `render.yaml`.
-2. It asks for the variables marked `sync: false`. Values:
+```powershell
+cd $HOME
+git clone https://github.com/chaparro2001/multiCooperativa.git
+cd multiCooperativa\deploy\home-server
+```
 
-| Variable                           | Value                                                        | Where it comes from                            |
-| ---------------------------------- | ------------------------------------------------------------ | ---------------------------------------------- |
-| `NODE_ENV`                         | `production`                                                 | in `render.yaml`                               |
-| `DATABASE_URL`                     | Neon pooled URL                                              | Neon > Connect (pooled)                        |
-| `DIRECT_URL`                       | Neon direct URL                                              | Neon > Connect (direct)                        |
-| `JWT_SECRET`                       | generated by Render                                          | `generateValue: true`                          |
-| `S3_ENDPOINT`                      | `https://<ref>.storage.supabase.co/storage/v1/s3`            | Supabase > Storage > S3 Connection             |
-| `S3_REGION`                        | e.g. `eu-central-1`                                          | same page                                      |
-| `S3_BUCKET`                        | `multicooperativa`                                           | in `render.yaml`                               |
-| `S3_ACCESS_KEY_ID`                 | access key id                                                | Supabase S3 access keys                        |
-| `S3_SECRET_ACCESS_KEY`             | secret                                                       | Supabase S3 access keys                        |
-| `S3_FORCE_PATH_STYLE`              | `true`                                                       | in `render.yaml`                               |
-| `GEMINI_API_KEY`                   | key                                                          | Google AI Studio                               |
-| `GEMINI_MODEL`                     | `gemini-3.8-flash`                                           | in `render.yaml`                               |
-| `EMBEDDINGS_PROVIDER`              | `gemini`                                                     | in `render.yaml`                               |
-| `GEMINI_EMBEDDING_MODEL`           | `gemini-embedding-2`                                         | in `render.yaml`                               |
-| `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` | `30`                                                         | in `render.yaml`                               |
-| `CORS_ORIGINS`                     | `https://chaparro2001.github.io`                             | in `render.yaml` (origin only, no path)        |
-| `JOBS_TOKEN`                       | random string of 32+ characters, e.g. `openssl rand -hex 32` | you generate it; the same value goes to GitHub |
+(Use the real repository URL if it differs.) The repository is public, so no login is needed. To update later: `git pull` and repeat step 5's `up` command.
 
-Render sets `PORT` itself. On every start the container runs `prisma migrate deploy` with `DIRECT_URL`, then starts the API (free plans have no pre-deploy command).
+### 3. Create the Cloudflare Tunnel
 
-3. When the deploy is live, `https://<service>.onrender.com/health` answers `{"status":"ok"}`. That URL (no trailing slash) is `API_URL` below.
+The domain must already be on Cloudflare (its nameservers point to Cloudflare).
 
-### 5. GitHub (web and cron)
+1. Open <https://one.dash.cloudflare.com> (Zero Trust). If it asks to choose a plan, pick **Free**.
+2. **Networks > Tunnels > Create a tunnel > Cloudflared**. Name it `multicooperativa-home`.
+3. On "Install and run connectors" choose **Docker** and copy **only the token**: the long string after `--token` (it starts with `eyJ`). Do not run the command it shows; Compose runs `cloudflared` for you. Keep the token secret: whoever has it can run your tunnel.
+4. **Next**, then add a **Public hostname**:
+   - Subdomain: `api-cooperativa`, Domain: `chaparro2001.com`, Path: empty.
+   - Service type: `HTTP`, URL: `api:3000` (the name of the API container on the Docker network).
+   - Save. Cloudflare creates the DNS record by itself.
+5. Check that **SSL/TLS > Overview** of the domain is **Full** (or Full strict). The connection from `cloudflared` to the API is local and plain HTTP; the browser-facing HTTPS certificate is issued by Cloudflare for `api-cooperativa.chaparro2001.com` automatically.
 
-In the repository: **Settings > Pages > Source: GitHub Actions**. Then **Settings > Secrets and variables > Actions**:
+Only this one hostname is exposed. Do not add other public hostnames (database, storage, Ollama must stay private).
 
-| Kind     | Name         | Value                                                        | Used by                                                               |
-| -------- | ------------ | ------------------------------------------------------------ | --------------------------------------------------------------------- |
-| Variable | `API_URL`    | Render URL, e.g. `https://multicooperativa-api.onrender.com` | `pages.yml` (becomes `EXPO_PUBLIC_API_URL` at build time), `cron.yml` |
-| Secret   | `JOBS_TOKEN` | the same string as in Render                                 | `cron.yml`                                                            |
+### 4. Create `.env.server`
 
-Run **Actions > Deploy web demo > Run workflow** (or push to `main`). The site is built with base path `/multiCooperativa` (`experiments.baseUrl` in `apps/mobile/app.json`), `index.html` is copied to `404.html` so that reloads of any path load the app, and it is deployed with `actions/deploy-pages`. `EXPO_PUBLIC_API_URL` is public by design: it ends up in the bundle.
+Still in `deploy\home-server`:
 
-If the repository name differs from `multiCooperativa`, change `baseUrl` in `apps/mobile/app.json` and the origin in `CORS_ORIGINS`.
+```powershell
+Copy-Item env.server.example .env.server
+```
+
+Generate the secrets. This helper works in the Windows PowerShell that comes with Windows and in PowerShell 7:
+
+```powershell
+function New-Secret { $b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); -join ($b | ForEach-Object { $_.ToString('x2') }) }
+New-Secret   # run it once per secret below; every call prints a different 64-character value
+```
+
+Open the file with `notepad .env.server` and fill in:
+
+| Variable               | Secret | Value                                                                                  |
+| ---------------------- | :----: | -------------------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD`    |  yes   | `New-Secret`                                                                           |
+| `S3_SECRET_ACCESS_KEY` |  yes   | `New-Secret`                                                                           |
+| `JWT_SECRET`           |  yes   | `New-Secret` (at least 32 characters)                                                  |
+| `JOBS_TOKEN`           |  yes   | `New-Secret` (at least 32 characters). Also goes to GitHub in step 9                   |
+| `TUNNEL_TOKEN`         |  yes   | The token copied in step 3                                                             |
+| `GEMINI_API_KEY`       |  yes   | Key from Google AI Studio (no card). Remove the leading `#`. Without it AI answers 503 |
+| `GEMINI_MODEL`         |   no   | `gemini-3.8-flash`                                                                     |
+| `CORS_ORIGINS`         |   no   | `https://chaparro2001.github.io` (origin only, no path)                                |
+| `SEED_PASSWORD`        |  yes   | The password of the demo users; choose your own, the demo is public                    |
+
+Values go after the `=` with no quotes and no spaces. `.env.server` is ignored by git. Back it up somewhere private (the secrets cannot be recovered).
+
+### 5. Start the stack
+
+```powershell
+docker compose --env-file .env.server up -d --build
+```
+
+The first run builds the API image and downloads about 3 GB (including the `bge-m3` model of 1.2 GB): it can take 10 to 20 minutes. When it ends:
+
+```powershell
+docker compose --env-file .env.server ps
+```
+
+`api`, `postgres` and `ollama` should be `healthy`, `storage` and `cloudflared` `running`; `bucket-init` and `ollama-pull` show `exited (0)`, which is correct (they are one-shot jobs). The API applies the database migrations on every start. If something fails: `docker compose --env-file .env.server logs api`.
 
 ### 6. Seed the demo data
 
-From your machine, with the repository installed (`pnpm install`). Use the **direct** Neon URL and choose a password for the demo users (default `demo-cooperativa-2026` if `SEED_PASSWORD` is not set; the demo is public, so prefer your own):
+Both commands run inside the Compose network, from the same folder. They are additive and idempotent.
 
-```bash
-# Users and cooperatives (additive, idempotent; needs the migrations, which the first Render start applies)
-DATABASE_URL='<neon direct url>' SEED_PASSWORD='<password>' \
-  pnpm --filter @multicooperativa/api db:seed --allow-production
+```powershell
+# Users and cooperatives
+docker compose --env-file .env.server run --rm --no-deps api pnpm --filter @multicooperativa/api db:seed --allow-production
 
-# Sample documents and announcements, through the live API (wakes it; takes a minute if it was asleep)
-API_URL='https://<service>.onrender.com' SEED_PASSWORD='<password>' \
-  pnpm --filter @multicooperativa/api db:seed:content
+# Sample documents and announcements, through the API (indexed with Ollama; takes a minute or two)
+docker compose --env-file .env.server run --rm --no-deps -e API_URL=http://api:3000 api pnpm --filter @multicooperativa/api db:seed:content
 ```
 
-- `db:seed` refuses a remote database and `NODE_ENV=production` unless `--allow-production` is given. It never deletes or updates anything. Never run `prisma migrate reset` against Neon: it wipes the database.
-- `db:seed:content` uploads three PDFs and publishes two announcements as `admin@sanisidro.test`, so the files go to Supabase and are indexed with Gemini embeddings through the normal upload path, and it waits until indexing finishes. Re-running skips what exists.
-- **Do not copy vectors from a local database.** Embeddings from Ollama (`bge-m3`) and from Gemini live in different spaces and are not comparable. If you change `EMBEDDINGS_PROVIDER` on an environment that already has documents, reindex them (`POST /cooperatives/{id}/documents/{documentId}/reindex`, or delete and re-upload).
+`db:seed` needs `--allow-production` because the container runs with `NODE_ENV=production`. Never run `prisma migrate reset` here: it wipes the database. Demo users: see [sample-data.md](sample-data.md); handy ones are `admin@sanisidro.test`, `socio@sanisidro.test`, `gestor@sanisidro.test` and `lucia@demo.test`, with the password you set in `SEED_PASSWORD` (default `demo-cooperativa-2026` when empty).
 
-Demo users (password: the one you set, or `demo-cooperativa-2026`): see [sample-data.md](sample-data.md). Handy ones: `admin@sanisidro.test` (administrator), `socio@sanisidro.test` (member), `gestor@sanisidro.test` (manager), `lucia@demo.test` (member of both cooperatives).
+### 7. Check the public URL
+
+From the server: `curl.exe https://api-cooperativa.chaparro2001.com/health` must print `{"status":"ok"}`. Then **from your phone on mobile data (Wi-Fi off)** open `https://api-cooperativa.chaparro2001.com/health`: this proves it works from outside your home. If it shows a Cloudflare error (1033 or 502), check that `cloudflared` is running (`docker compose --env-file .env.server logs cloudflared`) and that the public hostname points to `http://api:3000`.
+
+### 8. Windows hardening (so it keeps working until grading)
+
+- **Never sleep.** Settings > System > Power: when plugged in, "Screen and sleep" > sleep **Never**. In an administrator PowerShell: `powercfg /hibernate off`. On a laptop also set "closing the lid" to **Do nothing** (Control Panel > Power Options).
+- **Windows Update.** Settings > Windows Update > **Pause updates** (up to 5 weeks) and set **Active hours** to the whole day, so it does not reboot at a bad moment. Resume updates after grading.
+- **Start after a reboot.** `cloudflared` and the rest start by themselves when Docker Desktop starts (`restart: unless-stopped`). Docker Desktop starts when a user **signs in** (step 1.3), so after a power cut someone must sign in. For an unattended machine enable automatic sign-in: `netplwiz`, untick "Users must enter a user name and password" (only if the machine is physically safe).
+- **Router/UPS.** Nothing to open on the router. A UPS is optional.
+- Backups are not needed for a demo; the data can be recreated with the seeds.
+
+### 9. GitHub (web and cron)
+
+In the repository: **Settings > Pages > Source: GitHub Actions**. Then **Settings > Secrets and variables > Actions**:
+
+| Kind     | Name         | Value                                      | Used by                                                               |
+| -------- | ------------ | ------------------------------------------ | --------------------------------------------------------------------- |
+| Variable | `API_URL`    | `https://api-cooperativa.chaparro2001.com` | `pages.yml` (becomes `EXPO_PUBLIC_API_URL` at build time), `cron.yml` |
+| Secret   | `JOBS_TOKEN` | the same string as in `.env.server`        | `cron.yml`                                                            |
+
+Run **Actions > Deploy web demo > Run workflow** (or push to `main`). The site is built with base path `/multiCooperativa` (`experiments.baseUrl` in `apps/mobile/app.json`), `index.html` is copied to `404.html` so that reloads of any path load the app, and it is deployed with `actions/deploy-pages`. `EXPO_PUBLIC_API_URL` is public by design: it ends up in the bundle. Rerun the workflow whenever `API_URL` changes.
+
+If the repository name differs from `multiCooperativa`, change `baseUrl` in `apps/mobile/app.json` and the origin in `CORS_ORIGINS`.
+
+## Operating it
+
+Always from `deploy\home-server`, with `--env-file .env.server`:
+
+| Task                         | Command                                                                |
+| ---------------------------- | ---------------------------------------------------------------------- |
+| Status                       | `docker compose --env-file .env.server ps`                             |
+| Logs of the API              | `docker compose --env-file .env.server logs -f api`                    |
+| Stop everything (data stays) | `docker compose --env-file .env.server stop`                           |
+| Start again                  | `docker compose --env-file .env.server start`                          |
+| **Cut public access**        | `docker compose --env-file .env.server stop cloudflared`               |
+| Restore public access        | `docker compose --env-file .env.server start cloudflared`              |
+| Update to the latest code    | `git pull`, then `docker compose --env-file .env.server up -d --build` |
+| Memory use                   | `docker stats --no-stream`                                             |
+
+`docker compose down -v` deletes the volumes (all data): do not use it unless you want to start from scratch.
+
+## Security notes
+
+- Only the API hostname is published, through the tunnel. PostgreSQL, RustFS and Ollama have no published ports and are reachable only from the other containers; the API container itself publishes nothing on the host (a commented `127.0.0.1:3000` mapping in `compose.yaml` is for local debugging).
+- Nothing is opened on the home router: `cloudflared` only makes an outbound connection.
+- Secrets live in `.env.server` (git-ignored) and in the Cloudflare/GitHub dashboards. The API container does not receive the tunnel token.
+- The API still enforces everything it enforces anywhere: JWT, per-cooperative isolation, login lockout, the assistant's per-user hourly limit (`ASSISTANT_MESSAGE_LIMIT_PER_HOUR`) and CORS limited to `CORS_ORIGINS`. `trust proxy` is set to one hop, matching the tunnel.
+- Cloudflare terminates TLS, so it can see the traffic. Use only sample data.
+- The cloud-hosted Gemini API receives the assistant's prompts and scanned documents; its free tier may use content to improve Google's products. Do not upload real third-party documents. Embeddings stay local.
 
 ## Limitations
 
-- **Cold starts.** Render's free instance sleeps after 15 minutes without traffic; the first request takes about a minute (the app shows its normal loading/error states meanwhile). The hourly cron wakes it once an hour but does not keep it awake. A keep-alive ping to `/health` is safe: `/health` does not touch the database, so it does not wake Neon.
-- **Neon suspends** the compute after 5 minutes idle; the first query then takes a second or two more.
-- **Supabase pauses** free projects after 7 days of inactivity: open the dashboard and restore the project before a demo if it has been idle. The hourly cron does not touch Supabase.
-- **Memory.** About 512 MB: the Node heap is capped at 320 MB (`NODE_OPTIONS` in the Dockerfile); idle usage measured around 170 MB. Uploads (20 MB limit) are kept in memory while processed.
-- **Gemini free tier**: rate limits apply, and Google may use free-tier content to improve its products. Do not upload real invoices, delivery notes or documents of third parties; use the sample data.
+- **Availability** depends on the home machine: power, internet, Windows restarts and someone signed in for Docker Desktop. There is no cold start.
+- **Memory.** Measured on a Mac with Docker: idle usage about 2 GB in total (API about 300 MB, Ollama about 1.5 GB with the model loaded, storage about 180 MB, PostgreSQL about 65 MB). The limits in `compose.yaml` (API 1 GB, Ollama 3 GB, PostgreSQL and storage 512 MB, `cloudflared` 128 MB) fit in 6 GB for WSL2.
+- Indexing and search on CPU are slower than on a hosted API; a long document can take a while to become searchable.
+- **Gemini free tier**: rate limits apply (the API retries and falls back where configured).
 - **Scheduled workflows** are disabled by GitHub after 60 days without repository activity.
 - **Web build**: the session is kept in `sessionStorage` (survives reloads, ends with the tab); native apps use the Keychain/Keystore. There is no biometric unlock or camera capture on the web (the file chooser is used), confirmations use the browser's dialogs, and opening a deep link directly on an inner page lands on the home screen (use the in-app navigation).
 - Email invitations are not available (no email provider): `POST .../members` answers 503 in production.
-- The data of a free Neon project can be deleted if the account is abandoned; this is a demo, not a system of record.
+- This is a demo, not a system of record: no backups.
 
 ## Cost
 
-0 EUR: Render Free, Neon Free, Supabase Free, GitHub Pages and Actions (public repository), Gemini free tier. No payment method is requested by any of them.
+0 EUR: GitHub Pages and Actions (public repository), Cloudflare free plan (the domain is already owned), Docker Desktop (personal/education use), Gemini free tier. No card is requested by any of them.
+
+## Alternative: Tailscale Funnel (no domain)
+
+If you have no domain on Cloudflare, install Tailscale on the server, enable HTTPS and Funnel in the admin console, and run `tailscale funnel --bg 3000`. The API then answers at `https://<machine>.<tailnet>.ts.net`. In this case remove the `cloudflared` service from `compose.yaml`, uncomment the `127.0.0.1:3000:3000` mapping of `api`, and use the Funnel URL as `API_URL`. Cut access with `tailscale funnel reset`. Not tested for this project.
+
+## Alternative: managed cloud (requires a credit card on Render)
+
+Neon (Postgres with pgvector), Supabase Storage (S3 protocol) and Render (Docker web service from [`render.yaml`](../render.yaml)), with Gemini embeddings (`EMBEDDINGS_PROVIDER=gemini`, [ADR-010](adr/ADR-010-gemini-embeddings-for-the-hosted-demo.md)). Render's blueprint and manual web services, and Railway, asked for a credit card in October 2026, which is why this is not the primary path. Summary:
+
+1. **Neon**: Postgres 17, Frankfurt. Copy the pooled URL (`DATABASE_URL`) and the direct URL (`DIRECT_URL`), both ending in `?sslmode=require`.
+2. **Supabase Storage**: private bucket `multicooperativa`; enable S3 Connection and create an access key (`S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`).
+3. **Render**: New > Blueprint on this repository; fill the variables marked `sync: false` and set `JOBS_TOKEN` (the same value as the GitHub secret). The container applies migrations with `DIRECT_URL` on start.
+4. **GitHub**: `API_URL` = the Render URL, as in step 9 above.
+5. **Seed** from your machine with the direct Neon URL: `DATABASE_URL='<neon direct url>' SEED_PASSWORD='<password>' pnpm --filter @multicooperativa/api db:seed --allow-production`, then `API_URL='https://<service>.onrender.com' SEED_PASSWORD='<password>' pnpm --filter @multicooperativa/api db:seed:content`.
+
+Caveats of that path: Render's free instance sleeps after 15 minutes (cold start about 1 minute, so the hourly cron wakes it but does not keep it awake) and has 512 MB (the image caps the Node heap at 320 MB); Neon suspends idle compute; Supabase pauses free projects after 7 days of inactivity; document text goes to Google for embeddings. Vectors from Ollama and from Gemini are not comparable: never copy `embedding` rows between environments, and reindex if you change `EMBEDDINGS_PROVIDER` on an existing database.
 
 ## Local equivalent
 
-`docker build -f apps/api/Dockerfile -t multicooperativa-api .` from the repository root builds the same image Render builds. Run it with the variables above (for example against the Docker Compose database through `host.docker.internal`); `GET /health` must answer 200.
+`docker build -f apps/api/Dockerfile -t multicooperativa-api .` from the repository root builds the same image the home server runs. For development, `docker-compose.yml` at the root starts only the services (see `CLAUDE.md`).

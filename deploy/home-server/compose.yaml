@@ -1,0 +1,184 @@
+# Self-hosted stack for the hosted demo (ADR-012, docs/04-deployment.md).
+# Same pieces as the local docker-compose.yml, plus the API container. Run it from this folder:
+#
+#   docker compose --env-file .env.server up -d --build
+#
+# No container publishes a port on the host. The only way in from the internet is the
+# Cloudflare Tunnel: the `cloudflared` container opens an outbound connection to Cloudflare and
+# forwards the public hostname to http://api:3000 (configured in the Cloudflare dashboard).
+# PostgreSQL, the S3 storage and Ollama are reachable only from the other containers.
+name: multicooperativa-server
+
+x-api-build: &api-build
+  context: ../..
+  dockerfile: apps/api/Dockerfile
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: multicooperativa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.server}
+      POSTGRES_DB: multicooperativa
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U multicooperativa -d multicooperativa']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+
+  # S3-compatible storage (ADR-005).
+  storage:
+    image: rustfs/rustfs:1.0.1
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: multicooperativa
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:?Set S3_SECRET_ACCESS_KEY in .env.server}
+    volumes:
+      - storage-data:/data
+    mem_limit: 512m
+
+  # Production never creates the bucket by itself (ADR-005): this one-shot does, and retries
+  # until the storage answers. It reuses the API image, which already has the S3 client.
+  bucket-init:
+    build: *api-build
+    image: multicooperativa-api:server
+    restart: 'no'
+    depends_on:
+      - storage
+    environment:
+      S3_ENDPOINT: http://storage:9000
+      S3_BUCKET: multicooperativa
+      S3_ACCESS_KEY_ID: multicooperativa
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+    command:
+      - node
+      - -e
+      - |
+        const { S3Client, HeadBucketCommand, CreateBucketCommand } = require('@aws-sdk/client-s3');
+        const bucket = process.env.S3_BUCKET;
+        const client = new S3Client({
+          endpoint: process.env.S3_ENDPOINT,
+          region: 'us-east-1',
+          forcePathStyle: true,
+          credentials: {
+            accessKeyId: process.env.S3_ACCESS_KEY_ID,
+            secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+          },
+        });
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        (async () => {
+          for (let attempt = 1; attempt <= 60; attempt++) {
+            try {
+              try {
+                await client.send(new HeadBucketCommand({ Bucket: bucket }));
+                console.log('Bucket ' + bucket + ' already exists');
+              } catch {
+                await client.send(new CreateBucketCommand({ Bucket: bucket }));
+                console.log('Bucket ' + bucket + ' created');
+              }
+              return;
+            } catch (error) {
+              console.log('Storage not ready yet: ' + error.message);
+              await sleep(2000);
+            }
+          }
+          process.exit(1);
+        })();
+
+  # Embeddings with a local model (ADR-006).
+  ollama:
+    image: ollama/ollama:0.35.1
+    restart: unless-stopped
+    environment:
+      # Keep the model in memory between searches instead of reloading it after 5 minutes.
+      OLLAMA_KEEP_ALIVE: 30m
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 3g
+
+  # One-shot: downloads the embeddings model into the ollama volume (about 1.2 GB the first
+  # time, instant afterwards).
+  ollama-pull:
+    image: ollama/ollama:0.35.1
+    restart: 'no'
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ['ollama', 'pull', 'bge-m3']
+
+  api:
+    build: *api-build
+    image: multicooperativa-api:server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bucket-init:
+        condition: service_completed_successfully
+      ollama-pull:
+        condition: service_completed_successfully
+    # Everything the user sets (secrets, GEMINI_*, CORS_ORIGINS...) reaches the API from here.
+    env_file:
+      - .env.server
+    # Wiring between containers: it overrides anything of the same name in .env.server.
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgresql://multicooperativa:${POSTGRES_PASSWORD}@postgres:5432/multicooperativa
+      S3_ENDPOINT: http://storage:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: multicooperativa
+      S3_ACCESS_KEY_ID: multicooperativa
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_FORCE_PATH_STYLE: 'true'
+      EMBEDDINGS_PROVIDER: ollama
+      OLLAMA_URL: http://ollama:11434
+      EMBEDDING_MODEL: bge-m3
+      # The image caps the heap at 320 MB for Render's 512 MB; this server has room.      NODE_OPTIONS: --max-old-space-size=768
+      # .env.server also holds the tunnel token: the API must not receive it.
+      TUNNEL_TOKEN: ''
+    # Only for debugging from this machine (never 0.0.0.0): uncomment to reach the API at
+    # http://127.0.0.1:3000 without the tunnel.
+    # ports:
+    #   - '127.0.0.1:3000:3000'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    mem_limit: 1g
+
+  # Cloudflare Tunnel (ADR-012). The token comes from the Zero Trust dashboard; the public
+  # hostname -> http://api:3000 mapping lives there too. `docker compose stop cloudflared` cuts
+  # the public access while leaving everything else running.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.2
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in .env.server}
+    command: tunnel --no-autoupdate run
+    mem_limit: 128m
+
+volumes:
+  postgres-data:
+  storage-data:
+  ollama-data:

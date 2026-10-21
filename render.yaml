@@ -1,6 +1,9 @@
-# Render Blueprint for the hosted demo (docs/04-deployment.md).
-# Free plan, no credit card. Secrets are NOT stored here: `sync: false` makes Render ask for
-# them in the dashboard the first time the blueprint is applied.
+# OPTIONAL cloud alternative (ADR-010). The primary deployment is the home server with
+# Cloudflare Tunnel (ADR-012, deploy/home-server/). Render asked for a credit card in
+# October 2026, so this blueprint is kept but not used.
+# See docs/04-deployment.md, section "Alternative: managed cloud".
+# Secrets are NOT stored here: `sync: false` makes Render ask for them in the dashboard the
+# first time the blueprint is applied.
 services:
   - type: web
     name: multicooperativa-api
