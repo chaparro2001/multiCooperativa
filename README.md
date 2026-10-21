@@ -8,13 +8,13 @@ Entrega: 26/10/2026 · Cierre de funcionalidad: 22/10/2026.
 
 ## Entregables
 
-| Entregable            | Enlace                                           |
-| --------------------- | ------------------------------------------------ |
-| Demo (web)            | https://chaparro2001.github.io/multiCooperativa/ |
-| API (Render)          | <!-- TODO: URL de la API en Render -->           |
-| Presentación (slides) | <!-- TODO: URL de las slides -->                 |
-| Vídeo de la demo      | <!-- TODO: URL del vídeo -->                     |
-| Documentación         | [docs/README.md](docs/README.md)                 |
+| Entregable            | Enlace                                                                                                                                                                      |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Demo (web)            | https://chaparro2001.github.io/multiCooperativa/                                                                                                                            |
+| API (Render)          | <!-- TODO: URL de la API en Render -->                                                                                                                                      |
+| Presentación (slides) | [docs/slides/multicooperativa-tfm.pptx](docs/slides/multicooperativa-tfm.pptx) ([PDF](docs/slides/multicooperativa-tfm.pdf), [guion del vídeo](docs/slides/guion-video.md)) |
+| Vídeo de la demo      | <!-- TODO: URL del vídeo -->                                                                                                                                                |
+| Documentación         | [docs/README.md](docs/README.md)                                                                                                                                            |
 
 ## Índice
 

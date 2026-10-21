@@ -8,13 +8,13 @@ Delivery: 26/10/2026 · Feature freeze: 22/10/2026.
 
 ## Deliverables
 
-| Deliverable   | Link                                             |
-| ------------- | ------------------------------------------------ |
-| Demo (web)    | https://chaparro2001.github.io/multiCooperativa/ |
-| API (Render)  | <!-- TODO: Render API URL -->                    |
-| Slides        | <!-- TODO: slides URL -->                        |
-| Demo video    | <!-- TODO: video URL -->                         |
-| Documentation | [docs/README.md](docs/README.md)                 |
+| Deliverable   | Link                                                                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Demo (web)    | https://chaparro2001.github.io/multiCooperativa/                                                                                                                                     |
+| API (Render)  | <!-- TODO: Render API URL -->                                                                                                                                                        |
+| Slides        | [docs/slides/multicooperativa-tfm.pptx](docs/slides/multicooperativa-tfm.pptx) ([PDF](docs/slides/multicooperativa-tfm.pdf), [video script, in Spanish](docs/slides/guion-video.md)) |
+| Demo video    | <!-- TODO: video URL -->                                                                                                                                                             |
+| Documentation | [docs/README.md](docs/README.md)                                                                                                                                                     |
 
 ## Contents
 
