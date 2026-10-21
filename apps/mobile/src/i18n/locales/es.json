@@ -24,6 +24,22 @@
       "mb": "{{value}} MB"
     }
   },
+  "forms": {
+    "fixFields": "Revisa los campos marcados en rojo.",
+    "errors": {
+      "required": "Este campo es obligatorio.",
+      "invalid": "El valor no es válido.",
+      "email": "Escribe un email válido, por ejemplo nombre@dominio.es.",
+      "phone": "Escribe un teléfono válido, solo con números, espacios, + y guiones.",
+      "tooShort": "Debe tener al menos {{min}} caracteres.",
+      "tooLong": "Puede tener como máximo {{max}} caracteres.",
+      "mustBePositive": "Debe ser un número positivo.",
+      "tooSmall": "El valor mínimo es {{min}}.",
+      "tooBig": "El valor máximo es {{max}}.",
+      "tooShortOrSmall": "El valor es demasiado corto o pequeño.",
+      "tooBigOrLong": "El valor es demasiado largo o grande."
+    }
+  },
   "enums": {
     "module": {
       "announcements": "Comunicados",

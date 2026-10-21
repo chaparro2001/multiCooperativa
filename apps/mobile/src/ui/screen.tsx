@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -9,28 +9,71 @@ import {
   View,
 } from 'react-native';
 
+import { type FormApi, FormProvider } from '@/forms/use-form';
+
 import { useBrandColor } from '../branding/brand';
 import { colors } from './theme';
 
 export const SCREEN_PADDING = 24;
 export const SCREEN_MAX_WIDTH = 960;
 
-/** Scrollable screen body that keeps inputs above the keyboard. */
-export function Screen({ children, testID }: { children: ReactNode; testID?: string }) {
-  return (
+/** Distance kept above the invalid field the screen scrolls to. */
+const SCROLL_MARGIN = 24;
+
+/**
+ * Scrollable screen body that keeps inputs above the keyboard. With `form`, its fields (those
+ * with a `name`) show the form's errors and the screen scrolls to the first invalid one.
+ */
+export function Screen({
+  children,
+  testID,
+  form,
+}: {
+  children: ReactNode;
+  testID?: string;
+  form?: FormApi;
+}) {
+  const scroll = useRef<ScrollView>(null);
+  const offset = useRef(0);
+
+  const scrollTo = useCallback((target: View) => {
+    target.measureInWindow((_x, targetY) => {
+      // ScrollView forwards the native view's measuring methods; its typings omit them.
+      (scroll.current as unknown as View | null)?.measureInWindow((_sx, scrollY) => {
+        scroll.current?.scrollTo({
+          y: Math.max(0, offset.current + targetY - scrollY - SCROLL_MARGIN),
+          animated: true,
+        });
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    form?.attachScroller(scrollTo);
+    return () => form?.attachScroller(null);
+    // The form object changes on every render; its scroller slot is stable.
+  }, [!!form, scrollTo]);
+
+  const body = (
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
+        ref={scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        onScroll={(event) => {
+          offset.current = event.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
         testID={testID}
       >
         {children}
       </ScrollView>
     </KeyboardAvoidingView>
   );
+  return form ? <FormProvider value={form}>{body}</FormProvider> : body;
 }
 
 export function Loading() {

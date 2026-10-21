@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useBrandColor } from '@/branding/brand';
+import { FieldGroup } from '@/ui/field';
 import { colors } from '@/ui/theme';
 
 /** Two or three exclusive choices as a pill row. */
@@ -9,13 +10,18 @@ export function Segmented<T extends string>({
   onChange,
   options,
   testIDPrefix,
+  name,
+  error,
 }: {
   value: T;
   onChange(value: T): void;
   options: { value: T; label: string }[];
   testIDPrefix: string;
+  /** Links the choice to the surrounding form's validation state (required selectors). */
+  name?: string;
+  error?: string;
 }) {
-  return (
+  const row = (
     <View style={styles.row} accessibilityRole="tablist">
       {options.map((option) => (
         <Pressable
@@ -32,6 +38,13 @@ export function Segmented<T extends string>({
         </Pressable>
       ))}
     </View>
+  );
+  return name || error ? (
+    <FieldGroup name={name} error={error}>
+      {row}
+    </FieldGroup>
+  ) : (
+    row
   );
 }
 

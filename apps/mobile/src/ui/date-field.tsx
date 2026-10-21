@@ -6,6 +6,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { currentLocale, formatDate, formatTime } from '@/i18n/format';
 
 import { useBrandColor } from '../branding/brand';
+import { FieldGroup } from './field';
 import { colors } from './theme';
 import { fromInputValue, toInputValue } from './web-date-input';
 
@@ -21,6 +22,10 @@ export interface DateFieldProps {
   /** Value proposed when an optional field is added. */
   suggested?: () => Date;
   testID?: string;
+  /** Links the field to the surrounding form's validation state. */
+  name?: string;
+  /** Message shown under the field with a red frame (overrides the form's). */
+  error?: string;
 }
 
 /**
@@ -36,6 +41,8 @@ export function DateField({
   optional = false,
   suggested,
   testID,
+  name,
+  error,
 }: DateFieldProps) {
   const { t } = useTranslation();
   const brand = useBrandColor();
@@ -44,50 +51,52 @@ export function DateField({
   return (
     <View style={styles.field} testID={testID}>
       <Text style={styles.label}>{label}</Text>
-      {value === null ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => onChange(initial())}
-          style={[styles.add, { borderColor: brand }]}
-        >
-          <Text style={[styles.addText, { color: brand }]}>{t('common.actions.add')}</Text>
-        </Pressable>
-      ) : (
-        <View style={styles.row}>
-          {Platform.OS === 'web' ? (
-            <WebPicker
-              value={value}
-              mode={mode}
-              minimumDate={minimumDate}
-              label={label}
-              onChange={onChange}
-            />
-          ) : Platform.OS === 'ios' ? (
-            <DateTimePicker
-              value={value}
-              mode={mode}
-              display="compact"
-              locale={currentLocale()}
-              minimumDate={minimumDate}
-              minuteInterval={mode === 'datetime' ? 5 : undefined}
-              onValueChange={(_event, date) => onChange(date)}
-              accessibilityLabel={label}
-            />
-          ) : (
-            <AndroidPicker
-              value={value}
-              mode={mode}
-              minimumDate={minimumDate}
-              onChange={onChange}
-            />
-          )}
-          {optional && (
-            <Pressable accessibilityRole="button" onPress={() => onChange(null)} hitSlop={8}>
-              <Text style={styles.remove}>{t('common.actions.remove')}</Text>
-            </Pressable>
-          )}
-        </View>
-      )}
+      <FieldGroup name={name} error={error} testID={testID ? `${testID}-group` : undefined}>
+        {value === null ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => onChange(initial())}
+            style={[styles.add, { borderColor: brand }]}
+          >
+            <Text style={[styles.addText, { color: brand }]}>{t('common.actions.add')}</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.row}>
+            {Platform.OS === 'web' ? (
+              <WebPicker
+                value={value}
+                mode={mode}
+                minimumDate={minimumDate}
+                label={label}
+                onChange={onChange}
+              />
+            ) : Platform.OS === 'ios' ? (
+              <DateTimePicker
+                value={value}
+                mode={mode}
+                display="compact"
+                locale={currentLocale()}
+                minimumDate={minimumDate}
+                minuteInterval={mode === 'datetime' ? 5 : undefined}
+                onValueChange={(_event, date) => onChange(date)}
+                accessibilityLabel={label}
+              />
+            ) : (
+              <AndroidPicker
+                value={value}
+                mode={mode}
+                minimumDate={minimumDate}
+                onChange={onChange}
+              />
+            )}
+            {optional && (
+              <Pressable accessibilityRole="button" onPress={() => onChange(null)} hitSlop={8}>
+                <Text style={styles.remove}>{t('common.actions.remove')}</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+      </FieldGroup>
     </View>
   );
 }
@@ -102,6 +111,8 @@ export function DayField({
   onChange,
   suggested,
   testID,
+  name,
+  error,
 }: {
   label: string;
   value: string;
@@ -109,6 +120,8 @@ export function DayField({
   /** Day the picker opens on when the field is still empty. */
   suggested?: () => Date;
   testID?: string;
+  name?: string;
+  error?: string;
 }) {
   return (
     <DateField
@@ -118,6 +131,8 @@ export function DayField({
       onChange={(date) => onChange(date ? toInputValue(date, 'date') : '')}
       suggested={suggested}
       testID={testID}
+      name={name}
+      error={error}
     />
   );
 }
