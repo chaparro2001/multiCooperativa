@@ -626,10 +626,10 @@
   "memberArea": {
     "fields": {
       "partnerNumber": "Número de socio",
-      "noPartnerNumber": "Sin número",
       "joinedAt": "Fecha de alta",
       "profile": "Perfil",
-      "email": "Email"
+      "email": "Email",
+      "noPartnerNumber": "Sin número"
     },
     "me": {
       "record": "Mis datos",

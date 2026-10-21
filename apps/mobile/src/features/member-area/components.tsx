@@ -29,14 +29,13 @@ export function RecordCard({ member }: { member: MemberRecord }) {
           tone={STATUS_TONE[member.status]}
         />
       </View>
-      <Fact label={t('memberArea.fields.partnerNumber')}>
-        {member.partnerNumber ?? t('memberArea.fields.noPartnerNumber')}
-      </Fact>
+      {member.isPartner && (
+        <Fact label={t('memberArea.fields.partnerNumber')}>
+          {member.partnerNumber ?? t('memberArea.fields.noPartnerNumber')}
+        </Fact>
+      )}
       <Fact label={t('memberArea.fields.joinedAt')}>{formatDay(member.joinedAt)}</Fact>
-      <Fact label={t('memberArea.fields.profile')}>
-        {member.profileName}
-        {member.isPartner ? ` · ${t('common.partner')}` : ''}
-      </Fact>
+      <Fact label={t('memberArea.fields.profile')}>{member.profileName}</Fact>
       <Fact label={t('memberArea.fields.email')}>{member.email}</Fact>
     </View>
   );
@@ -125,9 +124,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
   },
-  rowText: { flexShrink: 1, gap: 2 },
+  rowText: { flex: 1, gap: 2 },
   concept: { fontSize: 16, fontWeight: '600', color: colors.text },
   detail: { fontSize: 13, color: colors.muted },
-  amount: { fontSize: 16, fontWeight: '600', color: colors.primary },
+  // Never wraps: "-100,00 €" split over two lines reads as two numbers.
+  amount: { fontSize: 16, fontWeight: '600', color: colors.primary, flexShrink: 0 },
   amountOut: { color: colors.danger },
 });

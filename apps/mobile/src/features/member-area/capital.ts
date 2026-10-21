@@ -54,9 +54,7 @@ export interface MovementDraft {
 export type MovementDraftError = 'concept_missing' | 'amount_invalid' | 'amount_not_positive';
 
 /** US-MEM-03: validates the form like the server will, so the user is told before the round trip. */
-export function movementRequest(
-  draft: MovementDraft,
-):
+export function movementRequest(draft: MovementDraft):
   | {
       ok: true;
       request: { date: string; type: CapitalMovementType; concept: string; amount: string };
