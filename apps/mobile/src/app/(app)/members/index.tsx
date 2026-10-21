@@ -38,7 +38,8 @@ export default function MembersScreen() {
                 <HeaderActions>
                   <HeaderAction
                     href="/members/invite"
-                    title={t('members.list.invite')}
+                    icon="person-add-outline"
+                    label={t('members.list.invite')}
                     testID="invite-member"
                   />
                 </HeaderActions>

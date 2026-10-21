@@ -60,6 +60,13 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
   { id: 'users', module: 'users', emoji: '👥', route: '/members' },
 ];
 
+/** Emoji of a home tile, shared by the places that point at the same screen (single source). */
+export function moduleEmoji(id: string): string {
+  const entry = MODULE_ENTRIES.find((e) => e.id === id);
+  if (!entry) throw new Error(`Unknown module entry: ${id}`);
+  return entry.emoji;
+}
+
 export interface VisibleModule extends ModuleEntry {
   /** "Manage" level: the screen shows create, edit and delete actions (US-ACC-06). */
   canManage: boolean;

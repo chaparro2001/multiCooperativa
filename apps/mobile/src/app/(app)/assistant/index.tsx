@@ -158,13 +158,15 @@ function Chat() {
             <HeaderActions>
               <HeaderAction
                 href="/assistant/history"
-                title={t('assistant.history.open')}
+                icon="time-outline"
+                label={t('assistant.history.open')}
                 testID="assistant-history"
               />
               {messages.length > 0 && (
                 <HeaderAction
                   onPress={reset}
-                  title={t('assistant.newConversation')}
+                  icon="create-outline"
+                  label={t('assistant.newConversation')}
                   testID="new-conversation"
                 />
               )}

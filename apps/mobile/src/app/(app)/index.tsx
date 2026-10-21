@@ -43,7 +43,12 @@ export default function HomeScreen() {
         options={{
           headerRight: () => (
             <HeaderActions>
-              <HeaderAction href="/settings" title={t('settings.title')} testID="settings-link" />
+              <HeaderAction
+                href="/settings"
+                icon="settings-outline"
+                label={t('settings.title')}
+                testID="settings-link"
+              />
             </HeaderActions>
           ),
         }}

@@ -45,7 +45,14 @@ export default function ThirdPartiesScreen() {
                         ? `/invoices/third-parties/editor?type=${fixed}`
                         : '/invoices/third-parties/editor'
                     }
-                    title={t('invoicing.thirdParties.new')}
+                    icon="add"
+                    label={t(
+                      fixed === 'supplier'
+                        ? 'invoicing.thirdParties.newSupplier'
+                        : fixed === 'customer'
+                          ? 'invoicing.thirdParties.newCustomer'
+                          : 'invoicing.thirdParties.new',
+                    )}
                     testID="new-third-party"
                   />
                 </HeaderActions>

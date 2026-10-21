@@ -33,7 +33,8 @@ export default function DocumentListScreen() {
                 <HeaderActions>
                   <HeaderAction
                     href="/documents/upload"
-                    title={t('documents.list.upload')}
+                    icon="add"
+                    label={t('documents.list.upload')}
                     testID="upload-document"
                   />
                 </HeaderActions>
