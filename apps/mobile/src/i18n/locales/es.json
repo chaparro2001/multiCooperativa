@@ -121,6 +121,12 @@
       "pending_invoicing": "Pendiente de facturar",
       "invoiced": "Facturado",
       "voided": "Anulado"
+    },
+    "capitalMovementType": {
+      "mandatory_contribution": "Aportación obligatoria",
+      "voluntary_contribution": "Aportación voluntaria",
+      "refund": "Reembolso",
+      "correction": "Corrección"
     }
   },
   "errors": {
@@ -189,7 +195,9 @@
       "assistant_model_not_available": "Ese modelo ya no está disponible. Actualiza la pantalla y elige otro.",
       "local_model_not_in_use": "El asistente no usa un modelo local en este servidor.",
       "assistant_refused": "El asistente no puede responder a esta pregunta.",
-      "internal_error": "Ha ocurrido un error en el servidor. Inténtalo de nuevo."
+      "internal_error": "Ha ocurrido un error en el servidor. Inténtalo de nuevo.",
+      "invalid_movement": "Revisa los datos del movimiento.",
+      "insufficient_capital": "El movimiento dejaría el capital del socio en negativo: el reembolso no puede superar el capital disponible."
     }
   },
   "auth": {
@@ -275,10 +283,7 @@
     }
   },
   "modulePlaceholder": {
-    "badge": "Próximamente",
-    "comingSoon": "Próximamente. Esta sección forma parte del trabajo futuro del proyecto.",
-    "access": "Tu acceso: {{level}}{{scope}}.",
-    "ownDataOnly": " (solo tus datos)"
+    "badge": "Próximamente"
   },
   "announcements": {
     "pinned": "Fijado",
@@ -616,6 +621,55 @@
       "resend": "Generar nuevo enlace",
       "resent": "Nuevo enlace generado.",
       "ownMembership": "Es tu propio acceso: no puedes modificarlo desde aquí."
+    }
+  },
+  "memberArea": {
+    "fields": {
+      "partnerNumber": "Número de socio",
+      "noPartnerNumber": "Sin número",
+      "joinedAt": "Fecha de alta",
+      "profile": "Perfil",
+      "email": "Email"
+    },
+    "me": {
+      "record": "Mis datos",
+      "capital": "Mi capital",
+      "capitalTotal": "Capital aportado",
+      "movements": "Movimientos",
+      "allMembers": "Socios",
+      "notPartner": "No eres socio de la cooperativa, así que no tienes capital aportado."
+    },
+    "movements": {
+      "empty": "Todavía no hay movimientos: tu capital es 0,00 €.",
+      "amountLabel": "{{amount}}"
+    },
+    "members": {
+      "title": "Capital de los socios",
+      "totalCapital": "Capital social de la cooperativa",
+      "search": "Buscar socio",
+      "searchPlaceholder": "Nombre, email o número",
+      "empty": "No hay socios que coincidan.",
+      "partnerNumber": "Socio n.º {{number}}"
+    },
+    "statement": {
+      "title": "Socio"
+    },
+    "register": {
+      "title": "Registrar movimiento",
+      "open": "Registrar movimiento",
+      "currentCapital": "Capital actual: {{amount}}",
+      "type": "Tipo",
+      "date": "Fecha",
+      "concept": "Concepto",
+      "amount": "Importe (€)",
+      "refundHint": "Un reembolso no puede superar el capital disponible.",
+      "correctionHint": "Los movimientos no se pueden editar ni borrar: un error se corrige con una corrección de signo contrario (por ejemplo, -50,00).",
+      "submit": "Registrar",
+      "errors": {
+        "concept_missing": "Escribe un concepto.",
+        "amount_invalid": "Escribe un importe válido, con hasta dos decimales.",
+        "amount_not_positive": "El importe debe ser mayor que cero (solo una corrección puede ser negativa)."
+      }
     }
   }
 }

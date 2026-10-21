@@ -18,6 +18,10 @@ describe('parentRoute (US-INV-06, US-ACC-08)', () => {
     ['/members', '/'],
     ['/members/abc', '/members'],
     ['/members/invite', '/members'],
+    ['/member-area', '/'],
+    ['/member-area/members', '/member-area'],
+    ['/member-area/members/abc', '/member-area/members'],
+    ['/member-area/members/abc/register', '/member-area/members/abc'],
   ])('%s -> %s', (path, parent) => {
     expect(parentRoute(path)).toBe(parent);
   });

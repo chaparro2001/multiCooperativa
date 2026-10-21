@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { messageFor } from '@/api/api-error';
 import { ActiveCooperativeProvider, useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { HeaderBack } from '@/navigation/header-back';
-import { canAccess, canManage } from '@/navigation/modules';
+import { allScope, canAccess, canManage } from '@/navigation/modules';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 
@@ -121,7 +121,26 @@ function CooperativeNavigator() {
           </Stack.Protected>
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'member-area')}>
-          <Stack.Screen name="member-area" options={{ title: t('enums.module.member-area') }} />
+          <Stack.Screen
+            name="member-area/index"
+            options={{ title: t('enums.module.member-area') }}
+          />
+          <Stack.Protected guard={allScope(allowed, 'member-area')}>
+            <Stack.Screen
+              name="member-area/members/index"
+              options={{ title: t('memberArea.members.title') }}
+            />
+            <Stack.Screen
+              name="member-area/members/[id]/index"
+              options={{ title: t('memberArea.statement.title') }}
+            />
+            <Stack.Protected guard={canManage(allowed, 'member-area')}>
+              <Stack.Screen
+                name="member-area/members/[id]/register"
+                options={{ title: t('memberArea.register.title') }}
+              />
+            </Stack.Protected>
+          </Stack.Protected>
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'assistant')}>
           <Stack.Screen name="assistant" options={{ title: t('enums.module.assistant') }} />

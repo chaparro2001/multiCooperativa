@@ -37,13 +37,7 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
     emoji: '🤝',
     route: '/invoices/third-parties?type=customer',
   },
-  {
-    id: 'member-area',
-    module: 'member-area',
-    emoji: '👤',
-    route: '/member-area',
-    comingSoon: true,
-  },
+  { id: 'member-area', module: 'member-area', emoji: '👤', route: '/member-area' },
   { id: 'assistant', module: 'assistant', emoji: '🤖', route: '/assistant' },
   { id: 'users', module: 'users', emoji: '👥', route: '/members' },
 ];
@@ -77,4 +71,12 @@ export function canManage(
   module: Module,
 ): boolean {
   return permissions?.some((p) => p.module === module && p.level === 'manage') ?? false;
+}
+
+/** "All" scope on the module: the screens that list other members exist only then (the server enforces it too). */
+export function allScope(
+  permissions: MyPermissionsResponse['permissions'] | undefined,
+  module: Module,
+): boolean {
+  return permissions?.some((p) => p.module === module && p.scope === 'all') ?? false;
 }
