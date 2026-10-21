@@ -9,6 +9,7 @@ import {
   type LanguageModel,
   type LocalModelRuntime,
 } from './modules/assistant';
+import { createBrandingModule } from './modules/branding';
 import { createDocumentsModule, type DocumentEvent, type Embedder } from './modules/documents';
 import {
   createInvoicingModule,
@@ -138,6 +139,13 @@ export function createApi(deps: ApiDeps): Api {
     },
   });
 
+  const branding = createBrandingModule({
+    prisma: deps.prisma,
+    files: deps.files,
+    audit: access.recordAudit,
+    requireCooperative: access.requireCooperative,
+  });
+
   const runDueDates = () => runDueDatesJob({ prisma: deps.prisma, events });
 
   const app = createApp({
@@ -152,6 +160,7 @@ export function createApi(deps: ApiDeps): Api {
       invoicing.router,
       members.router,
       assistant.router,
+      branding.router,
     ],
     errorHandlers: [
       access.errorHandler,
@@ -161,6 +170,7 @@ export function createApi(deps: ApiDeps): Api {
       invoicing.errorHandler,
       members.errorHandler,
       assistant.errorHandler,
+      branding.errorHandler,
     ],
     trustProxy: deps.trustProxy,
     corsOrigins: deps.corsOrigins,

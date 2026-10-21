@@ -5,6 +5,7 @@ export * from './announcements';
 export * from './assistant';
 export * from './assemblies';
 export * from './auth';
+export * from './branding';
 export * from './documents';
 export * from './invoicing';
 export * from './member-area';

@@ -679,6 +679,17 @@ model AssistantSetting {
   updatedAt     DateTime @default(now()) @updatedAt
 }
 
+/// US-ACC-14: one row per cooperative that customized its look; no row means the app's default theme. Owned by the branding module.
+model CooperativeBranding {
+  cooperativeId   String   @id @db.Uuid
+  /// #RRGGBB upper-case; white text on it reaches WCAG AA (BR-ACC-12).
+  primaryColor    String?
+  /// Storage key of the logo under cooperatives/<id>/branding/ (BR-ACC-13).
+  logoKey         String?
+  logoContentType String?
+  updatedAt       DateTime @default(now())
+}
+
 model AssistantMessage {
   id             String           @id @default(uuid()) @db.Uuid
   conversationId String           @db.Uuid
