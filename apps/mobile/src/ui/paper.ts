@@ -28,6 +28,7 @@ export {
   Surface,
   Switch,
   Text,
+  TextInput,
   TouchableRipple,
   useTheme,
 } from 'react-native-paper';
