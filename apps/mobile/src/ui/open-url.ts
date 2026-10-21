@@ -8,8 +8,14 @@ import { Platform } from 'react-native';
  */
 export async function openUrl(url: string): Promise<void> {
   if (Platform.OS === 'web') {
-    const opened = globalThis.open(url, '_blank', 'noopener');
-    if (!opened) globalThis.location.assign(url);
+    // Not the 'noopener' feature: with it `open` always returns null, so a tab that did open
+    // looked blocked and the current tab navigated too. Cut the opener by hand instead.
+    const opened = globalThis.open(url, '_blank');
+    if (opened) {
+      opened.opener = null;
+      return;
+    }
+    globalThis.location.assign(url);
     return;
   }
   await WebBrowser.openBrowserAsync(url);
