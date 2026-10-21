@@ -71,11 +71,12 @@ export default function RootLayout() {
       <ServicesProvider services={services}>
         <QueryClientProvider client={queryClient}>
           <SessionProvider>
-            <BiometricsProvider>
-              <PaperProvider theme={defaultTheme} settings={paperSettings}>
+            {/* The lock screen renders inside the provider too (default green theme). */}
+            <PaperProvider theme={defaultTheme} settings={paperSettings}>
+              <BiometricsProvider>
                 <RootNavigator />
-              </PaperProvider>
-            </BiometricsProvider>
+              </BiometricsProvider>
+            </PaperProvider>
           </SessionProvider>
         </QueryClientProvider>
       </ServicesProvider>
