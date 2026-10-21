@@ -30,6 +30,7 @@ interface ActiveCooperativeValue {
   cooperativeId: string | null | undefined;
   cooperative: MeResponse['memberships'][number] | undefined;
   permissions: MyPermissionsResponse | undefined;
+  permissionsQuery: ReturnType<typeof useQuery<MyPermissionsResponse>>;
   select(cooperativeId: string): Promise<void>;
 }
 
@@ -97,9 +98,10 @@ export function ActiveCooperativeProvider({ children }: { children: ReactNode })
       cooperativeId,
       cooperative: me?.memberships.find((m) => m.cooperativeId === cooperativeId),
       permissions: permissionsQuery.data,
+      permissionsQuery,
       select,
     }),
-    [me, meQuery, cooperativeId, permissionsQuery.data, select],
+    [me, meQuery, cooperativeId, permissionsQuery, select],
   );
 
   return (

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { messageFor } from '@/api/api-error';
 import { ActiveCooperativeProvider, useActiveCooperative } from '@/cooperatives/active-cooperative';
+import { HeaderBack } from '@/navigation/header-back';
 import { canAccess, canManage } from '@/navigation/modules';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
@@ -21,23 +22,34 @@ export default function AppLayout() {
  */
 function CooperativeNavigator() {
   const { t } = useTranslation();
-  const { meQuery, cooperativeId, cooperative, permissions } = useActiveCooperative();
+  const { meQuery, permissionsQuery, cooperativeId, cooperative, permissions } =
+    useActiveCooperative();
   const allowed = permissions?.permissions;
 
-  if (meQuery.isError) {
+  const failed = meQuery.isError ? meQuery : permissionsQuery.isError ? permissionsQuery : null;
+  if (failed) {
     return (
       <Screen>
-        <ErrorText>{messageFor(meQuery.error)}</ErrorText>
-        <Button title={t('common.actions.retry')} onPress={() => meQuery.refetch()} />
+        <ErrorText>{messageFor(failed.error)}</ErrorText>
+        <Button title={t('common.actions.retry')} onPress={() => failed.refetch()} />
       </Screen>
     );
   }
   if (cooperativeId === undefined) return <Loading />;
 
   const inCooperative = cooperativeId !== null;
+  // Until the permissions arrive the guards below would hide every module and a reloaded deep link
+  // would be lost (redirected to the home).
+  if (inCooperative && permissions === undefined) return <Loading />;
 
   return (
-    <Stack screenOptions={{ headerBackTitle: t('common.actions.back') }}>
+    <Stack
+      screenOptions={({ navigation }) => ({
+        headerBackTitle: t('common.actions.back'),
+        // Without history (reload, deep link) the default arrow is dead: go to the logical parent.
+        ...(navigation.canGoBack() ? {} : { headerLeft: () => <HeaderBack /> }),
+      })}
+    >
       <Stack.Protected guard={inCooperative}>
         <Stack.Screen name="index" options={{ title: cooperative?.cooperativeName ?? '' }} />
         <Stack.Screen name="settings" options={{ title: t('settings.title') }} />
