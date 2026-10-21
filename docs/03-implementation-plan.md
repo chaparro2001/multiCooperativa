@@ -78,6 +78,7 @@ Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assis
 - [x] Conversations and usage limit.
 - [x] Evaluation set of 23 questions (`pnpm --filter @multicooperativa/api ai:eval`).
 - [x] App: chat with citations and links.
+- [x] Conversation history: list, reopen, new conversation and delete (US-AI-04).
 
 ## Milestone 6 · Notifications and feature freeze (20–22 Oct)
 

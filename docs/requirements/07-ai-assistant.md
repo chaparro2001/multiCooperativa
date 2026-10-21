@@ -45,6 +45,10 @@ As a user, I want to ask follow-up questions without repeating the context.
 
 - **Given** an open conversation, **when** I ask a follow-up question ("and the previous one?"), **then** the assistant uses the previous turns.
 - **Given** that I switch active cooperative, **when** I return to the assistant, **then** a new conversation starts.
+- **Given** I have asked before, **when** I open "History" from the assistant, **then** I see my conversations (the first question as title and the date of the last activity), newest first, loaded in pages, with pull to refresh and an empty state if there are none. Conversations that never received an answer are not listed.
+- **Given** the history, **when** I tap a conversation, **then** the chat reopens with all its messages (answers keep their citations and ratings) and I can keep asking in it with its context; "New conversation" starts an empty one.
+- **Given** a conversation of mine, **when** I delete it and confirm, **then** it disappears from the history with all its messages and ratings (privacy: the user decides how long their questions are kept). If it was open, the chat empties.
+- **Given** a conversation of another user or of another cooperative, **when** I list, read, write to or delete it, **then** the API answers 404 and nothing changes (BR-AI-07). Deleting writes nothing sensitive to the logs.
 
 ### Should
 
@@ -174,17 +178,18 @@ erDiagram
 | Method | Route                                                                             | Use                 |
 | ------ | --------------------------------------------------------------------------------- | ------------------- |
 | POST   | `/cooperatives/{cooperativeId}/assistant/conversations`                           | Create conversation |
-| GET    | `/cooperatives/{cooperativeId}/assistant/conversations`                           | My conversations    |
+| GET    | `/cooperatives/{cooperativeId}/assistant/conversations?limit=&before=`            | My conversations    |
+| DELETE | `/cooperatives/{cooperativeId}/assistant/conversations/{conversationId}`          | Delete conversation |
 | POST   | `/cooperatives/{cooperativeId}/assistant/conversations/{conversationId}/messages` | Send message        |
 | POST   | `/cooperatives/{cooperativeId}/assistant/messages/{messageId}/rating`             | Rate answer         |
 | GET    | `/cooperatives/{cooperativeId}/assistant/conversations/{conversationId}`          | Messages of one     |
 
-The last route is not in the first draft: the app needs it to reopen a conversation. Over the limit the API answers 429 with `Retry-After`; without `GEMINI_API_KEY`, 503 `assistant_unavailable` ([ADR-009](../adr/ADR-009-gemini-language-and-vision-model.md)).
+The listing returns `{ items, nextCursor }` (default 20, up to 100, newest activity first; `before` is the `nextCursor` of the previous page); deleting answers 204 and also removes the messages and their ratings. The `GET` of one conversation is not in the first draft: the app needs it to reopen a conversation. Over the limit the API answers 429 with `Retry-After`; without `GEMINI_API_KEY`, 503 `assistant_unavailable` ([ADR-009](../adr/ADR-009-gemini-language-and-vision-model.md)).
 
 ## 9. Screens
 
 1. Chat with suggested questions, tappable citations and links to invoices, assemblies and documents.
-2. Conversation history.
+2. Conversation history (reopen, new conversation, delete with confirmation), reached from the assistant's header.
 
 ## 10. Test strategy
 
