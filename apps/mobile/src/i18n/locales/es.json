@@ -37,6 +37,12 @@
       "read": "consulta",
       "manage": "gestión"
     },
+    "membershipStatus": {
+      "invited": "Invitado",
+      "active": "Activo",
+      "suspended": "Suspendido",
+      "removed": "Eliminado"
+    },
     "announcementStatus": {
       "draft": "Borrador",
       "published": "Publicado",
@@ -557,6 +563,53 @@
       "confirm": "Confirmar y guardar",
       "invalid": "Revisa los datos: faltan campos o alguno no es válido.",
       "expectedTotal": "Total esperado: {{expected}} €."
+    }
+  },
+  "members": {
+    "list": {
+      "invite": "Invitar",
+      "search": "Buscar",
+      "searchPlaceholder": "Nombre o email",
+      "empty": "No hay miembros que coincidan."
+    },
+    "filters": {
+      "all": "Todos",
+      "active": "Activos",
+      "invited": "Invitados",
+      "suspended": "Suspendidos"
+    },
+    "fields": {
+      "email": "Email",
+      "name": "Nombre",
+      "profile": "Perfil",
+      "isPartner": "Es socio",
+      "partnerNumber": "Número de socio"
+    },
+    "invite": {
+      "title": "Invitar",
+      "submit": "Enviar invitación",
+      "nameHint": "El nombre se usa solo si la persona aún no tiene cuenta en multiCooperativa.",
+      "sentTitle": "Invitación registrada",
+      "sentMessage": "Se ha invitado a {{email}}. Recibirá un enlace de un solo uso, válido 7 días, para activar su acceso.",
+      "backToList": "Volver a la lista",
+      "deliveryUnavailable": "La invitación se ha registrado, pero el envío del enlace no está disponible en este servidor. Aparecerá como invitado en la lista y podrás reenviarla desde su ficha."
+    },
+    "detail": {
+      "title": "Miembro",
+      "saveProfile": "Guardar perfil",
+      "profileSaved": "Perfil actualizado.",
+      "suspend": "Suspender",
+      "suspendTitle": "Suspender acceso",
+      "suspendMessage": "{{name}} perderá el acceso a esta cooperativa en su próxima petición. Podrás reactivarlo después.",
+      "suspended": "Acceso suspendido.",
+      "reactivate": "Reactivar",
+      "reactivateTitle": "Reactivar acceso",
+      "reactivateMessage": "{{name}} recuperará el acceso con su perfil actual.",
+      "reactivated": "Acceso reactivado.",
+      "invitedExplanation": "Esta persona aún no ha aceptado la invitación. Si el enlace caducó o se perdió, reenvía uno nuevo: el anterior dejará de valer.",
+      "resend": "Reenviar invitación",
+      "resent": "Invitación reenviada.",
+      "ownMembership": "Es tu propio acceso: no puedes modificarlo desde aquí."
     }
   }
 }

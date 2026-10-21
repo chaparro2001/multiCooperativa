@@ -127,7 +127,11 @@ function CooperativeNavigator() {
           <Stack.Screen name="assistant" options={{ title: t('enums.module.assistant') }} />
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'users')}>
-          <Stack.Screen name="members" options={{ title: t('enums.module.users') }} />
+          <Stack.Screen name="members/index" options={{ title: t('enums.module.users') }} />
+          <Stack.Screen name="members/[id]" options={{ title: t('members.detail.title') }} />
+          <Stack.Protected guard={canManage(allowed, 'users')}>
+            <Stack.Screen name="members/invite" options={{ title: t('members.invite.title') }} />
+          </Stack.Protected>
         </Stack.Protected>
       </Stack.Protected>
       <Stack.Screen

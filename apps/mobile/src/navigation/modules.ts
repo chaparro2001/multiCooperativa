@@ -45,7 +45,7 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
     comingSoon: true,
   },
   { id: 'assistant', module: 'assistant', emoji: '🤖', route: '/assistant' },
-  { id: 'users', module: 'users', emoji: '👥', route: '/members', comingSoon: true },
+  { id: 'users', module: 'users', emoji: '👥', route: '/members' },
 ];
 
 export interface VisibleModule extends ModuleEntry {
