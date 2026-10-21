@@ -182,7 +182,7 @@ export default function MemberScreen() {
         </Text>
       )}
 
-      {notice && (
+      {notice ? (
         <Text
           accessibilityRole="alert"
           variant="bodyLarge"
@@ -191,8 +191,8 @@ export default function MemberScreen() {
         >
           {notice}
         </Text>
-      )}
-      {error && <ErrorText>{error}</ErrorText>}
+      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
     </Screen>
   );
 }

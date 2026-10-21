@@ -61,8 +61,8 @@ export default function ThirdPartyScreen() {
       </View>
       <View style={styles.block}>
         <Fact label={t('invoicing.thirdParties.nif')}>{party.nif}</Fact>
-        {party.email && <Fact label={t('invoicing.thirdParties.email')}>{party.email}</Fact>}
-        {party.phone && <Fact label={t('invoicing.thirdParties.phone')}>{party.phone}</Fact>}
+        {party.email ? <Fact label={t('invoicing.thirdParties.email')}>{party.email}</Fact> : null}
+        {party.phone ? <Fact label={t('invoicing.thirdParties.phone')}>{party.phone}</Fact> : null}
       </View>
 
       <View style={styles.block} testID="balance">
@@ -111,7 +111,7 @@ export default function ThirdPartyScreen() {
         <NoteRow key={note.id} note={note} />
       ))}
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       {canManage && (
         <View style={styles.block}>
           <Button

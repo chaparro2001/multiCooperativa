@@ -79,7 +79,7 @@ export default function DeliveryNoteScreen() {
         ))}
       </View>
 
-      {data.invoiceId && (
+      {data.invoiceId ? (
         <Pressable
           accessibilityRole="link"
           onPress={() => router.push(`/invoices/invoice/${data.invoiceId}`)}
@@ -88,9 +88,9 @@ export default function DeliveryNoteScreen() {
             {t('invoicing.detail.viewInvoice')}
           </Text>
         </Pressable>
-      )}
+      ) : null}
 
-      {data.fileUrl && (
+      {data.fileUrl ? (
         <Button
           title={t('invoicing.detail.openFile')}
           variant="secondary"
@@ -108,9 +108,9 @@ export default function DeliveryNoteScreen() {
           }
           testID="open-file"
         />
-      )}
+      ) : null}
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
 
       {canManage && data.status === 'pending_invoicing' && (
         <ConfirmButton

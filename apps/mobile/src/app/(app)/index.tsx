@@ -57,13 +57,13 @@ export default function HomeScreen() {
       />
       <View style={styles.identity}>
         {/* US-ACC-14: the cooperative's logo, when its administrator uploaded one. */}
-        {brand.logoUrl && <BrandLogo size={56} testID="home-logo" />}
+        {brand.logoUrl ? <BrandLogo size={56} testID="home-logo" /> : null}
         <View style={styles.identityText}>
-          {brand.logoUrl && (
+          {brand.logoUrl ? (
             <Text variant="titleLarge" numberOfLines={2} testID="home-cooperative-name">
               {cooperative?.cooperativeName}
             </Text>
-          )}
+          ) : null}
           <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
             {cooperative?.profileName}
             {/* "Socio · Socio" when the profile is already called like that. */}
@@ -98,9 +98,9 @@ export default function HomeScreen() {
                 {title(entry)}
               </Text>
               {/* The accent only shows once the cooperative picked its own colour. */}
-              {brand.configuredColor && (
+              {brand.configuredColor ? (
                 <View style={[styles.accent, { backgroundColor: brand.primaryColor }]} />
-              )}
+              ) : null}
               {entry.comingSoon && (
                 <Chip compact mode="outlined" testID={`coming-soon-${entry.id}`}>
                   {t('modulePlaceholder.badge')}

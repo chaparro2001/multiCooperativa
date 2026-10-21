@@ -203,11 +203,11 @@ function Chat() {
           ) : null
         }
       />
-      {error && (
+      {error ? (
         <View style={styles.error}>
           <ErrorText>{error}</ErrorText>
         </View>
-      )}
+      ) : null}
       <View style={[styles.composer, { borderTopColor: colors.outlineVariant }]}>
         <TextInput
           mode="outlined"

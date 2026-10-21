@@ -188,7 +188,7 @@ export default function RegisterScreen() {
             keyboardType="decimal-pad"
             testID="form-total"
           />
-          {suggestedTotal && draft.total !== suggestedTotal && (
+          {suggestedTotal && draft.total !== suggestedTotal ? (
             <TouchableRipple
               onPress={() => patch({ total: suggestedTotal })}
               accessibilityRole="button"
@@ -197,7 +197,7 @@ export default function RegisterScreen() {
                 {t('invoicing.form.useComputedTotal', { total: suggestedTotal })}
               </Text>
             </TouchableRipple>
-          )}
+          ) : null}
         </>
       )}
 
@@ -230,7 +230,7 @@ export default function RegisterScreen() {
         </View>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('invoicing.form.confirm')}
@@ -299,7 +299,7 @@ function PartyPicker({
               onPress={createSuggested}
               testID="create-suggested-party"
             />
-            {error && <ErrorText>{error}</ErrorText>}
+            {error ? <ErrorText>{error}</ErrorText> : null}
           </Card.Content>
         </Card>
       )}
@@ -323,11 +323,11 @@ function PartyPicker({
             />
           ))}
       </View>
-      {selected && (
+      {selected ? (
         <Text variant="bodyMedium">
           {selected.name} · {selected.nif}
         </Text>
-      )}
+      ) : null}
       {parties.data && parties.data.items.length === 0 && (
         <TouchableRipple
           onPress={() => router.push('/invoices/third-parties/editor')}

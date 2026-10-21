@@ -67,7 +67,7 @@ export default function LoginScreen() {
         onSubmitEditing={submit}
         testID="password-field"
       />
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('auth.login.submit')}

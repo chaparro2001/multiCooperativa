@@ -169,7 +169,7 @@ function Form({
         keyboardType="phone-pad"
         testID="third-party-phone"
       />
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       {duplicate ? (
         <Button

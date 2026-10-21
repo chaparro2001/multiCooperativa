@@ -70,7 +70,7 @@ export default function SettingsScreen() {
         </View>
       )}
       {biometrics.available && <Divider />}
-      {biometricsError && <ErrorText>{biometricsError}</ErrorText>}
+      {biometricsError ? <ErrorText>{biometricsError}</ErrorText> : null}
 
       {/* US-ACC-14: only the administrator sees it; the API enforces it. */}
       {canEditBranding(permissions?.permissions) && <AppearanceSection />}

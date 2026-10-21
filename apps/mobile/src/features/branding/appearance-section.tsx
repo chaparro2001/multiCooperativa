@@ -175,7 +175,7 @@ export function AppearanceSection() {
           onPress={() => saveColor(candidate ?? text)}
           testID="brand-color-save"
         />
-        {brand.configuredColor && (
+        {brand.configuredColor ? (
           <Button
             title={t('settings.appearance.color.reset')}
             variant="secondary"
@@ -183,7 +183,7 @@ export function AppearanceSection() {
             onPress={() => saveColor(null)}
             testID="brand-color-reset"
           />
-        )}
+        ) : null}
 
         <Text variant="titleMedium" style={styles.logoTitle}>
           {t('settings.appearance.logo.title')}
@@ -217,7 +217,7 @@ export function AppearanceSection() {
           onPress={chooseLogo}
           testID="brand-logo-choose"
         />
-        {brand.logoUrl && (
+        {brand.logoUrl ? (
           <Button
             title={t('settings.appearance.logo.remove')}
             variant="secondary"
@@ -225,7 +225,7 @@ export function AppearanceSection() {
             onPress={askToRemoveLogo}
             testID="brand-logo-remove"
           />
-        )}
+        ) : null}
       </View>
       <Divider />
     </FormScope>

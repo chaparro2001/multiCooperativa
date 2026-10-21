@@ -104,14 +104,14 @@ export default function InvoiceScreen() {
           {euros(subtractAmounts(data.total, data.base))}
         </Fact>
         <Fact label={t('invoicing.detail.total')}>{euros(data.total)}</Fact>
-        {data.settledAt && (
+        {data.settledAt ? (
           <Fact label={t(`invoicing.detail.settledOn.${data.operation}`)}>
             {formatDay(data.settledAt)}
           </Fact>
-        )}
+        ) : null}
       </View>
 
-      {data.fileUrl && (
+      {data.fileUrl ? (
         <Button
           title={t('invoicing.detail.openFile')}
           variant="secondary"
@@ -130,7 +130,7 @@ export default function InvoiceScreen() {
           }
           testID="open-file"
         />
-      )}
+      ) : null}
 
       {data.reconciliationStatus === 'with_discrepancy' && (
         <View style={styles.block} testID="discrepancies">
@@ -151,11 +151,11 @@ export default function InvoiceScreen() {
                     unit: item.unit,
                   })}
                 </Text>
-                {item.explanation && (
+                {item.explanation ? (
                   <Text variant="bodyMedium" style={styles.explanation}>
                     {item.explanation}
                   </Text>
-                )}
+                ) : null}
               </Card.Content>
             </Card>
           ))}
@@ -223,7 +223,7 @@ export default function InvoiceScreen() {
         </Text>
       </Pressable>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
 
       {canManage && open && (
         <View style={styles.block}>

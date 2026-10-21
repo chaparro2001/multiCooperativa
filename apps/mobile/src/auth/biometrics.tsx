@@ -159,11 +159,11 @@ function LockScreen({
       <Text variant="titleLarge" style={styles.centered}>
         {t('auth.lock.title')}
       </Text>
-      {message && (
+      {message ? (
         <Text variant="bodyMedium" style={[styles.centered, { color: colors.error }]}>
           {message}
         </Text>
-      )}
+      ) : null}
       <Button title={t('auth.lock.unlock')} onPress={tryUnlock} testID="unlock" />
       {/* US-ACC-04: when biometrics fail, the password is always a way in. */}
       <Button

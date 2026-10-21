@@ -110,7 +110,7 @@ export default function InvitationScreen() {
         onSubmitEditing={submit}
         testID="confirm-password-field"
       />
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('auth.invitation.submit')}

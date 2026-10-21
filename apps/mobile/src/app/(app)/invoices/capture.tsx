@@ -102,7 +102,7 @@ export default function CaptureScreen() {
         </Text>
       )}
       {denied && <ErrorText>{t('invoicing.capture.cameraDenied')}</ErrorText>}
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
         {t('invoicing.capture.privacy')}
       </Text>
