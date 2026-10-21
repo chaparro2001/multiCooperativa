@@ -12,8 +12,9 @@ Grabación de pantalla mientras se explica en voz alta (la cara es opcional). Du
 - [ ] **Contraseña de la demo a mano** (`<contraseña demo>`); no la muestres en pantalla al teclearla.
 - [ ] Ventana del navegador limpia (sin marcadores ni pestañas personales), **zoom del navegador** al 110-125 % para que se lea, y **notificaciones del sistema desactivadas** (modo No molestar).
 - [ ] Una sesión por perfil lista o los cuatro usuarios apuntados: `socio@sanisidro.test`, `gestor@sanisidro.test`, `admin@sanisidro.test` (y `consejo@sanisidro.test` si quieres citarlo).
+- [ ] **Color de marca de la demo distinto del verde por defecto** (que se note) y una pantalla con chips o segmentos a mano (filtros de facturas, opción de voto) para el momento Material Design; anota el color original para restaurarlo después.
 - [ ] Para la parte del administrador: un correo ficticio para la invitación (por ejemplo `nueva@sanisidro.test`) y un color y un logo de ejemplo (PNG o JPEG de menos de 1 MB; el SVG se rechaza).
-- [ ] Tener abiertos en el editor: `CLAUDE.md`, un módulo de `apps/api/src/modules/`, un fichero de test, un ADR y el conjunto de evaluación del asistente.
+- [ ] Tener abiertos en el editor: `CLAUDE.md`, un módulo de `apps/api/src/modules/`, un fichero de test, un ADR, el conjunto de evaluación del asistente, `skills-lock.json` y `src/ui`.
 - [ ] Diapositivas abiertas para la introducción, el despliegue y el cierre.
 - [ ] Prueba corta de micrófono y de grabación de pantalla.
 
@@ -32,7 +33,7 @@ Decir: el socio está poco informado (convocatorias en papel, documentos sin loc
 ### 1:15-1:40 Entrada como socio
 
 Pantalla: https://cooperativa.chaparro2001.com (cierra la diapositiva y pasa al navegador).
-Hacer: login con `socio@sanisidro.test`. Señalar que la navegación y las fichas de inicio solo ofrecen lo que el perfil permite, y el color y el logo de la cooperativa.
+Hacer: login con `socio@sanisidro.test`. Señalar que la navegación y las fichas de inicio solo ofrecen lo que el perfil permite, el color y el logo de la cooperativa y el aspecto Material Design de la interfaz (react-native-paper, ADR-020).
 
 ### 1:40-2:05 Socio: comunicados
 
@@ -78,6 +79,7 @@ Hacer: cerrar sesión y entrar con `admin@sanisidro.test`.
 
 1. **Miembros e invitación con enlace**: abrir la lista de miembros, invitar a `nueva@sanisidro.test`, mostrar el enlace de invitación y copiarlo. Decir que no hay proveedor de correo (ADR-016): el administrador recibe el enlace y lo entrega por el canal que prefiera; caduca a los 7 días y es de un solo uso. Opcional: cambiar el perfil de un miembro.
 2. **Ajustes, Apariencia**: elegir un color y ver cómo cambia la app; probar un color demasiado claro y enseñar que se rechaza por contraste insuficiente (WCAG AA, 4,5:1); subir un logo PNG o JPEG (el SVG se rechaza y se verifica por contenido). ADR-018.
+   **Momento Material Design (unos 15 segundos):** con el color elegido, mostrar que el tema Material Design 3 se genera a partir de ese color y llega a los controles: los chips, los segmentos y las opciones seleccionadas (por ejemplo, el filtro de la lista de facturas o la opción de voto) usan el color de la cooperativa, mientras que el rojo de error y el de aviso no cambian. Decir en una frase que los componentes están centralizados en `src/ui` y que las pantallas no importan Paper directamente (ADR-020).
 3. **Selector de modelo del asistente**: en Ajustes, abrir el selector y mostrar los modelos locales instalados (qwen3:4b-instruct por defecto, qwen3:8b); cambiar de modelo y hacer una pregunta. Decir en una frase que una cooperativa también puede usar un proveedor externo con su propia clave, cifrada en el servidor (ADR-019); no pegues ninguna clave real en pantalla.
 4. **Historial**: en el asistente, abrir el historial de conversaciones, reabrir una y eliminar otra.
 
@@ -85,12 +87,13 @@ Hacer: cerrar sesión y entrar con `admin@sanisidro.test`.
 
 Pantalla: editor.
 
-1. `CLAUDE.md`: el contrato con el agente (reglas no negociables, forma de trabajar, comandos).
+1. `CLAUDE.md`: el contrato con el agente (reglas no negociables, forma de trabajar, comandos) y su sección de skills de la comunidad.
 2. Estructura de un módulo en `apps/api/src/modules/<módulo>/`: `domain`, `application`, `infrastructure` e `index.ts` como única interfaz pública; mencionar la regla ESLint de fronteras.
 3. Un test de dominio (TDD) y señalar un identificador de requisito (`US-...`, `BR-...`) en el nombre.
-4. Un ADR (por ejemplo ADR-013, modelo local para el asistente, o ADR-012, servidor propio) y recordar que hay 19.
+4. Un ADR (por ejemplo ADR-013, modelo local para el asistente, o ADR-012, servidor propio) y recordar que hay 20; el último, ADR-020, es la migración a react-native-paper.
 5. El conjunto de evaluación del asistente (23 preguntas, `ai:eval`) y el benchmark de modelos locales del ADR-013 (qwen3:8b 19/22, qwen3:4b-instruct 18/22, gemma4:e4b 15/22).
-6. Cifras (a fecha 2026-10-21): 941 tests unitarios y 477 de integración, y 119 de 120 commits co-autorados con Claude. Mencionar el trabajo con agentes en paralelo en git worktrees.
+6. Cifras (a fecha 2026-10-21): 1168 tests unitarios y 477 de integración, y 160 de 161 commits co-autorados con Claude.
+7. Proceso con IA, en una o dos frases: `skills-lock.json` y `.agents/skills` (skills de la comunidad fijadas, siempre por debajo de `CLAUDE.md`, los ADR y las especificaciones) y agentes en paralelo: la migración a Paper la hizo un orquestador con un subagente de base, siete en paralelo sobre carpetas de funcionalidad disjuntas, uno de verificación y otro que lanzó la app en web con Playwright, hizo capturas y encontró errores visuales que se corrigieron. Antes también trabajé con agentes en git worktrees.
 
 ### 8:30-9:15 Despliegue
 
@@ -105,5 +108,5 @@ Decir: lo implementado (los siete módulos del MVP), lo que queda (notificacione
 ## Después de grabar
 
 - [ ] Revisar que no aparecen contraseñas, claves, enlaces de invitación vigentes ni datos reales.
-- [ ] Eliminar de la demo los datos creados durante la toma (invitación de prueba, proveedor de ejemplo, conversaciones).
+- [ ] Eliminar de la demo los datos creados durante la toma (invitación de prueba, proveedor de ejemplo, conversaciones) y restaurar el color de marca original.
 - [ ] Subir el vídeo y completar la URL en el README (`<!-- TODO: URL del vídeo -->`) y en la diapositiva 14.

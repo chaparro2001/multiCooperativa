@@ -68,7 +68,7 @@ Permissions are defined by module, level and scope (ADR-004). The backend decide
 
 | Layer            | Choice                                                                                                                                                                                 |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mobile app       | Expo + React Native + TypeScript, Expo Router                                                                                                                                          |
+| Mobile app       | Expo + React Native + TypeScript, Expo Router, react-native-paper (Material Design 3, ADR-020)                                                                                         |
 | Client data      | TanStack Query; tokens in the device's secure storage                                                                                                                                  |
 | User-facing text | i18next + react-i18next + expo-localization; `es` default (ADR-008)                                                                                                                    |
 | Contracts        | Shared package with Zod schemas (validate on the server and type the app)                                                                                                              |
@@ -308,11 +308,12 @@ ADRs are immutable: a decision that changes produces a new ADR.
 - [ADR-017](docs/adr/ADR-017-custom-domain-for-the-web-app.md): custom domain (`cooperativa.chaparro2001.com`) for the web app.
 - [ADR-018](docs/adr/ADR-018-per-cooperative-branding.md): per-cooperative primary colour and logo, set by its administrator.
 - [ADR-019](docs/adr/ADR-019-per-cooperative-hosted-language-model.md): per-cooperative hosted provider (Groq, Mistral, NVIDIA NIM, OpenRouter) with the cooperative's own API key.
+- [ADR-020](docs/adr/ADR-020-react-native-paper-ui-kit.md): react-native-paper (Material Design 3) as the UI kit, with the theme generated from the cooperative's colour.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): bilingual root README for the thesis delivery (bounded exception to ADR-008).
 
 ## 11. Quality
 
-- **Unit tests** (`pnpm test`): 941 tests in 92 files, all green as of 2026-10-21.
+- **Unit tests** (`pnpm test`): 1168 tests in 113 files (API 852, app 295, contracts 21), all green as of 2026-10-21.
 - **Integration tests** (`pnpm test:integration`): against real PostgreSQL and S3 storage, including the isolation test between cooperatives. 477 tests in 25 files, all green (2026-10-21).
 - **CI** (GitHub Actions, on every push and pull request): format check, lint, typecheck, tests, migrations on a Postgres with pgvector, and integration tests. There are also workflows for the GitHub Pages deploy and the due-dates cron.
 - **Local quality gate**: Husky runs lint, typecheck and tests on pre-commit.
@@ -335,7 +336,7 @@ The project was built with Spec Driven Development using Claude Code:
 | Master's topic                      | Evidence in the project                                                                                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Spec Driven Development             | `docs/requirements/`, plan by milestones with ticked tasks, specification IDs in tests and commits                                                           |
-| ADRs and Docs as Code               | `docs/adr/` (19 immutable ADRs), documentation versioned with the code, Mermaid diagrams                                                                     |
+| ADRs and Docs as Code               | `docs/adr/` (20 immutable ADRs), documentation versioned with the code, Mermaid diagrams                                                                     |
 | Clean Architecture with TypeScript  | `domain/application/infrastructure` layers per module, ports and adapters, ESLint module-boundaries rule                                                     |
 | Testing, TDD and quality gate       | Vitest, domain tests first, integration tests, Husky on pre-commit                                                                                           |
 | CI/CD with GitHub Actions           | `ci.yml` (format, lint, typecheck, tests, migrations, integration), Pages deploy and cron                                                                    |
