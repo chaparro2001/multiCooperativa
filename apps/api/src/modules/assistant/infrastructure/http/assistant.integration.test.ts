@@ -281,6 +281,43 @@ describe('US-AI-02 · ask about my data', () => {
     expect(answer.citations[0]).toMatchObject({ kind: 'assembly', resourceId: assemblyId });
   });
 
+  it('US-AI-02 + US-MEM-02: my_contributions gives a member their own capital and nobody else’s (scope own)', async () => {
+    const own = await prisma.membership.findFirstOrThrow({
+      where: { cooperativeId: farm, user: { email: 'member@farm.test' } },
+    });
+    const other = await prisma.membership.findFirstOrThrow({
+      where: { cooperativeId: farm, user: { email: 'admin@farm.test' } },
+    });
+    const movement = (membershipId: string, amount: string, concept: string) => ({
+      cooperativeId: farm,
+      membershipId,
+      date: new Date('2026-01-10'),
+      type: 'mandatory_contribution' as const,
+      concept,
+      amount,
+      recordedByMembershipId: other.id,
+    });
+    await prisma.capitalMovement.createMany({
+      data: [
+        movement(own.id, '600.00', 'My contribution'),
+        movement(other.id, '999.00', 'Someone else contribution'),
+      ],
+    });
+    script = new ScriptedLanguageModel([
+      callTools({ name: 'my_contributions', input: { membership_id: other.id } }),
+      say('Tienes 600 euros de capital.'),
+    ]);
+    const conversationId = await newConversation(member);
+
+    await send(member, conversationId, 'How much capital do I have?');
+
+    expect(script.requests[0]!.tools.map((tool) => tool.name)).toContain('my_contributions');
+    const given = toolResultsIn(script.requests[1]!.messages).join('');
+    expect(given).toContain('600.00');
+    expect(given).toContain('My contribution');
+    expect(given).not.toContain('999.00');
+  });
+
   it('US-AI-02: when the tool finds nothing, the model is told so', async () => {
     await prisma.announcement.deleteMany();
     script = new ScriptedLanguageModel([

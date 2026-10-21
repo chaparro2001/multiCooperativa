@@ -1,5 +1,5 @@
 /** Modules whose data the assistant can read. */
-export type ToolModule = 'documents' | 'invoicing' | 'assemblies' | 'announcements';
+export type ToolModule = 'documents' | 'invoicing' | 'assemblies' | 'announcements' | 'member-area';
 
 export interface ToolSpec {
   readonly name: ToolName;
@@ -21,6 +21,7 @@ export const TOOL_NAMES = [
   'upcoming_assemblies',
   'voting_result',
   'latest_announcements',
+  'my_contributions',
 ] as const;
 export type ToolName = (typeof TOOL_NAMES)[number];
 
@@ -37,7 +38,6 @@ const thirdParty = {
 
 /**
  * Requirements/07, section 3. The order is the order the model sees them.
- * `my_contributions` waits for the member area module (Milestone 5, first task).
  */
 export const TOOL_CATALOG: readonly ToolSpec[] = [
   {
@@ -173,6 +173,24 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
       additionalProperties: false,
     },
     requires: { module: 'announcements', level: 'read' },
+  },
+  {
+    name: 'my_contributions',
+    description:
+      "The user's own share capital (euros) and their latest capital movements. Only the user's own data, never another member's.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        n: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 20,
+          description: 'How many latest movements (default 10).',
+        },
+      },
+      additionalProperties: false,
+    },
+    requires: { module: 'member-area', level: 'read' },
   },
 ];
 

@@ -93,3 +93,44 @@ describe('US-AI-02 · list_third_parties', () => {
     ).not.toContain('list_third_parties');
   });
 });
+
+describe('US-AI-02 · my_contributions (US-MEM-02)', () => {
+  const mine = {
+    partnerNumber: '003',
+    capital: '500.00',
+    latestMovements: [
+      { date: '2026-02-10', type: 'refund', concept: 'Partial', capitalChange: '-100.00' },
+    ],
+  };
+
+  it('BR-AI-02: reads the member area with the caller context and returns the capital as summary', async () => {
+    const myContributions = vi.fn(async () => mine);
+    const executors = createToolExecutors({
+      memberArea: { myContributions },
+    } as unknown as DataSources);
+
+    const output = await executors.my_contributions(context, {});
+
+    expect(myContributions).toHaveBeenCalledWith(context, 10);
+    expect(output.summary).toMatchObject({ capital: '500.00', partnerNumber: '003' });
+    expect(output.items.map((item) => item.data)).toEqual(mine.latestMovements);
+    // Movements are not resources the app opens: nothing to cite.
+    expect(output.items[0]!.source).toBeUndefined();
+  });
+
+  it('BR-AI-03: takes no member id, so it cannot be aimed at another member', async () => {
+    const myContributions = vi.fn(async () => mine);
+    const executors = createToolExecutors({
+      memberArea: { myContributions },
+    } as unknown as DataSources);
+
+    await executors.my_contributions(context, { n: 3, membership_id: 'someone-else' });
+
+    expect(myContributions).toHaveBeenCalledWith(context, 3);
+  });
+
+  it('BR-AI-01: needs member area read', () => {
+    const can = (module: string) => module === 'member-area';
+    expect(availableTools(can).map((tool) => tool.name)).toEqual(['my_contributions']);
+  });
+});

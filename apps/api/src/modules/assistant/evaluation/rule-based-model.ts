@@ -40,6 +40,7 @@ function plan(question: string): { name: string; input: unknown }[] {
   if (q.includes('votacion')) add('voting_result');
   if (q.includes('asamblea') && q.includes('proxima')) add('upcoming_assemblies');
   if (q.includes('comunicado')) add('latest_announcements');
+  if (/capital|aportacion|aportado/.test(q)) add('my_contributions');
   if (/estatutos|quorum|consejo|riego|helicoptero|documento/.test(q)) {
     add('search_documents', { query: question });
   }

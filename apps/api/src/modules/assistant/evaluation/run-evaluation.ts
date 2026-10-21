@@ -10,13 +10,26 @@ type Grants = Record<string, 'read' | 'manage'>;
 
 /** The predefined profiles' permissions in the assistant's modules (requirements/01, section 3). */
 const PROFILES: Record<EvalProfile, Grants> = {
-  member: { announcements: 'read', assemblies: 'read', documents: 'read', assistant: 'read' },
-  manager: { announcements: 'read', documents: 'read', invoicing: 'manage', assistant: 'read' },
+  member: {
+    announcements: 'read',
+    assemblies: 'read',
+    documents: 'read',
+    'member-area': 'read',
+    assistant: 'read',
+  },
+  manager: {
+    announcements: 'read',
+    documents: 'read',
+    invoicing: 'manage',
+    'member-area': 'manage',
+    assistant: 'read',
+  },
   board: {
     announcements: 'manage',
     assemblies: 'manage',
     documents: 'manage',
     invoicing: 'read',
+    'member-area': 'read',
     assistant: 'read',
   },
 };
@@ -32,7 +45,8 @@ function contextFor(profile: EvalProfile): CooperativeContext {
     permissions: Object.entries(PROFILES[profile]).map(([module, level]) => ({
       module,
       level,
-      scope: 'all',
+      // Only the member profile reads its own data in the member area (requirements/01, section 3).
+      scope: profile === 'member' && module === 'member-area' ? 'own' : 'all',
     })),
   } as CooperativeContext;
 }

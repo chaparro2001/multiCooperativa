@@ -134,6 +134,7 @@ export function createApi(deps: ApiDeps): Api {
       invoicing: invoicing.reads,
       assemblies: assemblies.reads,
       announcements: announcements.reads,
+      memberArea: members.reads,
     },
   });
 

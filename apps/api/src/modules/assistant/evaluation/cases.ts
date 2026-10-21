@@ -93,6 +93,15 @@ export const EVALUATION_CASES: readonly EvalCase[] = [
     spec: 'US-AI-02',
   },
   {
+    id: 'member-capital',
+    profile: 'member',
+    question: '¿Cuánto capital tengo aportado?',
+    tools: ['my_contributions'],
+    cites: [],
+    mustContain: ['500.00|500,00'],
+    spec: 'US-AI-02 (US-MEM-02)',
+  },
+  {
     id: 'deny-owed',
     profile: 'member',
     question: '¿Cuánto debemos a los proveedores?',

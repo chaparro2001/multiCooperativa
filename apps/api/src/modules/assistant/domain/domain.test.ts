@@ -30,6 +30,7 @@ const GESTOR: Grants = {
   announcements: 'read',
   documents: 'read',
   invoicing: 'manage',
+  'member-area': 'manage',
   assistant: 'read',
 };
 const CONSEJO: Grants = {
@@ -37,6 +38,7 @@ const CONSEJO: Grants = {
   assemblies: 'manage',
   documents: 'manage',
   invoicing: 'read',
+  'member-area': 'read',
   assistant: 'read',
 };
 
@@ -47,6 +49,7 @@ describe('tools available per profile (BR-AI-01, US-AI-03)', () => {
       'upcoming_assemblies',
       'voting_result',
       'latest_announcements',
+      'my_contributions',
     ]);
   });
 
@@ -59,6 +62,7 @@ describe('tools available per profile (BR-AI-01, US-AI-03)', () => {
       'find_third_party',
       'list_third_parties',
       'latest_announcements',
+      'my_contributions',
     ]);
   });
 

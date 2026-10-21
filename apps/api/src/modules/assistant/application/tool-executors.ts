@@ -6,6 +6,7 @@ import type {
   CooperativeContext,
   FragmentHit,
   InvoicingReads,
+  MemberAreaReads,
 } from './data-sources';
 import type { Source } from '../domain/citations';
 import type { ToolName } from '../domain/tool-catalog';
@@ -33,6 +34,7 @@ export interface DataSources {
   invoicing: InvoicingReads;
   assemblies: AssemblyReads;
   announcements: AnnouncementReads;
+  memberArea: MemberAreaReads;
 }
 
 /** Fragments given to the model per search. */
@@ -72,6 +74,7 @@ const inputs = {
   upcoming_assemblies: z.object({}),
   voting_result: z.object({ assembly_id: z.uuid().optional() }),
   latest_announcements: z.object({ n: z.number().int().min(1).max(10).default(5) }),
+  my_contributions: z.object({ n: z.number().int().min(1).max(20).default(10) }),
 } satisfies Record<ToolName, z.ZodType>;
 
 /** The model sent something the tool cannot use; it can fix it and try again. */
@@ -223,6 +226,14 @@ export function createToolExecutors(src: DataSources): Record<ToolName, ToolExec
           source: record('announcement', row.id, row.title),
         })),
       };
+    },
+
+    /** Always the caller's own capital: the use case reads their membership, whatever the scope. */
+    async my_contributions(context, raw) {
+      const { n } = parse('my_contributions', raw);
+      const mine = await src.memberArea.myContributions(context, n);
+      const { latestMovements, ...summary } = mine;
+      return { items: latestMovements.map((movement) => ({ data: { ...movement } })), summary };
     },
   };
 }

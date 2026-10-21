@@ -129,10 +129,12 @@ const INVOICES = [
   },
 ] as const;
 
-const can = (context: CooperativeContext, module: 'invoicing' | 'assemblies' | 'announcements') =>
+type GuardedModule = 'invoicing' | 'assemblies' | 'announcements' | 'member-area';
+
+const can = (context: CooperativeContext, module: GuardedModule) =>
   hasAccess(context.permissions, module, 'read');
 
-function guard(context: CooperativeContext, module: 'invoicing' | 'assemblies' | 'announcements') {
+function guard(context: CooperativeContext, module: GuardedModule) {
   if (!can(context, module)) throw new ModuleAccessDeniedError(module, 'read');
 }
 
@@ -294,6 +296,29 @@ export function createCannedSources(): DataSources {
             authorName: 'Ana',
           },
         ];
+      },
+    },
+    memberArea: {
+      async myContributions(context, count) {
+        guard(context, 'member-area');
+        return {
+          partnerNumber: '003',
+          capital: '500.00',
+          latestMovements: [
+            {
+              date: '2026-02-10',
+              type: 'refund',
+              concept: 'Devolución parcial',
+              capitalChange: '-100.00',
+            },
+            {
+              date: '2026-01-10',
+              type: 'mandatory_contribution',
+              concept: 'Aportación obligatoria',
+              capitalChange: '600.00',
+            },
+          ].slice(0, count),
+        };
       },
     },
   };
