@@ -6,6 +6,7 @@ import {
   listProfilesResponseSchema,
   memberSchema,
   myPermissionsResponseSchema,
+  resendInvitationResponseSchema,
 } from '@multicooperativa/contracts';
 import request from 'supertest';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
@@ -13,7 +14,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestPrisma, resetDatabase } from '../../../../../test/database';
 import { createApp } from '../../../../app';
 import { loadEnv } from '../../../../config/env';
-import { createAccessModule, type InvitationSender } from '../../index';
+import { createAccessModule, type InvitationSender, LinkInvitationSender } from '../../index';
 
 const prisma = createTestPrisma();
 const sent: Parameters<InvitationSender['send']>[0][] = [];
@@ -183,7 +184,8 @@ describe('member lifecycle (US-ACC-08, US-ACC-09, US-ACC-10)', () => {
     const resent = await request(app)
       .post(`/cooperatives/${fieldCoop}/members/${membershipId}/invitation`)
       .set(as(adminToken));
-    expect(resent.status).toBe(204);
+    expect(resent.status).toBe(200);
+    expect(resendInvitationResponseSchema.parse(resent.body).invitationUrl).toBeUndefined();
     const [first, second] = sent;
 
     const old = await request(app)
@@ -345,5 +347,105 @@ describe('isolation between cooperatives (ADR-003)', () => {
         (await prisma.profile.findUniqueOrThrow({ where: { id: profile.id } })).cooperativeId,
       ).toBe(seaCoop);
     }
+  });
+});
+
+describe('administrator-delivered links (US-ACC-08, ADR-016)', () => {
+  const WEB_APP_URL = 'https://coop.example/multiCooperativa';
+  const linkAccess = createAccessModule({
+    prisma,
+    jwtSecret: loadEnv(process.env).JWT_SECRET,
+    authRateLimits: false,
+    invitationSender: new LinkInvitationSender(WEB_APP_URL),
+  });
+  const linkApp = createApp({
+    routers: [linkAccess.router],
+    errorHandlers: [linkAccess.errorHandler],
+  });
+  const tokenOf = (url: string) => new URL(url).searchParams.get('token')!;
+
+  async function inviteByLink(email: string, token = adminToken) {
+    return request(linkApp)
+      .post(`/cooperatives/${fieldCoop}/members`)
+      .set(as(token))
+      .send({
+        email,
+        name: 'Margaret',
+        profileId: await profileId(fieldCoop, 'Socio'),
+        isPartner: true,
+      });
+  }
+
+  it('the invite response gives the administrator the web link and its expiry', async () => {
+    const response = await inviteByLink('margaret@campo.es');
+
+    expect(response.status).toBe(201);
+    const body = inviteMemberResponseSchema.parse(response.body);
+    expect(body.invitationUrl).toMatch(
+      /^https:\/\/coop\.example\/multiCooperativa\/invitation\?token=[\w-]+$/,
+    );
+    const days = (Date.parse(body.expiresAt) - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(6.9);
+    expect(days).toBeLessThanOrEqual(7);
+  });
+
+  it('the token in the link activates the account and it is single use (BR-ACC-10)', async () => {
+    const body = inviteMemberResponseSchema.parse((await inviteByLink('margaret@campo.es')).body);
+    const token = tokenOf(body.invitationUrl!);
+
+    const first = await request(linkApp)
+      .post('/auth/invitations/accept')
+      .send({ token, password: PASSWORD });
+    const second = await request(linkApp)
+      .post('/auth/invitations/accept')
+      .send({ token, password: PASSWORD });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(410);
+    expect(await login('margaret@campo.es')).toBeTruthy();
+  });
+
+  it('resending returns a new link and the previous one stops working', async () => {
+    const body = inviteMemberResponseSchema.parse((await inviteByLink('margaret@campo.es')).body);
+    const resent = await request(linkApp)
+      .post(`/cooperatives/${fieldCoop}/members/${body.membershipId}/invitation`)
+      .set(as(adminToken));
+
+    expect(resent.status).toBe(200);
+    const issued = resendInvitationResponseSchema.parse(resent.body);
+    expect(tokenOf(issued.invitationUrl!)).not.toBe(tokenOf(body.invitationUrl!));
+
+    const old = await request(linkApp)
+      .post('/auth/invitations/accept')
+      .send({ token: tokenOf(body.invitationUrl!), password: PASSWORD });
+    const current = await request(linkApp)
+      .post('/auth/invitations/accept')
+      .send({ token: tokenOf(issued.invitationUrl!), password: PASSWORD });
+    expect(old.status).toBe(410);
+    expect(current.status).toBe(200);
+  });
+
+  it('whoever cannot manage users gets 403 and no link', async () => {
+    const { token: socioToken } = await activeMember('socio@campo.es');
+    const { membershipId } = inviteMemberResponseSchema.parse(
+      (await inviteByLink('margaret@campo.es')).body,
+    );
+
+    const invited = await inviteByLink('other@campo.es', socioToken);
+    const resent = await request(linkApp)
+      .post(`/cooperatives/${fieldCoop}/members/${membershipId}/invitation`)
+      .set(as(socioToken));
+
+    expect(invited.status).toBe(403);
+    expect(resent.status).toBe(403);
+    expect(JSON.stringify([invited.body, resent.body])).not.toContain('invitation?token');
+  });
+
+  it('the list of members never carries the link', async () => {
+    await inviteByLink('margaret@campo.es');
+    const list = await request(linkApp)
+      .get(`/cooperatives/${fieldCoop}/members`)
+      .set(as(adminToken));
+    expect(JSON.stringify(list.body)).not.toContain('token');
   });
 });

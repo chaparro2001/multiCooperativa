@@ -88,6 +88,12 @@ export async function listProfiles(
   return deps.members.listProfiles(context.cooperativeId);
 }
 
+/** What the inviting administrator gets back; `invitationUrl` only with administrator delivery (ADR-016). */
+export interface InvitationIssued {
+  expiresAt: Date;
+  invitationUrl?: string;
+}
+
 export interface InviteMemberInput {
   email: string;
   /** Used only if the email is new on the platform; an existing user keeps theirs. */
@@ -102,7 +108,7 @@ export async function inviteMember(
   deps: MemberDeps,
   context: CooperativeContext,
   input: InviteMemberInput,
-): Promise<{ membershipId: string }> {
+): Promise<InvitationIssued & { membershipId: string }> {
   requireUserManagement(context);
   const profile = await findProfileOrFail(deps, context, input.profileId);
 
@@ -125,13 +131,17 @@ export async function inviteMember(
   });
   if (created === 'already_member') throw new MemberAlreadyExistsError();
 
-  await deps.invitationSender.send({
+  const delivery = await deps.invitationSender.send({
     email,
     cooperativeId: context.cooperativeId,
     token,
     expiresAt,
   });
-  return { membershipId: created.membershipId };
+  return {
+    membershipId: created.membershipId,
+    expiresAt,
+    ...(delivery?.invitationUrl && { invitationUrl: delivery.invitationUrl }),
+  };
 }
 
 export type MemberChange = { profileId: string } | { status: 'active' | 'suspended' };
@@ -217,7 +227,7 @@ export async function resendInvitation(
   deps: MemberDeps,
   context: CooperativeContext,
   membershipId: string,
-): Promise<void> {
+): Promise<InvitationIssued> {
   requireUserManagement(context);
   const token = deps.secrets.generate();
   const { expiresAt } = issueInvitation(deps.now());
@@ -230,12 +240,13 @@ export async function resendInvitation(
     };
   });
 
-  await deps.invitationSender.send({
+  const delivery = await deps.invitationSender.send({
     email: member.email,
     cooperativeId: context.cooperativeId,
     token,
     expiresAt,
   });
+  return { expiresAt, ...(delivery?.invitationUrl && { invitationUrl: delivery.invitationUrl }) };
 }
 
 /** US-ACC-12: only this cooperative's events, newest first. */

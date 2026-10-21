@@ -78,7 +78,19 @@ export const inviteMemberRequestSchema = z.object({
   partnerNumber: z.string().trim().max(50).nullable().optional(),
 });
 
-export const inviteMemberResponseSchema = z.object({ membershipId: z.uuid() });
+/**
+ * Invitation just issued. `invitationUrl` is the web activation link (ADR-016): present only when
+ * the server delivers links through the administrator, who is the only caller of this endpoint.
+ */
+export const invitationIssuedSchema = z.object({
+  expiresAt: z.iso.datetime(),
+  invitationUrl: z.url().optional(),
+});
+
+export const inviteMemberResponseSchema = invitationIssuedSchema.extend({ membershipId: z.uuid() });
+
+/** POST /cooperatives/{id}/members/{memberId}/invitation: a new link; the previous one stops working. */
+export const resendInvitationResponseSchema = invitationIssuedSchema;
 
 /** PATCH /cooperatives/{id}/members/{memberId}: one change at a time (US-ACC-09, US-ACC-10). */
 export const updateMemberRequestSchema = z.union([
@@ -111,6 +123,7 @@ export type ListMembersResponse = z.infer<typeof listMembersResponseSchema>;
 export type ListProfilesResponse = z.infer<typeof listProfilesResponseSchema>;
 export type InviteMemberRequest = z.infer<typeof inviteMemberRequestSchema>;
 export type InviteMemberResponse = z.infer<typeof inviteMemberResponseSchema>;
+export type ResendInvitationResponse = z.infer<typeof resendInvitationResponseSchema>;
 export type UpdateMemberRequest = z.infer<typeof updateMemberRequestSchema>;
 export type AuditEvent = z.infer<typeof auditEventSchema>;
 export type ListAuditResponse = z.infer<typeof listAuditResponseSchema>;

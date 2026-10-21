@@ -1,4 +1,4 @@
-import type { InvitationSender } from '../application/ports/invitation-sender';
+import type { InvitationDelivery, InvitationSender } from '../application/ports/invitation-sender';
 import { InvitationDeliveryUnavailableError } from '../application/errors';
 
 /** Deep link that opens the activation screen of the app (scheme in apps/mobile/app.json). */
@@ -24,4 +24,41 @@ export class UnavailableInvitationSender implements InvitationSender {
   async send(): Promise<void> {
     throw new InvitationDeliveryUnavailableError();
   }
+}
+
+/** Web activation page, served by the hosted web app under its base path (ADR-016). */
+export function invitationWebUrl(webAppUrl: string, token: string): string {
+  return `${webAppUrl.replace(/\/+$/, '')}/invitation?token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Administrator delivery (ADR-016): nothing is sent; the link goes back in the response to the
+ * administrator who issued it (the only one who can already grant access) so they pass it on.
+ * It never writes the token to the log (NFR-ACC-08).
+ */
+export class LinkInvitationSender implements InvitationSender {
+  constructor(private readonly webAppUrl: string) {}
+
+  async send(invitation: { token: string }): Promise<InvitationDelivery> {
+    return { invitationUrl: invitationWebUrl(this.webAppUrl, invitation.token) };
+  }
+}
+
+export type InvitationDeliveryMode = 'console' | 'link';
+
+/**
+ * `link` works everywhere; `console` prints the token, so in production it is replaced by the
+ * sender that refuses (503) rather than leaking tokens to the logs.
+ */
+export function createInvitationSender(options: {
+  delivery: InvitationDeliveryMode;
+  webAppUrl?: string;
+  production: boolean;
+}): InvitationSender {
+  if (options.delivery === 'link') {
+    if (!options.webAppUrl)
+      throw new Error('WEB_APP_URL is required with INVITATION_DELIVERY=link');
+    return new LinkInvitationSender(options.webAppUrl);
+  }
+  return options.production ? new UnavailableInvitationSender() : new ConsoleInvitationSender();
 }

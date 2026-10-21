@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { inviteMemberRequestSchema, updateMemberRequestSchema } from './access';
+import {
+  inviteMemberResponseSchema,
+  inviteMemberRequestSchema,
+  resendInvitationResponseSchema,
+  updateMemberRequestSchema,
+} from './access';
 
 const profileId = '10000000-0000-4000-8000-000000000001';
 
@@ -24,5 +29,20 @@ describe('member contracts', () => {
       false,
     );
     expect(updateMemberRequestSchema.safeParse({}).success).toBe(false);
+  });
+
+  it('ADR-016: the invitation response carries the expiry and, optionally, the activation link', () => {
+    const expiresAt = '2026-10-28T10:00:00.000Z';
+    const membershipId = crypto.randomUUID();
+    const invitationUrl = 'https://coop.example/multiCooperativa/invitation?token=abc';
+
+    expect(inviteMemberResponseSchema.safeParse({ membershipId, expiresAt }).success).toBe(true);
+    expect(
+      inviteMemberResponseSchema.parse({ membershipId, expiresAt, invitationUrl }).invitationUrl,
+    ).toBe(invitationUrl);
+    expect(resendInvitationResponseSchema.safeParse({ expiresAt, invitationUrl }).success).toBe(
+      true,
+    );
+    expect(resendInvitationResponseSchema.safeParse({ invitationUrl: 'nope' }).success).toBe(false);
   });
 });

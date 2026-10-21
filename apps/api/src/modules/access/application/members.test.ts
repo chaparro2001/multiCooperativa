@@ -156,6 +156,26 @@ describe('invite (US-ACC-08)', () => {
   });
 });
 
+describe('administrator delivery (ADR-016)', () => {
+  it('returns the expiry and, when the sender produces one, the link; nothing otherwise', async () => {
+    const plain = await invite('plain@campo.es');
+    expect(plain).toMatchObject({ expiresAt: new Date('2026-10-17T10:00:00Z') });
+    expect(plain).not.toHaveProperty('invitationUrl');
+
+    deps.invitationSender = {
+      send: async ({ token }) => ({ invitationUrl: `https://w/i?token=${token}` }),
+    };
+    const linked = await invite('linked@campo.es');
+    expect(linked.invitationUrl).toBe('https://w/i?token=token-2');
+
+    const resent = await resendInvitation(deps, ctx, linked.membershipId);
+    expect(resent).toEqual({
+      expiresAt: new Date('2026-10-17T10:00:00Z'),
+      invitationUrl: 'https://w/i?token=token-3',
+    });
+  });
+});
+
 describe('resend invitation (US-ACC-08)', () => {
   it('Given a pending invitation, when I resend it, then the previous one is invalidated and a new one is issued', async () => {
     const { membershipId } = await invite('grace@campo.es');

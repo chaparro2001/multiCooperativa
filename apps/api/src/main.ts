@@ -1,6 +1,6 @@
 import { createApi } from './api';
 import { loadEnv } from './config/env';
-import { ConsoleInvitationSender, UnavailableInvitationSender } from './modules/access';
+import { createInvitationSender } from './modules/access';
 import { createGeminiLanguageModel, createOllamaModelRuntime } from './modules/assistant';
 import { GeminiEmbedder, OllamaEmbedder } from './modules/documents';
 import {
@@ -56,9 +56,13 @@ const { app, indexing, runDueDates } = createApi({
         })
       : null,
   assistantMessageLimitPerHour: env.ASSISTANT_MESSAGE_LIMIT_PER_HOUR,
-  // No email provider yet: in development the link is printed to the console;
-  // in production inviting returns 503 until one is configured.
-  invitationSender: production ? new UnavailableInvitationSender() : new ConsoleInvitationSender(),
+  // No email provider (ADR-016): with `link` the administrator receives the link and passes it on;
+  // `console` prints it in development and, in production, answers 503 instead of logging tokens.
+  invitationSender: createInvitationSender({
+    delivery: env.INVITATION_DELIVERY,
+    webAppUrl: env.WEB_APP_URL,
+    production,
+  }),
   // In production the API sits behind the host's proxy (Render): one hop.
   trustProxy: production ? 1 : false,
   corsOrigins: env.CORS_ORIGINS,

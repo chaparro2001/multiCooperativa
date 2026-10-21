@@ -93,6 +93,13 @@ const envSchema = z
           .filter(Boolean),
       )
       .pipe(z.array(z.url({ protocol: /^https?$/ }))),
+    /** How invitation links reach the invitee: printed to the API console (development) or returned to the inviting administrator (ADR-016). In production `console` makes inviting answer 503. */
+    INVITATION_DELIVERY: z.enum(['console', 'link']).default('console'),
+    /** Public URL of the web app (with its base path); invitation links are `${WEB_APP_URL}/invitation?token=…`. Required with INVITATION_DELIVERY=link. */
+    WEB_APP_URL: z
+      .url({ protocol: /^https?$/ })
+      .transform((value) => value.replace(/\/+$/, ''))
+      .optional(),
     /** Bearer secret of `POST /jobs/due-dates` (external scheduler). Without it the endpoint does not exist. */
     JOBS_TOKEN: z.string().min(32).optional(),
   })
@@ -113,6 +120,13 @@ const envSchema = z
         code: 'custom',
         path: ['OLLAMA_URL'],
         message: 'required with ASSISTANT_LLM_PROVIDER=ollama',
+      });
+    }
+    if (env.INVITATION_DELIVERY === 'link' && !env.WEB_APP_URL) {
+      context.addIssue({
+        code: 'custom',
+        path: ['WEB_APP_URL'],
+        message: 'required with INVITATION_DELIVERY=link',
       });
     }
     if (env.NODE_ENV !== 'production') return;

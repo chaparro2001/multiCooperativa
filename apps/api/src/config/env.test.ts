@@ -35,6 +35,7 @@ describe('loadEnv', () => {
       ASSISTANT_OLLAMA_TIMEOUT_MS: 90_000,
       ASSISTANT_MESSAGE_LIMIT_PER_HOUR: 30,
       CORS_ORIGINS: ['http://localhost:8081'],
+      INVITATION_DELIVERY: 'console',
     });
   });
 
@@ -211,6 +212,33 @@ describe('loadEnv', () => {
     expect(loadEnv(required).S3_PUBLIC_ENDPOINT).toBeUndefined();
     expect(() => loadEnv({ ...required, S3_PUBLIC_ENDPOINT: 'not a url' })).toThrow(
       /S3_PUBLIC_ENDPOINT/,
+    );
+  });
+});
+
+describe('invitation delivery (ADR-016)', () => {
+  it('defaults to console and needs no web URL', () => {
+    expect(loadEnv(required)).toMatchObject({ INVITATION_DELIVERY: 'console' });
+    expect(loadEnv(required).WEB_APP_URL).toBeUndefined();
+  });
+
+  it('link delivery requires WEB_APP_URL, a valid http(s) URL; the trailing slash is dropped', () => {
+    expect(() => loadEnv({ ...required, INVITATION_DELIVERY: 'link' })).toThrow(/WEB_APP_URL/);
+    expect(() =>
+      loadEnv({ ...required, INVITATION_DELIVERY: 'link', WEB_APP_URL: 'not a url' }),
+    ).toThrow(/WEB_APP_URL/);
+    expect(
+      loadEnv({
+        ...required,
+        INVITATION_DELIVERY: 'link',
+        WEB_APP_URL: 'https://coop.example/multiCooperativa/',
+      }).WEB_APP_URL,
+    ).toBe('https://coop.example/multiCooperativa');
+  });
+
+  it('rejects unknown modes', () => {
+    expect(() => loadEnv({ ...required, INVITATION_DELIVERY: 'email' })).toThrow(
+      /INVITATION_DELIVERY/,
     );
   });
 });
