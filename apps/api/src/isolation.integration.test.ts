@@ -53,6 +53,9 @@ let validBodies: Record<string, object>;
 /** Marks a route that receives a PDF as multipart/form-data. */
 const MULTIPART_PDF = { multipartField: 'file' } as const;
 
+/** Marks a route that receives a PNG logo as multipart/form-data. */
+const MULTIPART_LOGO = { multipartField: 'file', logo: true } as const;
+
 async function snapshot() {
   return {
     thirdParties: await prisma.thirdParty.findMany({
@@ -96,6 +99,7 @@ async function snapshot() {
       where: { cooperativeId: fieldCoop },
       orderBy: { id: 'asc' },
     }),
+    branding: await prisma.cooperativeBranding.findMany({ where: { cooperativeId: fieldCoop } }),
     invitations: await prisma.invitation.count(),
     audit: await prisma.auditEvent.count({ where: { cooperativeId: fieldCoop } }),
   };
@@ -295,6 +299,7 @@ beforeAll(async () => {
     'POST /cooperatives/:cooperativeId/assistant/conversations/:conversationId/messages': {
       content: 'Hello',
     },
+    'DELETE /cooperatives/:cooperativeId/assistant/conversations/:conversationId': {},
     'POST /cooperatives/:cooperativeId/assistant/messages/:messageId/rating': {
       rating: 'helpful',
     },
@@ -304,6 +309,8 @@ beforeAll(async () => {
       concept: 'Extra',
       amount: '50.00',
     },
+    'PUT /cooperatives/:cooperativeId/branding/primary-color': { primaryColor: '#1E5AA8' },
+    'PUT /cooperatives/:cooperativeId/branding/logo': MULTIPART_LOGO,
     'POST /cooperatives/:cooperativeId/members': {
       email: 'new@sea.test',
       name: 'New',
@@ -323,6 +330,13 @@ const send = (route: RegisteredRoute, path: string, token?: string, body: object
   const call = request(app)[route.method](path);
   if (token) call.set('Authorization', `Bearer ${token}`);
   if (route.method === 'get') return call;
+  if (body === MULTIPART_LOGO) {
+    const png = Buffer.alloc(33);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png);
+    png.writeUInt32BE(10, 16);
+    png.writeUInt32BE(10, 20);
+    return call.attach(MULTIPART_LOGO.multipartField, png, 'logo.png');
+  }
   if (body === MULTIPART_PDF) {
     return call.attach(MULTIPART_PDF.multipartField, Buffer.from('%PDF-1.4 test'), 'a.pdf');
   }

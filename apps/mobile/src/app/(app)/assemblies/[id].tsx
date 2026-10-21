@@ -18,6 +18,7 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 import { openUrl } from '@/ui/open-url';
 import { confirmAction } from '@/ui/confirm';
@@ -170,6 +171,7 @@ function PointCard({
   onError(message: string | null): void;
   onOpenAttachment(attachmentId: string): Promise<void>;
 }) {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const control = useVotingControl();
   const addDocument = useAddPointDocument();
@@ -209,7 +211,7 @@ function PointCard({
           onPress={() => run(() => onOpenAttachment(attachment.id))}
           style={({ pressed }) => [styles.attachment, pressed && styles.pressed]}
         >
-          <Text style={styles.attachmentName}>{attachment.name}</Text>
+          <Text style={[styles.attachmentName, { color: brand }]}>{attachment.name}</Text>
           <Text style={styles.meta}>{formatSize(attachment.size)}</Text>
         </Pressable>
       ))}
@@ -265,6 +267,7 @@ function PointCard({
 }
 
 function VotingBlock({ pointId, voting }: { pointId: string; voting: VotingView }) {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   if (voting.status === 'pending') {
     return <Badge label={t('enums.votingStatus.pending')} />;
@@ -309,7 +312,7 @@ function VotingBlock({ pointId, voting }: { pointId: string; voting: VotingView 
         </Text>
       )}
       {voting.myVote && (
-        <Text style={styles.myVote}>
+        <Text style={[styles.myVote, { color: brand }]}>
           {t('assemblies.detail.myVote', { choice: t(`enums.voteChoice.${voting.myVote}`) })}
         </Text>
       )}

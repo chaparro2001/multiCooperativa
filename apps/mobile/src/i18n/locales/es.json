@@ -10,6 +10,7 @@
       "cancel": "Cancelar",
       "close": "Cerrar",
       "confirm": "Confirmar",
+      "delete": "Eliminar",
       "edit": "Editar",
       "publish": "Publicar",
       "remove": "Quitar",
@@ -144,6 +145,12 @@
         "not_pdf": "Solo se admiten adjuntos en PDF.",
         "too_large": "Cada adjunto puede ocupar como máximo 10 MB."
       },
+      "logo_rejected": {
+        "svg_not_allowed": "El logo no puede ser un SVG. Usa una imagen PNG o JPEG.",
+        "unsupported_type": "El logo debe ser una imagen PNG o JPEG.",
+        "too_large": "El logo puede ocupar como máximo 1 MB.",
+        "too_large_dimensions": "El logo puede medir como máximo 1024 x 1024 píxeles."
+      },
       "file_rejected": {
         "not_pdf": "Solo se admiten documentos en PDF.",
         "too_large": "El documento puede ocupar como máximo 20 MB.",
@@ -200,6 +207,8 @@
       "assistant_provider_unreachable": "No se ha podido contactar con el proveedor para comprobar la clave. Inténtalo más tarde.",
       "assistant_refused": "El asistente no puede responder a esta pregunta.",
       "internal_error": "Ha ocurrido un error en el servidor. Inténtalo de nuevo.",
+      "insufficient_contrast": "Con ese color el texto blanco no se leería bien (contraste {{ratio}}:1; se necesita al menos {{minimum}}:1). Elige un color más oscuro.",
+      "invalid_color": "Escribe el color como #RRGGBB, por ejemplo #1E5AA8.",
       "invalid_movement": "Revisa los datos del movimiento.",
       "insufficient_capital": "El movimiento dejaría el capital del socio en negativo: el reembolso no puede superar el capital disponible."
     }
@@ -280,6 +289,33 @@
         "unavailable": "Este servidor no tiene activados los proveedores externos."
       }
     },
+    "appearance": {
+      "title": "Apariencia",
+      "description": "El color y el logo de tu cooperativa los ven todos sus miembros en la aplicación.",
+      "color": {
+        "title": "Color principal",
+        "hex": "Color (#RRGGBB)",
+        "invalid": "Escribe el color como #RRGGBB, por ejemplo #1E5AA8.",
+        "contrastOk": "Contraste con el texto blanco: {{ratio}}:1. Se lee bien.",
+        "contrastLow": "Contraste con el texto blanco: {{ratio}}:1. Es insuficiente: se necesita al menos 4,5:1.",
+        "preview": "Así se verán los botones:",
+        "previewPrimary": "Botón principal",
+        "previewSecondary": "Botón secundario",
+        "save": "Guardar color",
+        "saved": "Color guardado.",
+        "reset": "Volver al color por defecto"
+      },
+      "logo": {
+        "title": "Logo",
+        "description": "Imagen PNG o JPEG de hasta 1 MB. Se muestra en la pantalla de inicio.",
+        "none": "Tu cooperativa aún no tiene logo.",
+        "choose": "Elegir logo",
+        "change": "Cambiar logo",
+        "remove": "Quitar logo",
+        "removeTitle": "Quitar el logo",
+        "removeMessage": "La cooperativa se quedará sin logo. Puedes subir otro cuando quieras."
+      }
+    },
     "signOut": "Cerrar sesión"
   },
   "cooperatives": {
@@ -303,6 +339,16 @@
     "send": "Enviar",
     "thinking": "Pensando…",
     "newConversation": "Nueva",
+    "history": {
+      "open": "Historial",
+      "title": "Historial",
+      "new": "Nueva conversación",
+      "empty": "Todavía no tienes conversaciones. Tus preguntas al asistente aparecerán aquí.",
+      "privacy": "Solo tú ves tus conversaciones. Puedes eliminarlas cuando quieras.",
+      "delete": "Eliminar conversación",
+      "deleteTitle": "¿Eliminar la conversación?",
+      "deleteMessage": "Se borrarán sus mensajes y valoraciones. No se puede deshacer."
+    },
     "sources": "Fuentes",
     "citationPage": "{{title}} · pág. {{page}}",
     "openSource": "Abrir {{title}}",

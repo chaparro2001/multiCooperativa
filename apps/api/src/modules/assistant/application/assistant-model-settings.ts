@@ -31,7 +31,7 @@ import {
 import type { LanguageModel } from './ports/language-model';
 import type { AssistantSettingStore, AuditRecorder, LocalModelRuntime } from './ports/local-models';
 
-/** The cooperative's own account at a hosted provider (ADR-018). */
+/** The cooperative's own account at a hosted provider (ADR-019). */
 export interface HostedModelDeps {
   store: HostedSettingStore;
   gateway: HostedProviderGateway;
@@ -185,7 +185,7 @@ function keyFor(
 }
 
 /**
- * US-AI-07, ADR-018: use the cooperative's own account at a hosted provider. The key is checked
+ * US-AI-07, ADR-019: use the cooperative's own account at a hosted provider. The key is checked
  * against `GET /models` before anything is saved (401/403 -> key invalid, model not listed ->
  * not available, provider down -> unreachable) and is stored encrypted; it is never returned or audited.
  */
@@ -253,7 +253,7 @@ async function resolveServerModel(
 /**
  * The model one request of this cooperative runs on. A cooperative on a hosted provider uses its
  * own decrypted key and, when that provider fails, the server's own model answers instead
- * (ADR-018); everyone else gets the local choice (ADR-014) or the default model. A stored key
+ * (ADR-019); everyone else gets the local choice (ADR-014) or the default model. A stored key
  * that cannot be decrypted (the master key changed) also falls back to the server's model.
  */
 export async function resolveCooperativeLanguageModel(

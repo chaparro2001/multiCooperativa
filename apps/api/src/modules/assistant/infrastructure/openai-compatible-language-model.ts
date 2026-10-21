@@ -120,7 +120,7 @@ export function errorForStatus(status: number, what: string): HostedProviderErro
 }
 
 /**
- * A hosted OpenAI-compatible provider behind the language-model port (NFR-AI-02, ADR-018).
+ * A hosted OpenAI-compatible provider behind the language-model port (NFR-AI-02, ADR-019).
  * `POST {baseUrl}/chat/completions` with function tools, not streamed. The history goes on every
  * call. The API key travels only in the Authorization header and never appears in an error.
  */

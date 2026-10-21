@@ -55,7 +55,7 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...required, ASSISTANT_MESSAGE_LIMIT_PER_HOUR: '0' })).toThrow();
   });
 
-  it('ADR-018: the secrets key is optional and must be 32 bytes in base64', () => {
+  it('ADR-019: the secrets key is optional and must be 32 bytes in base64', () => {
     expect(loadEnv(required).ASSISTANT_SECRETS_KEY).toBeUndefined();
     const key = Buffer.alloc(32, 7).toString('base64');
     expect(loadEnv({ ...required, ASSISTANT_SECRETS_KEY: key }).ASSISTANT_SECRETS_KEY).toBe(key);

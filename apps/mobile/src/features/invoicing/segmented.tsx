@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 /** Two or three exclusive choices as a pill row. */
@@ -54,12 +55,17 @@ export function Chip({
   onPress(): void;
   testID?: string;
 }) {
+  const brand = useBrandColor();
   return (
     <Pressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
       onPress={onPress}
-      style={[chipStyles.chip, selected && chipStyles.chipSelected]}
+      style={[
+        chipStyles.chip,
+        selected && chipStyles.chipSelected,
+        selected && { backgroundColor: brand, borderColor: brand },
+      ]}
       testID={testID}
     >
       <Text style={[chipStyles.text, selected && chipStyles.textSelected]}>{label}</Text>

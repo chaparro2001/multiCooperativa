@@ -71,12 +71,34 @@ export class PrismaConversationStore implements ConversationStore {
     });
   }
 
-  list(cooperativeId: string, membershipId: string): Promise<ConversationRecord[]> {
+  list(
+    cooperativeId: string,
+    membershipId: string,
+    page?: { limit: number; before?: Date },
+  ): Promise<ConversationRecord[]> {
     return this.prisma.assistantConversation.findMany({
-      where: { cooperativeId, membershipId },
+      where: {
+        cooperativeId,
+        membershipId,
+        title: { not: null },
+        ...(page?.before ? { updatedAt: { lt: page.before } } : {}),
+      },
       orderBy: { updatedAt: 'desc' },
+      take: page?.limit,
       select: conversationSelect,
     });
+  }
+
+  /** The messages (and their ratings) go with it: the foreign key cascades. */
+  async remove(
+    cooperativeId: string,
+    membershipId: string,
+    conversationId: string,
+  ): Promise<boolean> {
+    const { count } = await this.prisma.assistantConversation.deleteMany({
+      where: { id: conversationId, cooperativeId, membershipId },
+    });
+    return count > 0;
   }
 
   find(

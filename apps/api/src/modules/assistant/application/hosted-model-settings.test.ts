@@ -30,7 +30,7 @@ import { FakeHostedGateway, FakeSecretCipher, InMemoryHostedStore } from './test
 import { InMemoryConversationStore } from './testing/in-memory-conversation-store';
 import { say, ScriptedLanguageModel } from './testing/scripted-language-model';
 
-/** US-AI-07 (extended), ADR-018: a cooperative's own key at a hosted provider. */
+/** US-AI-07 (extended), ADR-019: a cooperative's own key at a hosted provider. */
 
 const COOP = '11111111-1111-4111-8111-111111111111';
 const OTHER_COOP = '22222222-2222-4222-8222-222222222222';
@@ -306,7 +306,7 @@ describe('going back to local', () => {
   });
 });
 
-describe('the assistant uses the hosted provider (ADR-018)', () => {
+describe('the assistant uses the hosted provider (ADR-019)', () => {
   const hostedModel = (script: (request: ModelRequest) => never | ReturnType<typeof say>) =>
     new ScriptedLanguageModel(script);
 

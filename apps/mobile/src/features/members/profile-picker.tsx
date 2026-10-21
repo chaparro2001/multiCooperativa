@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { ErrorText, Loading } from '@/ui/screen';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 import { useProfiles } from './queries';
@@ -15,6 +16,7 @@ export function ProfilePicker({
   value: string | null;
   onChange(profileId: string): void;
 }) {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const profiles = useProfiles();
   if (profiles.isPending) return <Loading />;
@@ -30,7 +32,11 @@ export function ProfilePicker({
             accessibilityRole="radio"
             accessibilityState={{ checked: value === profile.id }}
             onPress={() => onChange(profile.id)}
-            style={[styles.chip, value === profile.id && styles.chipSelected]}
+            style={[
+              styles.chip,
+              value === profile.id && styles.chipSelected,
+              value === profile.id && { backgroundColor: brand, borderColor: brand },
+            ]}
             testID={`profile-${profile.name}`}
           >
             <Text style={[styles.chipText, value === profile.id && styles.chipTextSelected]}>

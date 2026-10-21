@@ -1,5 +1,5 @@
-import { router, Stack } from 'expo-router';
-import { useRef, useState } from 'react';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
@@ -13,9 +13,13 @@ import {
 } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { useBrandColor, useBrandTint } from '@/branding/brand';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { type ChatMessage, citationTarget, suggestedQuestions } from '@/features/assistant/chat';
+import { MarkdownText } from '@/features/assistant/markdown-text';
 import {
+  useConversation,
+  useConversationExists,
   useCreateConversation,
   useRateMessage,
   useSendMessage,
@@ -36,6 +40,8 @@ export default function AssistantScreen() {
 function Chat() {
   const { t } = useTranslation();
   const { permissions } = useActiveCooperative();
+  const brand = useBrandColor();
+  const tint = useBrandTint();
   const createConversation = useCreateConversation();
   const sendMessage = useSendMessage();
   const rateMessage = useRateMessage();
@@ -45,6 +51,53 @@ function Chat() {
   const [error, setError] = useState<string | null>(null);
   const list = useRef<FlatList<ChatMessage>>(null);
   const busy = createConversation.isPending || sendMessage.isPending;
+  // US-AI-04: the history opens a conversation with `conversation`, or starts a new one with `fresh`.
+  const { conversation: openId, fresh } = useLocalSearchParams<{
+    conversation?: string;
+    fresh?: string;
+  }>();
+  const opened = useConversation(openId);
+  const exists = useConversationExists();
+
+  function reset() {
+    setMessages([]);
+    setConversationId(null);
+    setError(null);
+    router.setParams({ conversation: undefined, fresh: undefined });
+  }
+
+  // Reopened conversation: its messages come from the server once, then the chat continues locally.
+  useEffect(() => {
+    if (!openId || opened.isFetching) return;
+    if (opened.data && opened.data.id !== conversationId) {
+      setConversationId(opened.data.id);
+      setMessages(opened.data.messages);
+      setError(null);
+    } else if (opened.error) {
+      setError(messageFor(opened.error));
+    }
+  }, [openId, opened.data, opened.error, opened.isFetching, conversationId]);
+
+  // "New conversation" from the history.
+  const lastFresh = useRef(fresh);
+  useEffect(() => {
+    if (fresh && fresh !== lastFresh.current) reset();
+    lastFresh.current = fresh;
+  }, [fresh]);
+
+  // Coming back from the history, the open conversation may have been deleted there.
+  useFocusEffect(
+    useCallback(() => {
+      if (!conversationId) return;
+      let current = true;
+      void exists(conversationId).then((found) => {
+        if (current && !found) reset();
+      });
+      return () => {
+        current = false;
+      };
+    }, [conversationId]),
+  );
 
   async function send(text: string) {
     const content = text.trim();
@@ -100,20 +153,26 @@ function Chat() {
     >
       <Stack.Screen
         options={{
-          headerRight: messages.length
-            ? () => (
-                <Pressable
-                  onPress={() => {
-                    setMessages([]);
-                    setConversationId(null);
-                    setError(null);
-                  }}
-                  testID="new-conversation"
-                >
-                  <Text style={styles.headerLink}>{t('assistant.newConversation')}</Text>
+          headerRight: () => (
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => router.push('/assistant/history')}
+                testID="assistant-history"
+              >
+                <Text style={[styles.headerLink, { color: brand }]}>
+                  {t('assistant.history.open')}
+                </Text>
+              </Pressable>
+              {messages.length > 0 && (
+                <Pressable accessibilityRole="button" onPress={reset} testID="new-conversation">
+                  <Text style={[styles.headerLink, { color: brand }]}>
+                    {t('assistant.newConversation')}
+                  </Text>
                 </Pressable>
-              )
-            : undefined,
+              )}
+            </View>
+          ),
         }}
       />
       <FlatList
@@ -132,7 +191,7 @@ function Chat() {
                 key={key}
                 accessibilityRole="button"
                 onPress={() => send(t(`assistant.suggestions.${key}`))}
-                style={styles.suggestion}
+                style={[styles.suggestion, { borderColor: brand, backgroundColor: tint }]}
                 testID={`suggestion-${key}`}
               >
                 <Text style={styles.suggestionText}>{t(`assistant.suggestions.${key}`)}</Text>
@@ -185,13 +244,22 @@ function MessageBubble({
 }) {
   const { t } = useTranslation();
   const mine = message.role === 'user';
+  const brand = useBrandColor();
   return (
     <View
-      style={[styles.bubble, mine ? styles.mine : styles.theirs, message.pending && styles.dim]}
+      style={[
+        styles.bubble,
+        mine ? [styles.mine, { backgroundColor: brand }] : styles.theirs,
+        message.pending && styles.dim,
+      ]}
     >
-      <Text style={mine ? styles.mineText : styles.text} selectable>
-        {message.content}
-      </Text>
+      {mine ? (
+        <Text style={styles.mineText} selectable>
+          {message.content}
+        </Text>
+      ) : (
+        <MarkdownText source={message.content} style={styles.text} />
+      )}
       {message.citations.length > 0 && (
         <View style={styles.citations} testID="citations">
           <Text style={styles.sources}>{t('assistant.sources')}</Text>
@@ -204,7 +272,7 @@ function MessageBubble({
               style={styles.citation}
               testID={`citation-${citation.ref}`}
             >
-              <Text style={styles.citationTitle}>
+              <Text style={[styles.citationTitle, { color: brand }]}>
                 {citation.page
                   ? t('assistant.citationPage', { title: citation.title, page: citation.page })
                   : citation.title}
@@ -253,7 +321,7 @@ const styles = StyleSheet.create({
   },
   suggestionText: { color: colors.text, fontSize: 15 },
   bubble: { borderRadius: 14, padding: 12, gap: 8, maxWidth: '92%' },
-  mine: { alignSelf: 'flex-end', backgroundColor: colors.primary },
+  mine: { alignSelf: 'flex-end' },
   theirs: { alignSelf: 'flex-start', backgroundColor: colors.surface },
   dim: { opacity: 0.6 },
   text: { color: colors.text, fontSize: 16 },
@@ -268,7 +336,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     gap: 2,
   },
-  citationTitle: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  citationTitle: { fontSize: 14, fontWeight: '600' },
   excerpt: { color: colors.muted, fontSize: 12 },
   rating: { flexDirection: 'row', gap: 8 },
   rate: {
@@ -300,5 +368,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
-  headerLink: { color: colors.primary, fontSize: 16 },
+  headerLink: { fontSize: 16 },
+  headerActions: { flexDirection: 'row', gap: 16, paddingRight: 12 },
 });

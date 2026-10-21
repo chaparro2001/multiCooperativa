@@ -16,7 +16,7 @@ function baseUrlOf(provider: HostedProviderId): string {
   return entry.baseUrl;
 }
 
-/** The fixed catalog of providers (ADR-018): the base URL always comes from the domain, never from a client. */
+/** The fixed catalog of providers (ADR-019): the base URL always comes from the domain, never from a client. */
 export class OpenAICompatibleGateway implements HostedProviderGateway {
   constructor(
     private readonly doFetch: typeof fetch = fetch,

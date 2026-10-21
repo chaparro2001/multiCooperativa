@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
+import { useBrandColor } from '@/branding/brand';
 import { messageFor } from '@/api/api-error';
 import { listStyles } from '@/features/invoicing/components';
 import { useThirdParties } from '@/features/invoicing/queries';
@@ -19,6 +20,7 @@ type Filter = 'all' | 'supplier' | 'customer';
 
 /** US-INV-01: suppliers and customers of the cooperative. */
 export default function ThirdPartiesScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('invoicing');
   // Opened from the Suppliers or Customers tile: the list is fixed to that type.
@@ -45,7 +47,9 @@ export default function ThirdPartiesScreen() {
                   }
                   testID="new-third-party"
                 >
-                  <Text style={listStyles.headerLink}>{t('invoicing.thirdParties.new')}</Text>
+                  <Text style={[listStyles.headerLink, { color: brand }]}>
+                    {t('invoicing.thirdParties.new')}
+                  </Text>
                 </Link>
               )
             : undefined,

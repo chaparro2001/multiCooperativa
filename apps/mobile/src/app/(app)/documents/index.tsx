@@ -12,12 +12,14 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { ErrorText, Loading } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 type Mode = 'title' | 'content';
 
 /** US-DOC-02 (by category, filter by title) and US-DOC-07 (by content). */
 export default function DocumentListScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('documents');
   const [mode, setMode] = useState<Mode>('title');
@@ -30,7 +32,9 @@ export default function DocumentListScreen() {
           headerRight: canManage
             ? () => (
                 <Link href="/documents/upload" testID="upload-document">
-                  <Text style={styles.headerLink}>{t('documents.list.upload')}</Text>
+                  <Text style={[styles.headerLink, { color: brand }]}>
+                    {t('documents.list.upload')}
+                  </Text>
                 </Link>
               )
             : undefined,

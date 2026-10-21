@@ -80,7 +80,7 @@ const envSchema = z
       ),
     /** Time limit of one Ollama chat call, sized for a CPU-only host. */
     ASSISTANT_OLLAMA_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(90_000),
-    /** Master key (32 random bytes, base64: `openssl rand -base64 32`) that encrypts the API keys cooperatives bring for hosted assistant providers (US-AI-07, ADR-018). Without it hosted mode is unavailable. Changing it invalidates the stored keys. */
+    /** Master key (32 random bytes, base64: `openssl rand -base64 32`) that encrypts the API keys cooperatives bring for hosted assistant providers (US-AI-07, ADR-019). Without it hosted mode is unavailable. Changing it invalidates the stored keys. */
     ASSISTANT_SECRETS_KEY: z
       .string()
       .transform((value) => (value === '' ? undefined : value))

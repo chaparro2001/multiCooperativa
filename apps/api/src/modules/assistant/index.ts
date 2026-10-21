@@ -55,7 +55,7 @@ export function createGeminiLanguageModel(settings: {
   );
 }
 
-/** A hosted OpenAI-compatible provider from the fixed catalog, with its own key (ADR-018). Null for an unknown provider. */
+/** A hosted OpenAI-compatible provider from the fixed catalog, with its own key (ADR-019). Null for an unknown provider. */
 export function createHostedLanguageModel(settings: {
   provider: string;
   model: string;
@@ -99,7 +99,7 @@ export function createAssistantModule(deps: {
   model: LanguageModel | null;
   /** With the Ollama provider: the models each cooperative may choose from (US-AI-07); `model` is then ignored. */
   local?: LocalModelRuntime;
-  /** ASSISTANT_SECRETS_KEY (32 bytes, base64): encrypts the API keys of cooperatives on a hosted provider (ADR-018). Without it hosted mode is unavailable. */
+  /** ASSISTANT_SECRETS_KEY (32 bytes, base64): encrypts the API keys of cooperatives on a hosted provider (ADR-019). Without it hosted mode is unavailable. */
   secretsKey?: string;
   /** Talks to the hosted providers; tests pass a fake. */
   hostedGateway?: HostedProviderGateway;

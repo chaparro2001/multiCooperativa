@@ -26,7 +26,7 @@ const savedHosted = settingsOf({
   hosted: { provider: 'groq', model: 'openai/gpt-oss-20b', keyHint: 'abcd' },
 });
 
-describe('external provider form (US-AI-07, ADR-018)', () => {
+describe('external provider form (US-AI-07, ADR-019)', () => {
   it('starts from what is saved, with the key field empty', () => {
     expect(hostedDraftFrom(settingsOf())).toEqual({ provider: null, model: '', apiKey: '' });
     expect(hostedDraftFrom(savedHosted)).toEqual({

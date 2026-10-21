@@ -10,7 +10,7 @@ import {
   isValidHostedModelId,
 } from './hosted-provider';
 
-describe('hosted provider catalog (US-AI-07, ADR-018)', () => {
+describe('hosted provider catalog (US-AI-07, ADR-019)', () => {
   it('is a fixed list of HTTPS base URLs, one per provider', () => {
     expect(HOSTED_PROVIDERS.map((provider) => provider.id)).toEqual([
       'groq',

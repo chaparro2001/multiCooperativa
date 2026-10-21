@@ -26,7 +26,7 @@ export function withoutHostedTurns(messages: ModelMessage[]): ModelMessage[] {
 }
 
 /**
- * ADR-018: the cooperative's hosted model answers; when its provider fails (key rejected, quota,
+ * ADR-019: the cooperative's hosted model answers; when its provider fails (key rejected, quota,
  * overload, timeout, anything the provider did wrong) the server's own model takes over for the
  * rest of the request so the assistant keeps working. The failure is logged without the key.
  */

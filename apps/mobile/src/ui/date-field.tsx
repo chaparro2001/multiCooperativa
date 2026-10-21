@@ -5,6 +5,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { currentLocale, formatDate, formatTime } from '@/i18n/format';
 
+import { useBrandColor } from '../branding/brand';
 import { colors } from './theme';
 import { fromInputValue, toInputValue } from './web-date-input';
 
@@ -37,6 +38,7 @@ export function DateField({
   testID,
 }: DateFieldProps) {
   const { t } = useTranslation();
+  const brand = useBrandColor();
   const initial = () => suggested?.() ?? minimumDate ?? new Date();
 
   return (
@@ -46,9 +48,9 @@ export function DateField({
         <Pressable
           accessibilityRole="button"
           onPress={() => onChange(initial())}
-          style={styles.add}
+          style={[styles.add, { borderColor: brand }]}
         >
-          <Text style={styles.addText}>{t('common.actions.add')}</Text>
+          <Text style={[styles.addText, { color: brand }]}>{t('common.actions.add')}</Text>
         </Pressable>
       ) : (
         <View style={styles.row}>

@@ -12,7 +12,7 @@ import {
  * NFR-AI-05: runs the evaluation set against the real model: Gemini (needs GEMINI_API_KEY) or, with ASSISTANT_LLM_PROVIDER=ollama,
  * the local Ollama model ASSISTANT_OLLAMA_MODEL (latency per question is printed).
  * With `--offline` it uses the rule-based stand-in, which is what the unit tests run in CI.
- * With `--hosted=<provider>/<model>` it uses a hosted provider of the catalog (ADR-018) with the key in EVAL_HOSTED_API_KEY,
+ * With `--hosted=<provider>/<model>` it uses a hosted provider of the catalog (ADR-019) with the key in EVAL_HOSTED_API_KEY,
  * e.g. `--hosted=groq/openai/gpt-oss-20b`.
  *
  *   pnpm --filter @multicooperativa/api ai:eval [--offline | --hosted=groq/openai/gpt-oss-20b] [--pause=4000] [--only=id1,id2]

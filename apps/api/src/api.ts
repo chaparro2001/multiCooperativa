@@ -10,6 +10,7 @@ import {
   type LanguageModel,
   type LocalModelRuntime,
 } from './modules/assistant';
+import { createBrandingModule } from './modules/branding';
 import { createDocumentsModule, type DocumentEvent, type Embedder } from './modules/documents';
 import {
   createInvoicingModule,
@@ -46,9 +47,9 @@ export interface ApiDeps {
   assistantMessageLimitPerHour?: number;
   /** Local models the assistant can use per cooperative (ASSISTANT_LLM_PROVIDER=ollama; ADR-014). */
   assistantLocalModels?: LocalModelRuntime;
-  /** ASSISTANT_SECRETS_KEY: encrypts the API keys of cooperatives on a hosted provider (ADR-018). Without it hosted mode is unavailable. */
+  /** ASSISTANT_SECRETS_KEY: encrypts the API keys of cooperatives on a hosted provider (ADR-019). Without it hosted mode is unavailable. */
   assistantSecretsKey?: string;
-  /** Hosted providers' gateway; tests pass a fake (ADR-018). */
+  /** Hosted providers' gateway; tests pass a fake (ADR-019). */
   assistantHostedGateway?: HostedProviderGateway;
   authRateLimits?: AuthRateLimits | false;
   trustProxy?: number | false;
@@ -145,6 +146,13 @@ export function createApi(deps: ApiDeps): Api {
     },
   });
 
+  const branding = createBrandingModule({
+    prisma: deps.prisma,
+    files: deps.files,
+    audit: access.recordAudit,
+    requireCooperative: access.requireCooperative,
+  });
+
   const runDueDates = () => runDueDatesJob({ prisma: deps.prisma, events });
 
   const app = createApp({
@@ -159,6 +167,7 @@ export function createApi(deps: ApiDeps): Api {
       invoicing.router,
       members.router,
       assistant.router,
+      branding.router,
     ],
     errorHandlers: [
       access.errorHandler,
@@ -168,6 +177,7 @@ export function createApi(deps: ApiDeps): Api {
       invoicing.errorHandler,
       members.errorHandler,
       assistant.errorHandler,
+      branding.errorHandler,
     ],
     trustProxy: deps.trustProxy,
     corsOrigins: deps.corsOrigins,

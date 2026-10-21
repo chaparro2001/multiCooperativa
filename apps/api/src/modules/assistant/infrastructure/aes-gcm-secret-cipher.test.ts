@@ -7,7 +7,7 @@ import { AesGcmSecretCipher, isValidMasterKey } from './aes-gcm-secret-cipher';
 
 const masterKey = () => randomBytes(32).toString('base64');
 
-describe('AesGcmSecretCipher (US-AI-07, ADR-018)', () => {
+describe('AesGcmSecretCipher (US-AI-07, ADR-019)', () => {
   it('round-trips a secret and never stores it in the clear', () => {
     const cipher = new AesGcmSecretCipher(masterKey());
     const encrypted = cipher.encrypt('gsk_secret-key-1234');

@@ -9,7 +9,7 @@ import type { ModelRequest } from '../application/ports/language-model';
 import { OpenAICompatibleGateway } from './openai-compatible-gateway';
 import { OpenAICompatibleLanguageModel } from './openai-compatible-language-model';
 
-/** US-AI-07, ADR-018: the hosted adapter, with a fake fetch (no network). */
+/** US-AI-07, ADR-019: the hosted adapter, with a fake fetch (no network). */
 
 const API_KEY = 'gsk_super-secret-key-0000';
 const BASE_URL = 'https://api.example.test/openai/v1';

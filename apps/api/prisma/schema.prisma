@@ -676,7 +676,7 @@ model AssistantSetting {
   cooperativeId String   @id @db.Uuid
   /// Ollama model id picked by the administrator (validated against the server allowlist on write and on use). Null when only a hosted provider is configured.
   model         String?
-  /// 'local' (the server's model) or 'hosted' (the cooperative's own provider account, ADR-018).
+  /// 'local' (the server's model) or 'hosted' (the cooperative's own provider account, ADR-019).
   source        String   @default("local")
   /// Provider id of the fixed catalog (groq, mistral, nvidia, openrouter); hosted source only.
   hostedProvider String?
@@ -688,6 +688,17 @@ model AssistantSetting {
   /// Last four characters of the key: the only part shown again.
   apiKeyHint    String?
   updatedAt     DateTime @default(now()) @updatedAt
+}
+
+/// US-ACC-14: one row per cooperative that customized its look; no row means the app's default theme. Owned by the branding module.
+model CooperativeBranding {
+  cooperativeId   String   @id @db.Uuid
+  /// #RRGGBB upper-case; white text on it reaches WCAG AA (BR-ACC-12).
+  primaryColor    String?
+  /// Storage key of the logo under cooperatives/<id>/branding/ (BR-ACC-13).
+  logoKey         String?
+  logoContentType String?
+  updatedAt       DateTime @default(now())
 }
 
 model AssistantMessage {

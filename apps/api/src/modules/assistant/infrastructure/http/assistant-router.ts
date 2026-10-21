@@ -4,6 +4,7 @@ import {
   type ConversationDetail,
   type AssistantConversation,
   type ListConversationsResponse,
+  listConversationsQuerySchema,
   rateMessageBodySchema,
   sendMessageBodySchema,
   updateAssistantModelBodySchema,
@@ -58,9 +59,26 @@ export function createAssistantRouter(
     res.status(201).json(toConversation(conversation) satisfies AssistantConversation);
   });
 
-  router.get(`${base}/conversations`, ...guard, async (_req, res) => {
-    const conversations = await useCases.listConversations(deps, getCooperativeContext(res));
-    res.json({ items: conversations.map(toConversation) } satisfies ListConversationsResponse);
+  router.get(`${base}/conversations`, ...guard, async (req, res) => {
+    const { limit, before } = parseBody(listConversationsQuerySchema, req.query);
+    const { items, nextCursor } = await useCases.listConversations(
+      deps,
+      getCooperativeContext(res),
+      { limit, before: before ? new Date(before) : undefined },
+    );
+    res.json({
+      items: items.map(toConversation),
+      nextCursor: nextCursor?.toISOString() ?? null,
+    } satisfies ListConversationsResponse);
+  });
+
+  router.delete(`${base}/conversations/:conversationId`, ...guard, async (req, res) => {
+    await useCases.deleteConversation(
+      deps,
+      getCooperativeContext(res),
+      uuidParam(req.params.conversationId),
+    );
+    res.status(204).end();
   });
 
   router.get(`${base}/conversations/:conversationId`, ...guard, async (req, res) => {

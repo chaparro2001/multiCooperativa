@@ -2,6 +2,8 @@ import { type Href, Link, router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { useBrand } from '@/branding/brand';
+import { BrandLogo } from '@/branding/brand-logo';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { type VisibleModule, visibleModules } from '@/navigation/modules';
 import { Loading, Screen, SCREEN_MAX_WIDTH, SCREEN_PADDING } from '@/ui/screen';
@@ -21,6 +23,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const { cooperative, permissions } = useActiveCooperative();
   const { width } = useWindowDimensions();
+  const brand = useBrand();
 
   if (!permissions) return <Loading />;
   const modules = visibleModules(permissions.permissions);
@@ -35,18 +38,31 @@ export default function HomeScreen() {
         options={{
           headerRight: () => (
             <Link href="/settings" accessibilityLabel={t('settings.title')} testID="settings-link">
-              <Text style={styles.headerLink}>{t('settings.title')}</Text>
+              <Text style={[styles.headerLink, { color: brand.primaryColor }]}>
+                {t('settings.title')}
+              </Text>
             </Link>
           ),
         }}
       />
-      <Text style={styles.profile}>
-        {cooperative?.profileName}
-        {/* "Socio · Socio" when the profile is already called like that. */}
-        {permissions.isPartner && cooperative?.profileName !== t('common.partner')
-          ? ` · ${t('common.partner')}`
-          : ''}
-      </Text>
+      <View style={styles.identity}>
+        {/* US-ACC-14: the cooperative's logo, when its administrator uploaded one. */}
+        {brand.logoUrl && <BrandLogo size={56} testID="home-logo" />}
+        <View style={styles.identityText}>
+          {brand.logoUrl && (
+            <Text style={styles.cooperativeName} numberOfLines={2} testID="home-cooperative-name">
+              {cooperative?.cooperativeName}
+            </Text>
+          )}
+          <Text style={styles.profile}>
+            {cooperative?.profileName}
+            {/* "Socio · Socio" when the profile is already called like that. */}
+            {permissions.isPartner && cooperative?.profileName !== t('common.partner')
+              ? ` · ${t('common.partner')}`
+              : ''}
+          </Text>
+        </View>
+      </View>
       <View style={styles.grid}>
         {modules.map((entry) => (
           <Pressable
@@ -63,6 +79,10 @@ export default function HomeScreen() {
             <Text style={styles.cellTitle} numberOfLines={2}>
               {title(entry)}
             </Text>
+            {/* The accent only shows once the cooperative picked its own colour. */}
+            {brand.configuredColor && (
+              <View style={[styles.accent, { backgroundColor: brand.primaryColor }]} />
+            )}
             {entry.comingSoon && (
               <Text style={styles.badge} testID={`coming-soon-${entry.id}`}>
                 {t('modulePlaceholder.badge')}
@@ -78,6 +98,9 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   // The web header puts headerRight flush against the window edge.
   headerLink: { color: colors.primary, fontSize: 16, marginRight: Platform.OS === 'web' ? 16 : 0 },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  identityText: { flex: 1, gap: 2 },
+  cooperativeName: { fontSize: 20, fontWeight: '700', color: colors.text },
   profile: { fontSize: 15, color: colors.muted },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   cell: {
@@ -101,6 +124,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     overflow: 'hidden',
   },
+  accent: { width: 28, height: 4, borderRadius: 2 },
   emoji: { fontSize: 44 },
   cellTitle: {
     fontSize: 16,

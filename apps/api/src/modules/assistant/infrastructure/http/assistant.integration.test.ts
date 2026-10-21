@@ -425,6 +425,77 @@ describe('US-AI-04 and BR-AI-07 · conversations', () => {
   it('a malformed id answers 404, not a server error', async () => {
     const response = await request(app).get(`${base()}/conversations/not-a-uuid`).set(as(member));
     expect(response.status).toBe(404);
+    const removal = await request(app).delete(`${base()}/conversations/not-a-uuid`).set(as(member));
+    expect(removal.status).toBe(404);
+  });
+
+  it('US-AI-04: the history lists only answered conversations, newest first, in pages', async () => {
+    script = new ScriptedLanguageModel(() => say('ok'));
+    const first = await newConversation(member);
+    await send(member, first, 'First question');
+    const second = await newConversation(member);
+    await send(member, second, 'Second question');
+    await newConversation(member); // never asked: not part of the history
+
+    const page = listConversationsResponseSchema.parse(
+      (await request(app).get(`${base()}/conversations?limit=1`).set(as(member))).body,
+    );
+    const next = listConversationsResponseSchema.parse(
+      (
+        await request(app)
+          .get(`${base()}/conversations?limit=1&before=${page.nextCursor}`)
+          .set(as(member))
+      ).body,
+    );
+
+    expect(page.items.map((c) => c.title)).toEqual(['Second question']);
+    expect(page.nextCursor).not.toBeNull();
+    expect(next.items.map((c) => c.title)).toEqual(['First question']);
+    expect(next.nextCursor).toBeNull();
+    const invalid = await request(app).get(`${base()}/conversations?limit=0`).set(as(member));
+    expect(invalid.status).toBe(400);
+  });
+
+  it('US-AI-04: the author deletes a conversation with its messages and ratings (204)', async () => {
+    script = new ScriptedLanguageModel([say('Hola.')]);
+    const conversationId = await newConversation(member);
+    const { answer } = sendMessageResponseSchema.parse(
+      (await send(member, conversationId, 'Q')).body,
+    );
+    await request(app)
+      .post(`${base()}/messages/${answer.id}/rating`)
+      .set(as(member))
+      .send({ rating: 'helpful' });
+
+    const removal = await request(app)
+      .delete(`${base()}/conversations/${conversationId}`)
+      .set(as(member));
+
+    expect(removal.status).toBe(204);
+    expect(
+      (await request(app).get(`${base()}/conversations/${conversationId}`).set(as(member))).status,
+    ).toBe(404);
+    expect(await prisma.assistantMessage.count()).toBe(0);
+    expect(
+      (await request(app).delete(`${base()}/conversations/${conversationId}`).set(as(member)))
+        .status,
+    ).toBe(404);
+  });
+
+  it('BR-AI-07: nobody else can delete it, and it stays', async () => {
+    script = new ScriptedLanguageModel(() => say('ok'));
+    const conversationId = await newConversation(member);
+    await send(member, conversationId, 'private question');
+
+    const byAdmin = await request(app)
+      .delete(`${base()}/conversations/${conversationId}`)
+      .set(as(admin));
+    const byOtherCooperative = await request(app)
+      .delete(`${base(sea)}/conversations/${conversationId}`)
+      .set(as(seaAdmin));
+
+    expect([byAdmin.status, byOtherCooperative.status]).toEqual([404, 404]);
+    expect(await prisma.assistantMessage.count()).toBe(2);
   });
 });
 

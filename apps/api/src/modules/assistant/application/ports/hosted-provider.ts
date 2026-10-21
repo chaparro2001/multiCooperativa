@@ -59,7 +59,7 @@ export interface HostedSettingStore {
   clearHosted(cooperativeId: string): Promise<void>;
 }
 
-/** Talks to the fixed catalog of providers (ADR-018). */
+/** Talks to the fixed catalog of providers (ADR-019). */
 export interface HostedProviderGateway {
   /** Model ids the key can use. Throws HostedProviderKeyInvalidError or another HostedProviderError. */
   listModels(provider: HostedProviderId, apiKey: string): Promise<readonly string[]>;

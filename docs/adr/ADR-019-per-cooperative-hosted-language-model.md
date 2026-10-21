@@ -1,4 +1,4 @@
-# ADR-018: Per-cooperative hosted language model with the cooperative's own API key
+# ADR-019: Per-cooperative hosted language model with the cooperative's own API key
 
 **Date**: 2026-10-21
 

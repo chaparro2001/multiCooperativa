@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { useBrandColor } from '@/branding/brand';
 import { Button } from '@/ui/button';
 import { ErrorText } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
@@ -22,10 +23,11 @@ import { useAssistantModelSettings, useUpdateAssistantModel } from './queries';
 
 /**
  * US-AI-07: the administrator picks who answers the cooperative's assistant: the server's local
- * model, or an external provider with the cooperative's own API key (ADR-018).
+ * model, or an external provider with the cooperative's own API key (ADR-019).
  */
 export function AssistantModelSection() {
   const { t } = useTranslation();
+  const brand = useBrandColor();
   const query = useAssistantModelSettings();
   const update = useUpdateAssistantModel();
   const [selected, setSelected] = useState<string | null>(null);
@@ -88,10 +90,18 @@ export function AssistantModelSection() {
                 setSource(choice);
                 setSaved(false);
               }}
-              style={[styles.option, source === choice && styles.optionActive]}
+              style={[
+                styles.option,
+                source === choice && [styles.optionActive, { borderColor: brand }],
+              ]}
               testID={`assistant-source-${choice}`}
             >
-              <View style={[styles.radio, source === choice && styles.radioActive]} />
+              <View
+                style={[
+                  styles.radio,
+                  source === choice && { borderColor: brand, backgroundColor: brand },
+                ]}
+              />
               <Text style={[styles.name, styles.optionText]}>
                 {t(`settings.assistantModel.source.${choice}`)}
               </Text>
@@ -116,10 +126,12 @@ export function AssistantModelSection() {
                     setDraft({ ...draft, provider: candidate.id });
                     setSaved(false);
                   }}
-                  style={[styles.option, active && styles.optionActive]}
+                  style={[styles.option, active && [styles.optionActive, { borderColor: brand }]]}
                   testID={`assistant-provider-${candidate.id}`}
                 >
-                  <View style={[styles.radio, active && styles.radioActive]} />
+                  <View
+                    style={[styles.radio, active && { borderColor: brand, backgroundColor: brand }]}
+                  />
                   <Text style={[styles.name, styles.optionText]}>
                     {t(`settings.assistantModel.hosted.providers.${candidate.id}`)}
                   </Text>
@@ -201,10 +213,12 @@ export function AssistantModelSection() {
                     setSelected(option.id);
                     setSaved(false);
                   }}
-                  style={[styles.option, active && styles.optionActive]}
+                  style={[styles.option, active && [styles.optionActive, { borderColor: brand }]]}
                   testID={`assistant-model-${option.id}`}
                 >
-                  <View style={[styles.radio, active && styles.radioActive]} />
+                  <View
+                    style={[styles.radio, active && { borderColor: brand, backgroundColor: brand }]}
+                  />
                   <View style={styles.optionText}>
                     <Text style={styles.name}>
                       {option.id}
@@ -231,7 +245,7 @@ export function AssistantModelSection() {
       {update.isError && <ErrorText>{messageFor(update.error)}</ErrorText>}
       {saved && (
         <Text
-          style={styles.success}
+          style={[styles.success, { color: brand }]}
           accessibilityLiveRegion="polite"
           testID="assistant-model-saved"
         >
@@ -255,7 +269,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 14, fontWeight: '500', color: colors.text },
   name: { fontSize: 17, fontWeight: '600', color: colors.text },
   detail: { fontSize: 14, color: colors.muted },
-  success: { fontSize: 14, color: colors.primary },
+  success: { fontSize: 14 },
   options: { gap: 8 },
   hosted: { gap: 12 },
   option: {
@@ -267,7 +281,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 8,
   },
-  optionActive: { borderColor: colors.primary, backgroundColor: colors.surface },
+  optionActive: { backgroundColor: colors.surface },
   optionText: { flex: 1, gap: 2 },
   radio: {
     width: 20,
@@ -276,7 +290,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
   },
-  radioActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   suggestions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   chip: {
     paddingHorizontal: 10,

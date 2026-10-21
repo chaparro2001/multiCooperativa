@@ -18,7 +18,7 @@ export function isValidMasterKey(base64: string): boolean {
 }
 
 /**
- * AES-256-GCM with the server's master key (ADR-018). A fresh random IV per encryption; the
+ * AES-256-GCM with the server's master key (ADR-019). A fresh random IV per encryption; the
  * authentication tag makes any alteration of the stored data, or a different master key, fail
  * on decrypt instead of returning garbage.
  */

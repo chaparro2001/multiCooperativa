@@ -7,7 +7,7 @@ import type {
 
 import { modelToSave } from './model-settings';
 
-/** What the administrator is typing for an external provider (US-AI-07, ADR-018). The key is never kept after saving. */
+/** What the administrator is typing for an external provider (US-AI-07, ADR-019). The key is never kept after saving. */
 export interface HostedDraft {
   provider: HostedProviderId | null;
   model: string;

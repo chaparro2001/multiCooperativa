@@ -1,5 +1,5 @@
 /**
- * Hosted OpenAI-compatible providers a cooperative can bring its own API key to (US-AI-07, ADR-018).
+ * Hosted OpenAI-compatible providers a cooperative can bring its own API key to (US-AI-07, ADR-019).
  * Pure rules: the fixed catalog, the format of what the administrator types and how a choice is
  * labelled. The catalog is closed on purpose: the API never calls a base URL typed by a client (SSRF).
  */

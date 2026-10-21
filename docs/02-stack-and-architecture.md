@@ -78,22 +78,23 @@ flowchart LR
 
 Each module follows the Clean Architecture layers (domain, application, infrastructure) and only exposes a public interface to the others.
 
-| Module                      | Responsibility                                                                                                     |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Access and profiles         | Users, sessions, memberships, profiles and permission resolution                                                   |
-| Announcements               | Publication and reading of announcements                                                                           |
-| Assemblies                  | Calls to meeting, agenda, votings, quorum and majorities                                                           |
-| Documents                   | Document repository and indexing for RAG                                                                           |
-| Invoices and delivery notes | Third parties (suppliers and customers), purchases and sales, reconciliation, due dates, claims, vision extraction |
-| Member area (`members`)     | Member data and capital contributions                                                                              |
-| AI assistant                | RAG and tool calling with the user's permissions                                                                   |
-| Notifications               | Consumes events from the other modules and sends push                                                              |
+| Module                      | Responsibility                                                                                                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Access and profiles         | Users, sessions, memberships, profiles and permission resolution                                                                                |
+| Announcements               | Publication and reading of announcements                                                                                                        |
+| Assemblies                  | Calls to meeting, agenda, votings, quorum and majorities                                                                                        |
+| Documents                   | Document repository and indexing for RAG                                                                                                        |
+| Invoices and delivery notes | Third parties (suppliers and customers), purchases and sales, reconciliation, due dates, claims, vision extraction                              |
+| Member area (`members`)     | Member data and capital contributions                                                                                                           |
+| AI assistant                | RAG and tool calling with the user's permissions                                                                                                |
+| Branding (`branding`)       | Per-cooperative primary colour and logo, set by its administrator and read by every member ([ADR-018](adr/ADR-018-per-cooperative-branding.md)) |
+| Notifications               | Consumes events from the other modules and sends push                                                                                           |
 
 ## Cross-cutting rules
 
 1. **The backend rules**: every use case checks the permission and denies by default. The app only hides what the server says is not allowed.
 2. **Double isolation**: by cooperative and, in the member area, by member. It also applies to the RAG and the assistant's tools.
-3. **Injected configuration**: API URL, cooperative and theme are not hardcoded in the app. This way the module could be embedded in another native app without rewriting it.
+3. **Injected configuration**: API URL, cooperative and theme are not hardcoded in the app (the theme of each cooperative comes from its branding, ADR-018). This way the module could be embedded in another native app without rewriting it.
 4. **Communication between modules through internal events** when an immediate response is not needed (for example, `DiscrepancyDetected` or `InvoiceOverdue` towards Notifications).
 5. **Dependency-free domain**: business rules do not import Prisma, Express or any SDK.
 6. **English everywhere except the UI**: code, identifiers, paths, enum values, API routes, docs and commit messages are in English; user-facing texts are localized (ADR-008).

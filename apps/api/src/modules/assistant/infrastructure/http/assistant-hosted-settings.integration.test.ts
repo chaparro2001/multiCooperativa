@@ -22,7 +22,7 @@ import { FakeHostedGateway } from '../../application/testing/hosted-fakes';
 import { say, ScriptedLanguageModel } from '../../application/testing/scripted-language-model';
 import type { LanguageModel, LocalModelRuntime } from '../../index';
 
-/** US-AI-07 (extended), ADR-018: a cooperative's own hosted provider key, with fakes (no network, no Ollama). */
+/** US-AI-07 (extended), ADR-019: a cooperative's own hosted provider key, with fakes (no network, no Ollama). */
 
 const env = loadEnv(process.env);
 const prisma = createTestPrisma();
@@ -133,7 +133,7 @@ beforeEach(async () => {
   [admin, seaAdmin] = await Promise.all([login('admin@farm.test'), login('admin@sea.test')]);
 });
 
-describe('PUT/GET assistant-model with a hosted provider (US-AI-07, ADR-018)', () => {
+describe('PUT/GET assistant-model with a hosted provider (US-AI-07, ADR-019)', () => {
   it('without the secrets key hosted is unavailable and PUT answers 409', async () => {
     const get = await request(plainApp).get(path()).set(as(admin));
     expect(assistantModelSettingsSchema.parse(get.body)).toMatchObject({ hostedAvailable: false });

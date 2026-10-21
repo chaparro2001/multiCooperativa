@@ -55,7 +55,7 @@ services:
         value: gemini-embedding-2
       - key: ASSISTANT_MESSAGE_LIMIT_PER_HOUR
         value: '30'
-      # Encrypts each cooperative's own provider key (ADR-018): `openssl rand -base64 32`. Unset hides the external provider option.
+      # Encrypts each cooperative's own provider key (ADR-019): `openssl rand -base64 32`. Unset hides the external provider option.
       - key: ASSISTANT_SECRETS_KEY
         sync: false
       # Browser origins allowed by CORS: the web app (origin only, no path); github.io kept during the move to the custom domain (ADR-017).

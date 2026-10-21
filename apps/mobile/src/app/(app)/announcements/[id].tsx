@@ -14,12 +14,14 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 import { openUrl } from '@/ui/open-url';
 import { confirmAction } from '@/ui/confirm';
 
 /** US-ANN-03 (read), US-ANN-05/06/07 (manage). */
 export default function AnnouncementScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { canManage } = useModuleAccess('announcements');
@@ -104,7 +106,7 @@ export default function AnnouncementScreen() {
               style={({ pressed }) => [styles.attachment, pressed && styles.pressed]}
               testID={`attachment-${attachment.name}`}
             >
-              <Text style={styles.attachmentName}>{attachment.name}</Text>
+              <Text style={[styles.attachmentName, { color: brand }]}>{attachment.name}</Text>
               <Text style={styles.meta}>{formatSize(attachment.size)}</Text>
             </Pressable>
           ))}

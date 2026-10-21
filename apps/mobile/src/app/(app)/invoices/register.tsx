@@ -28,6 +28,7 @@ import { Button } from '@/ui/button';
 import { DayField } from '@/ui/date-field';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 /**
@@ -36,6 +37,7 @@ import { colors } from '@/ui/theme';
  * attached to the record that gets created.
  */
 export default function RegisterScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ operation?: Operation; from?: string; noData?: string }>();
   const [draft, setDraft] = useState<RegistrationDraft>(
@@ -165,7 +167,7 @@ export default function RegisterScreen() {
           />
           {suggestedTotal && draft.total !== suggestedTotal && (
             <Pressable onPress={() => patch({ total: suggestedTotal })} accessibilityRole="button">
-              <Text style={styles.link}>
+              <Text style={[styles.link, { color: brand }]}>
                 {t('invoicing.form.useComputedTotal', { total: suggestedTotal })}
               </Text>
             </Pressable>
@@ -220,6 +222,7 @@ function PartyPicker({
   patch(change: Partial<RegistrationDraft>): void;
   warn: boolean;
 }) {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const create = useCreateThirdParty();
@@ -299,7 +302,7 @@ function PartyPicker({
           onPress={() => router.push('/invoices/third-parties/editor')}
           accessibilityRole="button"
         >
-          <Text style={styles.link}>{t('invoicing.form.noParties')}</Text>
+          <Text style={[styles.link, { color: brand }]}>{t('invoicing.form.noParties')}</Text>
         </Pressable>
       )}
     </View>

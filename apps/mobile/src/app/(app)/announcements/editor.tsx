@@ -16,6 +16,7 @@ import { formatSize } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 const TITLE_MAX = 120;
@@ -24,6 +25,7 @@ const MAX_ATTACHMENTS = 3;
 
 /** US-ANN-01 and US-ANN-05: draft, attachments (up to 3 PDF) and publish. */
 export default function AnnouncementEditorScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string }>();
   const [id, setId] = useState(params.id);
@@ -134,7 +136,7 @@ export default function AnnouncementEditorScreen() {
       </View>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {notice && <Text style={styles.notice}>{notice}</Text>}
+      {notice && <Text style={[styles.notice, { color: brand }]}>{notice}</Text>}
 
       <Button
         title={
