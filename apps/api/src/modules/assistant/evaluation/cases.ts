@@ -16,7 +16,7 @@ export interface EvalCase {
   forbiddenTools?: ToolName[];
   /** Kinds of citation that must appear; an empty list means no citation at all. */
   cites: ('document' | 'invoice' | 'delivery_note' | 'third_party' | 'assembly' | 'announcement')[];
-  /** Facts of the tool data the answer must contain (case and accents ignored). */
+  /** Facts of the tool data the answer must contain (case and accents ignored); `a|b` accepts either form. */
   mustContain?: string[];
   /** Text that must never appear: other cooperative's data, data the profile cannot see. */
   mustNotContain?: string[];
@@ -71,7 +71,7 @@ export const EVALUATION_CASES: readonly EvalCase[] = [
     question: '¿Cuándo es la próxima asamblea y qué se vota?',
     tools: ['upcoming_assemblies'],
     cites: ['assembly'],
-    mustContain: ['2026-12-01', 'aprobar las cuentas'],
+    mustContain: ['2026-12-01|1 de diciembre de 2026', 'aprobar las cuentas'],
     spec: 'US-AI-02',
   },
   {
@@ -80,7 +80,7 @@ export const EVALUATION_CASES: readonly EvalCase[] = [
     question: '¿Cuál fue el resultado de la última votación?',
     tools: ['voting_result'],
     cites: ['assembly'],
-    mustContain: ['approved'],
+    mustContain: ['approved|aprobad'],
     spec: 'US-AI-02',
   },
   {
@@ -100,7 +100,7 @@ export const EVALUATION_CASES: readonly EvalCase[] = [
     forbiddenTools: ['payments_and_collections_summary', 'list_invoices'],
     cites: [],
     mustContain: [DENIED],
-    mustNotContain: ['421.00'],
+    mustNotContain: ['421.00', '421,00'],
     spec: 'US-AI-03',
   },
   {
@@ -120,7 +120,7 @@ export const EVALUATION_CASES: readonly EvalCase[] = [
     question: '¿Qué facturas de proveedores vencen esta semana?',
     tools: ['list_invoices'],
     cites: ['invoice'],
-    mustContain: ['f-77', '121.00'],
+    mustContain: ['f-77', '121.00|121,00'],
     mustNotContain: ['f-80'],
     spec: 'US-AI-02',
   },
@@ -140,7 +140,7 @@ export const EVALUATION_CASES: readonly EvalCase[] = [
     question: '¿Cuánto tenemos pendiente de pagar y de cobrar?',
     tools: ['payments_and_collections_summary'],
     cites: [],
-    mustContain: ['421.00', '500.00'],
+    mustContain: ['421.00|421,00', '500.00|500,00'],
     spec: 'US-AI-02',
   },
   {
@@ -169,7 +169,7 @@ export const EVALUATION_CASES: readonly EvalCase[] = [
     forbiddenTools: ['upcoming_assemblies', 'voting_result'],
     cites: [],
     mustContain: [DENIED],
-    mustNotContain: ['2026-12-01'],
+    mustNotContain: ['2026-12-01', '1 de diciembre'],
     spec: 'US-AI-03',
   },
   {
@@ -187,7 +187,7 @@ export const EVALUATION_CASES: readonly EvalCase[] = [
     question: '¿Cuándo es la próxima asamblea y cuánto hay pendiente de pagar?',
     tools: ['upcoming_assemblies', 'payments_and_collections_summary'],
     cites: ['assembly'],
-    mustContain: ['2026-12-01', '421.00'],
+    mustContain: ['2026-12-01|1 de diciembre de 2026', '421.00|421,00'],
     spec: 'US-AI-02',
   },
   {

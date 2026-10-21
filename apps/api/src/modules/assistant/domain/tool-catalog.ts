@@ -93,7 +93,7 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
   {
     name: 'payments_and_collections_summary',
     description:
-      'Totals still to pay to suppliers and to collect from customers, with the overdue part, open discrepancies and stale delivery notes.',
+      'Totals still to pay to suppliers and to collect from customers, with the overdue part, open discrepancies and stale delivery notes. In each total, "pending" already includes the "overdue" part: never add them together.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     requires: { module: 'invoicing', level: 'read' },
   },

@@ -67,7 +67,11 @@ export function check(
     if (!outcome.citationKinds.includes(kind)) failures.push(`missing a ${kind} citation`);
   }
   for (const fact of evalCase.mustContain ?? []) {
-    if (!text.includes(plain(fact))) failures.push(`answer lacks "${fact}"`);
+    // "a|b": any of the alternatives (a model may write 121,00 or 1 de diciembre for 121.00 or 2026-12-01).
+    const alternatives = fact.split('|').map(plain);
+    if (!alternatives.some((alternative) => text.includes(alternative))) {
+      failures.push(`answer lacks "${fact}"`);
+    }
   }
   for (const leak of evalCase.mustNotContain ?? []) {
     if (text.includes(plain(leak))) failures.push(`answer contains "${leak}"`);

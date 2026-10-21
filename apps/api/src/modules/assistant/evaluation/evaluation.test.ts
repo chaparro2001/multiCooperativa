@@ -42,4 +42,15 @@ describe('evaluation set (NFR-AI-05)', () => {
 
     expect(failures).toEqual(['missing a document citation']);
   });
+
+  it('US-AI-02: a fact may be written in its Spanish form (121,00 instead of 121.00)', () => {
+    const due = EVALUATION_CASES.find((c) => c.id === 'inv-due-week')!;
+    const outcome = { tools: ['list_invoices'], citationKinds: ['invoice'] };
+
+    expect(check(due, { ...outcome, text: 'La F-77 vence: 121,00 € [S1]' })).toEqual([]);
+    expect(check(due, { ...outcome, text: 'La F-77 vence: 121.00 € [S1]' })).toEqual([]);
+    expect(check(due, { ...outcome, text: 'La F-77 vence [S1]' })).toEqual([
+      'answer lacks "121.00|121,00"',
+    ]);
+  });
 });

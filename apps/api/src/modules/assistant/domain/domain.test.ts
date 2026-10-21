@@ -169,6 +169,11 @@ describe('system prompt (BR-AI-06, hallucinations)', () => {
     expect(prompt).toMatch(/do not make up/i);
   });
 
+  it('US-AI-03: a topic without tools gets "no access", never a document search', () => {
+    expect(prompt).toContain('No tengo acceso a esa información');
+    expect(prompt).toMatch(/never use the document search as a substitute/i);
+  });
+
   it('US-AI-03: states which tools exist, so it can say a module is not available', () => {
     expect(prompt).toContain('search_documents');
     expect(buildSystemPrompt({ today: '2026-10-20', toolNames: [] })).toMatch(/no tools/i);
