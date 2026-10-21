@@ -17,7 +17,11 @@ import {
   hasAccess,
   requirePermission,
 } from '../../../access';
-import { InvalidRequestError, parseBody } from '../../../../shared/infrastructure/http/validation';
+import {
+  InvalidRequestError,
+  parseBody,
+  toValidationIssues,
+} from '../../../../shared/infrastructure/http/validation';
 import * as useCases from '../../application/documents';
 import type { DocumentDeps, IndexingDeps, UploadedFile } from '../../application/documents';
 import type { Embedder } from '../../application/ports/embedder';
@@ -64,7 +68,7 @@ export function createDocumentsRouter(
 
   router.get(base, ...read, async (req, res) => {
     const query = listDocumentsQuerySchema.safeParse(req.query);
-    if (!query.success) throw new InvalidRequestError();
+    if (!query.success) throw new InvalidRequestError(toValidationIssues(query.error));
     const context = getCooperativeContext(res);
     const documents = await useCases.listDocuments(deps, context, {
       category: query.data.category,
@@ -78,7 +82,7 @@ export function createDocumentsRouter(
   // Before `/:documentId`, which would otherwise take “search” as an id.
   router.get(`${base}/search`, ...read, async (req, res) => {
     const query = searchDocumentsQuerySchema.safeParse(req.query);
-    if (!query.success) throw new InvalidRequestError();
+    if (!query.success) throw new InvalidRequestError(toValidationIssues(query.error));
     const hits = await useCases.searchDocuments(deps, getCooperativeContext(res), query.data.q);
     res.json({
       items: hits.map((hit) => ({
