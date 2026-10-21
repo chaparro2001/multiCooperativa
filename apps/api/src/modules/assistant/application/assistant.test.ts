@@ -5,7 +5,9 @@ import { TOOL_NAMES, type ToolName } from '../domain/tool-catalog';
 import {
   type AssistantDeps,
   createConversation,
+  deleteConversation,
   getConversation,
+  listConversations,
   MAX_MODEL_CALLS,
   rateMessage,
   type RequestMetrics,
@@ -300,6 +302,98 @@ describe('BR-AI-07 · only the author sees a conversation', () => {
 
     await expect(getConversation(deps, elsewhere, mine.id)).rejects.toBeInstanceOf(
       ConversationNotFoundError,
+    );
+  });
+});
+
+describe('US-AI-04 · history of conversations', () => {
+  it('US-AI-04: lists my conversations newest activity first, skipping the ones never answered', async () => {
+    const model = new ScriptedLanguageModel([say('a'), say('b')]);
+    const { deps, conversations } = build(model);
+    let tick = 0;
+    conversations.clock = () => new Date(Date.UTC(2026, 9, 20, 10, 0, tick++));
+    await ask(deps, socio, 'First question');
+    await ask(deps, socio, 'Second question');
+    await createConversation(deps, socio);
+
+    const { items, nextCursor } = await listConversations(deps, socio);
+
+    expect(items.map((c) => c.title)).toEqual(['Second question', 'First question']);
+    expect(nextCursor).toBeNull();
+  });
+
+  it('US-AI-04: pages the history with a cursor on the last activity', async () => {
+    const { deps, conversations } = build(new ScriptedLanguageModel(() => say('x')));
+    let tick = 0;
+    conversations.clock = () => new Date(Date.UTC(2026, 9, 20, 10, 0, tick++));
+    for (const question of ['one', 'two', 'three']) await ask(deps, socio, question);
+
+    const first = await listConversations(deps, socio, { limit: 2 });
+    const second = await listConversations(deps, socio, { limit: 2, before: first.nextCursor! });
+
+    expect(first.items.map((c) => c.title)).toEqual(['three', 'two']);
+    expect(second.items.map((c) => c.title)).toEqual(['one']);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  it('BR-AI-07: the history of another member or cooperative is never mine', async () => {
+    const { deps } = build(new ScriptedLanguageModel([say('x')]));
+    await ask(deps, socio, 'private');
+    const other = contextOf(['documents'], { membershipId: 'm2', userId: 'u2' });
+    const elsewhere = contextOf(['documents'], {
+      cooperativeId: '22222222-2222-4222-8222-222222222222',
+    });
+
+    expect((await listConversations(deps, other)).items).toEqual([]);
+    expect((await listConversations(deps, elsewhere)).items).toEqual([]);
+  });
+
+  it('US-AI-04: deleting a conversation removes it with its messages', async () => {
+    const { deps, conversations } = build(new ScriptedLanguageModel([say('x'), say('y')]));
+    const doomed = await ask(deps, socio, 'to delete');
+    const kept = await ask(deps, socio, 'to keep');
+
+    await deleteConversation(deps, socio, doomed.conversation.id);
+
+    await expect(getConversation(deps, socio, doomed.conversation.id)).rejects.toBeInstanceOf(
+      ConversationNotFoundError,
+    );
+    expect(conversations.stored.map((m) => m.conversationId)).toEqual([
+      kept.conversation.id,
+      kept.conversation.id,
+    ]);
+  });
+
+  it('BR-AI-07: only the author deletes; another member or cooperative gets not found and nothing changes', async () => {
+    const { deps, conversations } = build(new ScriptedLanguageModel([say('x')]));
+    const { conversation } = await ask(deps, socio, 'mine');
+    const other = contextOf(['documents'], { membershipId: 'm2', userId: 'u2' });
+    const elsewhere = contextOf(['documents'], {
+      cooperativeId: '22222222-2222-4222-8222-222222222222',
+    });
+
+    await expect(deleteConversation(deps, other, conversation.id)).rejects.toBeInstanceOf(
+      ConversationNotFoundError,
+    );
+    await expect(deleteConversation(deps, elsewhere, conversation.id)).rejects.toBeInstanceOf(
+      ConversationNotFoundError,
+    );
+    expect(conversations.stored).toHaveLength(2);
+    await expect(deleteConversation(deps, socio, conversation.id)).resolves.toBeUndefined();
+    await expect(deleteConversation(deps, socio, conversation.id)).rejects.toBeInstanceOf(
+      ConversationNotFoundError,
+    );
+  });
+
+  it('US-AI-03: without the assistant module the history cannot be listed or deleted', async () => {
+    const { deps } = build(null);
+    const noAssistant = contextOf([], { permissions: [] });
+
+    await expect(listConversations(deps, noAssistant)).rejects.toBeInstanceOf(
+      ModuleAccessDeniedError,
+    );
+    await expect(deleteConversation(deps, noAssistant, 'x')).rejects.toBeInstanceOf(
+      ModuleAccessDeniedError,
     );
   });
 });

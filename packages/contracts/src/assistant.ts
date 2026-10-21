@@ -51,9 +51,24 @@ export const assistantConversationSchema = z.object({
 /** POST /cooperatives/{id}/assistant/conversations */
 export const createConversationResponseSchema = assistantConversationSchema;
 
-/** GET /cooperatives/{id}/assistant/conversations: mine only (BR-AI-07). */
+/** Page size of the history: the app asks for more with `nextCursor`. */
+export const DEFAULT_CONVERSATIONS_PAGE = 20;
+
+/** GET /cooperatives/{id}/assistant/conversations query. */
+export const listConversationsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(DEFAULT_CONVERSATIONS_PAGE),
+  /** `nextCursor` of the previous page: only conversations with older activity. */
+  before: z.iso.datetime().optional(),
+});
+
+/**
+ * GET /cooperatives/{id}/assistant/conversations: mine only (BR-AI-07), with at least one
+ * exchange, newest activity first (US-AI-04).
+ */
 export const listConversationsResponseSchema = z.object({
   items: z.array(assistantConversationSchema),
+  /** Pass it as `before` for the next page; null on the last one. */
+  nextCursor: z.iso.datetime().nullable(),
 });
 
 /** GET /cooperatives/{id}/assistant/conversations/{conversationId} */
@@ -109,6 +124,7 @@ export type CitationKind = z.infer<typeof citationKindSchema>;
 export type AssistantMessage = z.infer<typeof assistantMessageSchema>;
 export type AssistantRating = z.infer<typeof assistantRatingSchema>;
 export type AssistantConversation = z.infer<typeof assistantConversationSchema>;
+export type ListConversationsQuery = z.infer<typeof listConversationsQuerySchema>;
 export type ListConversationsResponse = z.infer<typeof listConversationsResponseSchema>;
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 export type SendMessageResponse = z.infer<typeof sendMessageResponseSchema>;

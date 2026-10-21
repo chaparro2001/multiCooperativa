@@ -36,8 +36,15 @@ export interface NewMessage {
  */
 export interface ConversationStore {
   create(cooperativeId: string, membershipId: string): Promise<ConversationRecord>;
-  /** Newest activity first. */
-  list(cooperativeId: string, membershipId: string): Promise<ConversationRecord[]>;
+  /**
+   * Newest activity first, only conversations that already have an exchange (a title).
+   * With `before`, only those with older activity.
+   */
+  list(
+    cooperativeId: string,
+    membershipId: string,
+    page?: { limit: number; before?: Date },
+  ): Promise<ConversationRecord[]>;
   find(
     cooperativeId: string,
     membershipId: string,
@@ -50,6 +57,8 @@ export interface ConversationStore {
     conversationId: string,
     limit?: number,
   ): Promise<MessageRecord[]>;
+  /** US-AI-04: removes the conversation with its messages and ratings; false when it is not the author's. */
+  remove(cooperativeId: string, membershipId: string, conversationId: string): Promise<boolean>;
   /** One step: both messages are stored, the title is set if empty and the activity moves. */
   appendExchange(
     cooperativeId: string,

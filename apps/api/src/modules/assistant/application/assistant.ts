@@ -68,12 +68,38 @@ export async function createConversation(
   return deps.conversations.create(context.cooperativeId, context.membershipId);
 }
 
+/** My history, newest activity first; `nextCursor` is the activity of the last item when there are more. */
 export async function listConversations(
   deps: AssistantDeps,
   context: CooperativeContext,
-): Promise<ConversationRecord[]> {
+  page: { limit: number; before?: Date } = { limit: 20 },
+): Promise<{ items: ConversationRecord[]; nextCursor: Date | null }> {
   requireAccess(context.permissions, 'assistant', 'read');
-  return deps.conversations.list(context.cooperativeId, context.membershipId);
+  // One extra row tells whether there is another page.
+  const rows = await deps.conversations.list(context.cooperativeId, context.membershipId, {
+    ...page,
+    limit: page.limit + 1,
+  });
+  const items = rows.slice(0, page.limit);
+  return {
+    items,
+    nextCursor: rows.length > page.limit ? items[items.length - 1]!.updatedAt : null,
+  };
+}
+
+/** US-AI-04, privacy: the author can erase a conversation; for anyone else it does not exist. */
+export async function deleteConversation(
+  deps: AssistantDeps,
+  context: CooperativeContext,
+  conversationId: string,
+): Promise<void> {
+  requireAccess(context.permissions, 'assistant', 'read');
+  const removed = await deps.conversations.remove(
+    context.cooperativeId,
+    context.membershipId,
+    conversationId,
+  );
+  if (!removed) throw new ConversationNotFoundError();
 }
 
 export async function getConversation(

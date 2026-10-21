@@ -295,6 +295,7 @@ beforeAll(async () => {
     'POST /cooperatives/:cooperativeId/assistant/conversations/:conversationId/messages': {
       content: 'Hello',
     },
+    'DELETE /cooperatives/:cooperativeId/assistant/conversations/:conversationId': {},
     'POST /cooperatives/:cooperativeId/assistant/messages/:messageId/rating': {
       rating: 'helpful',
     },

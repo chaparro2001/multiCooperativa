@@ -32,10 +32,29 @@ export class InMemoryConversationStore implements ConversationStore {
     return conversation;
   }
 
-  async list(cooperativeId: string, membershipId: string) {
-    return this.conversations
-      .filter((c) => c.cooperativeId === cooperativeId && c.membershipId === membershipId)
+  async list(cooperativeId: string, membershipId: string, page?: { limit: number; before?: Date }) {
+    const mine = this.conversations
+      .filter(
+        (c) =>
+          c.cooperativeId === cooperativeId &&
+          c.membershipId === membershipId &&
+          c.title !== null &&
+          (!page?.before || c.updatedAt < page.before),
+      )
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    return page ? mine.slice(0, page.limit) : mine;
+  }
+
+  async remove(cooperativeId: string, membershipId: string, conversationId: string) {
+    if (!(await this.find(cooperativeId, membershipId, conversationId))) return false;
+    this.conversations.splice(
+      this.conversations.findIndex((c) => c.id === conversationId),
+      1,
+    );
+    for (let i = this.stored.length - 1; i >= 0; i--) {
+      if (this.stored[i]!.conversationId === conversationId) this.stored.splice(i, 1);
+    }
+    return true;
   }
 
   async find(cooperativeId: string, membershipId: string, conversationId: string) {
