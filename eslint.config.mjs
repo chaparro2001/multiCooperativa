@@ -13,6 +13,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.expo/**',
       '**/generated/**',
+      '.claude/**',
     ],
   },
   js.configs.recommended,
