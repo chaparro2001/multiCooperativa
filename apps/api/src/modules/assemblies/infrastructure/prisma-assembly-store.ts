@@ -1,5 +1,5 @@
 import type { PrismaClient } from '../../../shared/infrastructure/prisma';
-import type { AssemblyState, AssemblyStatus } from '../domain/assembly';
+import type { AssemblyState, AssemblyStatus, RescheduledFrom } from '../domain/assembly';
 import type {
   AssemblyRecord,
   AssemblyStore,
@@ -31,11 +31,52 @@ const assemblySelect = {
   secondCallAt: true,
   place: true,
   createdAt: true,
+  previousFirstCallAt: true,
+  previousSecondCallAt: true,
+  previousPlace: true,
+  rescheduledAt: true,
+  rescheduleReason: true,
   points: { orderBy: { position: 'asc' }, select: pointSelect },
 } as const;
 
 const openVotingsOf = (tx: Transaction | PrismaClient, assemblyId: string) =>
   tx.voting.count({ where: { status: 'open', point: { assemblyId } } });
+
+/** A voting row exists only once opened (open or closed). */
+const openedVotingsOf = (tx: Transaction | PrismaClient, assemblyId: string) =>
+  tx.voting.count({ where: { point: { assemblyId } } });
+
+interface RescheduleColumns {
+  previousFirstCallAt: Date | null;
+  previousSecondCallAt: Date | null;
+  previousPlace: string | null;
+  rescheduledAt: Date | null;
+  rescheduleReason: string | null;
+}
+
+function toRecord(
+  row: Omit<AssemblyRecord, 'rescheduledFrom'> & RescheduleColumns,
+): AssemblyRecord {
+  const {
+    previousFirstCallAt,
+    previousSecondCallAt,
+    previousPlace,
+    rescheduledAt,
+    rescheduleReason,
+    ...rest
+  } = row;
+  const rescheduledFrom: RescheduledFrom | null =
+    rescheduledAt && previousFirstCallAt && previousPlace
+      ? {
+          firstCallAt: previousFirstCallAt,
+          secondCallAt: previousSecondCallAt,
+          place: previousPlace,
+          at: rescheduledAt,
+          reason: rescheduleReason,
+        }
+      : null;
+  return { ...rest, rescheduledFrom };
+}
 
 export class PrismaAssemblyStore implements AssemblyStore {
   constructor(private readonly prisma: PrismaClient) {}
@@ -61,12 +102,16 @@ export class PrismaAssemblyStore implements AssemblyStore {
     }));
   }
 
-  find(cooperativeId: string, id: string): Promise<AssemblyRecord | null> {
-    return this.prisma.assembly.findFirst({ where: { id, cooperativeId }, select: assemblySelect });
+  async find(cooperativeId: string, id: string): Promise<AssemblyRecord | null> {
+    const row = await this.prisma.assembly.findFirst({
+      where: { id, cooperativeId },
+      select: assemblySelect,
+    });
+    return row && toRecord(row);
   }
 
-  create(cooperativeId: string, state: AssemblyState): Promise<AssemblyRecord> {
-    return this.prisma.assembly.create({
+  async create(cooperativeId: string, state: AssemblyState): Promise<AssemblyRecord> {
+    const row = await this.prisma.assembly.create({
       data: {
         cooperativeId,
         type: state.type,
@@ -86,12 +131,13 @@ export class PrismaAssemblyStore implements AssemblyStore {
       },
       select: assemblySelect,
     });
+    return toRecord(row);
   }
 
   update(
     cooperativeId: string,
     id: string,
-    decide: (current: AssemblyRecord, openVotings: number) => AssemblyState,
+    decide: Parameters<AssemblyStore['update']>[2],
   ): Promise<{ assembly: AssemblyRecord; removedFileKeys: string[] } | null> {
     return this.prisma.$transaction(async (tx) => {
       const locked = await tx.$queryRaw<{ id: string }[]>`
@@ -99,11 +145,10 @@ export class PrismaAssemblyStore implements AssemblyStore {
         WHERE id = ${id}::uuid AND "cooperativeId" = ${cooperativeId}::uuid
         FOR UPDATE`;
       if (locked.length === 0) return null;
-      const current = await tx.assembly.findUniqueOrThrow({
-        where: { id },
-        select: assemblySelect,
-      });
-      const next = decide(current, await openVotingsOf(tx, id));
+      const current = toRecord(
+        await tx.assembly.findUniqueOrThrow({ where: { id }, select: assemblySelect }),
+      );
+      const next = decide(current, await openVotingsOf(tx, id), await openedVotingsOf(tx, id));
 
       await tx.assembly.update({
         where: { id },
@@ -113,6 +158,13 @@ export class PrismaAssemblyStore implements AssemblyStore {
           firstCallAt: next.firstCallAt,
           secondCallAt: next.secondCallAt,
           place: next.place,
+          ...(next.rescheduledFrom && {
+            previousFirstCallAt: next.rescheduledFrom.firstCallAt,
+            previousSecondCallAt: next.rescheduledFrom.secondCallAt,
+            previousPlace: next.rescheduledFrom.place,
+            rescheduledAt: next.rescheduledFrom.at,
+            rescheduleReason: next.rescheduledFrom.reason,
+          }),
         },
       });
 
@@ -142,10 +194,9 @@ export class PrismaAssemblyStore implements AssemblyStore {
         }
       }
 
-      const assembly = await tx.assembly.findUniqueOrThrow({
-        where: { id },
-        select: assemblySelect,
-      });
+      const assembly = toRecord(
+        await tx.assembly.findUniqueOrThrow({ where: { id }, select: assemblySelect }),
+      );
       return { assembly, removedFileKeys };
     });
   }

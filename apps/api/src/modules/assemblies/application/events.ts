@@ -17,4 +17,24 @@ export type VotingClosed = DomainEvent<
   { cooperativeId: string; assemblyId: string; pointId: string; title: string; outcome: Outcome }
 >;
 
-export type AssemblyEvent = AssemblyConvened | VotingOpened | VotingClosed;
+/**
+ * US-ASM-09: a convened assembly moved. Dates are ISO instants. The announcements
+ * module publishes the notice when `notifyMembers` is true.
+ */
+export type AssemblyRescheduled = DomainEvent<
+  'AssemblyRescheduled',
+  {
+    cooperativeId: string;
+    assemblyId: string;
+    assemblyType: 'ordinary' | 'extraordinary';
+    previous: { firstCallAt: string; secondCallAt: string | null; place: string };
+    firstCallAt: string;
+    secondCallAt: string | null;
+    place: string;
+    reason: string | null;
+    notifyMembers: boolean;
+    rescheduledByMembershipId: string;
+  }
+>;
+
+export type AssemblyEvent = AssemblyConvened | AssemblyRescheduled | VotingOpened | VotingClosed;

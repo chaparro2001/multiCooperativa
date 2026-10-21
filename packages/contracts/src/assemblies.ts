@@ -28,6 +28,16 @@ export const assemblyInputSchema = z.object({
   points: z.array(pointInputSchema).max(50),
 });
 
+/** POST /assemblies/{id}/reschedule (US-ASM-09): only for a convened assembly with no voting opened. */
+export const rescheduleAssemblyRequestSchema = z.object({
+  firstCallAt: instant,
+  secondCallAt: instant.nullable().default(null),
+  place: z.string().max(200),
+  reason: z.string().max(500).nullable().default(null),
+  /** Publishes an announcement for the members with the change. */
+  notifyMembers: z.boolean().default(true),
+});
+
 export const assemblySummarySchema = z.object({
   id: z.uuid(),
   type: assemblyTypeSchema,
@@ -79,6 +89,16 @@ export const pointAttachmentSchema = z.object({
 export const assemblyDetailSchema = assemblySummarySchema
   .omit({ pointCount: true, openVotings: true })
   .extend({
+    /** Set once a convened assembly was moved: what it was before (US-ASM-09). */
+    rescheduledFrom: z
+      .object({
+        firstCallAt: instant,
+        secondCallAt: instant.nullable(),
+        place: z.string(),
+        at: instant,
+        reason: z.string().nullable(),
+      })
+      .nullable(),
     points: z.array(
       z.object({
         id: z.uuid(),
@@ -104,6 +124,7 @@ export type VoteChoice = z.infer<typeof voteChoiceSchema>;
 export type VotingOutcome = z.infer<typeof votingOutcomeSchema>;
 export type PointInput = z.infer<typeof pointInputSchema>;
 export type AssemblyInput = z.infer<typeof assemblyInputSchema>;
+export type RescheduleAssemblyRequest = z.input<typeof rescheduleAssemblyRequestSchema>;
 export type AssemblySummary = z.infer<typeof assemblySummarySchema>;
 export type ListAssembliesResponse = z.infer<typeof listAssembliesResponseSchema>;
 export type VotingView = z.infer<typeof votingViewSchema>;

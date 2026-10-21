@@ -20,13 +20,25 @@ export class InvalidAssemblyError extends AssemblyDomainError {
 export class InsufficientNoticeError extends AssemblyDomainError {
   readonly code = 'insufficient_notice';
 
-  constructor(readonly minNoticeDays: number) {
-    super(`The assembly must be convened at least ${minNoticeDays} days in advance.`);
+  constructor(
+    readonly minNoticeDays: number,
+    field?: string,
+  ) {
+    super(`The assembly must be convened at least ${minNoticeDays} days in advance.`, field);
   }
 }
 
 export class InvalidAssemblyTransitionError extends AssemblyDomainError {
   readonly code = 'invalid_assembly_transition';
+}
+
+/** US-ASM-09: census and votes must not be altered, so a voting that was opened blocks the change. */
+export class VotingAlreadyOpenedError extends AssemblyDomainError {
+  readonly code = 'voting_already_opened';
+
+  constructor() {
+    super('The date cannot be changed: a voting of this assembly has already been opened.');
+  }
 }
 
 export class InvalidVotingTransitionError extends AssemblyDomainError {

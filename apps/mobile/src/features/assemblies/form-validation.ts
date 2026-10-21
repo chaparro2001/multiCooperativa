@@ -1,4 +1,8 @@
-import { assemblyInputSchema, type AssemblyType } from '@multicooperativa/contracts';
+import {
+  assemblyInputSchema,
+  type AssemblyType,
+  rescheduleAssemblyRequestSchema,
+} from '@multicooperativa/contracts';
 
 import { collect, type FieldErrors, mergeErrors, required, zodFieldErrors } from '@/forms/errors';
 import type { ServerMapping } from '@/forms/server-errors';
@@ -44,6 +48,51 @@ export function validateAssembly(draft: AssemblyDraft): FieldErrors {
     secondCallAt: draft.secondCall ? draft.secondCall.toISOString() : null,
     place: draft.place.trim(),
     points: toPointInputs(draft.points),
+  });
+  const contract = parsed.success
+    ? {}
+    : zodFieldErrors(parsed.error, (path) => {
+        const joined = path.map(String).join('.');
+        return FORM_FIELD[joined] ?? joined;
+      });
+  return mergeErrors(own, contract);
+}
+
+export interface RescheduleDraft {
+  firstCall: Date;
+  secondCall: Date | null;
+  place: string;
+  reason: string;
+  notifyMembers: boolean;
+}
+
+/** Same API paths as the editor, plus the optional reason. */
+export const RESCHEDULE_SERVER_MAPPING: ServerMapping = { fields: FORM_FIELD };
+
+export const isRescheduleField = (name: string) =>
+  /^(firstCall|secondCall|place|reason)$/.test(name);
+
+/** US-ASM-09: what the change of date needs before it is sent (the notice is the server's rule). */
+export function validateReschedule(draft: RescheduleDraft, now = new Date()): FieldErrors {
+  const own = collect({
+    place: draft.place.trim() ? undefined : required,
+    firstCall: Number.isNaN(draft.firstCall.getTime())
+      ? required
+      : draft.firstCall.getTime() <= now.getTime()
+        ? { key: 'assemblies.reschedule.errors.pastDate' }
+        : undefined,
+    secondCall:
+      draft.secondCall && draft.secondCall.getTime() <= draft.firstCall.getTime()
+        ? { key: 'assemblies.editor.errors.secondBeforeFirst' }
+        : undefined,
+  });
+  const valid = !Number.isNaN(draft.firstCall.getTime());
+  const parsed = rescheduleAssemblyRequestSchema.safeParse({
+    firstCallAt: valid ? draft.firstCall.toISOString() : '',
+    secondCallAt: draft.secondCall ? draft.secondCall.toISOString() : null,
+    place: draft.place.trim(),
+    reason: draft.reason.trim() || null,
+    notifyMembers: draft.notifyMembers,
   });
   const contract = parsed.success
     ? {}

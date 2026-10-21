@@ -83,7 +83,11 @@
         "points_title": "Escribe el título del punto (máximo 200 caracteres).",
         "points_description": "La descripción del punto es demasiado larga.",
         "points_majority": "Elige la mayoría que necesita este punto votable.",
-        "points": "El orden del día necesita al menos un punto."
+        "points": "El orden del día necesita al menos un punto.",
+        "reason": "El motivo puede tener como máximo 500 caracteres."
+      },
+      "insufficient_notice": {
+        "firstCallAt": "La nueva fecha debe tener al menos {{minNoticeDays}} días de antelación desde hoy."
       }
     }
   },
@@ -250,6 +254,7 @@
       "insufficient_notice_one": "La asamblea debe convocarse con al menos {{count}} día de antelación.",
       "insufficient_notice_other": "La asamblea debe convocarse con al menos {{count}} días de antelación.",
       "invalid_assembly_transition": "Ese cambio no es posible con el estado actual de la asamblea.",
+      "voting_already_opened": "No se puede cambiar la fecha: ya se ha abierto una votación de esta asamblea.",
       "invalid_voting_transition": "Ese cambio no es posible con el estado actual de la votación.",
       "voting_not_open": "La votación no está abierta.",
       "already_voted": "Ya has votado en este punto; el voto no se puede cambiar.",
@@ -519,7 +524,25 @@
       "quorumReached": "Con quórum en {{call}} convocatoria",
       "quorumMissed": "Sin quórum en {{call}} convocatoria",
       "myVote": "Tu voto: {{choice}}",
-      "vote": "Votar"
+      "vote": "Votar",
+      "reschedule": "Cambiar fecha",
+      "rescheduledNote": "Fecha cambiada el {{at}} (antes: {{date}})",
+      "rescheduledPlace": "Lugar anterior: {{place}}",
+      "rescheduledReason": "Motivo: {{reason}}"
+    },
+    "reschedule": {
+      "title": "Cambiar fecha",
+      "current": "Ahora: {{date}} · {{place}}",
+      "noticeHint": "La nueva fecha debe respetar el plazo mínimo de antelación contado desde hoy. Solo es posible mientras no se haya abierto ninguna votación.",
+      "reason": "Motivo (opcional)",
+      "notifyMembers": "Avisar a los socios con un comunicado",
+      "submit": "Cambiar fecha",
+      "confirmTitle": "Cambiar la fecha de la asamblea",
+      "confirmMessage": "Se actualizará la convocatoria. No se avisará a los socios.",
+      "confirmMessageNotify": "Se actualizará la convocatoria y se publicará un comunicado para los socios.",
+      "errors": {
+        "pastDate": "La fecha debe ser futura."
+      }
     },
     "vote": {
       "title": "Votar",

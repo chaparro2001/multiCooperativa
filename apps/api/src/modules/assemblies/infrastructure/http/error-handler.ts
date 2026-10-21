@@ -16,13 +16,19 @@ const STATUS_BY_CODE: Record<string, number> = {
   not_in_census: 403,
   not_found: 404,
   invalid_assembly_transition: 409,
+  voting_already_opened: 409,
   invalid_voting_transition: 409,
   voting_not_open: 409,
   already_voted: 409,
 };
 
 function details(error: AssemblyDomainError): ApiError['details'] {
-  if (error instanceof InsufficientNoticeError) return { minNoticeDays: error.minNoticeDays };
+  if (error instanceof InsufficientNoticeError) {
+    return {
+      minNoticeDays: error.minNoticeDays,
+      ...(error.field && { field: error.field }),
+    };
+  }
   // US-ASM-05: the member is shown the vote that counts.
   if (error instanceof AlreadyVotedError) return { choice: error.choice };
   return error.field ? { field: error.field } : undefined;

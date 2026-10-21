@@ -391,6 +391,13 @@ model Assembly {
   place         String         @db.VarChar(200)
   createdAt     DateTime       @default(now())
 
+  /// Last date change of a convened assembly (US-ASM-09): what it was before. All null if never moved.
+  previousFirstCallAt  DateTime?
+  previousSecondCallAt DateTime?
+  previousPlace        String?   @db.VarChar(200)
+  rescheduledAt        DateTime?
+  rescheduleReason     String?   @db.VarChar(500)
+
   points AssemblyPoint[]
 
   @@index([cooperativeId, status, firstCallAt])
@@ -429,9 +436,9 @@ model PointAttachment {
 
 /// Copies the rules on opening: changing the settings afterwards does not alter a voting in progress.
 model Voting {
-  id                      String        @id @default(uuid()) @db.Uuid
-  pointId                 String        @unique @db.Uuid
-  status                  VotingStatus  @default(open)
+  id                      String         @id @default(uuid()) @db.Uuid
+  pointId                 String         @unique @db.Uuid
+  status                  VotingStatus   @default(open)
   majority                Majority
   firstCallQuorumPercent  Int
   secondCallQuorumPercent Int
@@ -474,8 +481,8 @@ model Vote {
   /// NFR-ASM-03: server time.
   castAt       DateTime   @default(now())
 
-  voting       Voting       @relation(fields: [votingId], references: [id])
-  censusEntry  VotingCensus @relation(fields: [votingId, membershipId], references: [votingId, membershipId])
+  voting      Voting       @relation(fields: [votingId], references: [id])
+  censusEntry VotingCensus @relation(fields: [votingId, membershipId], references: [votingId, membershipId])
 
   @@unique([votingId, membershipId])
 }
@@ -675,21 +682,21 @@ model AssistantConversation {
 
 /// US-AI-07: one row per cooperative that chose a local model; no row means the server default.
 model AssistantSetting {
-  cooperativeId String   @id @db.Uuid
+  cooperativeId    String   @id @db.Uuid
   /// Ollama model id picked by the administrator (validated against the server allowlist on write and on use). Null when only a hosted provider is configured.
-  model         String?
+  model            String?
   /// 'local' (the server's model) or 'hosted' (the cooperative's own provider account, ADR-019).
-  source        String   @default("local")
+  source           String   @default("local")
   /// Provider id of the fixed catalog (groq, mistral, nvidia, openrouter); hosted source only.
-  hostedProvider String?
-  hostedModel   String?
+  hostedProvider   String?
+  hostedModel      String?
   /// The cooperative's API key, AES-256-GCM encrypted with ASSISTANT_SECRETS_KEY (base64 parts). Never returned.
   apiKeyCiphertext String?
-  apiKeyIv      String?
-  apiKeyTag     String?
+  apiKeyIv         String?
+  apiKeyTag        String?
   /// Last four characters of the key: the only part shown again.
-  apiKeyHint    String?
-  updatedAt     DateTime @default(now()) @updatedAt
+  apiKeyHint       String?
+  updatedAt        DateTime @default(now()) @updatedAt
 }
 
 /// US-ACC-14: one row per cooperative that customized its look; no row means the app's default theme. Owned by the branding module.

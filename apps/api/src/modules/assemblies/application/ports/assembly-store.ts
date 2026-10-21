@@ -1,4 +1,9 @@
-import type { AssemblyState, AssemblyStatus, PointState } from '../../domain/assembly';
+import type {
+  AssemblyState,
+  AssemblyStatus,
+  PointState,
+  RescheduledFrom,
+} from '../../domain/assembly';
 
 export interface AttachmentRecord {
   id: string;
@@ -16,6 +21,8 @@ export interface AssemblyRecord extends Omit<AssemblyState, 'points'> {
   id: string;
   cooperativeId: string;
   createdAt: Date;
+  /** Last date change, null if the assembly was never moved (US-ASM-09). */
+  rescheduledFrom: RescheduledFrom | null;
   points: PointRecord[];
 }
 
@@ -44,11 +51,17 @@ export interface AssemblyStore {
    * Locked read-modify-write. Points keep their id when the new state names it;
    * the rest are created; missing ones are removed with their attachments,
    * whose file keys come back so the caller can delete the files.
+   * `decide` also sees how many votings were ever opened (open or closed);
+   * returning `rescheduledFrom` stores the previous call (US-ASM-09).
    */
   update(
     cooperativeId: string,
     id: string,
-    decide: (current: AssemblyRecord, openVotings: number) => AssemblyState,
+    decide: (
+      current: AssemblyRecord,
+      openVotings: number,
+      openedVotings: number,
+    ) => AssemblyState & { rescheduledFrom?: RescheduledFrom | null },
   ): Promise<{ assembly: AssemblyRecord; removedFileKeys: string[] } | null>;
   findPoint(cooperativeId: string, pointId: string): Promise<PointContext | null>;
   /** Locked on the assembly: `check` sees its current status and may refuse. */

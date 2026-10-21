@@ -282,6 +282,10 @@ beforeAll(async () => {
       points: [{ title: 'X', description: '', votable: false, majority: null }],
     },
     'POST /cooperatives/:cooperativeId/assemblies/:assemblyId/convene': {},
+    'POST /cooperatives/:cooperativeId/assemblies/:assemblyId/reschedule': {
+      firstCallAt: '2027-12-01T18:00:00Z',
+      place: 'Another place',
+    },
     'POST /cooperatives/:cooperativeId/assemblies/:assemblyId/cancel': {},
     'POST /cooperatives/:cooperativeId/assemblies/:assemblyId/close': {},
     'POST /cooperatives/:cooperativeId/points/:pointId/documents': MULTIPART_PDF,

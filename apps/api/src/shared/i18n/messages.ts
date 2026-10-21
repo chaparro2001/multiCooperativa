@@ -15,6 +15,15 @@ const es = {
   'invitation.body':
     'Hola {name}, {cooperativeName} te ha invitado a unirte a multiCooperativa. ' +
     'Abre este enlace para activar tu cuenta: {link}',
+  // US-ASM-09: announcement published when an assembly is rescheduled.
+  'assembly.type.ordinary': 'Asamblea ordinaria',
+  'assembly.type.extraordinary': 'Asamblea extraordinaria',
+  'assembly.rescheduled.title': 'Cambio de fecha: {assembly}',
+  'assembly.rescheduled.intro': 'Cambia la fecha de la asamblea.',
+  'assembly.rescheduled.before': 'Antes: {date}, en {place}.',
+  'assembly.rescheduled.now': 'Ahora: {date}, en {place}.',
+  'assembly.rescheduled.secondCall': 'Segunda convocatoria: {date}.',
+  'assembly.rescheduled.reason': 'Motivo: {reason}',
 } as const;
 
 export type MessageKey = keyof typeof es;
@@ -24,6 +33,14 @@ const en: Record<MessageKey, string> = {
   'invitation.body':
     'Hello {name}, {cooperativeName} has invited you to join multiCooperativa. ' +
     'Open this link to activate your account: {link}',
+  'assembly.type.ordinary': 'Ordinary assembly',
+  'assembly.type.extraordinary': 'Extraordinary assembly',
+  'assembly.rescheduled.title': 'Date change: {assembly}',
+  'assembly.rescheduled.intro': 'The date of the assembly has changed.',
+  'assembly.rescheduled.before': 'Before: {date}, at {place}.',
+  'assembly.rescheduled.now': 'Now: {date}, at {place}.',
+  'assembly.rescheduled.secondCall': 'Second call: {date}.',
+  'assembly.rescheduled.reason': 'Reason: {reason}',
 };
 
 export const MESSAGES: Record<Locale, Record<MessageKey, string>> = { es, en };

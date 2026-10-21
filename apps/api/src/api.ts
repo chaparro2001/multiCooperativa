@@ -92,6 +92,7 @@ export function createApi(deps: ApiDeps): Api {
     prisma: deps.prisma,
     files: deps.files,
     events,
+    onAssemblyRescheduled: (handler) => events.subscribe('AssemblyRescheduled', handler),
     members: access.directory,
     requireCooperative: access.requireCooperative,
   });

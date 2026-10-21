@@ -10,11 +10,13 @@ import {
   editDraft,
   isVisible,
   orderForListing,
+  reschedule,
 } from './assembly';
 import {
   InsufficientNoticeError,
   InvalidAssemblyError,
   InvalidAssemblyTransitionError,
+  VotingAlreadyOpenedError,
 } from './errors';
 
 const now = new Date('2026-10-01T10:00:00Z');
@@ -205,5 +207,81 @@ describe('the field of a rule violation (usability of forms: details.field)', ()
         ),
       ),
     ).toBe('points.1.title');
+  });
+});
+
+describe('reschedule a convened assembly (US-ASM-09, BR-ASM-12)', () => {
+  const convened = convene(createDraft(input({ secondCallAt: inDays(20.5) })), now, 15);
+  const change = (overrides: Partial<Parameters<typeof reschedule>[1]> = {}) => ({
+    firstCallAt: inDays(30),
+    secondCallAt: null,
+    place: ' New hall ',
+    reason: ' Venue unavailable ',
+    ...overrides,
+  });
+
+  it('Given a convened assembly, when I move it, then it keeps what it was before', () => {
+    const moved = reschedule(convened, change(), now, 15, 0);
+
+    expect(moved).toMatchObject({
+      status: 'convened',
+      firstCallAt: inDays(30),
+      secondCallAt: null,
+      place: 'New hall',
+      rescheduledFrom: {
+        firstCallAt: inDays(20),
+        secondCallAt: inDays(20.5),
+        place: 'Social hall',
+        at: now,
+        reason: 'Venue unavailable',
+      },
+    });
+    expect(moved.points).toEqual(convened.points);
+  });
+
+  it.each(['draft', 'held', 'cancelled'] as const)('refuses a %s assembly', (status) => {
+    expect(() => reschedule({ ...convened, status }, change(), now, 15, 0)).toThrow(
+      InvalidAssemblyTransitionError,
+    );
+  });
+
+  it('refuses it once any voting was opened, so census and votes stay intact', () => {
+    expect(() => reschedule(convened, change(), now, 15, 1)).toThrow(VotingAlreadyOpenedError);
+  });
+
+  it('Given less notice than the minimum counted from now, then it states the minimum and the field', () => {
+    const error = (() => {
+      try {
+        reschedule(convened, change({ firstCallAt: inDays(14.9) }), now, 15, 0);
+      } catch (e) {
+        return e;
+      }
+    })();
+    expect(error).toBeInstanceOf(InsufficientNoticeError);
+    expect(error).toMatchObject({ minNoticeDays: 15, field: 'firstCallAt' });
+  });
+
+  it('accepts exactly the minimum notice', () => {
+    expect(() =>
+      reschedule(convened, change({ firstCallAt: inDays(15) }), now, 15, 0),
+    ).not.toThrow();
+  });
+
+  it('the second call must be after the first', () => {
+    expect(() => reschedule(convened, change({ secondCallAt: inDays(30) }), now, 15, 0)).toThrow(
+      expect.objectContaining({ field: 'secondCallAt' }),
+    );
+  });
+
+  it('the place is required and the reason is optional but bounded', () => {
+    expect(() => reschedule(convened, change({ place: ' ' }), now, 15, 0)).toThrow(
+      expect.objectContaining({ field: 'place' }),
+    );
+    expect(reschedule(convened, change({ reason: null }), now, 15, 0).rescheduledFrom.reason).toBe(
+      null,
+    );
+    expect(() => reschedule(convened, change({ reason: 'x'.repeat(501) }), now, 15, 0)).toThrow(
+      expect.objectContaining({ field: 'reason' }),
+    );
   });
 });

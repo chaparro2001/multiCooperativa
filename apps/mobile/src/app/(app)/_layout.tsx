@@ -87,6 +87,10 @@ function CooperativeNavigator() {
               name="assemblies/editor"
               options={{ title: t('assemblies.detail.title') }}
             />
+            <Stack.Screen
+              name="assemblies/reschedule"
+              options={{ title: t('assemblies.reschedule.title') }}
+            />
           </Stack.Protected>
         </Stack.Protected>
         <Stack.Protected guard={canAccess(allowed, 'documents')}>

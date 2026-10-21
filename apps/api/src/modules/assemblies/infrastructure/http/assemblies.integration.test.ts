@@ -21,7 +21,12 @@ const env = loadEnv(process.env);
 const prisma = createTestPrisma();
 const events: AppEvent[] = [];
 const bus = new InProcessEventBus<AppEvent>({ onHandlerError: () => {} });
-for (const type of ['AssemblyConvened', 'VotingOpened', 'VotingClosed'] as const) {
+for (const type of [
+  'AssemblyConvened',
+  'AssemblyRescheduled',
+  'VotingOpened',
+  'VotingClosed',
+] as const) {
   bus.subscribe(type, (event) => void events.push(event));
 }
 const invitationSender = { send: async () => {} };
@@ -285,5 +290,124 @@ describe('assemblies over HTTP (US-ASM-01..06)', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('invalid_assembly');
+  });
+});
+
+describe('reschedule over HTTP (US-ASM-09, BR-ASM-12)', () => {
+  const rescheduleUrl = (id: string) => `${base()}/${id}/reschedule`;
+  const announcementsUrl = () => `/cooperatives/${fieldCoop}/announcements`;
+  const body = (overrides: Record<string, unknown> = {}) => ({
+    firstCallAt: inDays(40),
+    secondCallAt: inDays(40.02),
+    place: 'Casa de cultura',
+    reason: 'La sala no está disponible',
+    ...overrides,
+  });
+  const rescheduled = () => events.filter((e) => e.type === 'AssemblyRescheduled');
+
+  it('moves a convened assembly, keeps the previous call, emits the event and announces it to members', async () => {
+    const { id, detail } = await convened();
+
+    const res = await request(app).post(rescheduleUrl(id)).set(as('board')).send(body());
+
+    expect(res.status).toBe(200);
+    expect(assemblySummarySchema.parse(res.body)).toMatchObject({
+      status: 'convened',
+      place: 'Casa de cultura',
+    });
+    const after = assemblyDetailSchema.parse(
+      (await request(app).get(`${base()}/${id}`).set(as('member'))).body,
+    );
+    expect(after.rescheduledFrom).toMatchObject({
+      firstCallAt: detail.firstCallAt,
+      place: 'Social hall',
+      reason: 'La sala no está disponible',
+    });
+    expect(after.points.map((p) => p.id)).toEqual(detail.points.map((p) => p.id));
+    expect(rescheduled()).toHaveLength(1);
+
+    const list = (await request(app).get(announcementsUrl()).set(as('member'))).body.items;
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ title: 'Cambio de fecha: Asamblea ordinaria' });
+    const shown = await request(app).get(`${announcementsUrl()}/${list[0].id}`).set(as('member'));
+    expect(shown.body.body).toContain('Casa de cultura');
+    expect(shown.body.body).toContain('Motivo: La sala no está disponible');
+  });
+
+  it('with notifyMembers=false no announcement is created', async () => {
+    const { id } = await convened();
+
+    const res = await request(app)
+      .post(rescheduleUrl(id))
+      .set(as('board'))
+      .send(body({ notifyMembers: false }));
+
+    expect(res.status).toBe(200);
+    expect((await request(app).get(announcementsUrl()).set(as('member'))).body.items).toEqual([]);
+  });
+
+  it('read level answers 403; an unknown assembly 404', async () => {
+    const { id } = await convened();
+
+    const denied = await request(app).post(rescheduleUrl(id)).set(as('member')).send(body());
+    expect(denied.status).toBe(403);
+    const missing = await request(app)
+      .post(rescheduleUrl('60000000-0000-4000-8000-000000000009'))
+      .set(as('board'))
+      .send(body());
+    expect(missing.status).toBe(404);
+  });
+
+  it('a draft, or an assembly with a voting already opened, answers 409', async () => {
+    const draft = await request(app)
+      .post(base())
+      .set(as('board'))
+      .send({
+        type: 'ordinary',
+        firstCallAt: inDays(20),
+        secondCallAt: null,
+        place: 'Hall',
+        points: [{ title: 'X', description: '', votable: false, majority: null }],
+      });
+    const draftId = assemblySummarySchema.parse(draft.body).id;
+    const asDraft = await request(app).post(rescheduleUrl(draftId)).set(as('board')).send(body());
+    expect(asDraft.status).toBe(409);
+    expect(asDraft.body.error).toBe('invalid_assembly_transition');
+
+    const { id, pointId } = await convened();
+    await request(app)
+      .post(`${point(pointId)}/voting/open`)
+      .set(as('board'));
+    const opened = await request(app).post(rescheduleUrl(id)).set(as('board')).send(body());
+    expect(opened.status).toBe(409);
+    expect(opened.body.error).toBe('voting_already_opened');
+
+    await request(app)
+      .post(`${point(pointId)}/voting/close`)
+      .set(as('board'));
+    const closed = await request(app).post(rescheduleUrl(id)).set(as('board')).send(body());
+    expect(closed.body.error).toBe('voting_already_opened');
+  });
+
+  it('answers 400 with details.field for the notice, the second call and the place', async () => {
+    const { id } = await convened();
+    const send = (overrides: Record<string, unknown>) =>
+      request(app).post(rescheduleUrl(id)).set(as('board')).send(body(overrides));
+
+    const notice = await send({ firstCallAt: inDays(3), secondCallAt: null });
+    expect(notice.status).toBe(400);
+    expect(notice.body).toMatchObject({
+      error: 'insufficient_notice',
+      details: { field: 'firstCallAt', minNoticeDays: 15 },
+    });
+    const second = await send({ secondCallAt: inDays(39) });
+    expect(second.body).toMatchObject({
+      error: 'invalid_assembly',
+      details: { field: 'secondCallAt' },
+    });
+    const place = await send({ place: '  ' });
+    expect(place.body).toMatchObject({ error: 'invalid_assembly', details: { field: 'place' } });
+    expect((await send({ firstCallAt: 'tomorrow' })).status).toBe(400);
+    expect(rescheduled()).toEqual([]);
   });
 });

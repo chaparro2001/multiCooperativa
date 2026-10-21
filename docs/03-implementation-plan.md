@@ -55,6 +55,7 @@ Specification: [04-assemblies](requirements/04-assemblies.md)
 - [x] Call to meeting, items, census, votes with a unique constraint in the database.
 - [x] API and events.
 - [x] App: list, detail, vote, result; editor and voting control for managers.
+- [x] Reschedule a called assembly (US-ASM-09, BR-ASM-12): notice from now, no voting opened, previous call kept, `AssemblyRescheduled` event and automatic announcement (optional) from the announcements module.
 
 ## Milestone 4 · Invoices and delivery notes (14–17 Oct)
 
