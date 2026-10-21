@@ -1,4 +1,4 @@
-import type { RequestHandler } from 'express';
+import { type RequestHandler, Router } from 'express';
 
 import type { EventPublisher } from '../../shared/events';
 import type { FileStorage } from '../../shared/files/file-storage';
@@ -6,6 +6,8 @@ import type { PrismaClient } from '../../shared/infrastructure/prisma';
 import { createAnnouncementReads } from './application/assistant-reads';
 import type { AnnouncementEvent } from './application/events';
 import type { MemberDirectory } from './application/ports/member-directory';
+import { createUnreadRouter } from './infrastructure/http/unread-router';
+import { PrismaUnreadStore } from './infrastructure/prisma-unread-store';
 import { createAnnouncementsRouter } from './infrastructure/http/announcements-router';
 import { announcementErrorHandler } from './infrastructure/http/error-handler';
 import { PrismaAnnouncementStore } from './infrastructure/prisma-announcement-store';
@@ -31,7 +33,10 @@ export function createAnnouncementsModule(deps: {
     now: deps.now ?? (() => new Date()),
   };
   return {
-    router: createAnnouncementsRouter(useCaseDeps, deps.requireCooperative),
+    router: Router().use(
+      createUnreadRouter({ unread: new PrismaUnreadStore(deps.prisma) }, deps.requireCooperative),
+      createAnnouncementsRouter(useCaseDeps, deps.requireCooperative),
+    ),
     errorHandler: announcementErrorHandler,
     /** For the AI assistant's tools (requirements/07): same use cases and permissions. */
     reads: createAnnouncementReads(useCaseDeps),

@@ -74,3 +74,7 @@ export type AnnouncementAttachment = z.infer<typeof announcementAttachmentSchema
 export type AnnouncementDetail = z.infer<typeof announcementDetailSchema>;
 export type CreateAnnouncementRequest = z.infer<typeof createAnnouncementRequestSchema>;
 export type UpdateAnnouncementRequest = z.infer<typeof updateAnnouncementRequestSchema>;
+
+/** GET /announcements/unread-count: published announcements the caller has not opened yet (US-ANN-08). */
+export const announcementsUnreadSchema = z.object({ unread: z.number().int().min(0) });
+export type AnnouncementsUnread = z.infer<typeof announcementsUnreadSchema>;
