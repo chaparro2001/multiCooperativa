@@ -29,6 +29,8 @@ function details(error: Error): ApiError['details'] {
   // US-INV-03: tells the difference.
   if (error instanceof TotalMismatchError)
     return { expected: error.expected, difference: error.difference };
+  // The input field a rule violation is about, so the app marks it (usability of forms).
+  if (error instanceof InvoicingDomainError && error.field) return { field: error.field };
   return undefined;
 }
 

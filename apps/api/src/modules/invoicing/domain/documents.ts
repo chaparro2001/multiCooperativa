@@ -2,6 +2,7 @@ import {
   InvalidDocumentError,
   InvalidInvoiceTransitionError,
   InvalidThirdPartyError,
+  InvoicingDomainError,
 } from './errors';
 import { assertTotal, parseMoney, parseQuantity, parseVatRate } from './money';
 import { isValidNif, normalizeNif } from './nif';
@@ -11,14 +12,24 @@ export type Operation = 'purchase' | 'sale';
 /** A calendar day, YYYY-MM-DD: compared as text, never through time zones. */
 export type Day = string;
 
-function assertDay(value: string, what: string): Day {
+/** Tags a rule violation raised by `run` with the input field it is about (`details.field`). */
+function atField<T>(field: string, run: () => T): T {
+  try {
+    return run();
+  } catch (error) {
+    if (error instanceof InvoicingDomainError && !error.field) error.field = field;
+    throw error;
+  }
+}
+
+function assertDay(value: string, what: string, field?: string): Day {
   const date = new Date(`${value}T00:00:00Z`);
   if (
     !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
     Number.isNaN(date.getTime()) ||
     !date.toISOString().startsWith(value)
   ) {
-    throw new InvalidDocumentError(`${what} is not a valid date.`);
+    throw new InvalidDocumentError(`${what} is not a valid date.`, field);
   }
   return value;
 }
@@ -29,10 +40,12 @@ export function addDays(day: Day, days: number): Day {
   return date.toISOString().slice(0, 10);
 }
 
-function text(value: string, max: number, what: string): string {
+function text(value: string, max: number, what: string, field?: string): string {
   const trimmed = value.trim();
-  if (!trimmed) throw new InvalidDocumentError(`${what} is missing.`);
-  if (trimmed.length > max) throw new InvalidDocumentError(`${what} exceeds ${max} characters.`);
+  if (!trimmed) throw new InvalidDocumentError(`${what} is missing.`, field);
+  if (trimmed.length > max) {
+    throw new InvalidDocumentError(`${what} exceeds ${max} characters.`, field);
+  }
   return trimmed;
 }
 
@@ -59,14 +72,14 @@ export interface ThirdPartyInput {
 
 function validThirdParty(input: Omit<ThirdPartyInput, 'nif'>) {
   const name = input.name.trim();
-  if (!name) throw new InvalidThirdPartyError('The company name is missing.');
-  if (name.length > 200) throw new InvalidThirdPartyError('The company name is too long.');
+  if (!name) throw new InvalidThirdPartyError('The company name is missing.', 'name');
+  if (name.length > 200) throw new InvalidThirdPartyError('The company name is too long.', 'name');
   if (!input.isSupplier && !input.isCustomer) {
-    throw new InvalidThirdPartyError('Say whether it is a supplier, a customer or both.');
+    throw new InvalidThirdPartyError('Say whether it is a supplier, a customer or both.', 'roles');
   }
   const email = input.email?.trim() || null;
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new InvalidThirdPartyError('The email is not valid.');
+    throw new InvalidThirdPartyError('The email is not valid.', 'email');
   }
   return {
     name,
@@ -80,7 +93,10 @@ function validThirdParty(input: Omit<ThirdPartyInput, 'nif'>) {
 export function createThirdParty(input: ThirdPartyInput): ThirdPartyState {
   const nif = normalizeNif(input.nif);
   if (!isValidNif(nif))
-    throw new InvalidThirdPartyError('The NIF is not valid: check the letter or the check digit.');
+    throw new InvalidThirdPartyError(
+      'The NIF is not valid: check the letter or the check digit.',
+      'nif',
+    );
   return { nif, ...validThirdParty(input), active: true };
 }
 
@@ -98,12 +114,19 @@ export const reactivate = <T extends ThirdPartyState>(party: T): T => ({ ...part
 
 /** BR-INV-03. */
 export function assertCanOperate(party: ThirdPartyState, operation: Operation): void {
-  if (!party.active) throw new InvalidThirdPartyError('The third party is deactivated.');
+  if (!party.active)
+    throw new InvalidThirdPartyError('The third party is deactivated.', 'thirdPartyId');
   if (operation === 'purchase' && !party.isSupplier) {
-    throw new InvalidThirdPartyError('A purchase needs a third party registered as a supplier.');
+    throw new InvalidThirdPartyError(
+      'A purchase needs a third party registered as a supplier.',
+      'thirdPartyId',
+    );
   }
   if (operation === 'sale' && !party.isCustomer) {
-    throw new InvalidThirdPartyError('A sale needs a third party registered as a customer.');
+    throw new InvalidThirdPartyError(
+      'A sale needs a third party registered as a customer.',
+      'thirdPartyId',
+    );
   }
 }
 
@@ -124,13 +147,17 @@ export interface LineInput {
 
 function validLines(lines: LineInput[]): Line[] {
   return lines.map((line, i) => {
-    const quantity = parseQuantity(line.quantity);
-    if (quantity <= 0n)
-      throw new InvalidDocumentError(`Line ${i + 1}: the quantity must be greater than zero.`);
+    const quantity = atField(`lines.${i}.quantity`, () => parseQuantity(line.quantity));
+    if (quantity <= 0n) {
+      throw new InvalidDocumentError(
+        `Line ${i + 1}: the quantity must be greater than zero.`,
+        `lines.${i}.quantity`,
+      );
+    }
     return {
-      concept: text(line.concept, 200, `The concept of line ${i + 1}`),
+      concept: text(line.concept, 200, `The concept of line ${i + 1}`, `lines.${i}.concept`),
       quantity,
-      unit: text(line.unit, 20, `The unit of line ${i + 1}`),
+      unit: text(line.unit, 20, `The unit of line ${i + 1}`, `lines.${i}.unit`),
     };
   });
 }
@@ -155,11 +182,11 @@ export function createDeliveryNote(input: {
 }): DeliveryNoteState {
   const lines = validLines(input.lines);
   if (lines.length === 0)
-    throw new InvalidDocumentError('The delivery note needs at least one line.');
+    throw new InvalidDocumentError('The delivery note needs at least one line.', 'lines');
   return {
     operation: input.operation,
-    number: text(input.number, 50, 'The delivery note number'),
-    date: assertDay(input.date, 'The delivery note date'),
+    number: text(input.number, 50, 'The delivery note number', 'number'),
+    date: assertDay(input.date, 'The delivery note date', 'date'),
     status: 'pending_invoicing',
     lines,
   };
@@ -206,17 +233,21 @@ export interface InvoiceInput {
 }
 
 export function createInvoice(input: InvoiceInput): InvoiceState {
-  const issueDate = assertDay(input.issueDate, 'The issue date');
-  const dueDate = assertDay(input.dueDate, 'The due date');
-  if (dueDate < issueDate)
-    throw new InvalidDocumentError('The due date cannot be earlier than the issue date.');
-  const base = parseMoney(input.base);
-  const vatRate = parseVatRate(input.vatRate);
-  const total = parseMoney(input.total);
+  const issueDate = assertDay(input.issueDate, 'The issue date', 'issueDate');
+  const dueDate = assertDay(input.dueDate, 'The due date', 'dueDate');
+  if (dueDate < issueDate) {
+    throw new InvalidDocumentError(
+      'The due date cannot be earlier than the issue date.',
+      'dueDate',
+    );
+  }
+  const base = atField('base', () => parseMoney(input.base));
+  const vatRate = atField('vatRate', () => parseVatRate(input.vatRate));
+  const total = atField('total', () => parseMoney(input.total));
   assertTotal(base, vatRate, total);
   return {
     operation: input.operation,
-    number: text(input.number, 50, 'The invoice number'),
+    number: text(input.number, 50, 'The invoice number', 'number'),
     issueDate,
     dueDate,
     base,
@@ -235,18 +266,30 @@ export function assertCanGroup(
 ): void {
   if (notes.length === 0) return;
   if (invoice.lines.length === 0) {
-    throw new InvalidDocumentError('To reconcile with delivery notes, provide the invoiced lines.');
+    throw new InvalidDocumentError(
+      'To reconcile with delivery notes, provide the invoiced lines.',
+      'lines',
+    );
   }
   for (const note of notes) {
     if (note.thirdPartyId !== invoice.thirdPartyId) {
-      throw new InvalidDocumentError('There is a delivery note from another third party.');
+      throw new InvalidDocumentError(
+        'There is a delivery note from another third party.',
+        'deliveryNoteIds',
+      );
     }
     if (note.operation !== invoice.operation)
-      throw new InvalidDocumentError('There is a delivery note of another operation.');
+      throw new InvalidDocumentError(
+        'There is a delivery note of another operation.',
+        'deliveryNoteIds',
+      );
     if (note.status === 'invoiced')
-      throw new InvalidDocumentError('There is an already invoiced delivery note.');
+      throw new InvalidDocumentError(
+        'There is an already invoiced delivery note.',
+        'deliveryNoteIds',
+      );
     if (note.status === 'voided')
-      throw new InvalidDocumentError('There is a voided delivery note.');
+      throw new InvalidDocumentError('There is a voided delivery note.', 'deliveryNoteIds');
   }
 }
 

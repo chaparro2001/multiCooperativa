@@ -52,21 +52,27 @@ function isRealDate(value: string): boolean {
  * BR-MEM-01: the result is frozen; the only way to change history is a new movement.
  */
 export function createMovement(input: NewMovementInput, currentBalanceCents: bigint): Movement {
-  if (!isRealDate(input.date)) throw new InvalidMovementError('The date must be YYYY-MM-DD.');
+  if (!isRealDate(input.date))
+    throw new InvalidMovementError('The date must be YYYY-MM-DD.', 'date');
   if (!(MOVEMENT_TYPES as readonly string[]).includes(input.type)) {
-    throw new InvalidMovementError('Unknown movement type.');
+    throw new InvalidMovementError('Unknown movement type.', 'type');
   }
   const concept = input.concept.trim();
   if (concept.length === 0 || concept.length > MAX_CONCEPT_LENGTH) {
-    throw new InvalidMovementError(`The concept needs 1 to ${MAX_CONCEPT_LENGTH} characters.`);
+    throw new InvalidMovementError(
+      `The concept needs 1 to ${MAX_CONCEPT_LENGTH} characters.`,
+      'concept',
+    );
   }
   const amountCents = parseMoney(input.amount);
   const magnitude = amountCents < 0n ? -amountCents : amountCents;
-  if (magnitude > MAX_AMOUNT_CENTS) throw new InvalidMovementError('The amount is too large.');
+  if (magnitude > MAX_AMOUNT_CENTS)
+    throw new InvalidMovementError('The amount is too large.', 'amount');
   if (input.type === 'correction') {
-    if (amountCents === 0n) throw new InvalidMovementError('A correction cannot be zero.');
+    if (amountCents === 0n)
+      throw new InvalidMovementError('A correction cannot be zero.', 'amount');
   } else if (amountCents <= 0n) {
-    throw new InvalidMovementError('The amount must be positive.');
+    throw new InvalidMovementError('The amount must be positive.', 'amount');
   }
   if (currentBalanceCents + effectOf(input.type, amountCents) < 0n) {
     throw new InsufficientCapitalError(formatMoney(currentBalanceCents));

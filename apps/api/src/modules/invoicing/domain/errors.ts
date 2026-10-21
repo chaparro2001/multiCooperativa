@@ -2,8 +2,15 @@
 export abstract class InvoicingDomainError extends Error {
   abstract readonly code: string;
 
-  constructor(message: string) {
+  /**
+   * Contract path of the input field the rule is about (`nif`, `dueDate`, `lines.0.quantity`),
+   * sent as `details.field` so the app marks that field. Absent when it is not about one.
+   */
+  field?: string;
+
+  constructor(message: string, field?: string) {
     super(message);
+    this.field = field;
     this.name = new.target.name;
   }
 }

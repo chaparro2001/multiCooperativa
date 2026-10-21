@@ -171,3 +171,20 @@ describe('registering a movement (US-MEM-03)', () => {
     }).toThrow(TypeError);
   });
 });
+
+describe('the field of a rule violation (usability of forms: details.field)', () => {
+  const fieldOf = (run: () => unknown) => {
+    try {
+      run();
+    } catch (error) {
+      return (error as { field?: string }).field;
+    }
+    return 'no error';
+  };
+
+  it('names the movement field that broke the rule', () => {
+    expect(fieldOf(() => createMovement(input({ date: 'x' }), 0n))).toBe('date');
+    expect(fieldOf(() => createMovement(input({ concept: ' ' }), 0n))).toBe('concept');
+    expect(fieldOf(() => createMovement(input({ amount: '0.00' }), 0n))).toBe('amount');
+  });
+});

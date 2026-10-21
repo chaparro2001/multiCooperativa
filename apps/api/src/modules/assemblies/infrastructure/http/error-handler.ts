@@ -25,7 +25,7 @@ function details(error: AssemblyDomainError): ApiError['details'] {
   if (error instanceof InsufficientNoticeError) return { minNoticeDays: error.minNoticeDays };
   // US-ASM-05: the member is shown the vote that counts.
   if (error instanceof AlreadyVotedError) return { choice: error.choice };
-  return undefined;
+  return error.field ? { field: error.field } : undefined;
 }
 
 export const assemblyErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
