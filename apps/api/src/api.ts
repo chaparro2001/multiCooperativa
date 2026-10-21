@@ -120,6 +120,7 @@ export function createApi(deps: ApiDeps): Api {
     extractor: deps.documentExtractor,
     explainer: deps.discrepancyExplainer,
     cooperativeTaxId: (id) => access.directory.cooperativeTaxId(id),
+    audit: access.recordAudit,
   });
 
   const members = createMembersModule({

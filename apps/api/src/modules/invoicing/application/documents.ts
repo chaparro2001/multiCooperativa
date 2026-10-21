@@ -21,6 +21,7 @@ import {
   type Operation,
   type PaymentStatus,
   settle,
+  STALE_NOTE_DAYS,
 } from '../domain/documents';
 import { InvalidDocumentError } from '../domain/errors';
 import { reconcile, type ReconciliationStatus } from '../domain/reconciliation';
@@ -41,8 +42,7 @@ import { requireManage, requireRead, UUID } from './shared';
 
 /** Same limit as other attachments; photos are reduced on the device first (NFR-INV-03). */
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
-/** US-INV-09: pending notes older than this are highlighted. */
-export const STALE_NOTE_DAYS = 30;
+export { STALE_NOTE_DAYS };
 
 export interface InvoicingDeps {
   thirdParties: ThirdPartyStore;

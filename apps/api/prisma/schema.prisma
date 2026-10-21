@@ -516,6 +516,8 @@ enum ReminderKind {
 model InvoicingSettings {
   cooperativeId        String @id @db.Uuid
   toleranceBasisPoints Int    @default(100)
+  /// BR-INV-15: days of notice before a due date (and before a pending note turns 30 days old), 1 to 90.
+  dueSoonDays          Int    @default(15)
 }
 
 model ThirdParty {

@@ -100,6 +100,9 @@ async function snapshot() {
       orderBy: { id: 'asc' },
     }),
     branding: await prisma.cooperativeBranding.findMany({ where: { cooperativeId: fieldCoop } }),
+    invoicingSettings: await prisma.invoicingSettings.findMany({
+      where: { cooperativeId: fieldCoop },
+    }),
     invitations: await prisma.invitation.count(),
     audit: await prisma.auditEvent.count({ where: { cooperativeId: fieldCoop } }),
   };
@@ -310,6 +313,7 @@ beforeAll(async () => {
       concept: 'Extra',
       amount: '50.00',
     },
+    'PUT /cooperatives/:cooperativeId/invoicing/settings': { dueSoonDays: 20 },
     'PUT /cooperatives/:cooperativeId/branding/primary-color': { primaryColor: '#1E5AA8' },
     'PUT /cooperatives/:cooperativeId/branding/logo': MULTIPART_LOGO,
     'POST /cooperatives/:cooperativeId/members': {

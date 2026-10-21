@@ -9,8 +9,13 @@ import {
   createDeliveryNote,
   createInvoice,
   createThirdParty,
+  assertDueSoonDays,
+  DEFAULT_DUE_SOON_DAYS,
   deactivate,
+  invoiceNeedsAttention,
   isDueSoon,
+  noteNeedsAttention,
+  staleNoteCutoff,
   markOverdue,
   settle,
 } from './documents';
@@ -215,13 +220,21 @@ describe('payments, collections and due dates (US-INV-07)', () => {
     expect(markOverdue(pending, '2026-11-01').paymentStatus).toBe('overdue');
   });
 
-  it('warns when due within the next 3 days, also if the process did not run one day', () => {
-    expect(isDueSoon(pending, '2026-10-28')).toBe(true);
-    expect(isDueSoon(pending, '2026-10-30')).toBe(true);
-    expect(isDueSoon(pending, '2026-10-31')).toBe(true);
-    expect(isDueSoon(pending, '2026-10-27')).toBe(false);
-    expect(isDueSoon(pending, '2026-11-01')).toBe(false);
-    expect(isDueSoon({ ...pending, paymentStatus: 'settled' }, '2026-10-28')).toBe(false);
+  it('warns when due within the next N days, also if the process did not run one day', () => {
+    expect(isDueSoon(pending, '2026-10-28', 3)).toBe(true);
+    expect(isDueSoon(pending, '2026-10-30', 3)).toBe(true);
+    expect(isDueSoon(pending, '2026-10-31', 3)).toBe(true);
+    expect(isDueSoon(pending, '2026-10-27', 3)).toBe(false);
+    expect(isDueSoon(pending, '2026-11-01', 3)).toBe(false);
+    expect(isDueSoon({ ...pending, paymentStatus: 'settled' }, '2026-10-28', 3)).toBe(false);
+  });
+
+  it('BR-INV-15: the window is the cooperative own number of days', () => {
+    expect(isDueSoon(pending, '2026-10-16', DEFAULT_DUE_SOON_DAYS)).toBe(true);
+    expect(isDueSoon(pending, '2026-10-15', DEFAULT_DUE_SOON_DAYS)).toBe(false);
+    expect(isDueSoon(pending, '2026-10-01', 30)).toBe(true);
+    expect(isDueSoon(pending, '2026-08-02', 90)).toBe(true);
+    expect(isDueSoon(pending, '2026-08-01', 90)).toBe(false);
   });
 
   it('is settled when pending or overdue, with its date', () => {
@@ -309,5 +322,87 @@ describe('the field of a rule violation (usability of forms: details.field)', ()
         }),
       ),
     ).toBe('lines.0.quantity');
+  });
+});
+
+describe('notice days and attention (BR-INV-15, BR-INV-16)', () => {
+  it('BR-INV-15: defaults to 15 days and accepts whole numbers from 1 to 90', () => {
+    expect(DEFAULT_DUE_SOON_DAYS).toBe(15);
+    expect(assertDueSoonDays(1)).toBe(1);
+    expect(assertDueSoonDays(90)).toBe(90);
+    for (const bad of [0, 91, -3, 1.5, Number.NaN]) {
+      expect(() => assertDueSoonDays(bad)).toThrow(InvalidDocumentError);
+    }
+    expect(() => assertDueSoonDays(0)).toThrow(expect.objectContaining({ field: 'dueSoonDays' }));
+  });
+
+  describe('invoices', () => {
+    const today = '2026-10-21';
+    const invoiceDue = (
+      dueDate: string,
+      paymentStatus: 'pending' | 'overdue' | 'settled' | 'voided' = 'pending',
+    ) => ({
+      paymentStatus,
+      dueDate,
+    });
+
+    it('counts the overdue ones and those due up to N days from today, edges included', () => {
+      expect(invoiceNeedsAttention(invoiceDue('2026-10-20'), today, 15)).toBe(true);
+      expect(invoiceNeedsAttention(invoiceDue('2026-10-21'), today, 15)).toBe(true);
+      expect(invoiceNeedsAttention(invoiceDue('2026-11-05'), today, 15)).toBe(true);
+      expect(invoiceNeedsAttention(invoiceDue('2026-11-06'), today, 15)).toBe(false);
+      expect(invoiceNeedsAttention(invoiceDue('2026-10-22'), today, 1)).toBe(true);
+      expect(invoiceNeedsAttention(invoiceDue('2026-10-23'), today, 1)).toBe(false);
+    });
+
+    it('counts a long-overdue invoice whatever N is, and an overdue status', () => {
+      expect(invoiceNeedsAttention(invoiceDue('2025-01-01', 'overdue'), today, 1)).toBe(true);
+    });
+
+    it('never counts a settled or voided invoice', () => {
+      expect(invoiceNeedsAttention(invoiceDue('2026-10-01', 'settled'), today, 15)).toBe(false);
+      expect(invoiceNeedsAttention(invoiceDue('2026-10-01', 'voided'), today, 15)).toBe(false);
+    });
+
+    it('crosses month and year ends exactly', () => {
+      expect(invoiceNeedsAttention(invoiceDue('2027-01-14'), '2026-12-30', 15)).toBe(true);
+      expect(invoiceNeedsAttention(invoiceDue('2027-01-15'), '2026-12-30', 15)).toBe(false);
+      expect(invoiceNeedsAttention(invoiceDue('2028-02-29'), '2028-02-14', 15)).toBe(true);
+    });
+  });
+
+  describe('delivery notes (US-INV-09)', () => {
+    const today = '2026-10-21';
+
+    it('the cut-off is today minus (30 - N): the date a note turns 30 days old within N days', () => {
+      expect(staleNoteCutoff(today, 15)).toBe('2026-10-06');
+      expect(staleNoteCutoff(today, 1)).toBe('2026-09-22');
+      expect(staleNoteCutoff(today, 29)).toBe('2026-10-20');
+    });
+
+    it('with N of 30 or more every pending note counts: there is no cut-off', () => {
+      expect(staleNoteCutoff(today, 30)).toBeNull();
+      expect(staleNoteCutoff(today, 90)).toBeNull();
+    });
+
+    it('counts old notes and those reaching 30 days within N days, edges included', () => {
+      const pendingOn = (date: string) => ({ status: 'pending_invoicing' as const, date });
+      // 2026-10-06 is 15 days old: it reaches 30 days in exactly 15 days.
+      expect(noteNeedsAttention(pendingOn('2026-10-06'), today, 15)).toBe(true);
+      expect(noteNeedsAttention(pendingOn('2026-10-07'), today, 15)).toBe(false);
+      expect(noteNeedsAttention(pendingOn('2026-08-01'), today, 15)).toBe(true);
+    });
+
+    it('with N of 30 or more counts even a note dated today or later', () => {
+      const pendingOn = (date: string) => ({ status: 'pending_invoicing' as const, date });
+      expect(noteNeedsAttention(pendingOn(today), today, 30)).toBe(true);
+      expect(noteNeedsAttention(pendingOn('2026-10-25'), today, 45)).toBe(true);
+      expect(noteNeedsAttention(pendingOn(today), today, 29)).toBe(false);
+    });
+
+    it('never counts an invoiced or voided note', () => {
+      expect(noteNeedsAttention({ status: 'invoiced', date: '2026-01-01' }, today, 15)).toBe(false);
+      expect(noteNeedsAttention({ status: 'voided', date: '2026-01-01' }, today, 90)).toBe(false);
+    });
   });
 });

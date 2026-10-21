@@ -15,6 +15,10 @@ export interface DueInvoice {
 export interface DueDatesStore {
   /** BR-INV-09: pending with a due date before today → overdue; records the notice. */
   markOverdue(today: string): Promise<DueInvoice[]>;
-  /** Pending and due between `from` and `until`: claims the “due soon” notice once. */
-  claimDueSoon(from: string, until: string): Promise<DueInvoice[]>;
+  /**
+   * Pending and due between `today` and `today` plus the notice days of the
+   * invoice's cooperative (`defaultDays` when it never chose one, BR-INV-15):
+   * claims the “due soon” notice once.
+   */
+  claimDueSoon(today: string, defaultDays: number): Promise<DueInvoice[]>;
 }

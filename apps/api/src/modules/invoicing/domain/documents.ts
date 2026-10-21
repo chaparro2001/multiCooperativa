@@ -303,22 +303,76 @@ export function markOverdue<T extends { paymentStatus: PaymentStatus; dueDate: D
     : invoice;
 }
 
-export const DUE_SOON_DAYS = 3;
+/** US-INV-07, BR-INV-15: default notice window, in days, of a cooperative that never chose one. */
+export const DEFAULT_DUE_SOON_DAYS = 15;
+export const MIN_DUE_SOON_DAYS = 1;
+export const MAX_DUE_SOON_DAYS = 90;
+/** US-INV-09: pending delivery notes older than this many days are stale. */
+export const STALE_NOTE_DAYS = 30;
+
+/** BR-INV-15: a whole number of days between 1 and 90. */
+export function assertDueSoonDays(days: number): number {
+  if (!Number.isInteger(days) || days < MIN_DUE_SOON_DAYS || days > MAX_DUE_SOON_DAYS) {
+    throw new InvalidDocumentError(
+      `The notice days must be a whole number between ${MIN_DUE_SOON_DAYS} and ${MAX_DUE_SOON_DAYS}.`,
+      'dueSoonDays',
+    );
+  }
+  return days;
+}
 
 /**
- * US-INV-07: due within the next 3 days. A window rather than an exact day, so
- * a day the daily process does not run loses no notice; the reminder record
- * keeps it from being sent twice (NFR-INV-04).
+ * US-INV-07: due within the next `days` days (the cooperative's window,
+ * BR-INV-15). A window rather than an exact day, so a day the daily process
+ * does not run loses no notice; the reminder record keeps it from being sent
+ * twice (NFR-INV-04).
  */
 export function isDueSoon(
   invoice: { paymentStatus: PaymentStatus; dueDate: Day },
   today: Day,
+  days: number,
 ): boolean {
   return (
     invoice.paymentStatus === 'pending' &&
     invoice.dueDate >= today &&
-    invoice.dueDate <= addDays(today, DUE_SOON_DAYS)
+    invoice.dueDate <= addDays(today, days)
   );
+}
+
+/**
+ * BR-INV-16: an invoice needs attention when it is still to be paid or
+ * collected (pending or overdue, never settled or voided) and is overdue or
+ * due within the next `days` days.
+ */
+export function invoiceNeedsAttention(
+  invoice: { paymentStatus: PaymentStatus; dueDate: Day },
+  today: Day,
+  days: number,
+): boolean {
+  return (
+    (invoice.paymentStatus === 'pending' || invoice.paymentStatus === 'overdue') &&
+    invoice.dueDate <= addDays(today, days)
+  );
+}
+
+/**
+ * BR-INV-16: the latest date a pending note can have and still need
+ * attention: it is already older than 30 days or reaches 30 days within the
+ * next `days` days, that is, `date <= today - (30 - days)`. With `days` of 30
+ * or more every pending note counts, so there is no cut-off (`null`).
+ */
+export function staleNoteCutoff(today: Day, days: number): Day | null {
+  return days >= STALE_NOTE_DAYS ? null : addDays(today, days - STALE_NOTE_DAYS);
+}
+
+export function noteNeedsAttention(
+  note: { status: DeliveryNoteStatus; date: Day },
+  today: Day,
+  days: number,
+): boolean {
+  if (note.status !== 'pending_invoicing') return false;
+  const cutoff = staleNoteCutoff(today, days);
+  return cutoff === null || note.date <= cutoff;
 }
 
 /** Paid (purchase) or collected (sale), with its date. */

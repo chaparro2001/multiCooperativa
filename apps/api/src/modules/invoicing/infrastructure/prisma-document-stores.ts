@@ -1,5 +1,10 @@
 import type { PrismaClient } from '../../../shared/infrastructure/prisma';
-import type { DeliveryNoteState, InvoiceState, Line } from '../domain/documents';
+import {
+  DEFAULT_DUE_SOON_DAYS,
+  type DeliveryNoteState,
+  type InvoiceState,
+  type Line,
+} from '../domain/documents';
 import {
   formatMoney,
   formatQuantity,
@@ -190,6 +195,16 @@ export class PrismaDeliveryNoteStore implements DeliveryNoteStore, StaleNotesQue
   countPendingBefore(cooperativeId: string, before: string): Promise<number> {
     return this.prisma.deliveryNote.count({
       where: { cooperativeId, status: 'pending_invoicing', date: { lt: fromDay(before) } },
+    });
+  }
+
+  countPendingUpTo(cooperativeId: string, upTo: string | null): Promise<number> {
+    return this.prisma.deliveryNote.count({
+      where: {
+        cooperativeId,
+        status: 'pending_invoicing',
+        ...(upTo !== null && { date: { lte: fromDay(upTo) } }),
+      },
     });
   }
 }
@@ -464,6 +479,16 @@ export class PrismaInvoiceStore implements InvoiceStore {
     );
   }
 
+  countDueUntil(cooperativeId: string, until: string): Promise<number> {
+    return this.prisma.invoice.count({
+      where: {
+        cooperativeId,
+        paymentStatus: { in: ['pending', 'overdue'] },
+        dueDate: { lte: fromDay(until) },
+      },
+    });
+  }
+
   countOpenDiscrepancies(cooperativeId: string): Promise<number> {
     return this.prisma.invoice.count({
       where: {
@@ -481,5 +506,18 @@ export class PrismaInvoicingSettingsStore implements InvoicingSettingsStore {
   async toleranceBasisPoints(cooperativeId: string): Promise<number> {
     const row = await this.prisma.invoicingSettings.findUnique({ where: { cooperativeId } });
     return row?.toleranceBasisPoints ?? DEFAULT_TOLERANCE_BASIS_POINTS;
+  }
+
+  async dueSoonDays(cooperativeId: string): Promise<number> {
+    const row = await this.prisma.invoicingSettings.findUnique({ where: { cooperativeId } });
+    return row?.dueSoonDays ?? DEFAULT_DUE_SOON_DAYS;
+  }
+
+  async saveDueSoonDays(cooperativeId: string, days: number): Promise<void> {
+    await this.prisma.invoicingSettings.upsert({
+      where: { cooperativeId },
+      create: { cooperativeId, dueSoonDays: days },
+      update: { dueSoonDays: days },
+    });
   }
 }

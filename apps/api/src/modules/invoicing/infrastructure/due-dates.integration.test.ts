@@ -62,16 +62,17 @@ afterAll(() => prisma.$disconnect());
 const run = () => runDueDatesJob({ prisma, events: bus });
 
 describe('daily due-date process (US-INV-07)', () => {
-  it('marks as overdue the pending ones past due and warns about those due in 3 days, in all cooperatives', async () => {
+  it('marks as overdue the pending ones past due and warns about those due within the window, in all cooperatives', async () => {
     const overdueA = await invoice(COOPS[0]!, 'F-1', addDays(today, -1));
     const overdueB = await invoice(COOPS[1]!, 'F-1', addDays(today, -10));
     const soon = await invoice(COOPS[0]!, 'F-2', addDays(today, 2));
     const dueToday = await invoice(COOPS[0]!, 'F-3', today);
-    await invoice(COOPS[0]!, 'F-4', addDays(today, 10));
+    await invoice(COOPS[0]!, 'F-4', addDays(today, 40));
     await invoice(COOPS[0]!, 'F-5', addDays(today, -5), 'settled');
     await invoice(COOPS[0]!, 'F-6', addDays(today, -5), 'voided');
 
     expect(await run()).toEqual({ overdue: 2, dueSoon: 2 });
+    // (F-4, due in 40 days, is outside the default 15-day window.)
 
     const statusOf = async (id: string) =>
       (await prisma.invoice.findUniqueOrThrow({ where: { id } })).paymentStatus;
@@ -92,6 +93,32 @@ describe('daily due-date process (US-INV-07)', () => {
         .map((e) => e.payload.invoiceId)
         .sort(),
     ).toEqual([soon, dueToday].sort());
+  });
+
+  it('BR-INV-15: the warning window is each cooperative own N, 15 days by default', async () => {
+    await prisma.invoicingSettings.create({ data: { cooperativeId: COOPS[1]!, dueSoonDays: 3 } });
+    const defaultIn15 = await invoice(COOPS[0]!, 'F-1', addDays(today, 15));
+    const defaultIn16 = await invoice(COOPS[0]!, 'F-2', addDays(today, 16));
+    const narrowIn3 = await invoice(COOPS[1]!, 'F-1', addDays(today, 3));
+    const narrowIn4 = await invoice(COOPS[1]!, 'F-2', addDays(today, 4));
+
+    expect(await run()).toEqual({ overdue: 0, dueSoon: 2 });
+    const warned = () =>
+      events
+        .filter((e) => e.type === 'InvoiceDueSoon')
+        .map((e) => e.payload.invoiceId)
+        .sort();
+    expect(warned()).toEqual([defaultIn15, narrowIn3].sort());
+
+    // The administrator widens the window: the invoices that enter it are warned once.
+    await prisma.invoicingSettings.update({
+      where: { cooperativeId: COOPS[1]! },
+      data: { dueSoonDays: 30 },
+    });
+    expect(await run()).toEqual({ overdue: 0, dueSoon: 1 });
+    expect(warned()).toEqual([defaultIn15, narrowIn3, narrowIn4].sort());
+    expect(warned()).not.toContain(defaultIn16);
+    expect(await run()).toEqual({ overdue: 0, dueSoon: 0 });
   });
 
   it('NFR-INV-04: running it twice changes nothing and duplicates no notices', async () => {

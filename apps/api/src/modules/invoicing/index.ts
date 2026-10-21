@@ -8,6 +8,8 @@ import { runDueDates } from './application/due-dates';
 import type { DiscrepancyExplainer } from './application/ports/discrepancy-explainer';
 import type { DocumentExtractor } from './application/ports/document-extractor';
 import type { InvoicingEvent } from './application/events';
+import { createInvoicingSettingsRouter } from './infrastructure/http/settings-router';
+import type { AuditRecorder } from './application/ports/document-stores';
 import { createExtractionsRouter } from './infrastructure/http/extractions-router';
 import { createInvoicingDocumentsRouter } from './infrastructure/http/documents-router';
 import { invoicingErrorHandler } from './infrastructure/http/error-handler';
@@ -72,6 +74,8 @@ export function createInvoicingModule(deps: {
   explainer?: DiscrepancyExplainer;
   /** From the access module: the cooperative's own tax id, to tell sales from purchases. */
   cooperativeTaxId(cooperativeId: string): Promise<string | null>;
+  /** Writes to the cooperative's audit log, through the access module. */
+  audit: AuditRecorder;
   now?: () => Date;
 }) {
   const now = deps.now ?? (() => new Date());
@@ -93,6 +97,9 @@ export function createInvoicingModule(deps: {
   const router = Router();
   router.use(createThirdPartiesRouter({ thirdParties }, deps.requireCooperative));
   router.use(createInvoicingDocumentsRouter(useCaseDeps, deps.requireCooperative));
+  router.use(
+    createInvoicingSettingsRouter({ ...useCaseDeps, audit: deps.audit }, deps.requireCooperative),
+  );
 
   router.use(
     createExtractionsRouter(

@@ -189,6 +189,31 @@ export const invoicingSummarySchema = z.object({
   staleDeliveryNotes: z.number().int(),
 });
 
+/** BR-INV-15: days of notice, a whole number from 1 to 90; 15 until the administrator chooses. */
+export const DUE_SOON_DAYS_MIN = 1;
+export const DUE_SOON_DAYS_MAX = 90;
+export const DUE_SOON_DAYS_DEFAULT = 15;
+
+/** GET and PUT /invoicing/settings (BR-INV-15). */
+export const invoicingSettingsSchema = z.object({
+  dueSoonDays: z.number().int().min(DUE_SOON_DAYS_MIN).max(DUE_SOON_DAYS_MAX),
+});
+
+/** PUT /invoicing/settings: the administrator's choice. */
+export const updateInvoicingSettingsBodySchema = z.strictObject({
+  dueSoonDays: z.number().int().min(DUE_SOON_DAYS_MIN).max(DUE_SOON_DAYS_MAX),
+});
+
+/** GET /invoicing/attention: what the home badges show (BR-INV-16). */
+export const invoicingAttentionSchema = z.object({
+  /** Pending invoices (purchases and sales) overdue or due within `days` days. */
+  invoices: z.number().int().min(0),
+  /** Pending delivery notes older than 30 days or reaching 30 days within `days` days. */
+  deliveryNotes: z.number().int().min(0),
+  /** The cooperative's notice window. */
+  days: z.number().int(),
+});
+
 /** GET /third-parties/{id}: record with documents and balance (US-INV-06). */
 export const thirdPartySheetSchema = thirdPartySchema.extend({
   deliveryNotes: z.array(deliveryNoteSchema),
@@ -204,6 +229,9 @@ export type InvoiceInput = z.infer<typeof invoiceInputSchema>;
 export type Invoice = z.infer<typeof invoiceSchema>;
 export type InvoiceDetail = z.infer<typeof invoiceDetailSchema>;
 export type InvoicingSummary = z.infer<typeof invoicingSummarySchema>;
+export type InvoicingSettings = z.infer<typeof invoicingSettingsSchema>;
+export type UpdateInvoicingSettingsBody = z.infer<typeof updateInvoicingSettingsBodySchema>;
+export type InvoicingAttention = z.infer<typeof invoicingAttentionSchema>;
 export type ThirdPartySheet = z.infer<typeof thirdPartySheetSchema>;
 export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
 export type ReconciliationStatus = z.infer<typeof reconciliationStatusSchema>;

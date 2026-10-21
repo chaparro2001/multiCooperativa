@@ -124,6 +124,8 @@ export interface InvoiceStore {
   /** Totals by operation and payment status, for the summary (US-INV-07). */
   totals(cooperativeId: string, thirdPartyId?: string): Promise<InvoiceSummaryRow[]>;
   countOpenDiscrepancies(cooperativeId: string): Promise<number>;
+  /** Pending or overdue invoices due on or before `until` (BR-INV-16): overdue ones included. */
+  countDueUntil(cooperativeId: string, until: string): Promise<number>;
   /** AI-drafted texts for discrepancies of this invoice that have none yet (BR-INV-12). */
   saveExplanations(
     cooperativeId: string,
@@ -135,8 +137,19 @@ export interface InvoiceStore {
 /** US-INV-09: pending notes older than a date, per party. */
 export interface StaleNotesQuery {
   countPendingBefore(cooperativeId: string, day: string): Promise<number>;
+  /** Notes pending invoicing dated on or before `upTo`; `null` counts all of them (BR-INV-16). */
+  countPendingUpTo(cooperativeId: string, upTo: string | null): Promise<number>;
 }
 
 export interface InvoicingSettingsStore {
   toleranceBasisPoints(cooperativeId: string): Promise<number>;
+  /** BR-INV-15: the cooperative's notice days, the default when it never chose one. */
+  dueSoonDays(cooperativeId: string): Promise<number>;
+  saveDueSoonDays(cooperativeId: string, days: number): Promise<void>;
 }
+
+/** Leaves a trace in the cooperative's audit log; provided by the access module (US-ACC-12). */
+export type AuditRecorder = (
+  cooperativeId: string,
+  event: { actorUserId: string; action: string; detail: Record<string, unknown> },
+) => Promise<void>;
