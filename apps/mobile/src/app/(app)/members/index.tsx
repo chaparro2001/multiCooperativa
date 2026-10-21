@@ -1,3 +1,4 @@
+import { UserPlus } from 'lucide-react-native';
 import type { Member } from '@multicooperativa/contracts';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
@@ -38,7 +39,7 @@ export default function MembersScreen() {
                 <HeaderActions>
                   <HeaderAction
                     href="/members/invite"
-                    icon="person-add-outline"
+                    icon={UserPlus}
                     label={t('members.list.invite')}
                     testID="invite-member"
                   />

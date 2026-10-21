@@ -1,11 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { type Href, Link } from 'expo-router';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { type ComponentProps, createElement, type ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { createElement, type ReactNode } from 'react';
 
 import { useBrandColor } from '@/branding/brand';
-
-type IconName = ComponentProps<typeof Ionicons>['name'];
 
 interface HeaderActionBase {
   /**
@@ -18,24 +16,17 @@ interface HeaderActionBase {
   /** Runs an action (role "button"). */
   onPress?: () => void;
   testID?: string;
+  /** Lucide icon component, tinted with the brand color (decorative: the label names the action). */
+  icon: LucideIcon;
 }
-
-/** The glyph is an Ionicons name (tinted with the brand color) or an emoji (decorative text). */
-type HeaderActionProps = HeaderActionBase & ({ icon: IconName } | { emoji: string });
 
 /** Minimum touch target of an icon action (44x44, Apple HIG and WCAG 2.5.5). */
 export const HEADER_ACTION_SIZE = 44;
 
-/** Icon action for a Stack `headerRight`; vector icons use the cooperative's brand color. */
-export function HeaderAction(props: HeaderActionProps) {
-  const { label, href, onPress, testID } = props;
+/** Icon action for a Stack `headerRight`; icons use the cooperative's brand color. */
+export function HeaderAction({ label, href, onPress, testID, icon: Icon }: HeaderActionBase) {
   const color = useBrandColor();
-  const glyph =
-    'icon' in props ? (
-      <Ionicons name={props.icon} size={24} color={color} />
-    ) : (
-      <Text style={styles.emoji}>{props.emoji}</Text>
-    );
+  const glyph = <Icon size={24} strokeWidth={1.75} color={color} aria-hidden />;
 
   const action =
     href !== undefined ? (
@@ -92,5 +83,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emoji: { fontSize: 22 },
 });

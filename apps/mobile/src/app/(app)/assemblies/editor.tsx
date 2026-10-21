@@ -1,5 +1,6 @@
 import type { AssemblyType } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { ArrowDown, ArrowUp, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
@@ -154,13 +155,13 @@ export default function AssemblyEditorScreen() {
             </Text>
             <View style={styles.pointTools}>
               <Tool
-                label="↑"
+                icon={ArrowUp}
                 accessibilityLabel={t('assemblies.editor.moveUp')}
                 onPress={() => setPoints((c) => movePoint(c, index, -1))}
                 disabled={index === 0}
               />
               <Tool
-                label="↓"
+                icon={ArrowDown}
                 accessibilityLabel={t('assemblies.editor.moveDown')}
                 onPress={() => setPoints((c) => movePoint(c, index, 1))}
                 disabled={index === points.length - 1}
@@ -250,11 +251,13 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 
 function Tool({
   label,
+  icon: Icon,
   accessibilityLabel,
   onPress,
   disabled = false,
 }: {
-  label: string;
+  label?: string;
+  icon?: LucideIcon;
   accessibilityLabel?: string;
   onPress(): void;
   disabled?: boolean;
@@ -268,9 +271,13 @@ function Tool({
       disabled={disabled}
       style={styles.tool}
     >
-      <Text style={[styles.toolText, { color: brand }, disabled && styles.toolDisabled]}>
-        {label}
-      </Text>
+      {Icon ? (
+        <Icon size={20} strokeWidth={1.75} color={disabled ? colors.border : brand} aria-hidden />
+      ) : (
+        <Text style={[styles.toolText, { color: brand }, disabled && styles.toolDisabled]}>
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
 }

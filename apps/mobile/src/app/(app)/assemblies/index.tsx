@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react-native';
 import type { AssemblySummary } from '@multicooperativa/contracts';
 import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -41,7 +42,7 @@ export default function AssemblyListScreen() {
                 <HeaderActions>
                   <HeaderAction
                     href="/assemblies/editor"
-                    icon="add"
+                    icon={Plus}
                     label={t('assemblies.list.new')}
                     testID="new-assembly"
                   />

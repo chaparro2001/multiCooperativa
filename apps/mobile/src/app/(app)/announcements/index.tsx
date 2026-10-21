@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react-native';
 import type { AnnouncementSummary } from '@multicooperativa/contracts';
 import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -43,7 +44,7 @@ export default function AnnouncementListScreen() {
                 <HeaderActions>
                   <HeaderAction
                     href="/announcements/editor"
-                    icon="add"
+                    icon={Plus}
                     label={t('announcements.list.new')}
                     testID="new-announcement"
                   />

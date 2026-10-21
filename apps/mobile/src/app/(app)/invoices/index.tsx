@@ -20,7 +20,7 @@ import { colors } from '@/ui/theme';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 
 import { Segmented } from '@/features/invoicing/segmented';
-import { moduleEmoji } from '@/navigation/modules';
+import { moduleIcon } from '@/navigation/modules';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 type Kind = 'invoice' | 'delivery_note';
@@ -71,13 +71,13 @@ export default function InvoicingHomeScreen() {
             <HeaderActions>
               <HeaderAction
                 href="/invoices/third-parties?type=supplier"
-                emoji={moduleEmoji('suppliers')}
+                icon={moduleIcon('suppliers')}
                 label={t('invoicing.thirdParties.filter.supplier')}
                 testID="suppliers-link"
               />
               <HeaderAction
                 href="/invoices/third-parties?type=customer"
-                emoji={moduleEmoji('customers')}
+                icon={moduleIcon('customers')}
                 label={t('invoicing.thirdParties.filter.customer')}
                 testID="customers-link"
               />

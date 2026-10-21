@@ -1,3 +1,4 @@
+import { Users } from 'lucide-react-native';
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text } from 'react-native';
@@ -32,7 +33,7 @@ export default function MemberAreaScreen() {
                   <HeaderActions>
                     <HeaderAction
                       href="/member-area/members"
-                      icon="people-outline"
+                      icon={Users}
                       label={t('memberArea.me.allMembers')}
                       testID="all-members"
                     />

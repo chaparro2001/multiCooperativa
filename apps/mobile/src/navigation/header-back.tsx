@@ -1,6 +1,7 @@
 import { router, usePathname } from 'expo-router';
+import { ChevronLeft } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { useBrandColor } from '@/branding/brand';
 
@@ -25,12 +26,11 @@ export function HeaderBack() {
       style={styles.button}
       testID="header-back"
     >
-      <Text style={[styles.arrow, { color: brand }]}>‹</Text>
+      <ChevronLeft size={28} strokeWidth={1.75} color={brand} aria-hidden />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: { paddingHorizontal: 8, paddingVertical: 4 },
-  arrow: { fontSize: 32, lineHeight: 32 },
 });

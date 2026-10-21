@@ -1,3 +1,4 @@
+import { Settings } from 'lucide-react-native';
 import { type Href, router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -45,7 +46,7 @@ export default function HomeScreen() {
             <HeaderActions>
               <HeaderAction
                 href="/settings"
-                icon="settings-outline"
+                icon={Settings}
                 label={t('settings.title')}
                 testID="settings-link"
               />
@@ -91,9 +92,9 @@ export default function HomeScreen() {
               ]}
               testID={`module-${entry.id}`}
             >
-              <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
-                {entry.emoji}
-              </Text>
+              <View accessibilityElementsHidden importantForAccessibility="no">
+                <entry.icon size={40} strokeWidth={1.75} color={brand.primaryColor} aria-hidden />
+              </View>
               <Text style={styles.cellTitle} numberOfLines={2}>
                 {title(entry)}
               </Text>
@@ -143,11 +144,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   accent: { width: 28, height: 4, borderRadius: 2 },
-  emoji: { fontSize: 44 },
   cellTitle: {
     fontSize: 16,
     lineHeight: 20,
-    // Always two lines tall, so emojis line up across a row even when a title wraps.
+    // Always two lines tall, so icons line up across a row even when a title wraps.
     minHeight: 40,
     fontWeight: '600',
     color: colors.text,
