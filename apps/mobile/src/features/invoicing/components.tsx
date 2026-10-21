@@ -15,6 +15,7 @@ import { Badge } from '@/ui/badge';
 import { colors } from '@/ui/theme';
 
 import { formatEuros } from './amounts';
+import type { InvoiceAttention, NoteAttention } from './attention';
 
 export const useEuros = () => (amount: string) => formatEuros(amount, currentLocale());
 
@@ -53,14 +54,48 @@ export function ReconciliationBadge({ status }: { status: ReconciliationStatus }
   );
 }
 
-export function InvoiceRow({ invoice }: { invoice: Invoice }) {
+/** BR-INV-16: why an invoice counts in the home badge. */
+export function InvoiceAttentionBadge({ attention }: { attention: InvoiceAttention }) {
+  const { t } = useTranslation();
+  if (attention.kind === 'overdue') {
+    return (
+      <Badge
+        label={t('invoicing.attention.overdueDays', { count: attention.days })}
+        tone="danger"
+      />
+    );
+  }
+  return (
+    <Badge
+      label={
+        attention.kind === 'dueToday'
+          ? t('invoicing.attention.dueToday')
+          : t('invoicing.attention.dueInDays', { count: attention.days })
+      }
+      tone="warning"
+    />
+  );
+}
+
+export function InvoiceRow({
+  invoice,
+  attention = null,
+}: {
+  invoice: Invoice;
+  /** Set when the invoice counts in the home badge (BR-INV-16): highlighted with its reason. */
+  attention?: InvoiceAttention | null;
+}) {
   const { t } = useTranslation();
   const euros = useEuros();
   return (
     <Pressable
       accessibilityRole="button"
       onPress={() => router.push(`/invoices/invoice/${invoice.id}`)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.row,
+        attention && styles.attention,
+        pressed && styles.pressed,
+      ]}
       testID={`invoice-${invoice.number}`}
     >
       <View style={styles.rowTop}>
@@ -72,20 +107,34 @@ export function InvoiceRow({ invoice }: { invoice: Invoice }) {
         {t('invoicing.row.due', { date: formatDay(invoice.dueDate) })}
       </Text>
       <View style={styles.badges}>
-        <PaymentBadge status={invoice.paymentStatus} operation={invoice.operation} />
+        {attention?.kind === 'overdue' ? null : (
+          <PaymentBadge status={invoice.paymentStatus} operation={invoice.operation} />
+        )}
+        {attention && <InvoiceAttentionBadge attention={attention} />}
         <ReconciliationBadge status={invoice.reconciliationStatus} />
       </View>
     </Pressable>
   );
 }
 
-export function NoteRow({ note }: { note: DeliveryNote }) {
+export function NoteRow({
+  note,
+  attention = null,
+}: {
+  note: DeliveryNote;
+  /** Set when the note counts in the home badge (BR-INV-16): highlighted with its age. */
+  attention?: NoteAttention | null;
+}) {
   const { t } = useTranslation();
   return (
     <Pressable
       accessibilityRole="button"
       onPress={() => router.push(`/invoices/delivery-note/${note.id}`)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.row,
+        attention && styles.attention,
+        pressed && styles.pressed,
+      ]}
       testID={`delivery-note-${note.number}`}
     >
       <Text style={styles.title}>{note.thirdParty.name}</Text>
@@ -97,6 +146,12 @@ export function NoteRow({ note }: { note: DeliveryNote }) {
           label={t(`enums.deliveryNoteStatus.${note.status}`)}
           tone={note.status === 'pending_invoicing' ? 'warning' : 'neutral'}
         />
+        {attention && (
+          <Badge
+            label={t('invoicing.attention.noteDays', { count: attention.days })}
+            tone={attention.stale ? 'danger' : 'warning'}
+          />
+        )}
       </View>
     </Pressable>
   );
@@ -118,6 +173,7 @@ export const listStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   row: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 6 },
+  attention: { borderLeftWidth: 4, borderLeftColor: colors.danger },
   pressed: { opacity: 0.7 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   title: { fontSize: 16, fontWeight: '600', color: colors.text, flexShrink: 1 },

@@ -6,7 +6,13 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 
 import { messageFor } from '@/api/api-error';
 import { InvoiceRow, listStyles, NoteRow, useEuros } from '@/features/invoicing/components';
-import { useDeliveryNotes, useInvoices, useInvoicingSummary } from '@/features/invoicing/queries';
+import { invoiceAttention, noteAttention, todayInSpain } from '@/features/invoicing/attention';
+import {
+  useDeliveryNotes,
+  useInvoices,
+  useInvoicingAttention,
+  useInvoicingSummary,
+} from '@/features/invoicing/queries';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading } from '@/ui/screen';
@@ -34,9 +40,18 @@ export default function InvoicingHomeScreen() {
   const section = fixed ? (fixed === 'invoice' ? 'invoices' : 'notes') : chosen;
   const invoices = useInvoices(operation);
   const notes = useDeliveryNotes(operation);
+  // BR-INV-16: the rows that count in the home badge are highlighted with their reason.
+  const attention = useInvoicingAttention();
+  const days = attention.data?.days;
+  const today = todayInSpain();
   const kind: Kind = fixed ?? (section === 'notes' ? 'delivery_note' : 'invoice');
   const refresh = usePullToRefresh(async () => {
-    await Promise.all([summary.refetch(), invoices.refetch(), notes.refetch()]);
+    await Promise.all([
+      summary.refetch(),
+      invoices.refetch(),
+      notes.refetch(),
+      attention.refetch(),
+    ]);
   });
 
   return (
@@ -115,11 +130,27 @@ export default function InvoicingHomeScreen() {
 
       {section === 'invoices' ? (
         <List query={invoices} empty={t('invoicing.home.noInvoices')}>
-          {(items) => items.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} />)}
+          {(items) =>
+            items.map((invoice) => (
+              <InvoiceRow
+                key={invoice.id}
+                invoice={invoice}
+                attention={days === undefined ? null : invoiceAttention(invoice, today, days)}
+              />
+            ))
+          }
         </List>
       ) : (
         <List query={notes} empty={t('invoicing.home.noNotes')}>
-          {(items) => items.map((note) => <NoteRow key={note.id} note={note} />)}
+          {(items) =>
+            items.map((note) => (
+              <NoteRow
+                key={note.id}
+                note={note}
+                attention={days === undefined ? null : noteAttention(note, today, days)}
+              />
+            ))
+          }
         </List>
       )}
     </ScrollView>

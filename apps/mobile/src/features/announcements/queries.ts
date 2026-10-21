@@ -3,6 +3,7 @@ import {
   announcementAttachmentSchema,
   announcementDetailSchema,
   announcementSchema,
+  announcementsUnreadSchema,
   type CreateAnnouncementRequest,
   listAnnouncementsResponseSchema,
   type UpdateAnnouncementRequest,
@@ -34,6 +35,17 @@ export function useAnnouncementList() {
   });
 }
 
+/** US-ANN-08: unread announcements of the caller, for the badge of the home. Only with access. */
+export function useUnreadAnnouncements(enabled = true) {
+  const { api } = useServices();
+  const { base, key } = useScope();
+  return useQuery({
+    queryKey: [...key, 'unread'],
+    enabled,
+    queryFn: () => api.request(`${base}/unread-count`, { schema: announcementsUnreadSchema }),
+  });
+}
+
 /** US-ANN-03: opening it marks it as read on the server. */
 export function useAnnouncement(id: string | undefined) {
   const { api } = useServices();
@@ -49,6 +61,7 @@ export function useAnnouncement(id: string | undefined) {
       const detail = await api.request(`${base}/${id}`, { schema: announcementDetailSchema });
       // The list shows it as read from now on.
       queryClient.invalidateQueries({ queryKey: [...key, 'list'] });
+      queryClient.invalidateQueries({ queryKey: [...key, 'unread'] });
       return detail;
     },
   });

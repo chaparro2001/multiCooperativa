@@ -5,7 +5,10 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import { useBrand } from '@/branding/brand';
 import { BrandLogo } from '@/branding/brand-logo';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
+import { tileBadge } from '@/features/home/tile-badges';
+import { useTileBadgeCounts } from '@/features/home/use-tile-badges';
 import { type VisibleModule, visibleModules } from '@/navigation/modules';
+import { CountBadge } from '@/ui/count-badge';
 import { Loading, Screen, SCREEN_MAX_WIDTH, SCREEN_PADDING } from '@/ui/screen';
 import { colors } from '@/ui/theme';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
@@ -25,6 +28,8 @@ export default function HomeScreen() {
   const { cooperative, permissions } = useActiveCooperative();
   const { width } = useWindowDimensions();
   const brand = useBrand();
+  // Count badges (unread announcements, invoices and delivery notes needing attention).
+  const badgeCounts = useTileBadgeCounts();
 
   if (!permissions) return <Loading />;
   const modules = visibleModules(permissions.permissions);
@@ -32,7 +37,6 @@ export default function HomeScreen() {
   const contentWidth = Math.min(width, SCREEN_MAX_WIDTH) - 2 * SCREEN_PADDING;
   const cellWidth = (contentWidth - GAP * (columns - 1)) / columns;
   const title = (entry: VisibleModule) => t(entry.titleKey ?? `enums.module.${entry.module}`);
-
   return (
     <Screen testID="home-screen">
       <Stack.Screen
@@ -63,32 +67,44 @@ export default function HomeScreen() {
         </View>
       </View>
       <View style={styles.grid}>
-        {modules.map((entry) => (
-          <Pressable
-            key={entry.id}
-            accessibilityRole="button"
-            accessibilityLabel={title(entry)}
-            onPress={() => router.push(entry.route as Href)}
-            style={({ pressed }) => [styles.cell, { width: cellWidth }, pressed && styles.pressed]}
-            testID={`module-${entry.id}`}
-          >
-            <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
-              {entry.emoji}
-            </Text>
-            <Text style={styles.cellTitle} numberOfLines={2}>
-              {title(entry)}
-            </Text>
-            {/* The accent only shows once the cooperative picked its own colour. */}
-            {brand.configuredColor && (
-              <View style={[styles.accent, { backgroundColor: brand.primaryColor }]} />
-            )}
-            {entry.comingSoon && (
-              <Text style={styles.badge} testID={`coming-soon-${entry.id}`}>
-                {t('modulePlaceholder.badge')}
+        {modules.map((entry) => {
+          const badge = tileBadge(entry.id, badgeCounts);
+          return (
+            <Pressable
+              key={entry.id}
+              accessibilityRole="button"
+              accessibilityLabel={
+                badge
+                  ? `${title(entry)}, ${t(badge.labelKey, { count: badge.count })}`
+                  : title(entry)
+              }
+              onPress={() => router.push(entry.route as Href)}
+              style={({ pressed }) => [
+                styles.cell,
+                { width: cellWidth },
+                pressed && styles.pressed,
+              ]}
+              testID={`module-${entry.id}`}
+            >
+              <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
+                {entry.emoji}
               </Text>
-            )}
-          </Pressable>
-        ))}
+              <Text style={styles.cellTitle} numberOfLines={2}>
+                {title(entry)}
+              </Text>
+              {/* The accent only shows once the cooperative picked its own colour. */}
+              {brand.configuredColor && (
+                <View style={[styles.accent, { backgroundColor: brand.primaryColor }]} />
+              )}
+              {entry.comingSoon && (
+                <Text style={styles.badge} testID={`coming-soon-${entry.id}`}>
+                  {t('modulePlaceholder.badge')}
+                </Text>
+              )}
+              <CountBadge count={badge?.count ?? 0} testID={`count-badge-${entry.id}`} />
+            </Pressable>
+          );
+        })}
       </View>
     </Screen>
   );

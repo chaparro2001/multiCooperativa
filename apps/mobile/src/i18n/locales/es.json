@@ -37,7 +37,8 @@
       "tooSmall": "El valor mínimo es {{min}}.",
       "tooBig": "El valor máximo es {{max}}.",
       "tooShortOrSmall": "El valor es demasiado corto o pequeño.",
-      "tooBigOrLong": "El valor es demasiado largo o grande."
+      "tooBigOrLong": "El valor es demasiado largo o grande.",
+      "integerBetween": "Escribe un número entero entre {{min}} y {{max}}."
     },
     "server": {
       "total_mismatch": "El total no coincide con la base más el IVA: debería ser {{expected}} €.",
@@ -388,7 +389,15 @@
         "removeMessage": "La cooperativa se quedará sin logo. Puedes subir otro cuando quieras."
       }
     },
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "invoicing": {
+      "title": "Facturación",
+      "description": "Avisos de la cooperativa sobre facturas y albaranes. El número de días se aplica a los avisos de vencimiento, a las insignias de la pantalla de inicio y a los albaranes que están a punto de cumplir 30 días sin facturar.",
+      "dueSoonDays": "Días de aviso de vencimiento",
+      "hint": "Entre 1 y 90 días. Por defecto, 15.",
+      "save": "Guardar",
+      "saved": "Guardado. Ya se aplica a los avisos."
+    }
   },
   "cooperatives": {
     "select": {
@@ -464,7 +473,9 @@
       "addPdf": "Añadir PDF",
       "saveDraft": "Guardar borrador",
       "saveChanges": "Guardar cambios"
-    }
+    },
+    "unreadBadge_one": "{{count}} comunicado sin leer",
+    "unreadBadge_other": "{{count}} comunicados sin leer"
   },
   "assemblies": {
     "agenda": "Orden del día",
@@ -736,6 +747,19 @@
         "linesToReconcile": "Añade las líneas facturadas: se necesitan para cuadrar con los albaranes agrupados.",
         "linesRequired": "Añade al menos una línea."
       }
+    },
+    "attention": {
+      "invoices_one": "{{count}} factura requiere atención",
+      "invoices_other": "{{count}} facturas requieren atención",
+      "notes_one": "{{count}} albarán requiere atención",
+      "notes_other": "{{count}} albaranes requieren atención",
+      "overdueDays_one": "Vencida hace {{count}} día",
+      "overdueDays_other": "Vencida hace {{count}} días",
+      "dueToday": "Vence hoy",
+      "dueInDays_one": "Vence en {{count}} día",
+      "dueInDays_other": "Vence en {{count}} días",
+      "noteDays_one": "Sin facturar {{count}} día",
+      "noteDays_other": "Sin facturar {{count}} días"
     }
   },
   "members": {

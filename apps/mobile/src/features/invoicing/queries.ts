@@ -6,6 +6,8 @@ import {
   type InvoiceInput,
   invoiceDetailSchema,
   invoiceSchema,
+  invoicingAttentionSchema,
+  invoicingSettingsSchema,
   invoicingSummarySchema,
   listDeliveryNotesResponseSchema,
   listInvoicesResponseSchema,
@@ -38,6 +40,41 @@ export function useInvoicingSummary() {
     queryKey: [...key, 'summary'],
     queryFn: () => api.request(`${base}/invoices/summary`, { schema: invoicingSummarySchema }),
   });
+}
+
+/**
+ * BR-INV-16: counts for the home badges and the highlighted rows. Only asked when the profile has
+ * invoicing access (the API answers 403 otherwise); it is refetched on every screen focus.
+ */
+export function useInvoicingAttention(enabled = true) {
+  const { api } = useServices();
+  const { base, key } = useScope();
+  return useQuery({
+    queryKey: [...key, 'attention'],
+    enabled,
+    queryFn: () => api.request(`${base}/invoicing/attention`, { schema: invoicingAttentionSchema }),
+  });
+}
+
+/** BR-INV-15: the cooperative's notice days. */
+export function useInvoicingSettings() {
+  const { api } = useServices();
+  const { base, key } = useScope();
+  return useQuery({
+    queryKey: [...key, 'settings'],
+    queryFn: () => api.request(`${base}/invoicing/settings`, { schema: invoicingSettingsSchema }),
+  });
+}
+
+export function useUpdateInvoicingSettings() {
+  const { api } = useServices();
+  return useInvoicingMutation((dueSoonDays: number, base) =>
+    api.request(`${base}/invoicing/settings`, {
+      method: 'PUT',
+      body: { dueSoonDays },
+      schema: invoicingSettingsSchema,
+    }),
+  );
 }
 
 /** US-INV-06: purchases and sales apart. */

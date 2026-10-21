@@ -7,6 +7,8 @@ import { useBiometrics } from '@/auth/biometrics';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { AppearanceSection } from '@/features/branding/appearance-section';
 import { canEditBranding } from '@/features/branding/brand-color';
+import { canEditInvoicingSettings } from '@/features/invoicing/attention';
+import { InvoicingSettingsSection } from '@/features/invoicing/settings-section';
 import { AssistantModelSection } from '@/features/assistant/model-settings-section';
 import { canChooseAssistantModel } from '@/features/assistant/model-settings';
 import { useSession } from '@/session/session-context';
@@ -64,6 +66,9 @@ export default function SettingsScreen() {
 
       {/* US-ACC-14: only the administrator sees it; the API enforces it. */}
       {canEditBranding(permissions?.permissions) && <AppearanceSection />}
+
+      {/* BR-INV-15: only the administrator sees it; the API enforces it. */}
+      {canEditInvoicingSettings(permissions?.permissions) && <InvoicingSettingsSection />}
 
       {/* US-AI-07: only the administrator sees it; the API enforces it. */}
       {canChooseAssistantModel(permissions?.permissions) && <AssistantModelSection />}
