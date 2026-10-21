@@ -16,6 +16,7 @@ import { messageFor } from '@/api/api-error';
 import { useBrandColor, useBrandTint } from '@/branding/brand';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { type ChatMessage, citationTarget, suggestedQuestions } from '@/features/assistant/chat';
+import { MarkdownText } from '@/features/assistant/markdown-text';
 import {
   useConversation,
   useConversationExists,
@@ -252,9 +253,13 @@ function MessageBubble({
         message.pending && styles.dim,
       ]}
     >
-      <Text style={mine ? styles.mineText : styles.text} selectable>
-        {message.content}
-      </Text>
+      {mine ? (
+        <Text style={styles.mineText} selectable>
+          {message.content}
+        </Text>
+      ) : (
+        <MarkdownText source={message.content} style={styles.text} />
+      )}
       {message.citations.length > 0 && (
         <View style={styles.citations} testID="citations">
           <Text style={styles.sources}>{t('assistant.sources')}</Text>
