@@ -19,6 +19,8 @@ import {
 
 export interface S3Settings {
   endpoint?: string;
+  /** Browser-reachable endpoint used only to presign download URLs (ADR-012); defaults to `endpoint`. */
+  publicEndpoint?: string;
   region: string;
   bucket: string;
   accessKeyId: string;
@@ -29,19 +31,25 @@ export interface S3Settings {
 /** Any S3-compatible storage: AWS, Cloudflare R2, Railway buckets, RustFS in development (ADR-005). */
 export class S3FileStorage implements FileStorage {
   private readonly client: S3Client;
+  /** Signs the download URLs with the host the browser will call; same as `client` when no public endpoint. */
+  private readonly presignClient: S3Client;
   private readonly bucket: string;
 
   constructor(settings: S3Settings) {
     this.bucket = settings.bucket;
-    this.client = new S3Client({
-      endpoint: settings.endpoint,
-      region: settings.region,
-      forcePathStyle: settings.forcePathStyle,
-      credentials: {
-        accessKeyId: settings.accessKeyId,
-        secretAccessKey: settings.secretAccessKey,
-      },
-    });
+    const clientFor = (endpoint: string | undefined) =>
+      new S3Client({
+        endpoint,
+        region: settings.region,
+        forcePathStyle: settings.forcePathStyle,
+        credentials: {
+          accessKeyId: settings.accessKeyId,
+          secretAccessKey: settings.secretAccessKey,
+        },
+      });
+    this.client = clientFor(settings.endpoint);
+    // SigV4 signs the Host header, so the URL must be presigned for the public host, not rewritten.
+    this.presignClient = settings.publicEndpoint ? clientFor(settings.publicEndpoint) : this.client;
   }
 
   async put(key: string, content: Uint8Array, contentType: string): Promise<void> {
@@ -74,7 +82,7 @@ export class S3FileStorage implements FileStorage {
     options: { fileName: string; contentType: string; expiresInSeconds?: number },
   ): Promise<string> {
     return getSignedUrl(
-      this.client,
+      this.presignClient,
       new GetObjectCommand({
         Bucket: this.bucket,
         Key: key,
@@ -106,6 +114,7 @@ export class S3FileStorage implements FileStorage {
 
 export function s3SettingsFromEnv(env: {
   S3_ENDPOINT?: string;
+  S3_PUBLIC_ENDPOINT?: string;
   S3_REGION: string;
   S3_BUCKET: string;
   S3_ACCESS_KEY_ID: string;
@@ -114,6 +123,7 @@ export function s3SettingsFromEnv(env: {
 }): S3Settings {
   return {
     endpoint: env.S3_ENDPOINT,
+    publicEndpoint: env.S3_PUBLIC_ENDPOINT,
     region: env.S3_REGION,
     bucket: env.S3_BUCKET,
     accessKeyId: env.S3_ACCESS_KEY_ID,

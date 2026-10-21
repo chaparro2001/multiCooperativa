@@ -225,15 +225,15 @@ Datos definidos en el seed (`apps/api/src/dev/demo-seed.ts`) y descritos en [doc
 
 Resumen de [docs/04-deployment.md](docs/04-deployment.md). Coste de 0 EUR y sin tarjeta de crédito: la API corre en un servidor doméstico (ADR-012), porque Render y Railway piden tarjeta.
 
-| Pieza             | Servicio                                                                                                     |
-| ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| App web           | GitHub Pages (export web de Expo, despliegue por Actions)                                                    |
-| API               | Contenedor Docker en un servidor propio, expuesto con Cloudflare Tunnel (`api-cooperativa.chaparro2001.com`) |
-| Base de datos     | PostgreSQL 17 con pgvector (contenedor)                                                                      |
-| Ficheros          | RustFS, compatible con S3 (contenedor)                                                                       |
-| Embeddings        | Ollama con bge-m3 (contenedor, ADR-006)                                                                      |
-| Lenguaje y visión | Gemini API (clave gratuita)                                                                                  |
-| Tarea programada  | Cron de GitHub Actions cada hora (vencimientos)                                                              |
+| Pieza             | Servicio                                                                                                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App web           | GitHub Pages (export web de Expo, despliegue por Actions)                                                                                                                  |
+| API               | Contenedor Docker en un servidor propio, expuesto con Cloudflare Tunnel (`api-cooperativa.chaparro2001.com`; enlaces de ficheros por `files-cooperativa.chaparro2001.com`) |
+| Base de datos     | PostgreSQL 17 con pgvector (contenedor)                                                                                                                                    |
+| Ficheros          | RustFS, compatible con S3 (contenedor)                                                                                                                                     |
+| Embeddings        | Ollama con bge-m3 (contenedor, ADR-006)                                                                                                                                    |
+| Lenguaje y visión | Gemini API (clave gratuita)                                                                                                                                                |
+| Tarea programada  | Cron de GitHub Actions cada hora (vencimientos)                                                                                                                            |
 
 Avisos:
 

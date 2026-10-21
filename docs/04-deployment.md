@@ -19,16 +19,16 @@ flowchart LR
   cron["GitHub Actions cron<br/>hourly"] -- "POST /jobs/due-dates" --> cf
 ```
 
-| Piece           | Service                                              | Notes                                                                                                       |
-| --------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Web app         | GitHub Pages (Actions deploy)                        | `https://chaparro2001.github.io/multiCooperativa/`; built by `.github/workflows/pages.yml`                  |
-| API             | Container built from `apps/api/Dockerfile`           | Public URL `https://api-cooperativa.chaparro2001.com` (Cloudflare Tunnel). No port is published on the host |
-| Database        | `pgvector/pgvector:pg17` container                   | Named volume; not reachable from outside                                                                    |
-| Files           | RustFS container (S3 protocol)                       | Private bucket `multicooperativa`, created by a one-shot container; the API signs 5-minute URLs             |
-| Embeddings      | Ollama container with `bge-m3`                       | `EMBEDDINGS_PROVIDER=ollama` ([ADR-006](adr/ADR-006-local-model-embeddings.md))                             |
-| Chat and vision | Gemini API (free key)                                | [ADR-009](adr/ADR-009-gemini-language-and-vision-model.md)                                                  |
-| Tunnel          | `cloudflared` container                              | Outbound connection to Cloudflare; the dashboard maps the public hostname to `http://api:3000`              |
-| Scheduled job   | GitHub Actions cron, plus the API's own hourly timer | `.github/workflows/cron.yml` calls `/jobs/due-dates`; the timer also runs because the server does not sleep |
+| Piece           | Service                                              | Notes                                                                                                                                         |
+| --------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web app         | GitHub Pages (Actions deploy)                        | `https://chaparro2001.github.io/multiCooperativa/`; built by `.github/workflows/pages.yml`                                                    |
+| API             | Container built from `apps/api/Dockerfile`           | Public URL `https://api-cooperativa.chaparro2001.com` (Cloudflare Tunnel). No port is published on the host                                   |
+| Database        | `pgvector/pgvector:pg17` container                   | Named volume; not reachable from outside                                                                                                      |
+| Files           | RustFS container (S3 protocol)                       | Private bucket `multicooperativa`, created by a one-shot container; the API signs 5-minute URLs                                               |
+| Embeddings      | Ollama container with `bge-m3`                       | `EMBEDDINGS_PROVIDER=ollama` ([ADR-006](adr/ADR-006-local-model-embeddings.md))                                                               |
+| Chat and vision | Gemini API (free key)                                | [ADR-009](adr/ADR-009-gemini-language-and-vision-model.md)                                                                                    |
+| Tunnel          | `cloudflared` container                              | Outbound connection to Cloudflare; the dashboard maps `api-cooperativa` to `http://api:3000` and `files-cooperativa` to `http://storage:9000` |
+| Scheduled job   | GitHub Actions cron, plus the API's own hourly timer | `.github/workflows/cron.yml` calls `/jobs/due-dates`; the timer also runs because the server does not sleep                                   |
 
 The native apps are not part of this demo (no EAS build); the web export is the same code. The stack is defined in [`deploy/home-server/compose.yaml`](../deploy/home-server/compose.yaml); its variables are in [`deploy/home-server/env.server.example`](../deploy/home-server/env.server.example).
 
@@ -79,9 +79,14 @@ The domain must already be on Cloudflare (its nameservers point to Cloudflare).
    - Subdomain: `api-cooperativa`, Domain: `chaparro2001.com`, Path: empty.
    - Service type: `HTTP`, URL: `api:3000` (the name of the API container on the Docker network).
    - Save. Cloudflare creates the DNS record by itself.
-5. Check that **SSL/TLS > Overview** of the domain is **Full** (or Full strict). The connection from `cloudflared` to the API is local and plain HTTP; the browser-facing HTTPS certificate is issued by Cloudflare for `api-cooperativa.chaparro2001.com` automatically.
+5. Add a **second Public hostname** for the file links (the API hands the browser presigned storage URLs, and the browser cannot reach `storage:9000`):
+   - Subdomain: `files-cooperativa`, Domain: `chaparro2001.com`, Path: empty.
+   - Service type: `HTTP`, URL: `storage:9000`.
+   - Under **Additional application settings > HTTP Settings**, set **HTTP Host Header** to `files-cooperativa.chaparro2001.com`. By default `cloudflared` forwards the original Host (the public hostname) and Cloudflare's reference does not state it explicitly, so setting it removes any doubt. It must never be `storage:9000`: the presigned URL signs the Host, and a different one answers `403 SignatureDoesNotMatch`.
+   - Save. The API signs the links with `S3_PUBLIC_ENDPOINT` (default `https://files-cooperativa.chaparro2001.com`, overridable in `.env.server`).
+6. Check that **SSL/TLS > Overview** of the domain is **Full** (or Full strict). The connection from `cloudflared` to the API is local and plain HTTP; the browser-facing HTTPS certificate is issued by Cloudflare for `api-cooperativa.chaparro2001.com` automatically.
 
-Only this one hostname is exposed. Do not add other public hostnames (database, storage, Ollama must stay private).
+Only these two hostnames are exposed. The storage one serves nothing without a valid presigned signature (the bucket is private, links expire in minutes). Do not add other public hostnames (database and Ollama must stay private).
 
 ### 4. Create `.env.server`
 
@@ -186,7 +191,7 @@ Always from `deploy\home-server`, with `--env-file .env.server`:
 
 ## Security notes
 
-- Only the API hostname is published, through the tunnel. PostgreSQL, RustFS and Ollama have no published ports and are reachable only from the other containers; the API container itself publishes nothing on the host (a commented `127.0.0.1:3000` mapping in `compose.yaml` is for local debugging).
+- Only the API and the file-link hostnames are published, through the tunnel (the latter reaches RustFS, which accepts only requests with a valid presigned signature). PostgreSQL, RustFS and Ollama have no published ports and are reachable only from the other containers; the API container itself publishes nothing on the host (a commented `127.0.0.1:3000` mapping in `compose.yaml` is for local debugging).
 - Nothing is opened on the home router: `cloudflared` only makes an outbound connection.
 - Secrets live in `.env.server` (git-ignored) and in the Cloudflare/GitHub dashboards. The API container does not receive the tunnel token.
 - The API still enforces everything it enforces anywhere: JWT, per-cooperative isolation, login lockout, the assistant's per-user hourly limit (`ASSISTANT_MESSAGE_LIMIT_PER_HOUR`) and CORS limited to `CORS_ORIGINS`. `trust proxy` is set to one hop, matching the tunnel.

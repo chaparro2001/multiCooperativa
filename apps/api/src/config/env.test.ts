@@ -161,4 +161,16 @@ describe('loadEnv', () => {
       expect(loadEnv({ ...required, JOBS_TOKEN: 'j'.repeat(32) }).JOBS_TOKEN).toBe('j'.repeat(32));
     });
   });
+
+  it('accepts an optional public S3 endpoint and rejects a malformed one', () => {
+    expect(loadEnv({ ...required, S3_PUBLIC_ENDPOINT: 'https://files.example.com' })).toMatchObject(
+      {
+        S3_PUBLIC_ENDPOINT: 'https://files.example.com',
+      },
+    );
+    expect(loadEnv(required).S3_PUBLIC_ENDPOINT).toBeUndefined();
+    expect(() => loadEnv({ ...required, S3_PUBLIC_ENDPOINT: 'not a url' })).toThrow(
+      /S3_PUBLIC_ENDPOINT/,
+    );
+  });
 });

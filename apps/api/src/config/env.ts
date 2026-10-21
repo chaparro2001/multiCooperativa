@@ -28,6 +28,8 @@ const envSchema = z
     JWT_SECRET: z.string().min(32),
     /** Empty for AWS S3; the service URL for any other compatible one. */
     S3_ENDPOINT: z.url({ protocol: /^https?$/ }).optional(),
+    /** Browser-reachable URL of the storage, used only to presign download links when `S3_ENDPOINT` is an internal hostname (ADR-012). */
+    S3_PUBLIC_ENDPOINT: z.url({ protocol: /^https?$/ }).optional(),
     S3_REGION: z.string().min(1).default('us-east-1'),
     S3_BUCKET: z.string().min(3).optional(),
     S3_ACCESS_KEY_ID: z.string().min(1).optional(),
