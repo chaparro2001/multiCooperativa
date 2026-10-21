@@ -47,6 +47,16 @@ Second round (final prompt, 25 GB for Docker, 12 CPUs):
 | `qwen3:8b`          | 19/22  | 7.1 s / 25.9 s | 6.7 GB |
 | `qwen3:4b-instruct` | 18/22  | 5.0 s / 15.4 s | 4.2 GB |
 
+Later comparison of two more tool-capable models, measured on 2026-10-21 under the same conditions (final prompt, same Mac, Docker with 25 GB and 12 CPUs, CPU only, `think: false`, `num_ctx` 8192) with `qwen3:4b-instruct` re-run as a control in the same session:
+
+| Model               | Passed | Median / p90 / max    | RAM        | Note                                                                                                                       |
+| ------------------- | ------ | --------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `qwen3:4b-instruct` | 18/22  | 5.0 s / 18.7 s / 28 s | 4.2 GB     | Control: same result as the first measurement                                                                              |
+| `phi4-mini` (3.8B)  | 4/22   | 2.8 s / 32.4 s / 90 s | 4.2 GB     | Almost never calls a tool; asks for more detail or writes the call as text; two 503s (timeout, tool call as text)          |
+| `gemma4:e4b`        | 15/22  | 4.8 s / 16.3 s / 27 s | about 7 GB | Tools work over `/api/chat` and `think: false` is honoured; skips the tool on some questions, over-answers a denied module |
+
+`phi4-mini` is discarded: the failure is the model's, not the adapter's (it ignores the tools field). `gemma4:e4b` is as fast as `qwen3:4b-instruct` but 3 questions less accurate than it and 4 less than `qwen3:8b`: it did not call `list_invoices` or `list_delivery_notes` on a question, answered a denied module (assemblies) instead of saying it has no access, and missed "approved" in a vote result. `ollama ps` reports only 386 MB for it (the weights are memory-mapped); the container used about 8.5 GB in total with `bge-m3` loaded, so roughly 7 GB for the model. It also reads images, which is not used by the assistant. `gemma4:e2b` was not tried because `e4b` was not slow. The decision does not change.
+
 `qwen3:8b` is chosen: the most accurate non-thinking model, typical latency well under 30 s, and the host has the memory. The thinking `qwen3:4b` passed 20 of 22 but takes a minute per question, which is unusable in a chat. `qwen3:4b-instruct` is the fallback for hosts with less RAM (`ASSISTANT_OLLAMA_MODEL=qwen3:4b-instruct`).
 
 ## Consequences
