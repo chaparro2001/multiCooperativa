@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
-import { visibleModules } from '@/navigation/modules';
+import { type VisibleModule, visibleModules } from '@/navigation/modules';
 import { Loading, Screen, SCREEN_MAX_WIDTH, SCREEN_PADDING } from '@/ui/screen';
 import { colors } from '@/ui/theme';
 
@@ -27,6 +27,7 @@ export default function HomeScreen() {
   const columns = columnsFor(width);
   const contentWidth = Math.min(width, SCREEN_MAX_WIDTH) - 2 * SCREEN_PADDING;
   const cellWidth = (contentWidth - GAP * (columns - 1)) / columns;
+  const title = (entry: VisibleModule) => t(entry.titleKey ?? `enums.module.${entry.module}`);
 
   return (
     <Screen testID="home-screen">
@@ -46,21 +47,21 @@ export default function HomeScreen() {
       <View style={styles.grid}>
         {modules.map((entry) => (
           <Pressable
-            key={entry.module}
+            key={entry.id}
             accessibilityRole="button"
-            accessibilityLabel={t(`enums.module.${entry.module}`)}
+            accessibilityLabel={title(entry)}
             onPress={() => router.push(entry.route as Href)}
             style={({ pressed }) => [styles.cell, { width: cellWidth }, pressed && styles.pressed]}
-            testID={`module-${entry.module}`}
+            testID={`module-${entry.id}`}
           >
             <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
               {entry.emoji}
             </Text>
             <Text style={styles.cellTitle} numberOfLines={2}>
-              {t(`enums.module.${entry.module}`)}
+              {title(entry)}
             </Text>
             {entry.comingSoon && (
-              <Text style={styles.badge} testID={`coming-soon-${entry.module}`}>
+              <Text style={styles.badge} testID={`coming-soon-${entry.id}`}>
                 {t('modulePlaceholder.badge')}
               </Text>
             )}

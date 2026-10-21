@@ -1,7 +1,12 @@
 import type { Module, MyPermissionsResponse } from '@multicooperativa/contracts';
 
 export interface ModuleEntry {
+  /** Unique per home tile (key and test id); equals `module` unless a module has several tiles. */
+  id: string;
+  /** Permission module that decides whether the tile is shown. */
   module: Module;
+  /** i18n key of the tile title; defaults to `enums.module.<module>`. */
+  titleKey?: 'invoicing.thirdParties.title';
   /** Shown in the home grid; decorative, screen readers read the title (`enums.module.<module>`). */
   emoji: string;
   /** Screen of the module inside the cooperative. */
@@ -12,13 +17,27 @@ export interface ModuleEntry {
 
 /** Order of the home grid. */
 export const MODULE_ENTRIES: readonly ModuleEntry[] = [
-  { module: 'announcements', emoji: '📢', route: '/announcements' },
-  { module: 'assemblies', emoji: '🗳️', route: '/assemblies' },
-  { module: 'documents', emoji: '📄', route: '/documents' },
-  { module: 'invoicing', emoji: '🧾', route: '/invoices' },
-  { module: 'member-area', emoji: '👤', route: '/member-area', comingSoon: true },
-  { module: 'assistant', emoji: '🤖', route: '/assistant' },
-  { module: 'users', emoji: '👥', route: '/members', comingSoon: true },
+  { id: 'announcements', module: 'announcements', emoji: '📢', route: '/announcements' },
+  { id: 'assemblies', module: 'assemblies', emoji: '🗳️', route: '/assemblies' },
+  { id: 'documents', module: 'documents', emoji: '📄', route: '/documents' },
+  { id: 'invoicing', module: 'invoicing', emoji: '🧾', route: '/invoices' },
+  // Suppliers and customers are master data of the invoicing module (BR-INV-01): same permission.
+  {
+    id: 'third-parties',
+    module: 'invoicing',
+    titleKey: 'invoicing.thirdParties.title',
+    emoji: '🤝',
+    route: '/invoices/third-parties',
+  },
+  {
+    id: 'member-area',
+    module: 'member-area',
+    emoji: '👤',
+    route: '/member-area',
+    comingSoon: true,
+  },
+  { id: 'assistant', module: 'assistant', emoji: '🤖', route: '/assistant' },
+  { id: 'users', module: 'users', emoji: '👥', route: '/members', comingSoon: true },
 ];
 
 export interface VisibleModule extends ModuleEntry {
