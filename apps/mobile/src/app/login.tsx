@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { validateLogin } from '@/auth/form-validation';
 import { useForm } from '@/forms/use-form';
 import { useSession } from '@/session/session-context';
+import { AppLogo } from '@/ui/app-logo';
 import { Button } from '@/ui/button';
 import { FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
@@ -39,9 +40,9 @@ export default function LoginScreen() {
 
   return (
     <Screen testID="login-screen" form={form}>
-      <Text variant="headlineLarge" style={[styles.title, { color: colors.primary }]}>
-        multiCooperativa
-      </Text>
+      <View style={styles.title}>
+        <AppLogo />
+      </View>
       <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
         {t('auth.login.subtitle')}
       </Text>

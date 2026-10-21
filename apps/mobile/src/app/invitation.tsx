@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { StyleSheet, View } from 'react-native';
 
 import {
   INVITATION_FIELDS,
@@ -10,6 +11,7 @@ import {
 import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
 import { useSession } from '@/session/session-context';
+import { AppLogo } from '@/ui/app-logo';
 import { Button } from '@/ui/button';
 import { FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
@@ -85,6 +87,9 @@ export default function InvitationScreen() {
 
   return (
     <Screen testID="invitation-screen" form={form}>
+      <View style={styles.logo}>
+        <AppLogo />
+      </View>
       <Text variant="headlineSmall">{t('auth.invitation.title')}</Text>
       <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
         {t('auth.invitation.instructions')}
@@ -121,3 +126,7 @@ export default function InvitationScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  logo: { marginTop: 16 },
+});
