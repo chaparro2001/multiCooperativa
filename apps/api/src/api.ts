@@ -4,7 +4,11 @@ import { createApp } from './app';
 import { type AuthRateLimits, createAccessModule, type InvitationSender } from './modules/access';
 import { type AnnouncementEvent, createAnnouncementsModule } from './modules/announcements';
 import { type AssemblyEvent, createAssembliesModule } from './modules/assemblies';
-import { createAssistantModule, type LanguageModel } from './modules/assistant';
+import {
+  createAssistantModule,
+  type LanguageModel,
+  type LocalModelRuntime,
+} from './modules/assistant';
 import { createDocumentsModule, type DocumentEvent, type Embedder } from './modules/documents';
 import {
   createInvoicingModule,
@@ -38,6 +42,8 @@ export interface ApiDeps {
   events?: EventBus<AppEvent>;
   /** BR-AI-08; 30 when omitted. */
   assistantMessageLimitPerHour?: number;
+  /** Local models the assistant can use per cooperative (ASSISTANT_LLM_PROVIDER=ollama; ADR-014). */
+  assistantLocalModels?: LocalModelRuntime;
   authRateLimits?: AuthRateLimits | false;
   trustProxy?: number | false;
   /** Origins allowed to call the API from a browser (CORS); none when omitted. */
@@ -112,6 +118,8 @@ export function createApi(deps: ApiDeps): Api {
   const assistant = createAssistantModule({
     prisma: deps.prisma,
     model: deps.languageModel ?? null,
+    local: deps.assistantLocalModels,
+    audit: access.recordAudit,
     requireCooperative: access.requireCooperative,
     messageLimitPerHour: deps.assistantMessageLimitPerHour,
     sources: {

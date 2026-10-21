@@ -65,6 +65,19 @@ const envSchema = z
     ASSISTANT_LLM_PROVIDER: z.enum(['gemini', 'ollama']).default('gemini'),
     /** Ollama chat model with tool support. Only read with ASSISTANT_LLM_PROVIDER=ollama. */
     ASSISTANT_OLLAMA_MODEL: z.string().min(1).default('qwen3:8b'),
+    /** Models a cooperative's administrator may pick (US-AI-07, ADR-014), comma-separated. Empty: only ASSISTANT_OLLAMA_MODEL. Never pulled by the app. */
+    ASSISTANT_OLLAMA_MODELS: z
+      .string()
+      .default('')
+      .transform((value) =>
+        value
+          .split(',')
+          .map((model) => model.trim())
+          .filter(Boolean),
+      )
+      .pipe(
+        z.array(z.string().regex(/^[\w.:/-]+$/, 'must be an Ollama model id such as qwen3:8b')),
+      ),
     /** Time limit of one Ollama chat call, sized for a CPU-only host. */
     ASSISTANT_OLLAMA_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(90_000),
     /** BR-AI-08: messages per user and hour. */

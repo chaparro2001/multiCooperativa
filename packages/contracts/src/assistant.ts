@@ -75,6 +75,35 @@ export const sendMessageResponseSchema = z.object({
 /** POST /cooperatives/{id}/assistant/messages/{messageId}/rating (US-AI-05). */
 export const rateMessageBodySchema = z.object({ rating: assistantRatingSchema });
 
+/** Where the assistant's chat runs; the local-model choice only applies to `ollama` (ADR-013, ADR-014). */
+export const assistantProviderSchema = z.enum(['gemini', 'ollama']);
+
+export const assistantModelOptionSchema = z.object({
+  /** Ollama model id, e.g. `qwen3:8b`. Allowlisted by the server and installed in Ollama. */
+  id: z.string().min(1),
+});
+
+/**
+ * GET /cooperatives/{id}/settings/assistant-model (US-AI-07).
+ * With `gemini` there is nothing to choose: `current` and `default` are null and `options` empty.
+ */
+export const assistantModelSettingsSchema = z.object({
+  provider: assistantProviderSchema,
+  /** The model this cooperative's questions go to now (the saved one, or the default). */
+  current: z.string().nullable(),
+  /** The server default, used when the cooperative has not chosen. */
+  default: z.string().nullable(),
+  options: z.array(assistantModelOptionSchema),
+});
+
+/** PUT /cooperatives/{id}/settings/assistant-model; `null` goes back to the server default. */
+export const updateAssistantModelBodySchema = z.strictObject({
+  model: z.string().trim().min(1).max(100).nullable(),
+});
+
+export type AssistantProvider = z.infer<typeof assistantProviderSchema>;
+export type AssistantModelOption = z.infer<typeof assistantModelOptionSchema>;
+export type AssistantModelSettings = z.infer<typeof assistantModelSettingsSchema>;
 export type Citation = z.infer<typeof citationSchema>;
 export type CitationKind = z.infer<typeof citationKindSchema>;
 export type AssistantMessage = z.infer<typeof assistantMessageSchema>;

@@ -47,3 +47,21 @@ export class AssistantRefusedError extends AssistantApplicationError {
     super('The assistant cannot answer this request.');
   }
 }
+
+/** US-AI-07: the model is not allowlisted, or not installed in Ollama. */
+export class ModelNotAvailableError extends AssistantApplicationError {
+  readonly code = 'assistant_model_not_available';
+
+  constructor(model: string) {
+    super(`The model "${model}" is not available for this server.`);
+  }
+}
+
+/** US-AI-07: the assistant runs on Gemini, so there is no local model to choose. */
+export class LocalModelNotInUseError extends AssistantApplicationError {
+  readonly code = 'local_model_not_in_use';
+
+  constructor() {
+    super('The assistant is not using a local model on this server.');
+  }
+}

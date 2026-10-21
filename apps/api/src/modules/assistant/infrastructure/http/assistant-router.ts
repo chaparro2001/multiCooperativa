@@ -1,10 +1,12 @@
 import {
   type AssistantMessage,
+  type AssistantModelSettings,
   type ConversationDetail,
   type AssistantConversation,
   type ListConversationsResponse,
   rateMessageBodySchema,
   sendMessageBodySchema,
+  updateAssistantModelBodySchema,
   type SendMessageResponse,
 } from '@multicooperativa/contracts';
 import { type RequestHandler, Router } from 'express';
@@ -12,6 +14,7 @@ import { type RequestHandler, Router } from 'express';
 import { parseBody } from '../../../../shared/infrastructure/http/validation';
 import { getCooperativeContext, requirePermission } from '../../../access';
 import * as useCases from '../../application/assistant';
+import * as modelSettings from '../../application/assistant-model-settings';
 import { ConversationNotFoundError } from '../../application/errors';
 import type { ConversationRecord, MessageRecord } from '../../application/ports/conversation-store';
 
@@ -43,6 +46,7 @@ const toMessage = (record: MessageRecord): AssistantMessage => ({
 /** HTTP adapter of the assistant module (requirements/07, section 8). */
 export function createAssistantRouter(
   deps: useCases.AssistantDeps,
+  settingsDeps: modelSettings.ModelSettingsDeps,
   requireCooperative: RequestHandler,
 ): Router {
   const router = Router();
@@ -91,6 +95,28 @@ export function createAssistantRouter(
     const { rating } = parseBody(rateMessageBodySchema, req.body);
     const message = await useCases.rateMessage(deps, getCooperativeContext(res), messageId, rating);
     res.json(toMessage(message) satisfies AssistantMessage);
+  });
+
+  // US-AI-07: the local model of the cooperative, for its administrators only.
+  const settingsPath = '/cooperatives/:cooperativeId/settings/assistant-model';
+  const adminGuard = [requireCooperative, requirePermission('users', 'manage')];
+
+  router.get(settingsPath, ...adminGuard, async (_req, res) => {
+    const settings = await modelSettings.getAssistantModelSettings(
+      settingsDeps,
+      getCooperativeContext(res),
+    );
+    res.json(settings satisfies AssistantModelSettings);
+  });
+
+  router.put(settingsPath, ...adminGuard, async (req, res) => {
+    const { model } = parseBody(updateAssistantModelBodySchema, req.body);
+    const settings = await modelSettings.setAssistantModel(
+      settingsDeps,
+      getCooperativeContext(res),
+      model,
+    );
+    res.json(settings satisfies AssistantModelSettings);
   });
 
   return router;

@@ -208,6 +208,10 @@ export class PrismaMemberStore implements MemberStore {
     });
   }
 
+  async recordAudit(cooperativeId: string, targetUserId: string, audit: AuditInput): Promise<void> {
+    await this.audit(this.prisma, cooperativeId, targetUserId, audit);
+  }
+
   private async audit(
     tx: Transaction,
     cooperativeId: string,

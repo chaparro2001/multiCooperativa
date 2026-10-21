@@ -31,6 +31,7 @@ describe('loadEnv', () => {
       ],
       ASSISTANT_LLM_PROVIDER: 'gemini',
       ASSISTANT_OLLAMA_MODEL: 'qwen3:8b',
+      ASSISTANT_OLLAMA_MODELS: [],
       ASSISTANT_OLLAMA_TIMEOUT_MS: 90_000,
       ASSISTANT_MESSAGE_LIMIT_PER_HOUR: 30,
       CORS_ORIGINS: ['http://localhost:8081'],
@@ -67,6 +68,13 @@ describe('loadEnv', () => {
       ASSISTANT_OLLAMA_MODEL: 'llama3.2:3b',
       ASSISTANT_OLLAMA_TIMEOUT_MS: 120_000,
     });
+    expect(
+      loadEnv({ ...required, ASSISTANT_OLLAMA_MODELS: ' qwen3:8b , qwen3:4b-instruct,, ' })
+        .ASSISTANT_OLLAMA_MODELS,
+    ).toEqual(['qwen3:8b', 'qwen3:4b-instruct']);
+    expect(() => loadEnv({ ...required, ASSISTANT_OLLAMA_MODELS: 'bad model' })).toThrow(
+      /ASSISTANT_OLLAMA_MODELS/,
+    );
     expect(() => loadEnv({ ...required, ASSISTANT_LLM_PROVIDER: 'openai' })).toThrow(
       /ASSISTANT_LLM_PROVIDER/,
     );

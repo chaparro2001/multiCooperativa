@@ -641,6 +641,14 @@ model AssistantConversation {
   @@index([cooperativeId, membershipId, updatedAt])
 }
 
+/// US-AI-07: one row per cooperative that chose a local model; no row means the server default.
+model AssistantSetting {
+  cooperativeId String   @id @db.Uuid
+  /// Ollama model id picked by the administrator (validated against the server allowlist on write and on use).
+  model         String
+  updatedAt     DateTime @default(now()) @updatedAt
+}
+
 model AssistantMessage {
   id             String           @id @default(uuid()) @db.Uuid
   conversationId String           @db.Uuid

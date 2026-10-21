@@ -6,6 +6,9 @@ import { type AssistantDeps, type RequestMetrics } from './application/assistant
 import type { DataSources } from './application/tool-executors';
 import { createToolExecutors } from './application/tool-executors';
 import type { LanguageModel } from './application/ports/language-model';
+import type { AuditRecorder, LocalModelRuntime } from './application/ports/local-models';
+import { OllamaModelRuntime } from './infrastructure/ollama-model-runtime';
+import { PrismaAssistantSettingStore } from './infrastructure/prisma-setting-store';
 import { MESSAGE_LIMIT_PER_HOUR } from './domain/usage';
 import { DEFAULT_GEMINI_MODEL, GeminiLanguageModel } from './infrastructure/gemini-language-model';
 import {
@@ -17,6 +20,17 @@ import { createAssistantRouter } from './infrastructure/http/assistant-router';
 import { PrismaConversationStore } from './infrastructure/prisma-conversation-store';
 
 export type { LanguageModel } from './application/ports/language-model';
+export type { LocalModelRuntime } from './application/ports/local-models';
+
+/** The local models Ollama can serve for the assistant, chosen per cooperative (ADR-014). */
+export function createOllamaModelRuntime(settings: {
+  url: string;
+  defaultModel: string;
+  models: readonly string[];
+  timeoutMs?: number;
+}): LocalModelRuntime {
+  return new OllamaModelRuntime(settings);
+}
 export { DEFAULT_GEMINI_MODEL } from './infrastructure/gemini-language-model';
 export { DEFAULT_OLLAMA_CHAT_MODEL } from './infrastructure/ollama-language-model';
 export { MESSAGE_LIMIT_PER_HOUR } from './domain/usage';
@@ -61,6 +75,10 @@ export function createAssistantModule(deps: {
   prisma: PrismaClient;
   /** Null when the provider is not configured (no Gemini key): the assistant answers 503 and the rest of the app works (ADR-009). */
   model: LanguageModel | null;
+  /** With the Ollama provider: the models each cooperative may choose from (US-AI-07); `model` is then ignored. */
+  local?: LocalModelRuntime;
+  /** Writes to the cooperative's audit log, through the access module. */
+  audit: AuditRecorder;
   /** The other modules, through their public interfaces (BR-AI-02). */
   sources: DataSources;
   requireCooperative: RequestHandler;
@@ -69,9 +87,15 @@ export function createAssistantModule(deps: {
   now?: () => Date;
 }) {
   const now = deps.now ?? (() => new Date());
+  const settingsDeps = {
+    local: deps.local ?? null,
+    settings: new PrismaAssistantSettingStore(deps.prisma),
+    audit: deps.audit,
+  };
   const useCaseDeps: AssistantDeps = {
     conversations: new PrismaConversationStore(deps.prisma),
     model: deps.model,
+    localModels: deps.local ? settingsDeps : undefined,
     executors: createToolExecutors(deps.sources),
     now,
     today: () => todayInSpain(now()),
@@ -79,7 +103,7 @@ export function createAssistantModule(deps: {
     onMetrics: deps.onMetrics ?? logMetrics,
   };
   return {
-    router: createAssistantRouter(useCaseDeps, deps.requireCooperative),
+    router: createAssistantRouter(useCaseDeps, settingsDeps, deps.requireCooperative),
     errorHandler: assistantErrorHandler,
   };
 }
