@@ -53,5 +53,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
-  invalid: { borderColor: colors.danger, borderWidth: 2, paddingHorizontal: 11 },
+  invalid: {
+    borderColor: colors.danger,
+    borderWidth: 2,
+    paddingHorizontal: 11,
+    outlineColor: colors.danger,
+  },
 });
