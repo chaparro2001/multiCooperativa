@@ -101,8 +101,6 @@ export default function UploadDocumentScreen() {
         {DOCUMENT_CATEGORIES.map((value) => (
           <Chip
             key={value}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: category === value }}
             selected={category === value}
             showSelectedOverlay
             onPress={() => setCategory(value)}

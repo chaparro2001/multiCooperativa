@@ -27,14 +27,13 @@ export function ProfilePicker({
   return (
     <FieldGroup name={name} style={styles.group}>
       <Text variant="labelLarge">{t('members.fields.profile')}</Text>
-      <View style={styles.chips} accessibilityRole="radiogroup">
+      <View style={styles.chips}>
         {profiles.data.map((profile) => (
           <Chip
             key={profile.id}
             mode="outlined"
             selected={value === profile.id}
             onPress={() => onChange(profile.id)}
-            accessibilityRole="radio"
             testID={`profile-${profile.name}`}
           >
             {profile.name}

@@ -107,12 +107,7 @@ export default function AssemblyEditorScreen() {
       />
       <View style={styles.chips}>
         {ASSEMBLY_TYPES.map((value) => (
-          <Chip
-            key={value}
-            accessibilityRole="radio"
-            selected={type === value}
-            onPress={() => setType(value)}
-          >
+          <Chip key={value} selected={type === value} onPress={() => setType(value)}>
             {t(`enums.assemblyType.${value}`)}
           </Chip>
         ))}
@@ -211,7 +206,6 @@ export default function AssemblyEditorScreen() {
                 {MAJORITIES.map((value) => (
                   <Chip
                     key={value}
-                    accessibilityRole="radio"
                     selected={point.majority === value}
                     onPress={() => update(point.key, { majority: value })}
                   >
