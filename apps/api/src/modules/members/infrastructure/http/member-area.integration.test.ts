@@ -145,6 +145,21 @@ describe('US-MEM-01 / US-MEM-02 · my record and my movements', () => {
     expect(body.capital).toBe('0.00');
   });
 
+  it('US-MEM-01: the joining date is the recorded one, or the creation date of the membership', async () => {
+    const created = (await prisma.membership.findUniqueOrThrow({ where: { id: anaId } })).createdAt;
+    const before = await request(app).get(`${area()}/me`).set(as(ana));
+    expect(myMemberAreaResponseSchema.parse(before.body).member.joinedAt).toBe(
+      created.toISOString().slice(0, 10),
+    );
+
+    await prisma.membership.update({
+      where: { id: anaId },
+      data: { joinedAt: new Date('2019-05-04T00:00:00Z') },
+    });
+    const after = await request(app).get(`${area()}/me`).set(as(ana));
+    expect(myMemberAreaResponseSchema.parse(after.body).member.joinedAt).toBe('2019-05-04');
+  });
+
   it('US-MEM-02: with no movements the capital is zero and the list empty', async () => {
     const response = await request(app).get(`${area()}/me/movements`).set(as(ana));
 

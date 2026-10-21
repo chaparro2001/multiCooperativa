@@ -9,7 +9,7 @@ export interface MemberRecord {
   isPartner: boolean;
   status: 'invited' | 'active' | 'suspended' | 'removed';
   profileName: string;
-  /** The membership's creation date: the joining date until the membership records its own. */
+  /** The joining date; the membership's creation date when none was recorded. */
   joinedAt: Date;
 }
 
@@ -18,6 +18,7 @@ const memberSelect = {
   status: true,
   isPartner: true,
   partnerNumber: true,
+  joinedAt: true,
   createdAt: true,
   user: { select: { name: true, email: true } },
   profile: { select: { name: true } },
@@ -28,6 +29,7 @@ type MemberRow = {
   status: MemberRecord['status'];
   isPartner: boolean;
   partnerNumber: string | null;
+  joinedAt: Date | null;
   createdAt: Date;
   user: { name: string; email: string };
   profile: { name: string };
@@ -41,7 +43,7 @@ const toMemberRecord = (row: MemberRow): MemberRecord => ({
   isPartner: row.isPartner,
   status: row.status,
   profileName: row.profile.name,
-  joinedAt: row.createdAt,
+  joinedAt: row.joinedAt ?? row.createdAt,
 });
 
 /** Read-only member data other modules may need (author names, member counts). */

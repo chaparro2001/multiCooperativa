@@ -287,7 +287,7 @@ async function seedCapital(
       cooperativeId,
       user: { email: { in: [demo.admin.email, ...planned.map((p) => p.email)] } },
     },
-    select: { id: true, user: { select: { email: true } } },
+    select: { id: true, joinedAt: true, user: { select: { email: true } } },
   });
   const membershipOf = (email: string) => memberships.find((m) => m.user.email === email)?.id;
   const recordedBy = membershipOf(demo.admin.email);
@@ -297,6 +297,13 @@ async function seedCapital(
   for (const { email, movements } of planned) {
     const membershipId = membershipOf(email);
     if (!membershipId) continue;
+    // The partner joined the day of their first movement; only fills a joining date that is not set.
+    if (!memberships.find((m) => m.id === membershipId)?.joinedAt) {
+      await prisma.membership.update({
+        where: { id: membershipId },
+        data: { joinedAt: new Date(`${movements[0]!.date}T00:00:00Z`) },
+      });
+    }
     const existing = await prisma.capitalMovement.count({ where: { cooperativeId, membershipId } });
     if (existing > 0) continue;
     await prisma.capitalMovement.createMany({

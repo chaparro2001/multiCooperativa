@@ -135,6 +135,8 @@ describe('sample data', () => {
     expect(response.body.capital).toBe('750.00');
     expect(response.body.movements).toHaveLength(4);
     expect(response.body.member.partnerNumber).toBe('003');
+    // The joining date of the demo partner is the day of their first contribution.
+    expect(response.body.member.joinedAt).toBe('2024-02-01');
   });
 
   it('adds the capital movements to a cooperative that already existed, once and only where there are none', async () => {

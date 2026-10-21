@@ -101,6 +101,8 @@ model Membership {
   status        MembershipStatus @default(invited)
   isPartner     Boolean          @default(false)
   partnerNumber String?
+  /// Day the partner joined the cooperative (requirements/06); null falls back to the creation date.
+  joinedAt      DateTime?        @db.Date
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
