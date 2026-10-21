@@ -61,6 +61,21 @@ function detailedMessage(error: ApiError): string | null {
       const key = `errors.rejections.${error.code}.${String(reason)}`;
       return i18n.exists(key) ? lookup(key) : null;
     }
+    case 'logo_rejected': {
+      const key = `errors.rejections.logo_rejected.${String(reason)}`;
+      return i18n.exists(key) ? lookup(key) : null;
+    }
+    case 'insufficient_contrast': {
+      const ratio = Number(error.details.ratio);
+      const minimum = Number(error.details.minimum);
+      if (!Number.isFinite(ratio) || !Number.isFinite(minimum)) return null;
+      const format = (value: number) =>
+        value.toLocaleString(i18n.language, { maximumFractionDigits: 2 });
+      return i18n.t('errors.codes.insufficient_contrast', {
+        ratio: format(ratio),
+        minimum: format(minimum),
+      });
+    }
     case 'insufficient_notice': {
       const days = Number(error.details.minNoticeDays);
       return Number.isFinite(days)

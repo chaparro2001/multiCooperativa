@@ -8,6 +8,7 @@ import { ApiError, messageFor } from '@/api/api-error';
 import { useCastVote } from '@/features/assemblies/queries';
 import { Button } from '@/ui/button';
 import { ErrorText, Screen } from '@/ui/screen';
+import { useBrandColor, useBrandTint } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 import { confirmAction } from '@/ui/confirm';
 
@@ -15,6 +16,8 @@ const CHOICES: VoteChoice[] = ['in_favor', 'against', 'abstention'];
 
 /** US-ASM-05: one vote per item, confirmed because it cannot be changed (BR-ASM-03). */
 export default function VoteScreen() {
+  const brand = useBrandColor();
+  const tint = useBrandTint();
   const { t } = useTranslation();
   const { pointId } = useLocalSearchParams<{ pointId: string }>();
   const vote = useCastVote();
@@ -49,7 +52,7 @@ export default function VoteScreen() {
     return (
       <Screen testID="vote-confirmed">
         <Stack.Screen options={{ title: t('assemblies.vote.recordedTitle') }} />
-        <Text style={styles.done}>
+        <Text style={[styles.done, { color: brand }]}>
           {t('assemblies.vote.recorded', { choice: t(`enums.voteChoice.${cast}`) })}
         </Text>
         {error && <Text style={styles.meta}>{error}</Text>}
@@ -69,10 +72,20 @@ export default function VoteScreen() {
             accessibilityRole="radio"
             accessibilityState={{ checked: choice === value }}
             onPress={() => setChoice(value)}
-            style={[styles.choice, choice === value && styles.selected]}
+            style={[
+              styles.choice,
+              choice === value && styles.selected,
+              choice === value && { borderColor: brand, backgroundColor: tint },
+            ]}
             testID={`option-${value}`}
           >
-            <Text style={[styles.choiceText, choice === value && styles.selectedText]}>
+            <Text
+              style={[
+                styles.choiceText,
+                choice === value && styles.selectedText,
+                choice === value && { color: brand },
+              ]}
+            >
               {t(`enums.voteChoice.${value}`)}
             </Text>
           </Pressable>

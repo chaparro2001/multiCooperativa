@@ -16,6 +16,7 @@ import {
 } from '@/features/shared/scan-file';
 import { Button } from '@/ui/button';
 import { ErrorText, Screen } from '@/ui/screen';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 /**
@@ -23,6 +24,7 @@ import { colors } from '@/ui/theme';
  * The backend reads it and returns a proposal; nothing is saved until it is confirmed in the form (BR-INV-11).
  */
 export default function CaptureScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ operation?: Operation }>();
   const fallbackOperation: Operation = params.operation === 'sale' ? 'sale' : 'purchase';
@@ -86,7 +88,11 @@ export default function CaptureScreen() {
         testID="choose-pdf-scan"
       />
       {busy && (
-        <Text style={styles.status} accessibilityLiveRegion="polite" testID="extracting">
+        <Text
+          style={[styles.status, { color: brand }]}
+          accessibilityLiveRegion="polite"
+          testID="extracting"
+        >
           {t('invoicing.capture.reading')}
         </Text>
       )}

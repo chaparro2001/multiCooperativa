@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { useBrandColor } from '../branding/brand';
 import { colors } from './theme';
 
 export const SCREEN_PADDING = 24;
@@ -33,9 +34,10 @@ export function Screen({ children, testID }: { children: ReactNode; testID?: str
 }
 
 export function Loading() {
+  const brand = useBrandColor();
   return (
     <View style={styles.center}>
-      <ActivityIndicator size="large" color={colors.primary} />
+      <ActivityIndicator size="large" color={brand} />
     </View>
   );
 }

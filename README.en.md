@@ -178,6 +178,7 @@ The status of each task is in [docs/03-implementation-plan.md](docs/03-implement
 - **Invoices and delivery notes**: third parties (suppliers and customers), purchase and sales delivery notes and invoices with exact decimal amounts, reconciliation with tolerance, statuses, payments and collections summary, idempotent due-dates process (hourly), camera capture and review, **AI extraction** (Gemini vision, validated with Zod and confirmed by a person) and **AI discrepancy explanation**.
 - **Member area**: my data (partner number, joining date, profile, contact), my capital and my movements, read-only for the member (US-MEM-01, US-MEM-02); the governing board, manager and administrator consult every partner's capital with the cooperative's total (US-MEM-04), and the manager and administrator register contributions, refunds and corrections (US-MEM-03). Exact decimal amounts, immutable movements, capital never negative and double isolation (by cooperative and, with own scope, by member).
 - **AI assistant**: chat with citations and links to resources, RAG over documents, read-only tools filtered by permissions (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`, `my_contributions`), conversations with history (reopen and delete, US-AI-04), hourly usage limit, an evaluation set of 23 questions and, for each cooperative's administrator, the choice of the local model in Settings (US-AI-07, ADR-014).
+- **Per-cooperative appearance**: in Settings the administrator picks the primary colour (refused if white text over it does not reach a WCAG AA contrast of 4.5:1) and the logo (PNG or JPEG up to 1 MB, checked by content; SVG is refused); every member sees the app with that colour and the logo on the home (US-ACC-14, ADR-018).
 
 ## 6. Limitations and future work
 
@@ -301,6 +302,7 @@ ADRs are immutable: a decision that changes produces a new ADR.
 - [ADR-010](docs/adr/ADR-010-gemini-embeddings-for-the-hosted-demo.md): Gemini embeddings for the hosted demo.
 - [ADR-013](docs/adr/ADR-013-local-language-model-for-the-assistant.md): local language model (Ollama) for the assistant on the home server; Gemini stays for vision.
 - [ADR-014](docs/adr/ADR-014-per-cooperative-assistant-model.md): per-cooperative choice of the assistant's local model, from an operator allowlist.
+- [ADR-018](docs/adr/ADR-018-per-cooperative-branding.md): per-cooperative primary colour and logo, set by its administrator.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): bilingual root README for the thesis delivery (bounded exception to ADR-008).
 
 ## 11. Quality

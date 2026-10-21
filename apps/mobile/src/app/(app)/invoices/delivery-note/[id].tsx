@@ -16,11 +16,13 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 import { openUrl } from '@/ui/open-url';
 
 /** US-INV-06: delivery note with its lines, status, invoice and original. */
 export default function DeliveryNoteScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { canManage } = useModuleAccess('invoicing');
@@ -78,7 +80,7 @@ export default function DeliveryNoteScreen() {
           accessibilityRole="link"
           onPress={() => router.push(`/invoices/invoice/${data.invoiceId}`)}
         >
-          <Text style={styles.link}>{t('invoicing.detail.viewInvoice')}</Text>
+          <Text style={[styles.link, { color: brand }]}>{t('invoicing.detail.viewInvoice')}</Text>
         </Pressable>
       )}
 

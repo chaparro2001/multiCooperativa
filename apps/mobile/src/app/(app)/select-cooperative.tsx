@@ -6,10 +6,12 @@ import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { useSession } from '@/session/session-context';
 import { Button } from '@/ui/button';
 import { Loading, Screen } from '@/ui/screen';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 /** US-ACC-05: choose or switch cooperative without logging in again. */
 export default function SelectCooperativeScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { me, cooperativeId, select } = useActiveCooperative();
   const { signOut } = useSession();
@@ -45,6 +47,7 @@ export default function SelectCooperativeScreen() {
               style={({ pressed }) => [
                 styles.card,
                 current && styles.current,
+                current && { borderColor: brand },
                 pressed && styles.pressed,
               ]}
               testID={`cooperative-${membership.cooperativeName}`}

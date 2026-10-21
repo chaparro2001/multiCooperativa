@@ -2,6 +2,7 @@ import type { CapitalMovement, MemberRecord } from '@multicooperativa/contracts'
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useBrandColor } from '@/branding/brand';
 import { useEuros } from '@/features/invoicing/components';
 import { Fact } from '@/features/invoicing/components';
 import { formatDay } from '@/i18n/format';
@@ -52,8 +53,9 @@ export function CapitalTotal({
   testID?: string;
 }) {
   const euros = useEuros();
+  const brand = useBrandColor();
   return (
-    <View style={styles.total}>
+    <View style={[styles.total, { backgroundColor: brand }]}>
       <Text style={styles.totalLabel}>{label}</Text>
       <Text style={styles.totalAmount} testID={testID}>
         {euros(amount)}
@@ -66,6 +68,7 @@ export function CapitalTotal({
 export function MovementList({ movements }: { movements: CapitalMovement[] }) {
   const { t } = useTranslation();
   const euros = useEuros();
+  const brand = useBrandColor();
   if (movements.length === 0) {
     return (
       <Text style={styles.empty} testID="no-movements">
@@ -87,7 +90,7 @@ export function MovementList({ movements }: { movements: CapitalMovement[] }) {
               </Text>
             </View>
             <Text
-              style={[styles.amount, tone === 'danger' && styles.amountOut]}
+              style={[styles.amount, { color: brand }, tone === 'danger' && styles.amountOut]}
               accessibilityLabel={t('memberArea.movements.amountLabel', { amount: euros(change) })}
             >
               {tone === 'info' ? '+' : ''}

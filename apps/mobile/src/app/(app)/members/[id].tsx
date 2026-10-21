@@ -14,10 +14,12 @@ import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { confirmAction } from '@/ui/confirm';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 
 /** US-ACC-09 (profile), US-ACC-10 (suspend, reactivate), US-ACC-08 (resend). */
 export default function MemberScreen() {
+  const brand = useBrandColor();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { me } = useActiveCooperative();
@@ -175,7 +177,11 @@ export default function MemberScreen() {
       )}
 
       {notice && (
-        <Text accessibilityRole="alert" style={styles.notice} testID="member-notice">
+        <Text
+          accessibilityRole="alert"
+          style={[styles.notice, { color: brand }]}
+          testID="member-notice"
+        >
           {notice}
         </Text>
       )}

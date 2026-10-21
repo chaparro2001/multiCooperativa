@@ -178,6 +178,7 @@ El estado de cada tarea está en [docs/03-implementation-plan.md](docs/03-implem
 - **Facturas y albaranes**: terceros (proveedores y clientes), albaranes y facturas de compra y venta con importes en decimal exacto, conciliación con tolerancia, estados, resumen de pagos y cobros, proceso idempotente de vencimientos (cada hora), captura con cámara y revisión, **extracción con IA** (Gemini visión, validada con Zod y confirmada por una persona) y **explicación de discrepancias con IA**.
 - **Área del socio**: mis datos (número de socio, fecha de alta, perfil, contacto), mi capital y mis movimientos, de solo lectura para el socio (US-MEM-01, US-MEM-02); el consejo rector, el gestor y el administrador consultan el capital de todos los socios con el total de la cooperativa (US-MEM-04) y el gestor y el administrador registran aportaciones, reembolsos y correcciones (US-MEM-03). Importes en decimal exacto, movimientos inmutables, capital nunca negativo y doble aislamiento (por cooperativa y, con alcance propio, por socio).
 - **Asistente de IA**: chat con citas y enlaces a los recursos, RAG sobre los documentos, herramientas de solo lectura filtradas por permisos (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`, `my_contributions`), conversaciones con historial (reabrir y eliminar, US-AI-04), límite de uso por hora, conjunto de evaluación de 23 preguntas y, para el administrador de cada cooperativa, la elección del modelo local en Ajustes (US-AI-07, ADR-014).
+- **Apariencia por cooperativa**: el administrador elige en Ajustes el color principal (se rechaza si el texto blanco no alcanza un contraste WCAG AA de 4,5:1) y el logo (PNG o JPEG de hasta 1 MB, verificado por su contenido; el SVG se rechaza); todos los miembros ven la aplicación con ese color y el logo en el inicio (US-ACC-14, ADR-018).
 
 ## 6. Limitaciones y trabajo futuro
 
@@ -302,6 +303,7 @@ Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): README raíz bilingüe para la entrega del TFM (excepción acotada a ADR-008).
 - [ADR-013](docs/adr/ADR-013-local-language-model-for-the-assistant.md): modelo de lenguaje local (Ollama) para el asistente en el servidor propio; Gemini sigue en visión.
 - [ADR-014](docs/adr/ADR-014-per-cooperative-assistant-model.md): elección por cooperativa del modelo local del asistente, entre los permitidos por el operador.
+- [ADR-018](docs/adr/ADR-018-per-cooperative-branding.md): color principal y logo por cooperativa, configurados por su administrador.
 
 ## 11. Calidad
 
