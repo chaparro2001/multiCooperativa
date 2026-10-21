@@ -43,6 +43,7 @@ Specifications: [02-announcements](requirements/02-announcements.md) · [03-docu
 - [x] File storage with signed URLs (port + adapter).
 - [x] Announcements: domain, API, reads, `AnnouncementPublished` event.
 - [x] Documents: domain, versions, API.
+- [x] Republish a withdrawn document (US-DOC-08).
 - [x] Indexing: text extraction, chunking, embeddings, pgvector with `cooperativeId`.
 - [x] App: announcements list and detail; documents list and viewer; editor for managers.
 

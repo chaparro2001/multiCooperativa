@@ -17,7 +17,7 @@ export const DOCUMENT_CATEGORIES = [
 ] as const;
 export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
 
-/** Uploading publishes: there are no drafts (US-DOC-01). Withdrawing is final. */
+/** Uploading publishes: there are no drafts (US-DOC-01). A withdrawn document can be republished (US-DOC-08). */
 export type DocumentStatus = 'published' | 'withdrawn';
 
 export interface DocumentState {
@@ -73,6 +73,14 @@ export function withdraw<T extends DocumentState>(document: T): T {
     throw new InvalidDocumentTransitionError('The document is already withdrawn.');
   }
   return { ...document, status: 'withdrawn' };
+}
+
+/** US-DOC-08: only a withdrawn document goes back to published; its latest version stays current. */
+export function republish<T extends DocumentState>(document: T): T {
+  if (document.status !== 'withdrawn') {
+    throw new InvalidDocumentTransitionError('The document is not withdrawn.');
+  }
+  return { ...document, status: 'published' };
 }
 
 /** US-DOC-03: withdrawn documents only exist for “manage”. */

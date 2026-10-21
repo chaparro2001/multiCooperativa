@@ -8,6 +8,7 @@ import {
   createDocument,
   type DocumentCategory,
   isVisible,
+  republish,
   withdraw,
 } from '../domain/document';
 import { InvalidDocumentTransitionError } from '../domain/errors';
@@ -211,6 +212,24 @@ export async function withdrawDocument(
     payload: { cooperativeId: context.cooperativeId, documentId: withdrawn.id },
   });
   return withdrawn;
+}
+
+/** US-DOC-08: visible again for “read”; its current version is sent to indexing again. */
+export async function republishDocument(
+  deps: DocumentDeps & Pick<IndexingDeps, 'indexingStore'>,
+  context: CooperativeContext,
+  id: string,
+): Promise<DocumentWithCurrent> {
+  requireAccess(context.permissions, 'documents', 'manage');
+  const updated = UUID.test(id)
+    ? await deps.documents.update(context.cooperativeId, id, (current) => republish(current))
+    : null;
+  const document = updated ? await deps.documents.find(context.cooperativeId, id) : null;
+  if (!document) throw new DocumentNotFoundError();
+  // The fragments were deleted on withdrawal: until indexed again it is not “available”.
+  await deps.indexingStore.setStatus(document.current.id, 'pending', null);
+  await announcePublished(deps, document);
+  return document;
 }
 
 export interface IndexingDeps {

@@ -43,6 +43,7 @@ export default function DocumentScreen() {
   const action = useDocumentAction();
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
+  const [republished, setRepublished] = useState(false);
 
   if (document.isPending) return <Loading />;
   if (document.isError) {
@@ -71,6 +72,20 @@ export default function DocumentScreen() {
       cancelLabel: t('common.actions.cancel'),
       destructive: true,
       onConfirm: () => run(() => action.mutateAsync({ id, action: 'withdraw' })),
+    });
+  }
+
+  function confirmRepublish() {
+    confirmAction({
+      title: t('documents.detail.republishTitle'),
+      message: t('documents.detail.republishMessage'),
+      confirmLabel: t('documents.detail.republishTitle'),
+      cancelLabel: t('common.actions.cancel'),
+      onConfirm: () =>
+        run(async () => {
+          await action.mutateAsync({ id, action: 'republish' });
+          setRepublished(true);
+        }),
     });
   }
 
@@ -125,6 +140,16 @@ export default function DocumentScreen() {
             </View>
           )}
 
+          {data.status === 'withdrawn' && (
+            <Badge label={t('documents.list.notAvailableForAssistant')} tone="warning" />
+          )}
+
+          {republished && data.status === 'published' && (
+            <Text style={styles.success} testID="republished">
+              {t('documents.detail.republished')}
+            </Text>
+          )}
+
           {error && <ErrorText>{error}</ErrorText>}
 
           {data.status === 'published' && (
@@ -158,6 +183,15 @@ export default function DocumentScreen() {
             </View>
           ))}
 
+          {data.status === 'withdrawn' && (
+            <Button
+              title={t('documents.detail.republishTitle')}
+              loading={action.isPending}
+              onPress={confirmRepublish}
+              testID="republish"
+            />
+          )}
+
           {data.status === 'published' && (
             <Button
               title={t('documents.detail.withdrawTitle')}
@@ -177,6 +211,7 @@ const styles = StyleSheet.create({
   section: { gap: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
   sectionTitle: { fontSize: 15, fontWeight: '600', color: colors.text, marginTop: 8 },
   indexing: { gap: 8 },
+  success: { fontSize: 14, color: colors.text },
   version: { backgroundColor: colors.surface, borderRadius: 10, padding: 12, gap: 2 },
   versionName: { fontSize: 15, color: colors.text },
 });

@@ -10,6 +10,7 @@ import {
   getDocument,
   listDocuments,
   listVersions,
+  republishDocument,
   uploadDocument,
   withdrawDocument,
 } from './documents';
@@ -233,5 +234,61 @@ describe('withdraw (US-DOC-05)', () => {
       InvalidDocumentTransitionError,
     );
     expect(events.filter((e) => e.type === 'DocumentWithdrawn')).toHaveLength(1);
+  });
+});
+
+const statuses: [string, string][] = [];
+const indexingStore = {
+  setStatus: async (versionId: string, status: string) => void statuses.push([versionId, status]),
+} as unknown as Parameters<typeof republishDocument>[0]['indexingStore'];
+
+describe('republish (US-DOC-08)', () => {
+  it('Given a withdrawn document, when I republish it, then read access sees it again and DocumentPublished is emitted for its current version', async () => {
+    const document = await upload();
+    await withdrawDocument(deps, manager, document.id);
+
+    const republished = await republishDocument({ ...deps, indexingStore }, manager, document.id);
+
+    expect(republished.status).toBe('published');
+    expect(statuses.at(-1)).toEqual([document.current.id, 'pending']);
+    expect(await listDocuments(deps, reader, {})).toHaveLength(1);
+    expect(events.at(-1)).toMatchObject({
+      type: 'DocumentPublished',
+      payload: { cooperativeId: COOP, documentId: document.id, versionId: document.current.id },
+    });
+  });
+
+  it('a published document cannot be republished and emits nothing', async () => {
+    const document = await upload();
+    const before = events.length;
+
+    await expect(
+      republishDocument({ ...deps, indexingStore }, manager, document.id),
+    ).rejects.toThrow(InvalidDocumentTransitionError);
+    expect(events).toHaveLength(before);
+  });
+
+  it('it requires manage access', async () => {
+    const document = await upload();
+    await withdrawDocument(deps, manager, document.id);
+
+    await expect(
+      republishDocument({ ...deps, indexingStore }, reader, document.id),
+    ).rejects.toThrow();
+    await expect(
+      republishDocument({ ...deps, indexingStore }, context(null), document.id),
+    ).rejects.toThrow();
+  });
+
+  it('another cooperative or an unknown id does not exist', async () => {
+    const document = await upload();
+    await withdrawDocument(deps, manager, document.id);
+
+    await expect(
+      republishDocument({ ...deps, indexingStore }, context('manage', OTHER_COOP), document.id),
+    ).rejects.toThrow(DocumentNotFoundError);
+    await expect(republishDocument({ ...deps, indexingStore }, manager, 'nope')).rejects.toThrow(
+      DocumentNotFoundError,
+    );
   });
 });

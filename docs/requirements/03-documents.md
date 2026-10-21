@@ -68,6 +68,16 @@ As a user with manage level, I want to know whether a document is already availa
 
 - **Given** a natural-language query, **when** I search, **then** I get the documents whose chunks are most relevant, with the page where they appear.
 
+#### US-DOC-08 · Republish a withdrawn document
+
+As a user with manage level, I want to publish again a document I withdrew, so that it is available again without uploading it anew.
+
+- **Given** a withdrawn document, **when** I republish it with manage level, **then** it is published again, visible with read level, with its latest version as the current one.
+- **Given** a republished document, **then** its current version is indexed again (`DocumentPublished`) and until then it shows as pending; the assistant finds it once indexed.
+- **Given** a withdrawn document, **then** it never shows as available for the assistant (no indexing status is reported).
+- **Given** a published document, **when** I try to republish it, **then** I receive 409 `invalid_document_transition`.
+- **Given** a user with read level only, **when** they try to republish, **then** they receive 403; a document of another cooperative or unknown gives 404.
+
 ### Could
 
 - Restrict a document to certain profiles (for example, governing board minutes).
@@ -90,6 +100,7 @@ As a user with manage level, I want to know whether a document is already availa
 | BR-DOC-05 | When a document is withdrawn or its version replaced, the previous chunks are removed from the index. |
 | BR-DOC-06 | Every chunk carries `cooperativeId`, `documentId` and page number.                                    |
 | BR-DOC-07 | A non-indexed document remains readable; the assistant simply does not know it.                       |
+| BR-DOC-08 | A withdrawn document can be republished (only from withdrawn); its latest version is indexed again.   |
 
 ## 4. Indexing
 
@@ -148,23 +159,24 @@ erDiagram
 
 ## 7. Events
 
-| Event               | When                                     | Consumer                  |
-| ------------------- | ---------------------------------------- | ------------------------- |
-| `DocumentPublished` | On uploading a document or a new version | Indexing                  |
-| `DocumentWithdrawn` | On withdrawing a document                | Indexing (deletes chunks) |
+| Event               | When                                                          | Consumer                  |
+| ------------------- | ------------------------------------------------------------- | ------------------------- |
+| `DocumentPublished` | On uploading a document or a new version, or republishing one | Indexing                  |
+| `DocumentWithdrawn` | On withdrawing a document                                     | Indexing (deletes chunks) |
 
 ## 8. API
 
-| Method | Route                                                           | Use                                          | Level  |
-| ------ | --------------------------------------------------------------- | -------------------------------------------- | ------ |
-| GET    | `/cooperatives/{cooperativeId}/documents`                       | List with filter by category and title       | Read   |
-| GET    | `/cooperatives/{cooperativeId}/documents/{documentId}`          | Detail and signed URL of the current version | Read   |
-| GET    | `/cooperatives/{cooperativeId}/documents/search`                | Search by content                            | Read   |
-| POST   | `/cooperatives/{cooperativeId}/documents`                       | Upload document                              | Manage |
-| POST   | `/cooperatives/{cooperativeId}/documents/{documentId}/versions` | Upload new version                           | Manage |
-| GET    | `/cooperatives/{cooperativeId}/documents/{documentId}/versions` | History                                      | Manage |
-| POST   | `/cooperatives/{cooperativeId}/documents/{documentId}/withdraw` | Withdraw                                     | Manage |
-| POST   | `/cooperatives/{cooperativeId}/documents/{documentId}/reindex`  | Retry indexing                               | Manage |
+| Method | Route                                                            | Use                                          | Level  |
+| ------ | ---------------------------------------------------------------- | -------------------------------------------- | ------ |
+| GET    | `/cooperatives/{cooperativeId}/documents`                        | List with filter by category and title       | Read   |
+| GET    | `/cooperatives/{cooperativeId}/documents/{documentId}`           | Detail and signed URL of the current version | Read   |
+| GET    | `/cooperatives/{cooperativeId}/documents/search`                 | Search by content                            | Read   |
+| POST   | `/cooperatives/{cooperativeId}/documents`                        | Upload document                              | Manage |
+| POST   | `/cooperatives/{cooperativeId}/documents/{documentId}/versions`  | Upload new version                           | Manage |
+| GET    | `/cooperatives/{cooperativeId}/documents/{documentId}/versions`  | History                                      | Manage |
+| POST   | `/cooperatives/{cooperativeId}/documents/{documentId}/withdraw`  | Withdraw                                     | Manage |
+| POST   | `/cooperatives/{cooperativeId}/documents/{documentId}/republish` | Republish a withdrawn document (204)         | Manage |
+| POST   | `/cooperatives/{cooperativeId}/documents/{documentId}/reindex`   | Retry indexing                               | Manage |
 
 Contract (schemas in `packages/contracts/src/documents.ts`):
 
@@ -177,6 +189,7 @@ Contract (schemas in `packages/contracts/src/documents.ts`):
 - Events: `DocumentPublished` (`cooperativeId`, `documentId`, `versionId`) and `DocumentWithdrawn` (`cooperativeId`, `documentId`), emitted after saving. The module itself consumes them to index.
 - Indexing (ADR-006): in-process queue, one version at a time; the upload does not wait for it. On startup, the API re-enqueues pending versions. Chunks of up to 800 characters plus 150 of overlap, without mixing pages. Embeddings with `bge-m3` (1024 dimensions) on Ollama. Measured: 50 pages in 16 s locally.
 - `GET /documents/search?q=` (3 to 300 characters) returns up to 10 chunks with `documentId`, `title`, `category`, `page`, `excerpt` and `score`. It searches only published documents of the cooperative and filters before ordering. If the embeddings service does not respond: `503 search_unavailable`.
+- `POST /documents/{documentId}/republish` responds `204`, sets the current version to pending and emits `DocumentPublished`; `409` if the document is not withdrawn. A withdrawn document reports `indexingStatus: null`.
 - `POST /documents/{documentId}/reindex` responds `202` and leaves the current version as pending.
 
 ## 9. Screens
@@ -190,4 +203,4 @@ Contract (schemas in `packages/contracts/src/documents.ts`):
 - **Domain**: a single current version, status transitions, format and size validation.
 - **Indexing**: deterministic chunking on a sample PDF; deletion of chunks on withdrawal or versioning.
 - **Isolation**: search never returns chunks from another cooperative, even if the text matches exactly.
-- **Permissions**: upload, versions and withdrawal rejected with 403 without manage level.
+- **Permissions**: upload, versions, withdrawal and republishing rejected with 403 without manage level.

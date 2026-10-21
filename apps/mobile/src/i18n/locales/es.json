@@ -495,7 +495,10 @@
       "versionHistory": "Historial de versiones",
       "currentVersion": "{{name}} · vigente",
       "withdrawTitle": "Retirar documento",
-      "withdrawMessage": "Dejará de estar disponible para los miembros y para el asistente."
+      "withdrawMessage": "Dejará de estar disponible para los miembros y para el asistente.",
+      "republishTitle": "Volver a publicar",
+      "republishMessage": "Volverá a estar disponible para los miembros y para el asistente, con su versión vigente.",
+      "republished": "Documento publicado de nuevo. El asistente lo está indexando."
     },
     "upload": {
       "screenTitle": "Subir documento",

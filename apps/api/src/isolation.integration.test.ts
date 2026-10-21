@@ -269,6 +269,7 @@ beforeAll(async () => {
     'POST /cooperatives/:cooperativeId/announcements': { title: 'New', body: 'Text' },
     'POST /cooperatives/:cooperativeId/documents/:documentId/versions': MULTIPART_PDF,
     'POST /cooperatives/:cooperativeId/documents/:documentId/withdraw': {},
+    'POST /cooperatives/:cooperativeId/documents/:documentId/republish': {},
     'POST /cooperatives/:cooperativeId/documents/:documentId/reindex': {},
     'PATCH /cooperatives/:cooperativeId/assemblies/:assemblyId': {
       type: 'ordinary',

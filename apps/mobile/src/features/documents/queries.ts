@@ -123,7 +123,7 @@ export function useAddVersion() {
 export function useDocumentAction() {
   const { api } = useServices();
   return useDocumentMutation(
-    ({ id, action }: { id: string; action: 'withdraw' | 'reindex' }, base) =>
+    ({ id, action }: { id: string; action: 'withdraw' | 'republish' | 'reindex' }, base) =>
       api.request(`${base}/${id}/${action}`, { method: 'POST' }),
   );
 }

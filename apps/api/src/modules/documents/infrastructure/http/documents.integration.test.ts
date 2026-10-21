@@ -237,6 +237,51 @@ describe('documents over HTTP (US-DOC-01..05)', () => {
   });
 });
 
+describe('republishing a withdrawn document (US-DOC-08)', () => {
+  it('republish: 403 with read access, 409 if published, 404 if unknown; 204 restores visibility and re-indexes', async () => {
+    const document = documentSummarySchema.parse(
+      (
+        await upload(
+          'Bylaws',
+          'bylaws',
+          '2026-01-01',
+          await buildPdf([['The ordinary general assembly is held in June.']]),
+        )
+      ).body,
+    );
+    await indexing.idle();
+    const republish = (token: string, id = document.id) =>
+      request(app).post(`${base()}/${id}/republish`).set(as(token));
+
+    expect((await republish(admin)).status).toBe(409);
+    await request(app).post(`${base()}/${document.id}/withdraw`).set(as(admin));
+    await indexing.idle();
+    expect(await prisma.documentChunk.count()).toBe(0);
+    const withdrawn = documentDetailSchema.parse(
+      (await request(app).get(`${base()}/${document.id}`).set(as(admin))).body,
+    );
+    expect(withdrawn).toMatchObject({ status: 'withdrawn', indexingStatus: null });
+    expect((await republish(member)).status).toBe(403);
+    expect((await republish(admin, '00000000-0000-4000-8000-00000000dead')).status).toBe(404);
+    expect((await request(app).get(`${base()}/${document.id}`).set(as(member))).status).toBe(404);
+
+    expect((await republish(admin)).status).toBe(204);
+    await indexing.idle();
+
+    expect((await request(app).get(`${base()}/${document.id}`).set(as(member))).status).toBe(200);
+    expect(await prisma.documentChunk.count()).toBeGreaterThan(0);
+    const back = documentDetailSchema.parse(
+      (await request(app).get(`${base()}/${document.id}`).set(as(admin))).body,
+    );
+    expect(back).toMatchObject({ status: 'published', indexingStatus: 'indexed' });
+    expect(events.map((e) => e.type)).toEqual([
+      'DocumentPublished',
+      'DocumentWithdrawn',
+      'DocumentPublished',
+    ]);
+  });
+});
+
 describe('indexing and search (requirements/03, section 4; US-DOC-06, US-DOC-07)', () => {
   const bylawsPdf = () =>
     buildPdf([

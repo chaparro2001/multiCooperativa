@@ -5,6 +5,7 @@ import {
   assertValidFile,
   createDocument,
   isVisible,
+  republish,
   MAX_FILE_BYTES,
   TITLE_MAX_LENGTH,
   withdraw,
@@ -89,6 +90,22 @@ describe('versions and withdrawal (US-DOC-04, US-DOC-05)', () => {
     const withdrawn = withdraw(createDocument(valid));
     expect(withdrawn.status).toBe('withdrawn');
     expect(() => withdraw(withdrawn)).toThrow(InvalidDocumentTransitionError);
+  });
+});
+
+describe('republishing (US-DOC-08)', () => {
+  it('a withdrawn document goes back to published, keeping the rest', () => {
+    const withdrawn = withdraw(createDocument(valid));
+    expect(republish(withdrawn)).toEqual({ ...withdrawn, status: 'published' });
+  });
+
+  it('it accepts versions again', () => {
+    const back = republish(withdraw(createDocument(valid)));
+    expect(() => assertCanAddVersion(back)).not.toThrow();
+  });
+
+  it('a published document cannot be republished', () => {
+    expect(() => republish(createDocument(valid))).toThrow(InvalidDocumentTransitionError);
   });
 });
 

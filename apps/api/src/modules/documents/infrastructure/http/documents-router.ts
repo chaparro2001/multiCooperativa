@@ -33,7 +33,10 @@ function uploadedFile(req: Request): UploadedFile {
   return { name, content: new Uint8Array(req.file.buffer) };
 }
 
-/** The indexing state is a “manage” concern (US-DOC-06). */
+/**
+ * The indexing state is a “manage” concern (US-DOC-06). A withdrawn document is
+ * not in the index (BR-DOC-05), so it reports no state: never “available”.
+ */
 function toSummary(document: DocumentWithCurrent, context: CooperativeContext): DocumentSummary {
   const manager = hasAccess(context.permissions, 'documents', 'manage');
   return {
@@ -43,7 +46,8 @@ function toSummary(document: DocumentWithCurrent, context: CooperativeContext): 
     documentDate: document.documentDate,
     status: document.status,
     size: document.current.size,
-    indexingStatus: manager ? document.current.indexingStatus : null,
+    indexingStatus:
+      manager && document.status === 'published' ? document.current.indexingStatus : null,
   };
 }
 
@@ -145,6 +149,16 @@ export function createDocumentsRouter(
 
   router.post(`${base}/:documentId/withdraw`, ...manage, async (req, res) => {
     await useCases.withdrawDocument(
+      deps,
+      getCooperativeContext(res),
+      String(req.params.documentId),
+    );
+    res.status(204).end();
+  });
+
+  // US-DOC-08
+  router.post(`${base}/:documentId/republish`, ...manage, async (req, res) => {
+    await useCases.republishDocument(
       deps,
       getCooperativeContext(res),
       String(req.params.documentId),
