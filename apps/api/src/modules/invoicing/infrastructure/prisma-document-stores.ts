@@ -1,10 +1,9 @@
 import type { PrismaClient } from '../../../shared/infrastructure/prisma';
+import { type DeliveryNoteState, type InvoiceState, type Line } from '../domain/documents';
 import {
-  DEFAULT_DUE_SOON_DAYS,
-  type DeliveryNoteState,
-  type InvoiceState,
-  type Line,
-} from '../domain/documents';
+  DEFAULT_INVOICING_NOTICE_SETTINGS,
+  type InvoicingNoticeSettings,
+} from '../domain/invoicing-settings';
 import {
   formatMoney,
   formatQuantity,
@@ -189,12 +188,6 @@ export class PrismaDeliveryNoteStore implements DeliveryNoteStore, StaleNotesQue
           select: noteSelect,
         }),
       );
-    });
-  }
-
-  countPendingBefore(cooperativeId: string, before: string): Promise<number> {
-    return this.prisma.deliveryNote.count({
-      where: { cooperativeId, status: 'pending_invoicing', date: { lt: fromDay(before) } },
     });
   }
 
@@ -508,16 +501,29 @@ export class PrismaInvoicingSettingsStore implements InvoicingSettingsStore {
     return row?.toleranceBasisPoints ?? DEFAULT_TOLERANCE_BASIS_POINTS;
   }
 
-  async dueSoonDays(cooperativeId: string): Promise<number> {
-    const row = await this.prisma.invoicingSettings.findUnique({ where: { cooperativeId } });
-    return row?.dueSoonDays ?? DEFAULT_DUE_SOON_DAYS;
+  async noticeSettings(cooperativeId: string): Promise<InvoicingNoticeSettings> {
+    const row = await this.prisma.invoicingSettings.findUnique({
+      where: { cooperativeId },
+      select: {
+        invoiceNoticeEnabled: true,
+        invoiceNoticeDays: true,
+        noteDeadlineEnabled: true,
+        noteDeadlineDays: true,
+        noteNoticeEnabled: true,
+        noteNoticeDays: true,
+      },
+    });
+    return row ?? DEFAULT_INVOICING_NOTICE_SETTINGS;
   }
 
-  async saveDueSoonDays(cooperativeId: string, days: number): Promise<void> {
+  async saveNoticeSettings(
+    cooperativeId: string,
+    settings: InvoicingNoticeSettings,
+  ): Promise<void> {
     await this.prisma.invoicingSettings.upsert({
       where: { cooperativeId },
-      create: { cooperativeId, dueSoonDays: days },
-      update: { dueSoonDays: days },
+      create: { cooperativeId, ...settings },
+      update: settings,
     });
   }
 }

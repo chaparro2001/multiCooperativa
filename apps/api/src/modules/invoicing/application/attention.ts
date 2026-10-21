@@ -1,5 +1,11 @@
 import { type CooperativeContext, hasAccess, requireAccess } from '../../access';
-import { addDays, assertDueSoonDays, staleNoteCutoff } from '../domain/documents';
+import {
+  assertInvoicingNoticeSettings,
+  INVOICING_NOTICE_FIELDS,
+  type InvoicingNoticeSettings,
+  invoiceAttentionUntil,
+  noteAttentionUpTo,
+} from '../domain/invoicing-settings';
 import type {
   AuditRecorder,
   InvoiceStore,
@@ -31,42 +37,52 @@ function requireAdministration(context: CooperativeContext): void {
 export async function getInvoicingSettings(
   deps: Pick<AttentionDeps, 'settings'>,
   context: CooperativeContext,
-): Promise<{ dueSoonDays: number }> {
+): Promise<InvoicingNoticeSettings> {
   if (!hasAccess(context.permissions, 'users', 'manage')) requireRead(context);
-  return { dueSoonDays: await deps.settings.dueSoonDays(context.cooperativeId) };
-}
-
-/** BR-INV-15; audited (US-ACC-12). A write that changes nothing leaves no event. */
-export async function updateInvoicingSettings(
-  deps: Pick<AttentionDeps, 'settings' | 'audit'>,
-  context: CooperativeContext,
-  input: { dueSoonDays: number },
-): Promise<{ dueSoonDays: number }> {
-  requireAdministration(context);
-  const dueSoonDays = assertDueSoonDays(input.dueSoonDays);
-  const current = await deps.settings.dueSoonDays(context.cooperativeId);
-  if (current === dueSoonDays) return { dueSoonDays };
-  await deps.settings.saveDueSoonDays(context.cooperativeId, dueSoonDays);
-  await deps.audit(context.cooperativeId, {
-    actorUserId: context.userId,
-    action: INVOICING_SETTINGS_CHANGED_ACTION,
-    detail: { dueSoonDays: { from: current, to: dueSoonDays } },
-  });
-  return { dueSoonDays };
+  return deps.settings.noticeSettings(context.cooperativeId);
 }
 
 /**
- * BR-INV-16: what needs attention, for the badges of the home. Invoices
- * pending or overdue, due on or before today plus N days; delivery notes
- * pending invoicing that are older than 30 days or reach it within N days.
+ * BR-INV-15; audited (US-ACC-12) with the previous and the new value of each field that changed.
+ * A write that changes nothing leaves no event.
+ */
+export async function updateInvoicingSettings(
+  deps: Pick<AttentionDeps, 'settings' | 'audit'>,
+  context: CooperativeContext,
+  input: InvoicingNoticeSettings,
+): Promise<InvoicingNoticeSettings> {
+  requireAdministration(context);
+  const next = assertInvoicingNoticeSettings(input);
+  const current = await deps.settings.noticeSettings(context.cooperativeId);
+  const changed = INVOICING_NOTICE_FIELDS.filter((field) => current[field] !== next[field]);
+  if (changed.length === 0) return next;
+  await deps.settings.saveNoticeSettings(context.cooperativeId, next);
+  await deps.audit(context.cooperativeId, {
+    actorUserId: context.userId,
+    action: INVOICING_SETTINGS_CHANGED_ACTION,
+    detail: Object.fromEntries(
+      changed.map((field) => [field, { from: current[field], to: next[field] }]),
+    ),
+  });
+  return next;
+}
+
+/**
+ * BR-INV-16: what needs attention, for the badges of the home, and the settings that decide it.
+ * Invoices pending or overdue: only the overdue ones with the invoice notice off, those due
+ * within its days otherwise. Delivery notes pending invoicing: none with the deadline off, those
+ * past it with the notice off, those past it or reaching it within the notice days otherwise.
  */
 export async function attentionCounts(deps: AttentionDeps, context: CooperativeContext) {
   requireRead(context);
   const today = deps.today();
-  const days = await deps.settings.dueSoonDays(context.cooperativeId);
+  const settings = await deps.settings.noticeSettings(context.cooperativeId);
+  const noteWindow = noteAttentionUpTo(today, settings);
   const [invoices, deliveryNotes] = await Promise.all([
-    deps.invoices.countDueUntil(context.cooperativeId, addDays(today, days)),
-    deps.staleNotes.countPendingUpTo(context.cooperativeId, staleNoteCutoff(today, days)),
+    deps.invoices.countDueUntil(context.cooperativeId, invoiceAttentionUntil(today, settings)),
+    noteWindow === null
+      ? 0
+      : deps.staleNotes.countPendingUpTo(context.cooperativeId, noteWindow.upTo),
   ]);
-  return { invoices, deliveryNotes, days };
+  return { invoices, deliveryNotes, settings };
 }

@@ -317,7 +317,14 @@ beforeAll(async () => {
       concept: 'Extra',
       amount: '50.00',
     },
-    'PUT /cooperatives/:cooperativeId/invoicing/settings': { dueSoonDays: 20 },
+    'PUT /cooperatives/:cooperativeId/invoicing/settings': {
+      invoiceNoticeEnabled: true,
+      invoiceNoticeDays: 20,
+      noteDeadlineEnabled: true,
+      noteDeadlineDays: 30,
+      noteNoticeEnabled: true,
+      noteNoticeDays: 15,
+    },
     'PUT /cooperatives/:cooperativeId/branding/primary-color': { primaryColor: '#1E5AA8' },
     'PUT /cooperatives/:cooperativeId/branding/logo': MULTIPART_LOGO,
     'POST /cooperatives/:cooperativeId/members': {

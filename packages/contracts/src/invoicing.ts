@@ -185,33 +185,43 @@ export const invoicingSummarySchema = z.object({
   toPay: amountsSchema,
   toCollect: amountsSchema,
   openDiscrepancies: z.number().int(),
-  /** Delivery notes pending invoicing for more than 30 days. */
+  /** Delivery notes pending invoicing past the cooperative deadline (0 when it is off). */
   staleDeliveryNotes: z.number().int(),
 });
 
-/** BR-INV-15: days of notice, a whole number from 1 to 90; 15 until the administrator chooses. */
-export const DUE_SOON_DAYS_MIN = 1;
-export const DUE_SOON_DAYS_MAX = 90;
-export const DUE_SOON_DAYS_DEFAULT = 15;
+/**
+ * BR-INV-15: three alerts, each one with its own switch and number of days.
+ * Invoices: notice before the due date (1 to 90, 15 by default). Delivery notes: the deadline
+ * to invoice them (1 to 365, 30 by default) and the notice before that deadline (1 to 365, 15 by
+ * default; it must be shorter than the deadline when both are on).
+ */
+export const INVOICE_NOTICE_DAYS = { min: 1, max: 90, default: 15 } as const;
+export const NOTE_DEADLINE_DAYS = { min: 1, max: 365, default: 30 } as const;
+export const NOTE_NOTICE_DAYS = { min: 1, max: 365, default: 15 } as const;
 
-/** GET and PUT /invoicing/settings (BR-INV-15). */
-export const invoicingSettingsSchema = z.object({
-  dueSoonDays: z.number().int().min(DUE_SOON_DAYS_MIN).max(DUE_SOON_DAYS_MAX),
-});
+const invoicingSettingsShape = {
+  invoiceNoticeEnabled: z.boolean(),
+  invoiceNoticeDays: z.number().int().min(INVOICE_NOTICE_DAYS.min).max(INVOICE_NOTICE_DAYS.max),
+  noteDeadlineEnabled: z.boolean(),
+  noteDeadlineDays: z.number().int().min(NOTE_DEADLINE_DAYS.min).max(NOTE_DEADLINE_DAYS.max),
+  noteNoticeEnabled: z.boolean(),
+  noteNoticeDays: z.number().int().min(NOTE_NOTICE_DAYS.min).max(NOTE_NOTICE_DAYS.max),
+};
 
-/** PUT /invoicing/settings: the administrator's choice. */
-export const updateInvoicingSettingsBodySchema = z.strictObject({
-  dueSoonDays: z.number().int().min(DUE_SOON_DAYS_MIN).max(DUE_SOON_DAYS_MAX),
-});
+/** GET and PUT /invoicing/settings (BR-INV-15): the effective values, defaults when never chosen. */
+export const invoicingSettingsSchema = z.object(invoicingSettingsShape);
 
-/** GET /invoicing/attention: what the home badges show (BR-INV-16). */
+/** PUT /invoicing/settings: the administrator's choice, all the fields (the API checks the rules between them). */
+export const updateInvoicingSettingsBodySchema = z.strictObject(invoicingSettingsShape);
+
+/** GET /invoicing/attention: what the home badges show (BR-INV-16), with the settings that produced it. */
 export const invoicingAttentionSchema = z.object({
-  /** Pending invoices (purchases and sales) overdue or due within `days` days. */
+  /** Pending invoices overdue or, with the notice on, due within the notice days. */
   invoices: z.number().int().min(0),
-  /** Pending delivery notes older than 30 days or reaching 30 days within `days` days. */
+  /** Pending delivery notes past their deadline or, with the notice on, reaching it within the notice days; 0 with the deadline off. */
   deliveryNotes: z.number().int().min(0),
-  /** The cooperative's notice window. */
-  days: z.number().int(),
+  /** The cooperative's effective settings, so the lists mark the same rows. */
+  settings: invoicingSettingsSchema,
 });
 
 /** GET /third-parties/{id}: record with documents and balance (US-INV-06). */

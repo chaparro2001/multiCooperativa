@@ -32,17 +32,21 @@ export class PrismaDueDatesStore implements DueDatesStore {
     });
   }
 
-  async claimDueSoon(today: string, defaultDays: number): Promise<DueInvoice[]> {
+  async claimDueSoon(
+    today: string,
+    defaults: { enabled: boolean; days: number },
+  ): Promise<DueInvoice[]> {
     // The insert is the claim: a second run finds the reminder and returns nothing.
-    // The window is the cooperative's own number of days (BR-INV-15).
+    // The window is the cooperative's own number of days, none if it is off (BR-INV-15).
     const claimed = await this.prisma.$queryRaw<Row[]>`
       WITH claimed AS (
         INSERT INTO "InvoiceReminder" ("invoiceId", kind, "sentOn")
         SELECT i.id, 'due_soon', ${today}::date FROM "Invoice" i
         LEFT JOIN "InvoicingSettings" s ON s."cooperativeId" = i."cooperativeId"
         WHERE i."paymentStatus" = 'pending'
+          AND COALESCE(s."invoiceNoticeEnabled", ${defaults.enabled}::boolean)
           AND i."dueDate" BETWEEN ${today}::date
-            AND ${today}::date + COALESCE(s."dueSoonDays", ${defaultDays}::int)
+            AND ${today}::date + COALESCE(s."invoiceNoticeDays", ${defaults.days}::int)
         ON CONFLICT DO NOTHING
         RETURNING "invoiceId"
       )

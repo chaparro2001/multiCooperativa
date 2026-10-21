@@ -17,8 +17,8 @@ export interface DueDatesStore {
   markOverdue(today: string): Promise<DueInvoice[]>;
   /**
    * Pending and due between `today` and `today` plus the notice days of the
-   * invoice's cooperative (`defaultDays` when it never chose one, BR-INV-15):
-   * claims the “due soon” notice once.
+   * invoice's cooperative, only when its invoice notice is on (`defaults` when it
+   * never chose, BR-INV-15): claims the “due soon” notice once.
    */
-  claimDueSoon(today: string, defaultDays: number): Promise<DueInvoice[]>;
+  claimDueSoon(today: string, defaults: { enabled: boolean; days: number }): Promise<DueInvoice[]>;
 }

@@ -523,8 +523,15 @@ enum ReminderKind {
 model InvoicingSettings {
   cooperativeId        String @id @db.Uuid
   toleranceBasisPoints Int    @default(100)
-  /// BR-INV-15: days of notice before a due date (and before a pending note turns 30 days old), 1 to 90.
-  dueSoonDays          Int    @default(15)
+  /// BR-INV-15: invoices, notice before the due date (1 to 90 days). Off: only overdue invoices count.
+  invoiceNoticeEnabled Boolean @default(true)
+  invoiceNoticeDays    Int     @default(15)
+  /// BR-INV-15: delivery notes, deadline to invoice them from their date (1 to 365). Off: no such concept.
+  noteDeadlineEnabled  Boolean @default(true)
+  noteDeadlineDays     Int     @default(30)
+  /// BR-INV-15: delivery notes, notice before that deadline (1 to 365, shorter than it when both are on).
+  noteNoticeEnabled    Boolean @default(true)
+  noteNoticeDays       Int     @default(15)
 }
 
 model ThirdParty {

@@ -6,6 +6,7 @@ import type {
   Operation,
   PaymentStatus,
 } from '../../domain/documents';
+import type { InvoicingNoticeSettings } from '../../domain/invoicing-settings';
 import type {
   Discrepancy,
   Reconciliation,
@@ -136,16 +137,15 @@ export interface InvoiceStore {
 
 /** US-INV-09: pending notes older than a date, per party. */
 export interface StaleNotesQuery {
-  countPendingBefore(cooperativeId: string, day: string): Promise<number>;
   /** Notes pending invoicing dated on or before `upTo`; `null` counts all of them (BR-INV-16). */
   countPendingUpTo(cooperativeId: string, upTo: string | null): Promise<number>;
 }
 
 export interface InvoicingSettingsStore {
   toleranceBasisPoints(cooperativeId: string): Promise<number>;
-  /** BR-INV-15: the cooperative's notice days, the default when it never chose one. */
-  dueSoonDays(cooperativeId: string): Promise<number>;
-  saveDueSoonDays(cooperativeId: string, days: number): Promise<void>;
+  /** BR-INV-15: the cooperative's three alerts, the defaults when it never chose. */
+  noticeSettings(cooperativeId: string): Promise<InvoicingNoticeSettings>;
+  saveNoticeSettings(cooperativeId: string, settings: InvoicingNoticeSettings): Promise<void>;
 }
 
 /** Leaves a trace in the cooperative's audit log; provided by the access module (US-ACC-12). */

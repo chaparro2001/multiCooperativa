@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { type CooperativeContext, ModuleAccessDeniedError } from '../../access';
 import { InvalidDocumentError } from '../domain/errors';
 import {
+  DEFAULT_INVOICING_NOTICE_SETTINGS,
+  type InvoicingNoticeSettings,
+} from '../domain/invoicing-settings';
+import {
   type AttentionDeps,
   attentionCounts,
   getInvoicingSettings,
@@ -46,14 +50,14 @@ interface Inv {
 
 /** In-memory stores applying the port contracts, with a fixed clock. */
 function build(today: string, data: { invoices?: Inv[]; notes?: Note[] } = {}) {
-  const days = new Map<string, number>();
+  const stored = new Map<string, InvoicingNoticeSettings>();
   const audit: { cooperativeId: string; action: string; detail: Record<string, unknown> }[] = [];
   const deps: AttentionDeps = {
     today: () => today,
     settings: {
       toleranceBasisPoints: async () => 100,
-      dueSoonDays: async (id) => days.get(id) ?? 15,
-      saveDueSoonDays: async (id, value) => void days.set(id, value),
+      noticeSettings: async (id) => stored.get(id) ?? DEFAULT_INVOICING_NOTICE_SETTINGS,
+      saveNoticeSettings: async (id, value) => void stored.set(id, value),
     },
     invoices: {
       countDueUntil: async (id, until) =>
@@ -77,74 +81,92 @@ function build(today: string, data: { invoices?: Inv[]; notes?: Note[] } = {}) {
       audit.push({ cooperativeId, action: event.action, detail: event.detail });
     },
   };
-  return { deps, days, audit };
+  return { deps, stored, audit };
 }
 
+const DEFAULTS = DEFAULT_INVOICING_NOTICE_SETTINGS;
+const choose = (changes: Partial<InvoicingNoticeSettings>) => ({ ...DEFAULTS, ...changes });
+
 describe('invoicing settings (BR-INV-15)', () => {
-  it('a cooperative that never chose gets 15 days', async () => {
-    expect(await getInvoicingSettings(build('2026-10-21').deps, reader)).toEqual({
-      dueSoonDays: 15,
-    });
+  it('a cooperative that never chose gets the defaults: all on, 15 / 30 / 15 days', async () => {
+    expect(await getInvoicingSettings(build('2026-10-21').deps, reader)).toEqual(DEFAULTS);
   });
 
   it('reads need invoicing access or the administration; others get 403', async () => {
     const { deps } = build('2026-10-21');
-    await expect(getInvoicingSettings(deps, admin)).resolves.toEqual({ dueSoonDays: 15 });
-    await expect(getInvoicingSettings(deps, manager)).resolves.toEqual({ dueSoonDays: 15 });
+    await expect(getInvoicingSettings(deps, admin)).resolves.toEqual(DEFAULTS);
+    await expect(getInvoicingSettings(deps, manager)).resolves.toEqual(DEFAULTS);
     await expect(getInvoicingSettings(deps, partner)).rejects.toBeInstanceOf(
       ModuleAccessDeniedError,
     );
   });
 
   it('only the administration writes: invoicing manage is not enough', async () => {
-    const { deps, days, audit } = build('2026-10-21');
+    const { deps, stored, audit } = build('2026-10-21');
     for (const who of [manager, reader, partner]) {
-      await expect(updateInvoicingSettings(deps, who, { dueSoonDays: 20 })).rejects.toBeInstanceOf(
-        ModuleAccessDeniedError,
-      );
+      await expect(
+        updateInvoicingSettings(deps, who, choose({ invoiceNoticeDays: 20 })),
+      ).rejects.toBeInstanceOf(ModuleAccessDeniedError);
     }
-    expect(days.size).toBe(0);
+    expect(stored.size).toBe(0);
     expect(audit).toEqual([]);
   });
 
-  it('saves and audits the change with the previous and the new value', async () => {
-    const { deps, days, audit } = build('2026-10-21');
-    expect(await updateInvoicingSettings(deps, admin, { dueSoonDays: 7 })).toEqual({
-      dueSoonDays: 7,
-    });
-    expect(days.get(COOP)).toBe(7);
+  it('saves and audits each changed field with its previous and new value', async () => {
+    const { deps, stored, audit } = build('2026-10-21');
+    const next = choose({ invoiceNoticeDays: 7, noteDeadlineEnabled: false, noteNoticeDays: 5 });
+    expect(await updateInvoicingSettings(deps, admin, next)).toEqual(next);
+    expect(stored.get(COOP)).toEqual(next);
     expect(audit).toEqual([
       {
         cooperativeId: COOP,
         action: INVOICING_SETTINGS_CHANGED_ACTION,
-        detail: { dueSoonDays: { from: 15, to: 7 } },
+        detail: {
+          invoiceNoticeDays: { from: 15, to: 7 },
+          noteDeadlineEnabled: { from: true, to: false },
+          noteNoticeDays: { from: 15, to: 5 },
+        },
       },
     ]);
   });
 
-  it('writing the same value saves and audits nothing', async () => {
-    const { deps, days, audit } = build('2026-10-21');
-    await updateInvoicingSettings(deps, admin, { dueSoonDays: 15 });
-    expect(days.size).toBe(0);
+  it('writing the same values saves and audits nothing', async () => {
+    const { deps, stored, audit } = build('2026-10-21');
+    await updateInvoicingSettings(deps, admin, DEFAULTS);
+    expect(stored.size).toBe(0);
     expect(audit).toEqual([]);
   });
 
-  it('rejects values out of range or not whole, naming the field', async () => {
-    const { deps, audit } = build('2026-10-21');
-    for (const bad of [0, 91, 2.5]) {
-      await expect(updateInvoicingSettings(deps, admin, { dueSoonDays: bad })).rejects.toThrow(
-        InvalidDocumentError,
-      );
+  it('rejects invalid values naming the field, saving and auditing nothing', async () => {
+    const { deps, stored, audit } = build('2026-10-21');
+    const cases: [Partial<InvoicingNoticeSettings>, string][] = [
+      [{ invoiceNoticeDays: 91 }, 'invoiceNoticeDays'],
+      [{ noteDeadlineDays: 366 }, 'noteDeadlineDays'],
+      [{ noteNoticeDays: 0 }, 'noteNoticeDays'],
+      [{ noteDeadlineDays: 20, noteNoticeDays: 20 }, 'noteNoticeDays'],
+      [{ invoiceNoticeDays: 2.5 }, 'invoiceNoticeDays'],
+    ];
+    for (const [changes, field] of cases) {
+      const attempt = updateInvoicingSettings(deps, admin, choose(changes));
+      await expect(attempt).rejects.toBeInstanceOf(InvalidDocumentError);
+      await expect(attempt).rejects.toMatchObject({ field });
     }
+    expect(stored.size).toBe(0);
     expect(audit).toEqual([]);
   });
 
-  it('is per cooperative: another cooperative keeps its own value', async () => {
+  it('a notice not shorter than the deadline is fine while one of them is off', async () => {
     const { deps } = build('2026-10-21');
-    await updateInvoicingSettings(deps, admin, { dueSoonDays: 7 });
-    expect(await getInvoicingSettings(deps, contextOf([grant('users', 'manage')], OTHER))).toEqual({
-      dueSoonDays: 15,
-    });
+    const next = choose({ noteDeadlineDays: 10, noteNoticeDays: 50, noteNoticeEnabled: false });
+    await expect(updateInvoicingSettings(deps, admin, next)).resolves.toEqual(next);
+  });
+
+  it('is per cooperative: another cooperative keeps its own values', async () => {
+    const { deps } = build('2026-10-21');
+    await updateInvoicingSettings(deps, admin, choose({ invoiceNoticeDays: 7 }));
+    expect(await getInvoicingSettings(deps, contextOf([grant('users', 'manage')], OTHER))).toEqual(
+      DEFAULTS,
+    );
   });
 });
 
@@ -153,6 +175,7 @@ describe('attention counts (BR-INV-16)', () => {
   const data = {
     invoices: [
       { cooperativeId: COOP, paymentStatus: 'overdue', dueDate: '2026-09-01' },
+      { cooperativeId: COOP, paymentStatus: 'pending', dueDate: '2026-10-20' },
       { cooperativeId: COOP, paymentStatus: 'pending', dueDate: '2026-10-21' },
       { cooperativeId: COOP, paymentStatus: 'pending', dueDate: '2026-11-05' },
       { cooperativeId: COOP, paymentStatus: 'pending', dueDate: '2026-11-06' },
@@ -162,6 +185,7 @@ describe('attention counts (BR-INV-16)', () => {
     ] satisfies Inv[],
     notes: [
       { cooperativeId: COOP, status: 'pending_invoicing', date: '2026-08-01' },
+      { cooperativeId: COOP, status: 'pending_invoicing', date: '2026-09-21' },
       { cooperativeId: COOP, status: 'pending_invoicing', date: '2026-10-06' },
       { cooperativeId: COOP, status: 'pending_invoicing', date: '2026-10-07' },
       { cooperativeId: COOP, status: 'invoiced', date: '2026-08-01' },
@@ -169,26 +193,65 @@ describe('attention counts (BR-INV-16)', () => {
       { cooperativeId: OTHER, status: 'pending_invoicing', date: '2026-08-01' },
     ] satisfies Note[],
   };
-
-  it('counts with the default 15 days, at the fixed clock', async () => {
+  const countsWith = async (changes: Partial<InvoicingNoticeSettings>) => {
     const { deps } = build(today, data);
-    expect(await attentionCounts(deps, reader)).toEqual({
-      invoices: 3,
-      deliveryNotes: 2,
-      days: 15,
-    });
-  });
+    await updateInvoicingSettings(deps, admin, choose(changes));
+    const { invoices, deliveryNotes } = await attentionCounts(deps, reader);
+    return { invoices, deliveryNotes };
+  };
 
-  it('follows the cooperative N: narrower and wider windows', async () => {
+  it('counts with the defaults and returns the effective settings', async () => {
     const { deps } = build(today, data);
-    await updateInvoicingSettings(deps, admin, { dueSoonDays: 1 });
-    expect(await attentionCounts(deps, reader)).toEqual({ invoices: 2, deliveryNotes: 1, days: 1 });
-    await updateInvoicingSettings(deps, admin, { dueSoonDays: 30 });
-    // N of 30 or more: every pending note counts.
     expect(await attentionCounts(deps, reader)).toEqual({
       invoices: 4,
       deliveryNotes: 3,
-      days: 30,
+      settings: DEFAULTS,
+    });
+  });
+
+  it('invoice notice: on counts the window, off only the overdue ones', async () => {
+    expect(await countsWith({ invoiceNoticeEnabled: true, invoiceNoticeDays: 1 })).toMatchObject({
+      invoices: 3,
+    });
+    expect(await countsWith({ invoiceNoticeEnabled: true, invoiceNoticeDays: 90 })).toMatchObject({
+      invoices: 5,
+    });
+    // Off: only what is due before today, whatever its stored number of days.
+    expect(await countsWith({ invoiceNoticeEnabled: false })).toMatchObject({ invoices: 2 });
+    expect(await countsWith({ invoiceNoticeEnabled: false, invoiceNoticeDays: 90 })).toMatchObject({
+      invoices: 2,
+    });
+  });
+
+  it('note alerts, every combination of the toggles', async () => {
+    // Deadline on, notice on (deadline 30, notice 15): past it plus reaching it within 15 days.
+    expect(await countsWith({})).toMatchObject({ deliveryNotes: 3 });
+    // Deadline on, notice off: only the notes already past the deadline.
+    expect(await countsWith({ noteNoticeEnabled: false })).toMatchObject({ deliveryNotes: 2 });
+    // Deadline off: no stale-notes concept, with the notice on or off.
+    expect(await countsWith({ noteDeadlineEnabled: false })).toMatchObject({ deliveryNotes: 0 });
+    expect(
+      await countsWith({ noteDeadlineEnabled: false, noteNoticeEnabled: false }),
+    ).toMatchObject({ deliveryNotes: 0 });
+  });
+
+  it('a custom deadline replaces the 30 days', async () => {
+    expect(await countsWith({ noteDeadlineDays: 60, noteNoticeDays: 10 })).toMatchObject({
+      deliveryNotes: 1,
+    });
+    expect(await countsWith({ noteDeadlineDays: 10, noteNoticeEnabled: false })).toMatchObject({
+      deliveryNotes: 4,
+    });
+  });
+
+  it('the three alerts are independent of each other', async () => {
+    expect(await countsWith({ invoiceNoticeEnabled: false, noteDeadlineEnabled: false })).toEqual({
+      invoices: 2,
+      deliveryNotes: 0,
+    });
+    expect(await countsWith({ noteNoticeEnabled: false })).toEqual({
+      invoices: 4,
+      deliveryNotes: 2,
     });
   });
 
@@ -197,7 +260,7 @@ describe('attention counts (BR-INV-16)', () => {
     expect(await attentionCounts(deps, contextOf([grant('invoicing', 'read')], OTHER))).toEqual({
       invoices: 1,
       deliveryNotes: 1,
-      days: 15,
+      settings: DEFAULTS,
     });
   });
 
@@ -208,8 +271,8 @@ describe('attention counts (BR-INV-16)', () => {
   });
 });
 
-describe('daily due-date process uses the default window (BR-INV-15)', () => {
-  it('asks the store to claim with today and the default days, and emits what it claims', async () => {
+describe('daily due-date process asks for the defaults of a cooperative without row (BR-INV-15)', () => {
+  it('asks the store to claim with today and the default notice, and emits what it claims', async () => {
     const calls: unknown[][] = [];
     const store: DueDatesStore = {
       markOverdue: async () => [],
@@ -235,7 +298,7 @@ describe('daily due-date process uses the default window (BR-INV-15)', () => {
       },
       '2026-10-21',
     );
-    expect(calls).toEqual([['2026-10-21', 15]]);
+    expect(calls).toEqual([['2026-10-21', { enabled: true, days: 15 }]]);
     expect(result).toEqual({ overdue: 0, dueSoon: 1 });
     expect(events.map((e) => e.type)).toEqual(['InvoiceDueSoon']);
   });

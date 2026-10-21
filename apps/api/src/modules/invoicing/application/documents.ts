@@ -8,7 +8,6 @@ import {
 } from '../../../shared/domain/file-type';
 import { type FileStorage, newFileKey } from '../../../shared/files/file-storage';
 import {
-  addDays,
   assertCanGroup,
   assertCanOperate,
   cancelDeliveryNote,
@@ -21,8 +20,8 @@ import {
   type Operation,
   type PaymentStatus,
   settle,
-  STALE_NOTE_DAYS,
 } from '../domain/documents';
+import { noteDeadlineCutoff } from '../domain/invoicing-settings';
 import { InvalidDocumentError } from '../domain/errors';
 import { reconcile, type ReconciliationStatus } from '../domain/reconciliation';
 import { DuplicateNumberError, NotFoundError } from './errors';
@@ -42,7 +41,6 @@ import { requireManage, requireRead, UUID } from './shared';
 
 /** Same limit as other attachments; photos are reduced on the device first (NFR-INV-03). */
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
-export { STALE_NOTE_DAYS };
 
 export interface InvoicingDeps {
   thirdParties: ThirdPartyStore;
@@ -329,13 +327,13 @@ function amountsOf(
 
 export async function summary(deps: InvoicingDeps, context: CooperativeContext) {
   requireRead(context);
+  // US-INV-09: stale = past the cooperative deadline (BR-INV-15); with the deadline off there are none.
+  const settings = await deps.settings.noticeSettings(context.cooperativeId);
+  const cutoff = noteDeadlineCutoff(deps.today(), settings);
   const [rows, openDiscrepancies, staleDeliveryNotes] = await Promise.all([
     deps.invoices.totals(context.cooperativeId),
     deps.invoices.countOpenDiscrepancies(context.cooperativeId),
-    deps.staleNotes.countPendingBefore(
-      context.cooperativeId,
-      addDays(deps.today(), -STALE_NOTE_DAYS),
-    ),
+    cutoff === null ? 0 : deps.staleNotes.countPendingUpTo(context.cooperativeId, cutoff),
   ]);
   return {
     toPay: amountsOf(rows, 'purchase'),
