@@ -66,21 +66,21 @@ Los permisos se definen por módulo, nivel y alcance (ADR-004). El backend decid
 
 ## 2. Stack tecnológico
 
-| Capa               | Elección                                                                                       |
-| ------------------ | ---------------------------------------------------------------------------------------------- |
-| App móvil          | Expo + React Native + TypeScript, Expo Router                                                  |
-| Datos del cliente  | TanStack Query; tokens en el almacenamiento seguro del dispositivo                             |
-| Textos de usuario  | i18next + react-i18next + expo-localization; `es` por defecto (ADR-008)                        |
-| Contratos          | Paquete compartido con esquemas Zod (validan en servidor y tipan la app)                       |
-| Backend            | Node + TypeScript, monolito modular con Clean Architecture y eventos internos                  |
-| API                | REST, autenticación JWT, códigos de error estables                                             |
-| Persistencia       | PostgreSQL + Prisma; pgvector para RAG                                                         |
-| Modelo de lenguaje | Gemini (capa gratuita) tras puertos: asistente con function calling y visión (ADR-009)         |
-| Embeddings         | `bge-m3` local con Ollama (ADR-006); Gemini embeddings en la demo alojada (ADR-010)            |
-| Ficheros           | Almacenamiento compatible S3 con URLs firmadas que caducan (ADR-005); RustFS en local          |
-| Tests              | Vitest y React Native Testing Library                                                          |
-| Calidad            | ESLint, Prettier, Husky (pre-commit), regla propia de límites entre módulos                    |
-| Entrega            | GitHub Actions; demo con la API en un servidor propio (Cloudflare Tunnel) y GitHub Pages (web) |
+| Capa               | Elección                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| App móvil          | Expo + React Native + TypeScript, Expo Router                                                                                        |
+| Datos del cliente  | TanStack Query; tokens en el almacenamiento seguro del dispositivo                                                                   |
+| Textos de usuario  | i18next + react-i18next + expo-localization; `es` por defecto (ADR-008)                                                              |
+| Contratos          | Paquete compartido con esquemas Zod (validan en servidor y tipan la app)                                                             |
+| Backend            | Node + TypeScript, monolito modular con Clean Architecture y eventos internos                                                        |
+| API                | REST, autenticación JWT, códigos de error estables                                                                                   |
+| Persistencia       | PostgreSQL + Prisma; pgvector para RAG                                                                                               |
+| Modelo de lenguaje | Asistente: modelo local `qwen3:8b` en Ollama en el servidor propio (ADR-013); visión y explicaciones: Gemini (ADR-009); tras puertos |
+| Embeddings         | `bge-m3` local con Ollama (ADR-006); Gemini embeddings en la demo alojada (ADR-010)                                                  |
+| Ficheros           | Almacenamiento compatible S3 con URLs firmadas que caducan (ADR-005); RustFS en local                                                |
+| Tests              | Vitest y React Native Testing Library                                                                                                |
+| Calidad            | ESLint, Prettier, Husky (pre-commit), regla propia de límites entre módulos                                                          |
+| Entrega            | GitHub Actions; demo con la API en un servidor propio (Cloudflare Tunnel) y GitHub Pages (web)                                       |
 
 ## 3. Instalación y ejecución local
 
@@ -115,9 +115,11 @@ API_URL=http://localhost:3000 pnpm --filter @multicooperativa/api db:seed:conten
 
 ### Clave de Gemini (opcional)
 
-Para activar el asistente, la extracción de facturas y la explicación de discrepancias, define `GEMINI_API_KEY` en `apps/api/.env` (clave gratuita de Google AI Studio, sin tarjeta). Opcionales: `GEMINI_MODEL` y `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` (por defecto 30).
+Para activar el asistente (con el proveedor por defecto), la extracción de facturas y la explicación de discrepancias, define `GEMINI_API_KEY` en `apps/api/.env` (clave gratuita de Google AI Studio, sin tarjeta). Opcionales: `GEMINI_MODEL` y `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` (por defecto 30).
 
-Sin la clave, el asistente responde 503 y **el resto de la aplicación funciona con normalidad**. Las funciones de IA que usan Gemini (extracción de facturas, explicación de discrepancias) tampoco están disponibles. Los embeddings en local los sirve Ollama, no Gemini.
+**Asistente con modelo local (ADR-013)**: con `ASSISTANT_LLM_PROVIDER=ollama` el asistente responde con un modelo de Ollama (`ASSISTANT_OLLAMA_MODEL`, por defecto `qwen3:8b`; `pnpm ai:pull:chat` lo descarga) y no usa la cuota de Gemini ni envía las preguntas a la nube. Es lo que usa el servidor propio de la demo. Gemini se queda para la extracción de facturas (visión) y las explicaciones de discrepancias. Con el modelo local, una pregunta tarda unos 7 s de media en una CPU de 12 núcleos (p90 26 s) y supera 19 de las 22 preguntas del conjunto de evaluación.
+
+Sin la clave de Gemini (y con el proveedor `gemini`), el asistente responde 503 y **el resto de la aplicación funciona con normalidad**. Las funciones de IA que usan Gemini (extracción de facturas, explicación de discrepancias) tampoco están disponibles. Los embeddings en local los sirve Ollama, no Gemini.
 
 ### Tests y comprobaciones
 
@@ -225,19 +227,21 @@ Datos definidos en el seed (`apps/api/src/dev/demo-seed.ts`) y descritos en [doc
 
 Resumen de [docs/04-deployment.md](docs/04-deployment.md). Coste de 0 EUR y sin tarjeta de crédito: la API corre en un servidor doméstico (ADR-012), porque Render y Railway piden tarjeta.
 
-| Pieza             | Servicio                                                                                                                                                                   |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| App web           | GitHub Pages (export web de Expo, despliegue por Actions)                                                                                                                  |
-| API               | Contenedor Docker en un servidor propio, expuesto con Cloudflare Tunnel (`api-cooperativa.chaparro2001.com`; enlaces de ficheros por `files-cooperativa.chaparro2001.com`) |
-| Base de datos     | PostgreSQL 17 con pgvector (contenedor)                                                                                                                                    |
-| Ficheros          | RustFS, compatible con S3 (contenedor)                                                                                                                                     |
-| Embeddings        | Ollama con bge-m3 (contenedor, ADR-006)                                                                                                                                    |
-| Lenguaje y visión | Gemini API (clave gratuita)                                                                                                                                                |
-| Tarea programada  | Cron de GitHub Actions cada hora (vencimientos)                                                                                                                            |
+| Pieza            | Servicio                                                                                                                                                                   |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App web          | GitHub Pages (export web de Expo, despliegue por Actions)                                                                                                                  |
+| API              | Contenedor Docker en un servidor propio, expuesto con Cloudflare Tunnel (`api-cooperativa.chaparro2001.com`; enlaces de ficheros por `files-cooperativa.chaparro2001.com`) |
+| Base de datos    | PostgreSQL 17 con pgvector (contenedor)                                                                                                                                    |
+| Ficheros         | RustFS, compatible con S3 (contenedor)                                                                                                                                     |
+| Embeddings       | Ollama con bge-m3 (contenedor, ADR-006)                                                                                                                                    |
+| Asistente        | Ollama con `qwen3:8b` en el servidor (ADR-013)                                                                                                                             |
+| Visión           | Gemini API (clave gratuita): extracción de facturas y explicaciones                                                                                                        |
+| Tarea programada | Cron de GitHub Actions cada hora (vencimientos)                                                                                                                            |
 
 Avisos:
 
 - **Disponibilidad**: la API solo responde mientras el servidor doméstico está encendido y con conexión. No hay arranque en frío.
+- **Cuota de Gemini**: el asistente ya no la consume en el servidor propio (modelo local); la extracción de facturas sí.
 - **Uso de datos en la capa gratuita de Gemini**: Google puede usar el contenido para mejorar sus productos. **No subas facturas, albaranes ni documentos reales de terceros**; usa los datos de ejemplo.
 - Es una demo, no un sistema de registro: los datos pueden perderse.
 
@@ -262,7 +266,7 @@ flowchart LR
 
     DB[(PostgreSQL + pgvector)]
     Files[(Almacenamiento S3)]
-    LLM[Gemini: lenguaje y visión]
+    LLM[Ollama: asistente · Gemini: visión]
     Emb[Embeddings: Ollama o Gemini]
 
     UI --> Client --> Backend
@@ -294,6 +298,7 @@ Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
 - [ADR-009](docs/adr/ADR-009-gemini-language-and-vision-model.md): Gemini como modelo de lenguaje y visión.
 - [ADR-010](docs/adr/ADR-010-gemini-embeddings-for-the-hosted-demo.md): embeddings de Gemini para la demo alojada.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): README raíz bilingüe para la entrega del TFM (excepción acotada a ADR-008).
+- [ADR-013](docs/adr/ADR-013-local-language-model-for-the-assistant.md): modelo de lenguaje local (Ollama) para el asistente en el servidor propio; Gemini sigue en visión.
 
 ## 11. Calidad
 

@@ -16,7 +16,8 @@
     "test:integration": "pnpm --filter @multicooperativa/api test:integration",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
-    "ai:pull": "docker compose exec ollama ollama pull bge-m3"
+    "ai:pull": "docker compose exec ollama ollama pull bge-m3",
+    "ai:pull:chat": "docker compose exec ollama ollama pull qwen3:8b"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

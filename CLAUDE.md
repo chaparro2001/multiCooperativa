@@ -64,6 +64,7 @@ Requirements: Node 24 (`.nvmrc`), pnpm and Docker.
 pnpm install                 # installs and generates the Prisma client
 pnpm db:up                   # PostgreSQL with pgvector, S3 storage (RustFS) and Ollama with Docker Compose
 pnpm ai:pull                 # downloads the bge-m3 embeddings model into Ollama (once)
+pnpm ai:pull:chat            # downloads the assistant's local chat model (qwen3:8b, ~5 GB) for ASSISTANT_LLM_PROVIDER=ollama
 pnpm --filter @multicooperativa/api db:migrate   # applies or creates migrations
 pnpm --filter @multicooperativa/api db:seed      # sample data (docs/sample-data.md)
 pnpm --filter @multicooperativa/api db:seed:content  # sample documents and announcements, through the API (hosted demo)
@@ -81,6 +82,6 @@ pnpm test:integration        # *.integration.test.ts tests against the multicoop
 
 Environment variables: copy `apps/api/.env.example` and `apps/mobile/.env.example` to `.env`.
 
-The AI assistant needs `GEMINI_API_KEY` (free key from Google AI Studio, no card; ADR-009) and optionally `GEMINI_MODEL` (default `gemini-3.8-flash`), `GEMINI_FALLBACK_MODELS` (comma-separated, default `gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite`, tried when the main model answers 503/429 after the retries with backoff of `shared/infrastructure/resilient-call.ts`; empty disables it) and `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` (default 30). Without the key the assistant answers 503 and the rest of the app works.
+The AI assistant needs `GEMINI_API_KEY` (free key from Google AI Studio, no card; ADR-009) and optionally `GEMINI_MODEL` (default `gemini-3.8-flash`), `GEMINI_FALLBACK_MODELS` (comma-separated, default `gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite`, tried when the main model answers 503/429 after the retries with backoff of `shared/infrastructure/resilient-call.ts`; empty disables it) and `ASSISTANT_MESSAGE_LIMIT_PER_HOUR` (default 30). `ASSISTANT_LLM_PROVIDER=gemini|ollama` (default `gemini`; ADR-013) chooses who answers the assistant's chat: with `ollama` it uses a local model (`ASSISTANT_OLLAMA_MODEL`, default `qwen3:8b`, `OLLAMA_URL`, `ASSISTANT_OLLAMA_TIMEOUT_MS` default 90000) and needs no Gemini key; the home-server stack sets it to `ollama`. Invoice extraction and discrepancy explanations always use Gemini. Without the provider's key the assistant answers 503 and the rest of the app works.
 
 In `apps/mobile`, dependencies are added with `pnpm exec expo install <package>` so that they match the Expo SDK.

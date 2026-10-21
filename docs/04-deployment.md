@@ -13,42 +13,43 @@ flowchart LR
     cloudflared["cloudflared"] --> api["api<br/>:3000"]
     api --> pg[("PostgreSQL 17<br/>+ pgvector")]
     api --> s3[("RustFS<br/>S3")]
-    api --> ollama["Ollama<br/>bge-m3"]
+    api --> ollama["Ollama<br/>bge-m3 + qwen3:8b"]
   end
-  api -- "chat and vision" --> gemini["Gemini API"]
+  api -- "vision and explanations" --> gemini["Gemini API"]
   cron["GitHub Actions cron<br/>hourly"] -- "POST /jobs/due-dates" --> cf
 ```
 
-| Piece           | Service                                              | Notes                                                                                                                                         |
-| --------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web app         | GitHub Pages (Actions deploy)                        | `https://chaparro2001.github.io/multiCooperativa/`; built by `.github/workflows/pages.yml`                                                    |
-| API             | Container built from `apps/api/Dockerfile`           | Public URL `https://api-cooperativa.chaparro2001.com` (Cloudflare Tunnel). No port is published on the host                                   |
-| Database        | `pgvector/pgvector:pg17` container                   | Named volume; not reachable from outside                                                                                                      |
-| Files           | RustFS container (S3 protocol)                       | Private bucket `multicooperativa`, created by a one-shot container; the API signs 5-minute URLs                                               |
-| Embeddings      | Ollama container with `bge-m3`                       | `EMBEDDINGS_PROVIDER=ollama` ([ADR-006](adr/ADR-006-local-model-embeddings.md))                                                               |
-| Chat and vision | Gemini API (free key)                                | [ADR-009](adr/ADR-009-gemini-language-and-vision-model.md)                                                                                    |
-| Tunnel          | `cloudflared` container                              | Outbound connection to Cloudflare; the dashboard maps `api-cooperativa` to `http://api:3000` and `files-cooperativa` to `http://storage:9000` |
-| Scheduled job   | GitHub Actions cron, plus the API's own hourly timer | `.github/workflows/cron.yml` calls `/jobs/due-dates`; the timer also runs because the server does not sleep                                   |
+| Piece          | Service                                              | Notes                                                                                                                                         |
+| -------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web app        | GitHub Pages (Actions deploy)                        | `https://chaparro2001.github.io/multiCooperativa/`; built by `.github/workflows/pages.yml`                                                    |
+| API            | Container built from `apps/api/Dockerfile`           | Public URL `https://api-cooperativa.chaparro2001.com` (Cloudflare Tunnel). No port is published on the host                                   |
+| Database       | `pgvector/pgvector:pg17` container                   | Named volume; not reachable from outside                                                                                                      |
+| Files          | RustFS container (S3 protocol)                       | Private bucket `multicooperativa`, created by a one-shot container; the API signs 5-minute URLs                                               |
+| Embeddings     | Ollama container with `bge-m3`                       | `EMBEDDINGS_PROVIDER=ollama` ([ADR-006](adr/ADR-006-local-model-embeddings.md))                                                               |
+| Assistant chat | Ollama container with `qwen3:8b`                     | `ASSISTANT_LLM_PROVIDER=ollama` ([ADR-013](adr/ADR-013-local-language-model-for-the-assistant.md))                                            |
+| Vision         | Gemini API (free key)                                | Invoice extraction and discrepancy explanations ([ADR-009](adr/ADR-009-gemini-language-and-vision-model.md))                                  |
+| Tunnel         | `cloudflared` container                              | Outbound connection to Cloudflare; the dashboard maps `api-cooperativa` to `http://api:3000` and `files-cooperativa` to `http://storage:9000` |
+| Scheduled job  | GitHub Actions cron, plus the API's own hourly timer | `.github/workflows/cron.yml` calls `/jobs/due-dates`; the timer also runs because the server does not sleep                                   |
 
 The native apps are not part of this demo (no EAS build); the web export is the same code. The stack is defined in [`deploy/home-server/compose.yaml`](../deploy/home-server/compose.yaml); its variables are in [`deploy/home-server/env.server.example`](../deploy/home-server/env.server.example).
 
 ## Step by step (Windows)
 
-Needs: Windows 10 (22H2) or 11, 8 GB of RAM or more, about 15 GB of free disk, and an administrator account. Commands are for **PowerShell** (Start menu, type `PowerShell`; "Run as administrator" only where stated). Create the accounts yourself and paste secrets only into the places named below; none goes in the repository.
+Needs: Windows 10 (22H2) or 11, 16 GB of RAM or more (the local chat model needs it; see step 4 of the next section), about 15 GB of free disk, and an administrator account. Commands are for **PowerShell** (Start menu, type `PowerShell`; "Run as administrator" only where stated). Create the accounts yourself and paste secrets only into the places named below; none goes in the repository.
 
 ### 1. Install WSL2 and Docker Desktop
 
 1. In an **administrator** PowerShell: `wsl --install`. Restart when asked.
 2. Install [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/) and choose the **WSL 2** backend when asked. Restart if requested and accept the licence (personal and education use is free).
 3. Docker Desktop > **Settings > General**: tick **Start Docker Desktop when you sign in to your computer**.
-4. Give WSL2 enough memory. By default it takes half of the RAM (4 GB on an 8 GB machine), which is too little for this stack (about 2.5 GB in use, limits add up to more). Create the file `%UserProfile%\.wslconfig` with Notepad:
+4. Give WSL2 enough memory. By default it takes half of the RAM (4 GB on an 8 GB machine), which is too little for this stack. What the containers use once the assistant has answered a question (measured with Docker on CPU, `ollama ps`): `qwen3:8b` about 6.7 GB (4-bit weights 5.2 GB plus the context cache), `bge-m3` about 1.2 GB, API about 0.4 GB, PostgreSQL about 0.1 GB, RustFS about 0.2 GB, `cloudflared` a few MB: about 9 GB in total, plus the WSL2 kernel and page cache. The limits in `compose.yaml` (Ollama 10 GB, API 1 GB, PostgreSQL and RustFS 512 MB each, `cloudflared` 128 MB) add up to about 12 GB. Create the file `%UserProfile%\.wslconfig` with Notepad:
 
    ```ini
    [wsl2]
-   memory=6GB
+   memory=16GB
    ```
 
-   Then run `wsl --shutdown` and start Docker Desktop again. On a machine with more than 8 GB you can raise the value.
+   Then run `wsl --shutdown` and start Docker Desktop again. **16 GB is recommended for a host with 32 GB** (it leaves Windows 16 GB). With 12 to 16 GB of host RAM use `memory=8GB` and a smaller model (`ASSISTANT_OLLAMA_MODEL=qwen3:4b-instruct`, about 4.2 GB, fewer evaluation questions passed, see ADR-013); with less than 12 GB set `ASSISTANT_LLM_PROVIDER=gemini` in `.env.server` and keep `memory=6GB`. WSL2 only takes the memory it uses; the value is a ceiling.
 
 5. Check: `docker run --rm hello-world` prints "Hello from Docker!".
 
@@ -105,17 +106,19 @@ New-Secret   # run it once per secret below; every call prints a different 64-ch
 
 Open the file with `notepad .env.server` and fill in:
 
-| Variable               | Secret | Value                                                                                  |
-| ---------------------- | :----: | -------------------------------------------------------------------------------------- |
-| `POSTGRES_PASSWORD`    |  yes   | `New-Secret`                                                                           |
-| `S3_SECRET_ACCESS_KEY` |  yes   | `New-Secret`                                                                           |
-| `JWT_SECRET`           |  yes   | `New-Secret` (at least 32 characters)                                                  |
-| `JOBS_TOKEN`           |  yes   | `New-Secret` (at least 32 characters). Also goes to GitHub in step 9                   |
-| `TUNNEL_TOKEN`         |  yes   | The token copied in step 3                                                             |
-| `GEMINI_API_KEY`       |  yes   | Key from Google AI Studio (no card). Remove the leading `#`. Without it AI answers 503 |
-| `GEMINI_MODEL`         |   no   | `gemini-3.8-flash`                                                                     |
-| `CORS_ORIGINS`         |   no   | `https://chaparro2001.github.io` (origin only, no path)                                |
-| `SEED_PASSWORD`        |  yes   | The password of the demo users; choose your own, the demo is public                    |
+| Variable                 | Secret | Value                                                                                                                                   |
+| ------------------------ | :----: | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD`      |  yes   | `New-Secret`                                                                                                                            |
+| `S3_SECRET_ACCESS_KEY`   |  yes   | `New-Secret`                                                                                                                            |
+| `JWT_SECRET`             |  yes   | `New-Secret` (at least 32 characters)                                                                                                   |
+| `JOBS_TOKEN`             |  yes   | `New-Secret` (at least 32 characters). Also goes to GitHub in step 9                                                                    |
+| `TUNNEL_TOKEN`           |  yes   | The token copied in step 3                                                                                                              |
+| `GEMINI_API_KEY`         |  yes   | Key from Google AI Studio (no card). Remove the leading `#`. Without it, reading scanned documents answers 503 (the assistant is local) |
+| `GEMINI_MODEL`           |   no   | `gemini-3.5-flash-lite` (extraction and explanations)                                                                                   |
+| `ASSISTANT_LLM_PROVIDER` |   no   | `ollama` (default in `compose.yaml`) or `gemini` to go back to the cloud model                                                          |
+| `ASSISTANT_OLLAMA_MODEL` |   no   | `qwen3:8b` (default). Downloaded by `ollama-pull` the first time (about 5 GB)                                                           |
+| `CORS_ORIGINS`           |   no   | `https://chaparro2001.github.io` (origin only, no path)                                                                                 |
+| `SEED_PASSWORD`          |  yes   | The password of the demo users; choose your own, the demo is public                                                                     |
 
 Values go after the `=` with no quotes and no spaces. `.env.server` is ignored by git. Back it up somewhere private (the secrets cannot be recovered).
 
@@ -196,14 +199,15 @@ Always from `deploy\home-server`, with `--env-file .env.server`:
 - Secrets live in `.env.server` (git-ignored) and in the Cloudflare/GitHub dashboards. The API container does not receive the tunnel token.
 - The API still enforces everything it enforces anywhere: JWT, per-cooperative isolation, login lockout, the assistant's per-user hourly limit (`ASSISTANT_MESSAGE_LIMIT_PER_HOUR`) and CORS limited to `CORS_ORIGINS`. `trust proxy` is set to one hop, matching the tunnel.
 - Cloudflare terminates TLS, so it can see the traffic. Use only sample data.
-- The cloud-hosted Gemini API receives the assistant's prompts and scanned documents; its free tier may use content to improve Google's products. Do not upload real third-party documents. Embeddings stay local.
+- The cloud-hosted Gemini API receives the scanned documents and the discrepancy data it is asked to read or explain; its free tier may use content to improve Google's products. Do not upload real third-party documents. Embeddings and the assistant's questions and answers stay on the server (ADR-013).
 
 ## Limitations
 
 - **Availability** depends on the home machine: power, internet, Windows restarts and someone signed in for Docker Desktop. There is no cold start.
-- **Memory.** Measured on a Mac with Docker: idle usage about 2 GB in total (API about 300 MB, Ollama about 1.5 GB with the model loaded, storage about 180 MB, PostgreSQL about 65 MB). The limits in `compose.yaml` (API 1 GB, Ollama 3 GB, PostgreSQL and storage 512 MB, `cloudflared` 128 MB) fit in 6 GB for WSL2.
+- **Memory.** With both Ollama models loaded (`OLLAMA_KEEP_ALIVE=24h`) the stack uses about 9 GB, so WSL2 needs `memory=16GB` on the 32 GB host (see step 4 of the installation). The first question after a restart also loads the model from disk (several seconds).
+- **Assistant speed.** The local model runs on the CPU: measured on a 12-core Mac with Docker, a typical question takes 7 s and the slowest 30 s (median 7.1 s, p90 25.9 s over the 22 evaluation questions, ADR-013). A server with fewer or slower cores will be slower; `ASSISTANT_OLLAMA_TIMEOUT_MS` (default 90 s) bounds each call. The local model passes 19 of the 22 evaluation questions (Gemini scored 20 of 20 when it was last measured), so it can phrase or miss details more often.
 - Indexing and search on CPU are slower than on a hosted API; a long document can take a while to become searchable.
-- **Gemini free tier**: rate limits apply (the API retries and falls back where configured).
+- **Gemini free tier**: rate limits apply to invoice extraction and discrepancy explanations (the API retries and falls back where configured). The assistant no longer consumes that quota.
 - **Scheduled workflows** are disabled by GitHub after 60 days without repository activity.
 - **Web build**: the session is kept in `sessionStorage` (survives reloads, ends with the tab); native apps use the Keychain/Keystore. There is no biometric unlock or camera capture on the web (the file chooser is used), confirmations use the browser's dialogs, and opening a deep link directly on an inner page lands on the home screen (use the in-app navigation).
 - Email invitations are not available (no email provider): `POST .../members` answers 503 in production.
@@ -235,6 +239,6 @@ Caveats of that path: Render's free instance sleeps after 15 minutes (cold start
 
 ## Gemini quota, retries and fallback models
 
-The free Gemini tier is small: in October 2026 the Flash models (`gemini-3.8-flash`, `gemini-3.6-flash`) allowed about 20 requests per day each, and the Flash-Lite models more. One assistant question costs 2-3 calls. For the demo, set `GEMINI_MODEL=gemini-3.5-flash-lite` (20/20 in the evaluation set) and keep the default `GEMINI_FALLBACK_MODELS`.
+The assistant runs on a local model in the home-server stack (ADR-013), so this section applies to extraction and explanations there, and to the assistant if you set `ASSISTANT_LLM_PROVIDER=gemini` (hosted path, development). The free Gemini tier is small: in October 2026 the Flash models (`gemini-3.8-flash`, `gemini-3.6-flash`) allowed about 20 requests per day each, and the Flash-Lite models more. One assistant question costs 2-3 calls. For the demo, set `GEMINI_MODEL=gemini-3.5-flash-lite` (20/20 in the evaluation set) and keep the default `GEMINI_FALLBACK_MODELS`.
 
 Every Gemini call (assistant, extraction, explanations, embeddings) is retried with exponential backoff and jitter (3 attempts per model, 4 for embeddings, at most about 20 s of waiting, 30 s for embeddings; honoring `Retry-After` and `retryDelay`). If `GEMINI_MODEL` keeps failing with 503/429, the models of `GEMINI_FALLBACK_MODELS` are tried in order (embeddings never switch model: their vectors would not be comparable). Each retry logs one `gemini_retry` line without content. Changing either variable needs a restart of the `api` container.

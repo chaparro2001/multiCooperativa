@@ -89,13 +89,19 @@ services:
           process.exit(1);
         })();
 
-  # Embeddings with a local model (ADR-006).
+  # Local models (ADR-006 embeddings, ADR-013 assistant chat). CPU only: bge-m3 takes about
+  # 1.2 GB once loaded and the chat model (qwen3:8b, 4-bit) about 6.7 GB with an 8k context.
   ollama:
     image: ollama/ollama:0.35.1
     restart: unless-stopped
     environment:
-      # Keep the model in memory between searches instead of reloading it after 5 minutes.
-      OLLAMA_KEEP_ALIVE: 30m
+      # Keep the models in memory between questions instead of unloading them after 5 minutes
+      # (reloading the chat model costs several seconds). -1 would keep them forever.
+      OLLAMA_KEEP_ALIVE: 24h
+      # Both models stay loaded together (embeddings are used while the assistant answers).
+      OLLAMA_MAX_LOADED_MODELS: '2'
+      # One chat at a time per model: on a CPU, parallel requests only make everything slower.
+      OLLAMA_NUM_PARALLEL: '1'
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:
@@ -103,10 +109,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-    mem_limit: 3g
+    # bge-m3 (~1.2 GB) + chat model (~6.7 GB at 8k context) + headroom. Needs WSL2 memory=16GB.
+    mem_limit: 10g
 
-  # One-shot: downloads the embeddings model into the ollama volume (about 1.2 GB the first
-  # time, instant afterwards).
+  # One-shot: downloads the embeddings model and the assistant's chat model into the ollama
+  # volume (about 1.2 GB + 5.2 GB the first time, instant afterwards). The chat model follows
+  # ASSISTANT_OLLAMA_MODEL of .env.server.
   ollama-pull:
     image: ollama/ollama:0.35.1
     restart: 'no'
@@ -115,7 +123,11 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-    entrypoint: ['ollama', 'pull', 'bge-m3']
+      ASSISTANT_OLLAMA_MODEL: ${ASSISTANT_OLLAMA_MODEL:-qwen3:8b}
+    entrypoint:
+      - sh
+      - -c
+      - ollama pull bge-m3 && ollama pull "$${ASSISTANT_OLLAMA_MODEL}"
 
   api:
     build: *api-build
@@ -147,6 +159,11 @@ services:
       EMBEDDINGS_PROVIDER: ollama
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_MODEL: bge-m3
+      # The assistant answers with a local model (ADR-013); extraction and discrepancy
+      # explanations still use Gemini. Set ASSISTANT_LLM_PROVIDER=gemini in .env.server to switch back.
+      ASSISTANT_LLM_PROVIDER: ${ASSISTANT_LLM_PROVIDER:-ollama}
+      ASSISTANT_OLLAMA_MODEL: ${ASSISTANT_OLLAMA_MODEL:-qwen3:8b}
+      ASSISTANT_OLLAMA_TIMEOUT_MS: ${ASSISTANT_OLLAMA_TIMEOUT_MS:-90000}
       # The image caps the heap at 320 MB for Render's 512 MB; this server has room.
       NODE_OPTIONS: --max-old-space-size=768
       # .env.server also holds the tunnel token: the API must not receive it.
