@@ -152,7 +152,7 @@
       "no_active_membership": "No tienes acceso a ninguna cooperativa.",
       "invitation_not_usable": "La invitación ha caducado o ya se ha usado. Pide una nueva a tu cooperativa.",
       "invitation_not_pending": "Esta invitación ya no está pendiente.",
-      "invitation_delivery_unavailable": "No se ha podido enviar la invitación. Inténtalo más tarde.",
+      "invitation_delivery_unavailable": "La invitación se ha registrado, pero este servidor no puede entregar el enlace. Avisa a quien administra el servidor.",
       "password_required": "Es tu primera cooperativa en multiCooperativa: elige una contraseña.",
       "weak_password": "La contraseña debe tener al menos 10 caracteres.",
       "unauthenticated": "Tu sesión ha terminado. Vuelve a iniciar sesión.",
@@ -201,7 +201,7 @@
       "screenTitle": "Iniciar sesión",
       "subtitle": "Entra con el email y la contraseña de tu cooperativa.",
       "submit": "Entrar",
-      "invitedHint": "¿Te han invitado? Abre el enlace del correo de invitación desde este dispositivo."
+      "invitedHint": "¿Te han invitado? Abre desde este dispositivo el enlace que te ha enviado el administrador de tu cooperativa."
     },
     "invitation": {
       "screenTitle": "Activar acceso",
@@ -587,12 +587,18 @@
     },
     "invite": {
       "title": "Invitar",
-      "submit": "Enviar invitación",
+      "submit": "Crear invitación",
       "nameHint": "El nombre se usa solo si la persona aún no tiene cuenta en multiCooperativa.",
       "sentTitle": "Invitación registrada",
-      "sentMessage": "Se ha invitado a {{email}}. Recibirá un enlace de un solo uso, válido 7 días, para activar su acceso.",
-      "backToList": "Volver a la lista",
-      "deliveryUnavailable": "La invitación se ha registrado, pero el envío del enlace no está disponible en este servidor. Aparecerá como invitado en la lista y podrás reenviarla desde su ficha."
+      "sentMessage": "Se ha invitado a {{email}}. Compártele el enlace de abajo para que active su acceso.",
+      "sentNoLink": "Se ha invitado a {{email}}. Este servidor no muestra el enlace: en desarrollo aparece en la consola de la API.",
+      "backToList": "Volver a la lista"
+    },
+    "invitationLink": {
+      "explanation": "Envía este enlace a la persona; caduca el {{date}} y solo sirve una vez.",
+      "copy": "Copiar enlace",
+      "copied": "Enlace copiado",
+      "share": "Compartir"
     },
     "detail": {
       "title": "Miembro",
@@ -606,9 +612,9 @@
       "reactivateTitle": "Reactivar acceso",
       "reactivateMessage": "{{name}} recuperará el acceso con su perfil actual.",
       "reactivated": "Acceso reactivado.",
-      "invitedExplanation": "Esta persona aún no ha aceptado la invitación. Si el enlace caducó o se perdió, reenvía uno nuevo: el anterior dejará de valer.",
-      "resend": "Reenviar invitación",
-      "resent": "Invitación reenviada.",
+      "invitedExplanation": "Esta persona aún no ha aceptado la invitación. Si el enlace caducó o se perdió, genera uno nuevo: el anterior dejará de valer.",
+      "resend": "Generar nuevo enlace",
+      "resent": "Nuevo enlace generado.",
       "ownMembership": "Es tu propio acceso: no puedes modificarlo desde aquí."
     }
   }

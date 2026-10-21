@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
+import { InvitationLinkCard } from '@/features/members/invitation-link-card';
 import { memberActions, statusTone } from '@/features/members/members';
 import { ProfilePicker } from '@/features/members/profile-picker';
 import { useChangeMember, useMembers, useResendInvitation } from '@/features/members/queries';
@@ -27,6 +28,7 @@ export default function MemberScreen() {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [link, setLink] = useState<{ url: string; expiresAt: string } | null>(null);
 
   if (members.isPending) return <Loading />;
   if (members.isError) {
@@ -51,6 +53,7 @@ export default function MemberScreen() {
   async function run(task: () => Promise<unknown>, success: string) {
     setError(null);
     setNotice(null);
+    setLink(null);
     try {
       await task();
       setNotice(success);
@@ -155,10 +158,16 @@ export default function MemberScreen() {
             variant="secondary"
             loading={resend.isPending}
             onPress={() =>
-              void run(() => resend.mutateAsync(member.membershipId), t('members.detail.resent'))
+              void run(async () => {
+                const issued = await resend.mutateAsync(member.membershipId);
+                if (issued.invitationUrl) {
+                  setLink({ url: issued.invitationUrl, expiresAt: issued.expiresAt });
+                }
+              }, t('members.detail.resent'))
             }
             testID="resend-invitation"
           />
+          {link && <InvitationLinkCard url={link.url} expiresAt={link.expiresAt} />}
         </View>
       )}
       {member.userId === me?.id && (

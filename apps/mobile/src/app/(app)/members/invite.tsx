@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 
-import { ApiError, messageFor } from '@/api/api-error';
+import { messageFor } from '@/api/api-error';
+import { InvitationLinkCard } from '@/features/members/invitation-link-card';
 import { ProfilePicker } from '@/features/members/profile-picker';
 import { useInviteMember } from '@/features/members/queries';
 import { Button } from '@/ui/button';
@@ -22,7 +23,11 @@ export default function InviteMemberScreen() {
   const [isPartner, setIsPartner] = useState(true);
   const [partnerNumber, setPartnerNumber] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState<string | null>(null);
+  const [sent, setSent] = useState<{
+    email: string;
+    invitationUrl?: string;
+    expiresAt: string;
+  } | null>(null);
 
   const request = inviteMemberRequestSchema.safeParse({
     email,
@@ -36,15 +41,10 @@ export default function InviteMemberScreen() {
     if (!request.success) return;
     setError(null);
     try {
-      await invite.mutateAsync(request.data);
-      setSent(request.data.email);
+      const issued = await invite.mutateAsync(request.data);
+      setSent({ email: request.data.email, ...issued });
     } catch (failure) {
-      // The membership already exists in that case: it can be resent from its detail.
-      setError(
-        failure instanceof ApiError && failure.code === 'invitation_delivery_unavailable'
-          ? t('members.invite.deliveryUnavailable')
-          : messageFor(failure),
-      );
+      setError(messageFor(failure));
     }
   }
 
@@ -52,7 +52,14 @@ export default function InviteMemberScreen() {
     return (
       <Screen testID="invite-sent">
         <Text style={styles.title}>{t('members.invite.sentTitle')}</Text>
-        <Text style={styles.text}>{t('members.invite.sentMessage', { email: sent })}</Text>
+        <Text style={styles.text}>
+          {t(sent.invitationUrl ? 'members.invite.sentMessage' : 'members.invite.sentNoLink', {
+            email: sent.email,
+          })}
+        </Text>
+        {sent.invitationUrl && (
+          <InvitationLinkCard url={sent.invitationUrl} expiresAt={sent.expiresAt} />
+        )}
         <Button title={t('members.invite.backToList')} onPress={() => router.back()} />
       </Screen>
     );

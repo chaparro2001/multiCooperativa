@@ -4,6 +4,7 @@ import {
   listMembersResponseSchema,
   listProfilesResponseSchema,
   memberSchema,
+  resendInvitationResponseSchema,
   type UpdateMemberRequest,
 } from '@multicooperativa/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -41,7 +42,7 @@ export function useProfiles() {
   });
 }
 
-/** US-ACC-08. The membership exists even if the delivery fails (503), so the list refreshes anyway. */
+/** US-ACC-08. The membership exists even if the delivery fails (503), so the list refreshes anyway; the response carries the link to pass on (ADR-016). */
 export function useInviteMember() {
   const { api } = useServices();
   const queryClient = useQueryClient();
@@ -74,6 +75,10 @@ export function useResendInvitation() {
   const { api } = useServices();
   const { base } = useScope();
   return useMutation({
-    mutationFn: (id: string) => api.request(`${base}/members/${id}/invitation`, { method: 'POST' }),
+    mutationFn: (id: string) =>
+      api.request(`${base}/members/${id}/invitation`, {
+        method: 'POST',
+        schema: resendInvitationResponseSchema,
+      }),
   });
 }
