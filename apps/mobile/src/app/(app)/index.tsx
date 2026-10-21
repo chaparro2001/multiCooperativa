@@ -42,7 +42,10 @@ export default function HomeScreen() {
       />
       <Text style={styles.profile}>
         {cooperative?.profileName}
-        {permissions.isPartner ? ` · ${t('common.partner')}` : ''}
+        {/* "Socio · Socio" when the profile is already called like that. */}
+        {permissions.isPartner && cooperative?.profileName !== t('common.partner')
+          ? ` · ${t('common.partner')}`
+          : ''}
       </Text>
       <View style={styles.grid}>
         {modules.map((entry) => (
