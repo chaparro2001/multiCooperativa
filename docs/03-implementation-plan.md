@@ -34,6 +34,7 @@ Specification: [requirements/01-access-and-profiles.md](requirements/01-access-a
 - [x] App: login, secure token storage, automatic renewal, cooperative selector, permission-based navigation, biometrics.
 - [x] App: members screens (list with search and status filter, detail with profile change, suspend, reactivate and resend invitation, invite form; US-ACC-08 to US-ACC-10).
 - [x] Sample data: two cooperatives with users of each profile.
+- [x] Per-cooperative branding (US-ACC-14, ADR-018): `branding` module (colour with WCAG AA contrast check, PNG/JPEG logo in S3, audited), branding provider in the app that themes buttons, links, header and selected states, home logo and Settings → Appearance for administrators.
 
 ## Milestone 2 · Announcements and documents (9–11 Oct)
 

@@ -151,6 +151,18 @@ As an administrator, I want to see who changed which access and when, so that I 
 - **Given** an invitation, a profile change, a suspension or a reactivation, **when** it completes, **then** it is recorded with author, affected user, previous and new values, and date.
 - **Given** the log, **when** I consult it, **then** I only see the events of my cooperative.
 
+#### US-ACC-14 · Cooperative branding
+
+As an administrator, I want to set my cooperative's primary colour and logo, so that the app looks like my cooperative to all its members.
+
+- **Given** the Settings screen, **when** I am an administrator (Users and profiles · manage), **then** I see an "Appearance" section where I choose a colour (ready-made swatches or a `#RRGGBB` code, with a live preview of the buttons) and a logo (PNG or JPEG), and I can remove the logo or go back to the default colour.
+- **Given** a colour whose white text does not reach a 4.5:1 contrast, **when** I save it, **then** it is refused with the computed ratio and nothing changes (BR-ACC-16).
+- **Given** a logo that is an SVG, not a PNG or JPEG by its content, bigger than 1 MB or bigger than 1024 × 1024 px, **when** I upload it, **then** it is refused and nothing changes (BR-ACC-17).
+- **Given** a saved colour and logo, **when** any member of the cooperative opens the app, **then** buttons, links, header tint and selected states use the colour and the home shows the logo with the cooperative's name. Danger and warning colours do not change.
+- **Given** a cooperative that configured nothing, **when** its members open the app, **then** they see the default theme.
+- **Given** a user who is not an administrator, **when** they open Settings or call the write endpoints, **then** they do not see the section and the API answers 403; a user of another cooperative gets 404.
+- **Given** any change of colour or logo, **when** it completes, **then** it is recorded in the access change log as `cooperative.branding_changed` (US-ACC-12).
+
 ### Could
 
 #### US-ACC-13 · Custom profiles
@@ -171,23 +183,25 @@ As an administrator, I want to create my own profiles choosing level and scope p
 
 ## 5. Business rules
 
-| Id        | Rule                                                                                                                                                                             |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| BR-ACC-01 | The email uniquely identifies a user across the whole platform.                                                                                                                  |
-| BR-ACC-02 | A user has at most one membership per cooperative.                                                                                                                               |
-| BR-ACC-03 | Every membership has exactly one profile from its own cooperative.                                                                                                               |
-| BR-ACC-04 | A permission combines module, level and scope. Manage includes read. The absence of a permission is equivalent to no access.                                                     |
-| BR-ACC-05 | The "own" scope only makes sense in the Member area, which is the only module with per-member data. In all the others the scope is always "all".                                 |
-| BR-ACC-06 | Member status is independent of the profile. To vote, an active membership and member status are required.                                                                       |
-| BR-ACC-07 | Every cooperative always has at least one active administrator.                                                                                                                  |
-| BR-ACC-08 | An administrator cannot modify or suspend their own membership.                                                                                                                  |
-| BR-ACC-09 | An invited, suspended or removed membership grants no access. The effect is immediate.                                                                                           |
-| BR-ACC-10 | An invitation is single-use and expires after 7 days.                                                                                                                            |
-| BR-ACC-11 | Five failed sign-in attempts in 15 minutes block access for 15 minutes.                                                                                                          |
-| BR-ACC-12 | Changing or resetting the password revokes all of the user's sessions.                                                                                                           |
-| BR-ACC-13 | Predefined profiles cannot be edited or deleted.                                                                                                                                 |
-| BR-ACC-14 | Removal is permanent and deletes no data: the membership stays in removed status and its records keep their authorship. Coming back requires an invitation and a new membership. |
-| BR-ACC-15 | A removed membership does not count in the census of new votings nor receive notifications.                                                                                      |
+| Id        | Rule                                                                                                                                                                                                                                                                       |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-ACC-01 | The email uniquely identifies a user across the whole platform.                                                                                                                                                                                                            |
+| BR-ACC-02 | A user has at most one membership per cooperative.                                                                                                                                                                                                                         |
+| BR-ACC-03 | Every membership has exactly one profile from its own cooperative.                                                                                                                                                                                                         |
+| BR-ACC-04 | A permission combines module, level and scope. Manage includes read. The absence of a permission is equivalent to no access.                                                                                                                                               |
+| BR-ACC-05 | The "own" scope only makes sense in the Member area, which is the only module with per-member data. In all the others the scope is always "all".                                                                                                                           |
+| BR-ACC-06 | Member status is independent of the profile. To vote, an active membership and member status are required.                                                                                                                                                                 |
+| BR-ACC-07 | Every cooperative always has at least one active administrator.                                                                                                                                                                                                            |
+| BR-ACC-08 | An administrator cannot modify or suspend their own membership.                                                                                                                                                                                                            |
+| BR-ACC-09 | An invited, suspended or removed membership grants no access. The effect is immediate.                                                                                                                                                                                     |
+| BR-ACC-10 | An invitation is single-use and expires after 7 days.                                                                                                                                                                                                                      |
+| BR-ACC-11 | Five failed sign-in attempts in 15 minutes block access for 15 minutes.                                                                                                                                                                                                    |
+| BR-ACC-12 | Changing or resetting the password revokes all of the user's sessions.                                                                                                                                                                                                     |
+| BR-ACC-13 | Predefined profiles cannot be edited or deleted.                                                                                                                                                                                                                           |
+| BR-ACC-14 | Removal is permanent and deletes no data: the membership stays in removed status and its records keep their authorship. Coming back requires an invitation and a new membership.                                                                                           |
+| BR-ACC-15 | A removed membership does not count in the census of new votings nor receive notifications.                                                                                                                                                                                |
+| BR-ACC-16 | The cooperative's primary colour is `#RRGGBB` and white text over it must reach a WCAG AA contrast of at least 4.5:1 (relative luminance, WCAG 2.x); otherwise `422 insufficient_contrast` with the computed ratio. Only an administrator can change it and it is audited. |
+| BR-ACC-17 | The logo is a PNG or JPEG of at most 1 MB and 1024 × 1024 px, recognised by its content (magic bytes), never by name or declared type. SVG is always refused (it can carry scripts). A new logo replaces and deletes the previous object.                                  |
 
 ### Membership statuses
 
@@ -322,6 +336,10 @@ Within a cooperative:
 | POST   | `/cooperatives/{cooperativeId}/members/{memberId}/removal`    | Remove (permanent)                      | Users and profiles · manage |
 | POST   | `/cooperatives/{cooperativeId}/members/{memberId}/invitation` | Resend invitation                       | Users and profiles · manage |
 | GET    | `/cooperatives/{cooperativeId}/audit`                         | Access change log                       | Users and profiles · manage |
+| GET    | `/cooperatives/{cooperativeId}/branding`                      | Primary colour and logo link            | Active membership           |
+| PUT    | `/cooperatives/{cooperativeId}/branding/primary-color`        | Set or reset the primary colour         | Users and profiles · manage |
+| PUT    | `/cooperatives/{cooperativeId}/branding/logo`                 | Upload or replace the logo (multipart)  | Users and profiles · manage |
+| DELETE | `/cooperatives/{cooperativeId}/branding/logo`                 | Remove the logo                         | Users and profiles · manage |
 
 Response of `/cooperatives/{cooperativeId}/me/permissions`, with which the app builds the navigation:
 
@@ -354,6 +372,13 @@ Member management (schemas in `packages/contracts/src/access.ts`):
 - Every invitation, resend, profile change, suspension, reactivation and removal is recorded in the same transaction with author, affected user, previous and new values, and date (US-ACC-12).
 - Delivery of the invitation link ([ADR-016](../adr/ADR-016-invitation-links-delivered-by-the-administrator.md)): there is no email provider. With `INVITATION_DELIVERY=link`, `POST /members` (`201 { membershipId, expiresAt, invitationUrl }`) and `POST /members/{memberId}/invitation` (`200 { expiresAt, invitationUrl }`) return the web link `${WEB_APP_URL}/invitation?token=<token>` to the inviting administrator, who passes it on (the route already requires "Users and profiles · manage"). The link is never returned by any other endpoint and the token is never logged (NFR-ACC-08). With `INVITATION_DELIVERY=console` the native link `multicooperativa://invitation?token=<token>` is written to the API console in development and in production inviting responds 503 (the membership is created and can be resent).
 
+Branding (US-ACC-14, [ADR-018](../adr/ADR-018-per-cooperative-branding.md); schemas in `packages/contracts/src/branding.ts`, owned by the `branding` module):
+
+- `GET` returns `{ primaryColor: "#RRGGBB" | null, logoUrl: string | null, updatedAt: string | null }`; the logo link is a signed storage URL that expires in one hour, so the app asks again when it fails to load. Everything `null` means the default theme.
+- `PUT /branding/primary-color` takes `{ "primaryColor": "#RRGGBB" | null }` (`null` goes back to the default). `PUT /branding/logo` takes a `multipart/form-data` file in `file`. Every write answers with the new branding.
+- Errors: `400 invalid_request` (malformed body, no file), `403 forbidden`, `404 not_found`, `422 insufficient_contrast` (`details: { ratio, minimum }`), `422 invalid_color`, `422 logo_rejected` (`details.reason`: `svg_not_allowed`, `unsupported_type`, `too_large`, `too_large_dimensions`).
+- Files go to `cooperatives/{cooperativeId}/branding/<uuid>.<png|jpg>`. Changes are audited as `cooperative.branding_changed` with `{ primaryColor: { from, to } }` or `{ logo: "set" | "replaced" | "removed" }`; a write that changes nothing leaves no event.
+
 ## 9. App screens
 
 1. Sign in.
@@ -361,7 +386,7 @@ Member management (schemas in `packages/contracts/src/access.ts`):
 3. Password recovery.
 4. Cooperative selector.
 5. Home, with permission-based navigation.
-6. Settings: biometrics, cooperative switch, sign out.
+6. Settings: biometrics, cooperative switch, appearance (administrator: colour and logo, US-ACC-14), sign out.
 7. Members (administrator): list, invite, change profile, suspend, reactivate and remove with confirmation.
 
 ## 10. Test strategy
