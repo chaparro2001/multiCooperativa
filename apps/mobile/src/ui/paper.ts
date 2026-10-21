@@ -7,14 +7,12 @@
 export {
   ActivityIndicator,
   Card,
-  Chip,
   Divider,
   Icon,
   IconButton,
   List,
   PaperProvider,
   RadioButton,
-  SegmentedButtons,
   Surface,
   Switch,
   Text,
@@ -22,4 +20,5 @@ export {
   TouchableRipple,
   useTheme,
 } from 'react-native-paper';
+export { Chip, SegmentedButtons } from './chip';
 export type { MD3Theme } from 'react-native-paper';

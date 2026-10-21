@@ -15,7 +15,7 @@ import { useMembers } from '@/features/members/queries';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
-import { Card, SegmentedButtons, Text, useTheme } from '@/ui/paper';
+import { Card, Chip, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading } from '@/ui/screen';
 import { SCREEN_MAX_WIDTH } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
@@ -61,18 +61,19 @@ export default function MembersScreen() {
             returnKeyType="search"
             testID="member-search"
           />
-          <SegmentedButtons
-            value={status}
-            onValueChange={(value) => setStatus(value as StatusFilter)}
-            density="small"
-            buttons={STATUS_FILTERS.map((value) => ({
-              value,
-              label: t(`members.filters.${value}`),
-              showSelectedCheck: false,
-              accessibilityLabel: t(`members.filters.${value}`),
-              testID: `filter-${value}`,
-            }))}
-          />
+          <View style={styles.filters} accessibilityRole="radiogroup">
+            {STATUS_FILTERS.map((value) => (
+              <Chip
+                key={value}
+                selected={status === value}
+                onPress={() => setStatus(value)}
+                accessibilityLabel={t(`members.filters.${value}`)}
+                testID={`filter-${value}`}
+              >
+                {t(`members.filters.${value}`)}
+              </Chip>
+            ))}
+          </View>
         </View>
         {members.isPending ? (
           <Loading />
@@ -133,6 +134,7 @@ const styles = StyleSheet.create({
   // Same readable column as the Screen component on wide windows.
   column: { flex: 1, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   search: { padding: 16, paddingBottom: 8, gap: 10 },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   list: { padding: 16, paddingTop: 0, gap: 10 },
   empty: { padding: 16, textAlign: 'center' },
   rowContent: { gap: 4 },
