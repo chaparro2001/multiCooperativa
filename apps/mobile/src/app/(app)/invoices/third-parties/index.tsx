@@ -45,7 +45,7 @@ export default function ThirdPartiesScreen() {
                         ? `/invoices/third-parties/editor?type=${fixed}`
                         : '/invoices/third-parties/editor'
                     }
-                    icon="add"
+                    icon="plus"
                     label={t(
                       fixed === 'supplier'
                         ? 'invoicing.thirdParties.newSupplier'

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -46,7 +46,7 @@ export default function HomeScreen() {
             <HeaderActions>
               <HeaderAction
                 href="/settings"
-                icon="settings-outline"
+                icon="cog-outline"
                 label={t('settings.title')}
                 testID="settings-link"
               />
@@ -93,7 +93,7 @@ export default function HomeScreen() {
               testID={`module-${entry.id}`}
             >
               <View accessibilityElementsHidden importantForAccessibility="no">
-                <Ionicons name={entry.icon} size={40} color={brand.primaryColor} />
+                <MaterialCommunityIcons name={entry.icon} size={40} color={brand.primaryColor} />
               </View>
               <Text style={styles.cellTitle} numberOfLines={2}>
                 {title(entry)}

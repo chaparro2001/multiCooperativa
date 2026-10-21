@@ -43,7 +43,7 @@ export default function AnnouncementListScreen() {
                 <HeaderActions>
                   <HeaderAction
                     href="/announcements/editor"
-                    icon="add"
+                    icon="plus"
                     label={t('announcements.list.new')}
                     testID="new-announcement"
                   />

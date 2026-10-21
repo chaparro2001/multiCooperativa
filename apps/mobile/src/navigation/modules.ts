@@ -1,6 +1,6 @@
 import type { Module, MyPermissionsResponse } from '@multicooperativa/contracts';
 
-import type { IconName } from '@/ui/header-action';
+import type { IconName } from '@/ui/paper-settings';
 
 export interface ModuleEntry {
   /** Unique per home tile (key and test id); equals `module` unless a module has several tiles. */
@@ -13,7 +13,7 @@ export interface ModuleEntry {
     | 'invoicing.home.notes'
     | 'invoicing.thirdParties.filter.supplier'
     | 'invoicing.thirdParties.filter.customer';
-  /** Ionicons name shown in the home grid; decorative, screen readers read the title (`enums.module.<module>`). */
+  /** MaterialCommunityIcons name shown in the home grid; decorative, screen readers read the title (`enums.module.<module>`). */
   icon: IconName;
   /** Screen of the module inside the cooperative. */
   route: `/${string}`;
@@ -26,24 +26,24 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
   {
     id: 'announcements',
     module: 'announcements',
-    icon: 'megaphone-outline',
+    icon: 'bullhorn-outline',
     route: '/announcements',
   },
-  { id: 'assemblies', module: 'assemblies', icon: 'hand-left-outline', route: '/assemblies' },
-  { id: 'documents', module: 'documents', icon: 'document-text-outline', route: '/documents' },
+  { id: 'assemblies', module: 'assemblies', icon: 'hand-back-left-outline', route: '/assemblies' },
+  { id: 'documents', module: 'documents', icon: 'file-document-outline', route: '/documents' },
   // Invoices and delivery notes share one screen fixed to a kind by the query param (BR-INV-01: same permission).
   {
     id: 'invoices',
     module: 'invoicing',
     titleKey: 'invoicing.home.invoices',
-    icon: 'receipt-outline',
+    icon: 'receipt-text-outline',
     route: '/invoices?kind=invoice',
   },
   {
     id: 'delivery-notes',
     module: 'invoicing',
     titleKey: 'invoicing.home.notes',
-    icon: 'cube-outline',
+    icon: 'package-variant-closed',
     route: '/invoices?kind=delivery_note',
   },
   // Suppliers and customers are master data of the invoicing module (BR-INV-01): same permission.
@@ -52,19 +52,19 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
     id: 'suppliers',
     module: 'invoicing',
     titleKey: 'invoicing.thirdParties.filter.supplier',
-    icon: 'business-outline',
+    icon: 'office-building-outline',
     route: '/invoices/third-parties?type=supplier',
   },
   {
     id: 'customers',
     module: 'invoicing',
     titleKey: 'invoicing.thirdParties.filter.customer',
-    icon: 'storefront-outline',
+    icon: 'store-outline',
     route: '/invoices/third-parties?type=customer',
   },
-  { id: 'member-area', module: 'member-area', icon: 'person-outline', route: '/member-area' },
-  { id: 'assistant', module: 'assistant', icon: 'chatbubbles-outline', route: '/assistant' },
-  { id: 'users', module: 'users', icon: 'people-outline', route: '/members' },
+  { id: 'member-area', module: 'member-area', icon: 'account-outline', route: '/member-area' },
+  { id: 'assistant', module: 'assistant', icon: 'chat-processing-outline', route: '/assistant' },
+  { id: 'users', module: 'users', icon: 'account-group-outline', route: '/members' },
 ];
 
 /** Icon of a home tile, shared by the places that point at the same screen (single source). */

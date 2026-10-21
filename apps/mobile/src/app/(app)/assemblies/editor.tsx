@@ -1,5 +1,5 @@
 import type { AssemblyType } from '@multicooperativa/contracts';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +23,7 @@ import {
 import { useAssembly, useSaveAssembly } from '@/features/assemblies/queries';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
-import type { IconName } from '@/ui/header-action';
+import type { IconName } from '@/ui/paper-settings';
 import { FieldGroup, FormSummary } from '@/ui/field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
@@ -273,7 +273,7 @@ function Tool({
       style={styles.tool}
     >
       {icon ? (
-        <Ionicons name={icon} size={20} color={disabled ? colors.border : brand} />
+        <MaterialCommunityIcons name={icon} size={20} color={disabled ? colors.border : brand} />
       ) : (
         <Text style={[styles.toolText, { color: brand }, disabled && styles.toolDisabled]}>
           {label}

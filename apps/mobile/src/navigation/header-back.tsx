@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet } from 'react-native';
@@ -26,7 +26,7 @@ export function HeaderBack() {
       style={styles.button}
       testID="header-back"
     >
-      <Ionicons name="chevron-back" size={28} color={brand} />
+      <MaterialCommunityIcons name="chevron-left" size={28} color={brand} />
     </Pressable>
   );
 }

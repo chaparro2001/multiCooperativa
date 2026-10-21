@@ -79,7 +79,7 @@ export default function AssemblyScreen() {
             ? () => (
                 <HeaderActions>
                   <HeaderAction
-                    icon="calendar-outline"
+                    icon="calendar-month-outline"
                     label={t('assemblies.detail.reschedule')}
                     href={{ pathname: '/assemblies/reschedule', params: { id } }}
                     testID="reschedule-assembly"

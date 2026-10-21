@@ -32,7 +32,7 @@ export default function MemberAreaScreen() {
                   <HeaderActions>
                     <HeaderAction
                       href="/member-area/members"
-                      icon="people-outline"
+                      icon="account-group-outline"
                       label={t('memberArea.me.allMembers')}
                       testID="all-members"
                     />

@@ -41,7 +41,7 @@ export default function AssemblyListScreen() {
                 <HeaderActions>
                   <HeaderAction
                     href="/assemblies/editor"
-                    icon="add"
+                    icon="plus"
                     label={t('assemblies.list.new')}
                     testID="new-assembly"
                   />
