@@ -254,7 +254,8 @@
     }
   },
   "modulePlaceholder": {
-    "comingSoon": "Esta sección llegará en un próximo hito.",
+    "badge": "Próximamente",
+    "comingSoon": "Próximamente. Esta sección forma parte del trabajo futuro del proyecto.",
     "access": "Tu acceso: {{level}}{{scope}}.",
     "ownDataOnly": " (solo tus datos)"
   },

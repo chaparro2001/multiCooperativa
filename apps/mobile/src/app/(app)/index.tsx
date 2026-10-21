@@ -59,6 +59,11 @@ export default function HomeScreen() {
             <Text style={styles.cellTitle} numberOfLines={2}>
               {t(`enums.module.${entry.module}`)}
             </Text>
+            {entry.comingSoon && (
+              <Text style={styles.badge} testID={`coming-soon-${entry.module}`}>
+                {t('modulePlaceholder.badge')}
+              </Text>
+            )}
           </Pressable>
         ))}
       </View>
@@ -81,6 +86,17 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   pressed: { opacity: 0.7 },
+  badge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.muted,
+    borderWidth: 1,
+    borderColor: colors.muted,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
   emoji: { fontSize: 44 },
   cellTitle: {
     fontSize: 16,

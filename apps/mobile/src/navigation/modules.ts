@@ -6,6 +6,8 @@ export interface ModuleEntry {
   emoji: string;
   /** Screen of the module inside the cooperative. */
   route: `/${string}`;
+  /** Not built yet: the home shows a "coming soon" badge and the screen a placeholder. */
+  comingSoon?: true;
 }
 
 /** Order of the home grid. */
@@ -14,9 +16,9 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
   { module: 'assemblies', emoji: '🗳️', route: '/assemblies' },
   { module: 'documents', emoji: '📄', route: '/documents' },
   { module: 'invoicing', emoji: '🧾', route: '/invoices' },
-  { module: 'member-area', emoji: '👤', route: '/member-area' },
+  { module: 'member-area', emoji: '👤', route: '/member-area', comingSoon: true },
   { module: 'assistant', emoji: '🤖', route: '/assistant' },
-  { module: 'users', emoji: '👥', route: '/members' },
+  { module: 'users', emoji: '👥', route: '/members', comingSoon: true },
 ];
 
 export interface VisibleModule extends ModuleEntry {
