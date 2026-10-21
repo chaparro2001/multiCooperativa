@@ -90,7 +90,8 @@ services:
         })();
 
   # Local models (ADR-006 embeddings, ADR-013 assistant chat). CPU only: bge-m3 takes about
-  # 1.2 GB once loaded and the chat model (qwen3:8b, 4-bit) about 6.7 GB with an 8k context.
+  # 1.2 GB once loaded and each chat model (qwen3:8b, 4-bit) about 6.7 GB with an 8k context
+  # (qwen3:4b-instruct about 4.2 GB).
   ollama:
     image: ollama/ollama:0.35.1
     restart: unless-stopped
@@ -110,11 +111,13 @@ services:
       timeout: 5s
       retries: 20
     # bge-m3 (~1.2 GB) + chat model (~6.7 GB at 8k context) + headroom. Needs WSL2 memory=16GB.
-    mem_limit: 10g
+    # With two cooperatives on different chat models both stay loaded (ADR-014): 12 GB.
+    mem_limit: 12g
 
   # One-shot: downloads the embeddings model and the assistant's chat model into the ollama
-  # volume (about 1.2 GB + 5.2 GB the first time, instant afterwards). The chat model follows
-  # ASSISTANT_OLLAMA_MODEL of .env.server.
+  # volume (about 1.2 GB + 5.2 GB per chat model the first time, instant afterwards). It pulls the
+  # default ASSISTANT_OLLAMA_MODEL and every model of ASSISTANT_OLLAMA_MODELS (the ones each
+  # cooperative can choose, ADR-014). The API never pulls: only installed models are offered.
   ollama-pull:
     image: ollama/ollama:0.35.1
     restart: 'no'
@@ -124,10 +127,16 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
       ASSISTANT_OLLAMA_MODEL: ${ASSISTANT_OLLAMA_MODEL:-qwen3:8b}
+      ASSISTANT_OLLAMA_MODELS: ${ASSISTANT_OLLAMA_MODELS:-qwen3:8b,qwen3:4b-instruct}
     entrypoint:
       - sh
       - -c
-      - ollama pull bge-m3 && ollama pull "$${ASSISTANT_OLLAMA_MODEL}"
+      - |
+        set -e
+        ollama pull bge-m3
+        for model in "$${ASSISTANT_OLLAMA_MODEL}" $$(echo "$${ASSISTANT_OLLAMA_MODELS}" | tr ',' ' '); do
+          ollama pull "$$model"
+        done
 
   api:
     build: *api-build
@@ -163,6 +172,8 @@ services:
       # explanations still use Gemini. Set ASSISTANT_LLM_PROVIDER=gemini in .env.server to switch back.
       ASSISTANT_LLM_PROVIDER: ${ASSISTANT_LLM_PROVIDER:-ollama}
       ASSISTANT_OLLAMA_MODEL: ${ASSISTANT_OLLAMA_MODEL:-qwen3:8b}
+      # Models each cooperative's administrator can choose in Settings (ADR-014).
+      ASSISTANT_OLLAMA_MODELS: ${ASSISTANT_OLLAMA_MODELS:-qwen3:8b,qwen3:4b-instruct}
       ASSISTANT_OLLAMA_TIMEOUT_MS: ${ASSISTANT_OLLAMA_TIMEOUT_MS:-90000}
       # The image caps the heap at 320 MB for Render's 512 MB; this server has room.
       NODE_OPTIONS: --max-old-space-size=768

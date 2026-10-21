@@ -56,6 +56,15 @@ As a user, I want to ask follow-up questions without repeating the context.
 
 - **Given** an empty conversation, **when** I open the assistant, **then** I see suggested questions according to the modules I have access to.
 
+#### US-AI-07 · Choose the assistant's local model
+
+- **Given** I administer the cooperative (module `users`, manage level) and the server runs the assistant on local models, **when** I open Settings, **then** I see the "AI assistant" section with the models I can choose (allowlisted by the operator and installed), the one in use marked, and I can save another one.
+- **Given** I saved a model, **when** any member of my cooperative asks the assistant, **then** the answer comes from that model; other cooperatives keep theirs.
+- **Given** the saved model is no longer allowed or installed, **when** someone asks, **then** the server default answers and nothing fails.
+- **Given** I do not administer the cooperative, **then** I do not see the section and the API answers 403; a user of another cooperative gets 404.
+- **Given** the assistant runs on Gemini, **then** the section only says that no local model is in use.
+- The change is recorded in the audit log, and the app warns that the first answer after a change may take longer (the model is loaded).
+
 ### Could
 
 - Streaming response.
@@ -69,16 +78,17 @@ As a user, I want to ask follow-up questions without repeating the context.
 
 ## 2. Business rules
 
-| Id       | Rule                                                                                                                                  |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| BR-AI-01 | The tools available in each request are computed from the user's permissions in the active cooperative.                               |
-| BR-AI-02 | Each tool reuses the use cases of its module, with the same user and cooperative context. It does not access the database on its own. |
-| BR-AI-03 | All tools are read-only.                                                                                                              |
-| BR-AI-04 | The RAG search always filters by `cooperativeId` before ordering by similarity.                                                       |
-| BR-AI-05 | Answers based on documents include at least one citation. Without relevant chunks, the assistant says so.                             |
-| BR-AI-06 | Content retrieved from documents is treated as data, not as instructions.                                                             |
-| BR-AI-07 | Conversations are stored per user and cooperative, and only their author sees them.                                                   |
-| BR-AI-08 | Limit of 30 messages per user and hour (per membership: user and cooperative), configurable with `ASSISTANT_MESSAGE_LIMIT_PER_HOUR`.  |
+| Id       | Rule                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-AI-01 | The tools available in each request are computed from the user's permissions in the active cooperative.                                                                                                                                                                                                                                                                                                        |
+| BR-AI-02 | Each tool reuses the use cases of its module, with the same user and cooperative context. It does not access the database on its own.                                                                                                                                                                                                                                                                          |
+| BR-AI-03 | All tools are read-only.                                                                                                                                                                                                                                                                                                                                                                                       |
+| BR-AI-04 | The RAG search always filters by `cooperativeId` before ordering by similarity.                                                                                                                                                                                                                                                                                                                                |
+| BR-AI-05 | Answers based on documents include at least one citation. Without relevant chunks, the assistant says so.                                                                                                                                                                                                                                                                                                      |
+| BR-AI-06 | Content retrieved from documents is treated as data, not as instructions.                                                                                                                                                                                                                                                                                                                                      |
+| BR-AI-07 | Conversations are stored per user and cooperative, and only their author sees them.                                                                                                                                                                                                                                                                                                                            |
+| BR-AI-08 | Limit of 30 messages per user and hour (per membership: user and cooperative), configurable with `ASSISTANT_MESSAGE_LIMIT_PER_HOUR`.                                                                                                                                                                                                                                                                           |
+| BR-AI-09 | With the Ollama provider each request runs on the model chosen by its cooperative (US-AI-07). Only models in `ASSISTANT_OLLAMA_MODELS` that are installed in Ollama can be chosen; the API never downloads models. If the saved model is no longer offered, the server default (`ASSISTANT_OLLAMA_MODEL`) answers. Only whoever manages the `users` module can read or change it, and every change is audited. |
 
 ## 3. Tools
 
@@ -119,18 +129,20 @@ sequenceDiagram
 
 ## 5. Non-functional requirements
 
-| Id        | Requirement                                                                               |
-| --------- | ----------------------------------------------------------------------------------------- |
-| NFR-AI-01 | First response in under 8 seconds at the 95th percentile.                                 |
-| NFR-AI-02 | The model provider sits behind an interface (port) so it can be replaced.                 |
-| NFR-AI-03 | The provider's keys live only in the backend.                                             |
-| NFR-AI-04 | Latency, tokens and tools used per request are logged, without the personal content.      |
-| NFR-AI-05 | An evaluation set exists with at least 20 questions and expected answers, runnable in CI. |
+| Id        | Requirement                                                                                         |
+| --------- | --------------------------------------------------------------------------------------------------- |
+| NFR-AI-01 | First response in under 8 seconds at the 95th percentile.                                           |
+| NFR-AI-02 | The model provider sits behind an interface (port) so it can be replaced.                           |
+| NFR-AI-03 | The provider's keys live only in the backend.                                                       |
+| NFR-AI-04 | Latency, tokens and tools used per request are logged, without the personal content.                |
+| NFR-AI-05 | An evaluation set exists with at least 20 questions and expected answers, runnable in CI.           |
+| NFR-AI-06 | A client cannot make the server download or run a model outside the operator's allowlist (ADR-014). |
 
 ## 6. Specific security
 
 - **Prompt injection**: an uploaded document may contain text aimed at the model. It is mitigated by delimiting the retrieved content, stating so in the system prompt and, above all, with BR-AI-02 and BR-AI-03: even if the model strays, it can only call read tools that already filter by permissions.
 - **Leakage between cooperatives**: the cooperative filter is in the query, not in the prompt.
+- **Model choice abuse**: the per-cooperative model comes from an allowlist and must be installed already; nothing the client sends is passed to Ollama as a model name unless it passed both checks (NFR-AI-06, ADR-014).
 - **Hallucinations**: answers anchored to citations and tool data; if there is no basis, it says so.
 
 ## 7. Model
