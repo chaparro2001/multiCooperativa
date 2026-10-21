@@ -297,7 +297,7 @@ Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
 
 ## 11. Calidad
 
-- **Tests unitarios** (`pnpm test`): 613 tests en 67 ficheros, todos en verde a fecha 2026-10-20.
+- **Tests unitarios** (`pnpm test`): 649 tests en 68 ficheros, todos en verde a fecha 2026-10-21.
 - **Tests de integración** (`pnpm test:integration`): contra PostgreSQL y almacenamiento S3 reales, incluido el test de aislamiento entre cooperativas. 364 tests en 20 ficheros, todos en verde (2026-10-21).
 - **CI** (GitHub Actions, en cada push y pull request): comprobación de formato, lint, typecheck, tests, migraciones sobre un Postgres con pgvector y tests de integración. Hay además workflows de despliegue de GitHub Pages y de cron de vencimientos.
 - **Puerta de calidad local**: Husky ejecuta lint, typecheck y tests en el pre-commit.
