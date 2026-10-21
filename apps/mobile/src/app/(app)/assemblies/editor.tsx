@@ -1,9 +1,8 @@
 import type { AssemblyType } from '@multicooperativa/contracts';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
@@ -23,12 +22,10 @@ import {
 import { useAssembly, useSaveAssembly } from '@/features/assemblies/queries';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
-import type { IconName } from '@/ui/paper-settings';
 import { FieldGroup, FormSummary } from '@/ui/field';
+import { Card, Chip, IconButton, Switch, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { useBrandColor } from '@/branding/brand';
-import { colors } from '@/ui/theme';
 
 /** 20 days ahead at 19:00: past the default minimum notice of 15 days (BR-ASM-09). */
 function defaultFirstCall(): Date {
@@ -42,6 +39,7 @@ const HALF_AN_HOUR = 30 * 60 * 1000;
 /** US-ASM-01 and US-ASM-02: date, place, type and agenda while in draft. */
 export default function AssemblyEditorScreen() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{ id?: string }>();
   const existing = useAssembly(params.id);
   const save = useSaveAssembly();
@@ -111,10 +109,12 @@ export default function AssemblyEditorScreen() {
         {ASSEMBLY_TYPES.map((value) => (
           <Chip
             key={value}
-            label={t(`enums.assemblyType.${value}`)}
+            accessibilityRole="radio"
             selected={type === value}
             onPress={() => setType(value)}
-          />
+          >
+            {t(`enums.assemblyType.${value}`)}
+          </Chip>
         ))}
       </View>
       <DateField
@@ -147,71 +147,81 @@ export default function AssemblyEditorScreen() {
         testID="place-field"
       />
 
-      <Text style={styles.section}>{t('assemblies.agenda')}</Text>
+      <Text variant="titleSmall" style={styles.section}>
+        {t('assemblies.agenda')}
+      </Text>
       {points.map((point, index) => (
-        <View key={point.key} style={styles.point} testID={`editor-point-${index + 1}`}>
-          <View style={styles.pointHeader}>
-            <Text style={styles.pointNumber}>
-              {t('assemblies.editor.pointNumber', { number: index + 1 })}
-            </Text>
-            <View style={styles.pointTools}>
-              <Tool
-                icon="arrow-up"
-                accessibilityLabel={t('assemblies.editor.moveUp')}
-                onPress={() => setPoints((c) => movePoint(c, index, -1))}
-                disabled={index === 0}
-              />
-              <Tool
-                icon="arrow-down"
-                accessibilityLabel={t('assemblies.editor.moveDown')}
-                onPress={() => setPoints((c) => movePoint(c, index, 1))}
-                disabled={index === points.length - 1}
-              />
-              <Tool
-                label={t('common.actions.remove')}
-                onPress={() => setPoints((c) => c.filter((p) => p.key !== point.key))}
+        <Card key={point.key} mode="contained" testID={`editor-point-${index + 1}`}>
+          <Card.Content style={styles.pointContent}>
+            <View style={styles.pointHeader}>
+              <Text variant="titleSmall">
+                {t('assemblies.editor.pointNumber', { number: index + 1 })}
+              </Text>
+              <View style={styles.pointTools}>
+                <IconButton
+                  icon="arrow-up"
+                  size={20}
+                  accessibilityLabel={t('assemblies.editor.moveUp')}
+                  onPress={() => setPoints((c) => movePoint(c, index, -1))}
+                  disabled={index === 0}
+                />
+                <IconButton
+                  icon="arrow-down"
+                  size={20}
+                  accessibilityLabel={t('assemblies.editor.moveDown')}
+                  onPress={() => setPoints((c) => movePoint(c, index, 1))}
+                  disabled={index === points.length - 1}
+                />
+                <IconButton
+                  icon="delete-outline"
+                  size={20}
+                  accessibilityLabel={t('common.actions.remove')}
+                  onPress={() => setPoints((c) => c.filter((p) => p.key !== point.key))}
+                />
+              </View>
+            </View>
+            <TextField
+              label={t('assemblies.editor.pointTitle')}
+              name={`points.${index}.title`}
+              value={point.title}
+              onChangeText={(title) => update(point.key, { title })}
+              maxLength={200}
+            />
+            <TextField
+              label={t('assemblies.editor.pointDescription')}
+              name={`points.${index}.description`}
+              value={point.description}
+              onChangeText={(description) => update(point.key, { description })}
+              multiline
+            />
+            <View style={styles.switchRow}>
+              <Text variant="bodyMedium">{t('assemblies.editor.votable')}</Text>
+              <Switch
+                value={point.votable}
+                onValueChange={(votable) =>
+                  update(point.key, {
+                    votable,
+                    majority: votable ? (point.majority ?? 'simple') : null,
+                  })
+                }
               />
             </View>
-          </View>
-          <TextField
-            label={t('assemblies.editor.pointTitle')}
-            name={`points.${index}.title`}
-            value={point.title}
-            onChangeText={(title) => update(point.key, { title })}
-            maxLength={200}
-          />
-          <TextField
-            label={t('assemblies.editor.pointDescription')}
-            name={`points.${index}.description`}
-            value={point.description}
-            onChangeText={(description) => update(point.key, { description })}
-            multiline
-          />
-          <View style={styles.switchRow}>
-            <Text style={styles.label}>{t('assemblies.editor.votable')}</Text>
-            <Switch
-              value={point.votable}
-              onValueChange={(votable) =>
-                update(point.key, {
-                  votable,
-                  majority: votable ? (point.majority ?? 'simple') : null,
-                })
-              }
-            />
-          </View>
-          {point.votable && (
-            <FieldGroup name={`points.${index}.majority`} style={styles.chips}>
-              {MAJORITIES.map((value) => (
-                <Chip
-                  key={value}
-                  label={t(`enums.majority.${value}`)}
-                  selected={point.majority === value}
-                  onPress={() => update(point.key, { majority: value })}
-                />
-              ))}
-            </FieldGroup>
-          )}
-        </View>
+            {point.votable ? (
+              <FieldGroup name={`points.${index}.majority`} style={styles.chips}>
+                {MAJORITIES.map((value) => (
+                  <Chip
+                    key={value}
+                    accessibilityRole="radio"
+                    selected={point.majority === value}
+                    onPress={() => update(point.key, { majority: value })}
+                  >
+                    {t(`enums.majority.${value}`)}
+                  </Chip>
+                ))}
+              </FieldGroup>
+            ) : null}
+          </Card.Content>
+        </Card>
       ))}
       <Button
         title={t('assemblies.editor.addPoint')}
@@ -219,7 +229,7 @@ export default function AssemblyEditorScreen() {
         onPress={() => setPoints((c) => [...c, newPoint()])}
       />
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
       <Button
         title={t('assemblies.editor.saveDraft')}
@@ -227,83 +237,18 @@ export default function AssemblyEditorScreen() {
         loading={save.isPending}
         testID="save-assembly"
       />
-      <Text style={styles.hint}>{t('assemblies.editor.hint')}</Text>
+      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        {t('assemblies.editor.hint')}
+      </Text>
     </Screen>
   );
 }
 
-function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress(): void }) {
-  const brand = useBrandColor();
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
-      onPress={onPress}
-      style={[
-        styles.chip,
-        selected && styles.chipSelected,
-        selected && { backgroundColor: brand, borderColor: brand },
-      ]}
-    >
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function Tool({
-  label,
-  icon,
-  accessibilityLabel,
-  onPress,
-  disabled = false,
-}: {
-  label?: string;
-  icon?: IconName;
-  accessibilityLabel?: string;
-  onPress(): void;
-  disabled?: boolean;
-}) {
-  const brand = useBrandColor();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      onPress={onPress}
-      disabled={disabled}
-      style={styles.tool}
-    >
-      {icon ? (
-        <MaterialCommunityIcons name={icon} size={20} color={disabled ? colors.border : brand} />
-      ) : (
-        <Text style={[styles.toolText, { color: brand }, disabled && styles.toolDisabled]}>
-          {label}
-        </Text>
-      )}
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  section: { fontSize: 15, fontWeight: '600', color: colors.text, marginTop: 8 },
-  point: { backgroundColor: colors.surface, borderRadius: 12, padding: 12, gap: 10 },
+  section: { marginTop: 8 },
+  pointContent: { gap: 10 },
   pointHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  pointNumber: { fontWeight: '600', color: colors.text },
-  pointTools: { flexDirection: 'row', gap: 4 },
-  tool: { paddingHorizontal: 10, paddingVertical: 4 },
-  toolText: { color: colors.primary, fontSize: 15 },
-  toolDisabled: { color: colors.border },
+  pointTools: { flexDirection: 'row' },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  label: { fontSize: 14, color: colors.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.text },
-  chipTextSelected: { color: '#fff', fontWeight: '600' },
-  hint: { fontSize: 13, color: colors.muted },
 });

@@ -2,22 +2,20 @@ import type { VoteChoice } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { ApiError, messageFor } from '@/api/api-error';
 import { useCastVote } from '@/features/assemblies/queries';
 import { Button } from '@/ui/button';
+import { RadioButton, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Screen } from '@/ui/screen';
-import { useBrandColor, useBrandTint } from '@/branding/brand';
-import { colors } from '@/ui/theme';
 import { confirmAction } from '@/ui/confirm';
 
 const CHOICES: VoteChoice[] = ['in_favor', 'against', 'abstention'];
 
 /** US-ASM-05: one vote per item, confirmed because it cannot be changed (BR-ASM-03). */
 export default function VoteScreen() {
-  const brand = useBrandColor();
-  const tint = useBrandTint();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const { pointId } = useLocalSearchParams<{ pointId: string }>();
   const vote = useCastVote();
@@ -52,10 +50,14 @@ export default function VoteScreen() {
     return (
       <Screen testID="vote-confirmed">
         <Stack.Screen options={{ title: t('assemblies.vote.recordedTitle') }} />
-        <Text style={[styles.done, { color: brand }]}>
+        <Text variant="titleMedium" style={{ color: colors.primary }}>
           {t('assemblies.vote.recorded', { choice: t(`enums.voteChoice.${cast}`) })}
         </Text>
-        {error && <Text style={styles.meta}>{error}</Text>}
+        {error ? (
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+            {error}
+          </Text>
+        ) : null}
         <Button title={t('assemblies.vote.backToAssembly')} onPress={() => router.back()} />
       </Screen>
     );
@@ -64,34 +66,27 @@ export default function VoteScreen() {
   return (
     <Screen testID="vote-screen">
       <Stack.Screen options={{ title: t('assemblies.vote.title') }} />
-      <Text style={styles.text}>{t('assemblies.vote.choose')}</Text>
-      <View style={styles.choices}>
+      <Text variant="bodyLarge">{t('assemblies.vote.choose')}</Text>
+      <RadioButton.Group
+        value={choice ?? ''}
+        onValueChange={(value) => setChoice(value as VoteChoice)}
+      >
         {CHOICES.map((value) => (
-          <Pressable
+          <RadioButton.Item
             key={value}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: choice === value }}
-            onPress={() => setChoice(value)}
+            value={value}
+            label={t(`enums.voteChoice.${value}`)}
+            color={colors.primary}
+            labelVariant="titleMedium"
             style={[
               styles.choice,
-              choice === value && styles.selected,
-              choice === value && { borderColor: brand, backgroundColor: tint },
+              { borderColor: choice === value ? colors.primary : colors.outlineVariant },
             ]}
             testID={`option-${value}`}
-          >
-            <Text
-              style={[
-                styles.choiceText,
-                choice === value && styles.selectedText,
-                choice === value && { color: brand },
-              ]}
-            >
-              {t(`enums.voteChoice.${value}`)}
-            </Text>
-          </Pressable>
+          />
         ))}
-      </View>
-      {error && <ErrorText>{error}</ErrorText>}
+      </RadioButton.Group>
+      {error ? <ErrorText>{error}</ErrorText> : null}
       <Button
         title={t('assemblies.vote.submit')}
         onPress={confirm}
@@ -99,24 +94,13 @@ export default function VoteScreen() {
         loading={vote.isPending}
         testID="cast-vote"
       />
-      <Text style={styles.meta}>{t('assemblies.vote.advisory')}</Text>
+      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        {t('assemblies.vote.advisory')}
+      </Text>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  text: { fontSize: 16, color: colors.text },
-  choices: { gap: 10 },
-  choice: {
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  selected: { borderColor: colors.primary, backgroundColor: '#e3f0e8' },
-  choiceText: { fontSize: 17, color: colors.text },
-  selectedText: { fontWeight: '700', color: colors.primary },
-  done: { fontSize: 18, fontWeight: '600', color: colors.primary },
-  meta: { fontSize: 13, color: colors.muted },
+  choice: { borderWidth: 2, borderRadius: 12, marginBottom: 10 },
 });
