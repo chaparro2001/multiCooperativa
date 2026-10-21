@@ -59,6 +59,10 @@ describe('loadEnv', () => {
     expect(loadEnv(required).ASSISTANT_SECRETS_KEY).toBeUndefined();
     const key = Buffer.alloc(32, 7).toString('base64');
     expect(loadEnv({ ...required, ASSISTANT_SECRETS_KEY: key }).ASSISTANT_SECRETS_KEY).toBe(key);
+    // docker compose passes an unset variable as an empty string.
+    expect(
+      loadEnv({ ...required, ASSISTANT_SECRETS_KEY: '' }).ASSISTANT_SECRETS_KEY,
+    ).toBeUndefined();
     expect(() => loadEnv({ ...required, ASSISTANT_SECRETS_KEY: 'short' })).toThrow(
       /ASSISTANT_SECRETS_KEY/,
     );

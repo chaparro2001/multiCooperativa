@@ -301,6 +301,7 @@ ADRs are immutable: a decision that changes produces a new ADR.
 - [ADR-010](docs/adr/ADR-010-gemini-embeddings-for-the-hosted-demo.md): Gemini embeddings for the hosted demo.
 - [ADR-013](docs/adr/ADR-013-local-language-model-for-the-assistant.md): local language model (Ollama) for the assistant on the home server; Gemini stays for vision.
 - [ADR-014](docs/adr/ADR-014-per-cooperative-assistant-model.md): per-cooperative choice of the assistant's local model, from an operator allowlist.
+- [ADR-018](docs/adr/ADR-018-per-cooperative-hosted-language-model.md): per-cooperative hosted provider (Groq, Mistral, NVIDIA NIM, OpenRouter) with the cooperative's own API key.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): bilingual root README for the thesis delivery (bounded exception to ADR-008).
 
 ## 11. Quality

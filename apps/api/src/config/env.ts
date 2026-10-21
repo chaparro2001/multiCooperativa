@@ -83,9 +83,11 @@ const envSchema = z
     /** Master key (32 random bytes, base64: `openssl rand -base64 32`) that encrypts the API keys cooperatives bring for hosted assistant providers (US-AI-07, ADR-018). Without it hosted mode is unavailable. Changing it invalidates the stored keys. */
     ASSISTANT_SECRETS_KEY: z
       .string()
+      .transform((value) => (value === '' ? undefined : value))
       .refine(
         (value) =>
-          /^[A-Za-z0-9+/]+={0,2}$/.test(value) && Buffer.from(value, 'base64').length === 32,
+          value === undefined ||
+          (/^[A-Za-z0-9+/]+={0,2}$/.test(value) && Buffer.from(value, 'base64').length === 32),
         'must be 32 bytes in base64 (openssl rand -base64 32)',
       )
       .optional(),

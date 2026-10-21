@@ -302,6 +302,7 @@ Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
 - [ADR-011](docs/adr/ADR-011-bilingual-root-readme.md): README raíz bilingüe para la entrega del TFM (excepción acotada a ADR-008).
 - [ADR-013](docs/adr/ADR-013-local-language-model-for-the-assistant.md): modelo de lenguaje local (Ollama) para el asistente en el servidor propio; Gemini sigue en visión.
 - [ADR-014](docs/adr/ADR-014-per-cooperative-assistant-model.md): elección por cooperativa del modelo local del asistente, entre los permitidos por el operador.
+- [ADR-018](docs/adr/ADR-018-per-cooperative-hosted-language-model.md): proveedor externo (Groq, Mistral, NVIDIA NIM, OpenRouter) por cooperativa, con la clave de API propia de la cooperativa.
 
 ## 11. Calidad
 
