@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { messageFor } from '@/api/api-error';
+import { routeServerError } from '@/forms/server-errors';
+import { useForm } from '@/forms/use-form';
 import {
   ASSEMBLY_TYPES,
   type EditablePoint,
@@ -13,9 +14,15 @@ import {
   newPoint,
   toPointInputs,
 } from '@/features/assemblies/agenda';
+import {
+  ASSEMBLY_SERVER_MAPPING,
+  isAssemblyField,
+  validateAssembly,
+} from '@/features/assemblies/form-validation';
 import { useAssembly, useSaveAssembly } from '@/features/assemblies/queries';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
+import { FieldGroup, FormSummary } from '@/ui/field';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 import { useBrandColor } from '@/branding/brand';
@@ -43,6 +50,10 @@ export default function AssemblyEditorScreen() {
   const [place, setPlace] = useState('');
   const [points, setPoints] = useState<EditablePoint[]>([newPoint()]);
   const [error, setError] = useState<string | null>(null);
+  const form = useForm({
+    values: { type, firstCall, secondCall, place, points },
+    validate: validateAssembly,
+  });
 
   useEffect(() => {
     const data = existing.data;
@@ -71,6 +82,7 @@ export default function AssemblyEditorScreen() {
 
   async function submit() {
     setError(null);
+    if (!form.validateAll()) return;
     const firstCallAt = firstCall.toISOString();
     const secondCallAt = secondCall?.toISOString() ?? null;
     try {
@@ -80,12 +92,14 @@ export default function AssemblyEditorScreen() {
       });
       router.replace(`/assemblies/${saved.id}`);
     } catch (failure) {
-      setError(messageFor(failure));
+      const routed = routeServerError(failure, ASSEMBLY_SERVER_MAPPING, isAssemblyField);
+      form.setServerErrors(routed.fields);
+      setError(routed.banner);
     }
   }
 
   return (
-    <Screen testID="assembly-editor">
+    <Screen testID="assembly-editor" form={form}>
       <Stack.Screen
         options={{
           title: params.id ? t('assemblies.editor.editTitle') : t('assemblies.editor.newTitle'),
@@ -104,6 +118,7 @@ export default function AssemblyEditorScreen() {
       <DateField
         label={t('assemblies.editor.firstCall')}
         mode="datetime"
+        name="firstCall"
         value={firstCall}
         onChange={(date) => date && setFirstCall(date)}
         minimumDate={new Date()}
@@ -112,6 +127,7 @@ export default function AssemblyEditorScreen() {
       <DateField
         label={t('assemblies.editor.secondCall')}
         mode="datetime"
+        name="secondCall"
         value={secondCall}
         onChange={setSecondCall}
         minimumDate={firstCall}
@@ -122,6 +138,7 @@ export default function AssemblyEditorScreen() {
       />
       <TextField
         label={t('assemblies.editor.place')}
+        name="place"
         value={place}
         onChangeText={setPlace}
         maxLength={200}
@@ -156,12 +173,14 @@ export default function AssemblyEditorScreen() {
           </View>
           <TextField
             label={t('assemblies.editor.pointTitle')}
+            name={`points.${index}.title`}
             value={point.title}
             onChangeText={(title) => update(point.key, { title })}
             maxLength={200}
           />
           <TextField
             label={t('assemblies.editor.pointDescription')}
+            name={`points.${index}.description`}
             value={point.description}
             onChangeText={(description) => update(point.key, { description })}
             multiline
@@ -179,7 +198,7 @@ export default function AssemblyEditorScreen() {
             />
           </View>
           {point.votable && (
-            <View style={styles.chips}>
+            <FieldGroup name={`points.${index}.majority`} style={styles.chips}>
               {MAJORITIES.map((value) => (
                 <Chip
                   key={value}
@@ -188,7 +207,7 @@ export default function AssemblyEditorScreen() {
                   onPress={() => update(point.key, { majority: value })}
                 />
               ))}
-            </View>
+            </FieldGroup>
           )}
         </View>
       ))}
@@ -199,6 +218,7 @@ export default function AssemblyEditorScreen() {
       />
 
       {error && <ErrorText>{error}</ErrorText>}
+      <FormSummary form={form} />
       <Button
         title={t('assemblies.editor.saveDraft')}
         onPress={submit}

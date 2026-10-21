@@ -74,6 +74,15 @@
         "total": "Escribe un importe válido, con hasta dos decimales.",
         "vatRate": "El IVA debe estar entre 0 y 100.",
         "lines_quantity": "Escribe una cantidad válida, con hasta tres decimales."
+      },
+      "invalid_assembly": {
+        "place": "Indica el lugar de la asamblea (máximo 200 caracteres).",
+        "firstCallAt": "La fecha de la primera convocatoria no es válida.",
+        "secondCallAt": "La segunda convocatoria debe ser posterior a la primera.",
+        "points_title": "Escribe el título del punto (máximo 200 caracteres).",
+        "points_description": "La descripción del punto es demasiado larga.",
+        "points_majority": "Elige la mayoría que necesita este punto votable.",
+        "points": "El orden del día necesita al menos un punto."
       }
     }
   },
@@ -518,7 +527,10 @@
       "votable": "Se somete a votación",
       "addPoint": "Añadir punto",
       "saveDraft": "Guardar borrador",
-      "hint": "Después podrás convocarla desde su detalle. La documentación de cada punto se añade allí."
+      "hint": "Después podrás convocarla desde su detalle. La documentación de cada punto se añade allí.",
+      "errors": {
+        "secondBeforeFirst": "La segunda convocatoria debe ser posterior a la primera."
+      }
     }
   },
   "documents": {
