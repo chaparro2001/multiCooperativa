@@ -1,5 +1,5 @@
 import type { DocumentSearchHit, DocumentSummary } from '@multicooperativa/contracts';
-import { Link, router, Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
@@ -12,14 +12,13 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { ErrorText, Loading } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
+import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 type Mode = 'title' | 'content';
 
 /** US-DOC-02 (by category, filter by title) and US-DOC-07 (by content). */
 export default function DocumentListScreen() {
-  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('documents');
   const [mode, setMode] = useState<Mode>('title');
@@ -31,11 +30,13 @@ export default function DocumentListScreen() {
         options={{
           headerRight: canManage
             ? () => (
-                <Link href="/documents/upload" testID="upload-document">
-                  <Text style={[styles.headerLink, { color: brand }]}>
-                    {t('documents.list.upload')}
-                  </Text>
-                </Link>
+                <HeaderActions>
+                  <HeaderAction
+                    href="/documents/upload"
+                    title={t('documents.list.upload')}
+                    testID="upload-document"
+                  />
+                </HeaderActions>
               )
             : undefined,
         }}
@@ -179,7 +180,6 @@ function HitRow({ hit }: { hit: DocumentSearchHit }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#fff' },
-  headerLink: { color: colors.primary, fontSize: 16 },
   search: { padding: 16, paddingBottom: 8, gap: 10 },
   modes: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 10, padding: 3 },
   mode: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },

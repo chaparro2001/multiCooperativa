@@ -1,6 +1,6 @@
-import { type Href, Link, router, Stack } from 'expo-router';
+import { type Href, router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useBrand } from '@/branding/brand';
 import { BrandLogo } from '@/branding/brand-logo';
@@ -8,6 +8,7 @@ import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { type VisibleModule, visibleModules } from '@/navigation/modules';
 import { Loading, Screen, SCREEN_MAX_WIDTH, SCREEN_PADDING } from '@/ui/screen';
 import { colors } from '@/ui/theme';
+import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 const GAP = 12;
 
@@ -37,11 +38,9 @@ export default function HomeScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Link href="/settings" accessibilityLabel={t('settings.title')} testID="settings-link">
-              <Text style={[styles.headerLink, { color: brand.primaryColor }]}>
-                {t('settings.title')}
-              </Text>
-            </Link>
+            <HeaderActions>
+              <HeaderAction href="/settings" title={t('settings.title')} testID="settings-link" />
+            </HeaderActions>
           ),
         }}
       />
@@ -96,8 +95,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  // The web header puts headerRight flush against the window edge.
-  headerLink: { color: colors.primary, fontSize: 16, marginRight: Platform.OS === 'web' ? 16 : 0 },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   identityText: { flex: 1, gap: 2 },
   cooperativeName: { fontSize: 20, fontWeight: '700', color: colors.text },

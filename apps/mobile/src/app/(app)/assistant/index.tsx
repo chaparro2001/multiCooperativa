@@ -24,6 +24,7 @@ import {
   useRateMessage,
   useSendMessage,
 } from '@/features/assistant/queries';
+import { HeaderAction, HeaderActions } from '@/ui/header-action';
 import { Button } from '@/ui/button';
 import { ErrorText } from '@/ui/screen';
 import { colors } from '@/ui/theme';
@@ -154,24 +155,20 @@ function Chat() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <View style={styles.headerActions}>
-              <Pressable
-                accessibilityRole="link"
-                onPress={() => router.push('/assistant/history')}
+            <HeaderActions>
+              <HeaderAction
+                href="/assistant/history"
+                title={t('assistant.history.open')}
                 testID="assistant-history"
-              >
-                <Text style={[styles.headerLink, { color: brand }]}>
-                  {t('assistant.history.open')}
-                </Text>
-              </Pressable>
+              />
               {messages.length > 0 && (
-                <Pressable accessibilityRole="button" onPress={reset} testID="new-conversation">
-                  <Text style={[styles.headerLink, { color: brand }]}>
-                    {t('assistant.newConversation')}
-                  </Text>
-                </Pressable>
+                <HeaderAction
+                  onPress={reset}
+                  title={t('assistant.newConversation')}
+                  testID="new-conversation"
+                />
               )}
-            </View>
+            </HeaderActions>
           ),
         }}
       />
@@ -368,6 +365,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
-  headerLink: { fontSize: 16 },
-  headerActions: { flexDirection: 'row', gap: 16, paddingRight: 12 },
 });

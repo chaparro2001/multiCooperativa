@@ -1,10 +1,9 @@
 import type { Operation } from '@multicooperativa/contracts';
-import { Link, router, Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useBrandColor } from '@/branding/brand';
 import { messageFor } from '@/api/api-error';
 import { InvoiceRow, listStyles, NoteRow, useEuros } from '@/features/invoicing/components';
 import { useDeliveryNotes, useInvoices, useInvoicingSummary } from '@/features/invoicing/queries';
@@ -15,10 +14,10 @@ import { colors } from '@/ui/theme';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 
 import { Segmented } from '@/features/invoicing/segmented';
+import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 /** US-INV-06 and US-INV-07: summary, then purchases and sales with their invoices and delivery notes. */
 export default function InvoicingHomeScreen() {
-  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('invoicing');
   const summary = useInvoicingSummary();
@@ -40,11 +39,13 @@ export default function InvoicingHomeScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Link href="/invoices/third-parties" testID="third-parties-link">
-              <Text style={[listStyles.headerLink, { color: brand }]}>
-                {t('invoicing.home.thirdParties')}
-              </Text>
-            </Link>
+            <HeaderActions>
+              <HeaderAction
+                href="/invoices/third-parties"
+                title={t('invoicing.home.thirdParties')}
+                testID="third-parties-link"
+              />
+            </HeaderActions>
           ),
         }}
       />

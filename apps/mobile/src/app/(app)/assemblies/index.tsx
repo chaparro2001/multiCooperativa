@@ -1,5 +1,5 @@
 import type { AssemblySummary } from '@multicooperativa/contracts';
-import { Link, router, Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
@@ -11,13 +11,12 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading } from '@/ui/screen';
-import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
+import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 /** US-ASM-03: upcoming first, then the celebrated ones (ordered by the server). */
 export default function AssemblyListScreen() {
-  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('assemblies');
   const list = useAssemblyList();
@@ -39,11 +38,13 @@ export default function AssemblyListScreen() {
         options={{
           headerRight: canManage
             ? () => (
-                <Link href="/assemblies/editor" testID="new-assembly">
-                  <Text style={[styles.headerLink, { color: brand }]}>
-                    {t('assemblies.list.new')}
-                  </Text>
-                </Link>
+                <HeaderActions>
+                  <HeaderAction
+                    href="/assemblies/editor"
+                    title={t('assemblies.list.new')}
+                    testID="new-assembly"
+                  />
+                </HeaderActions>
               )
             : undefined,
         }}
@@ -97,7 +98,6 @@ const styles = StyleSheet.create({
   list: { padding: 16, gap: 10 },
   center: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
   empty: { color: colors.muted, fontSize: 16 },
-  headerLink: { color: colors.primary, fontSize: 16 },
   row: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 6 },
   pressed: { opacity: 0.7 },
   title: { fontSize: 16, fontWeight: '600', color: colors.text },

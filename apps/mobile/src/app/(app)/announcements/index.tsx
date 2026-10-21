@@ -1,9 +1,10 @@
 import type { AnnouncementSummary } from '@multicooperativa/contracts';
-import { Link, router, Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { useBrandColor } from '@/branding/brand';
 import { useAnnouncementList } from '@/features/announcements/queries';
 import { formatDay } from '@/i18n/format';
 import { useModuleAccess } from '@/navigation/use-module-access';
@@ -11,12 +12,11 @@ import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading } from '@/ui/screen';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
-import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
+import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 /** US-ANN-02: newest first, pinned on top, unread marked; more load at the end. */
 export default function AnnouncementListScreen() {
-  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('announcements');
   const list = useAnnouncementList();
@@ -40,11 +40,13 @@ export default function AnnouncementListScreen() {
         options={{
           headerRight: canManage
             ? () => (
-                <Link href="/announcements/editor" testID="new-announcement">
-                  <Text style={[styles.headerLink, { color: brand }]}>
-                    {t('announcements.list.new')}
-                  </Text>
-                </Link>
+                <HeaderActions>
+                  <HeaderAction
+                    href="/announcements/editor"
+                    title={t('announcements.list.new')}
+                    testID="new-announcement"
+                  />
+                </HeaderActions>
               )
             : undefined,
         }}
@@ -111,7 +113,6 @@ const styles = StyleSheet.create({
   list: { padding: 16, gap: 10 },
   center: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
   empty: { color: colors.muted, fontSize: 16 },
-  headerLink: { color: colors.primary, fontSize: 16 },
   row: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 8 },
   pressed: { opacity: 0.7 },
   rowHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },

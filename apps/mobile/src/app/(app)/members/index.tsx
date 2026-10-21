@@ -1,8 +1,8 @@
 import type { Member } from '@multicooperativa/contracts';
-import { Link, router, Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import {
@@ -18,12 +18,11 @@ import { Button } from '@/ui/button';
 import { ErrorText, Loading } from '@/ui/screen';
 import { SCREEN_MAX_WIDTH } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { useBrandColor } from '@/branding/brand';
 import { colors } from '@/ui/theme';
+import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 /** US-ACC-10: members of the cooperative with their profile and status; invite with manage level. */
 export default function MembersScreen() {
-  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('users');
   const members = useMembers();
@@ -36,11 +35,13 @@ export default function MembersScreen() {
         options={{
           headerRight: canManage
             ? () => (
-                <Link href="/members/invite" testID="invite-member">
-                  <Text style={[styles.headerLink, { color: brand }]}>
-                    {t('members.list.invite')}
-                  </Text>
-                </Link>
+                <HeaderActions>
+                  <HeaderAction
+                    href="/members/invite"
+                    title={t('members.list.invite')}
+                    testID="invite-member"
+                  />
+                </HeaderActions>
               )
             : undefined,
         }}
@@ -123,7 +124,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#fff' },
   // Same readable column as the Screen component on wide windows.
   column: { flex: 1, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
-  headerLink: { color: colors.primary, fontSize: 16, marginRight: Platform.OS === 'web' ? 16 : 0 },
   search: { padding: 16, paddingBottom: 8, gap: 10 },
   filters: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 10, padding: 3 },
   filter: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },

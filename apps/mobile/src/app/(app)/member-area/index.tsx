@@ -1,8 +1,7 @@
-import { Link, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text } from 'react-native';
 
-import { useBrandColor } from '@/branding/brand';
 import { messageFor } from '@/api/api-error';
 import {
   CapitalTotal,
@@ -11,14 +10,14 @@ import {
   memberAreaStyles as s,
 } from '@/features/member-area/components';
 import { useMyMovements } from '@/features/member-area/queries';
-import { listStyles } from '@/features/invoicing/components';
+import {} from '@/features/invoicing/components';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Button } from '@/ui/button';
 import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 /** US-MEM-01 and US-MEM-02: my record, my capital and my movements. Read-only for the member. */
 export default function MemberAreaScreen() {
-  const brand = useBrandColor();
   const { t } = useTranslation();
   const { scope } = useModuleAccess('member-area');
   const mine = useMyMovements();
@@ -30,11 +29,13 @@ export default function MemberAreaScreen() {
           headerRight:
             scope === 'all'
               ? () => (
-                  <Link href="/member-area/members" testID="all-members">
-                    <Text style={[listStyles.headerLink, { color: brand }]}>
-                      {t('memberArea.me.allMembers')}
-                    </Text>
-                  </Link>
+                  <HeaderActions>
+                    <HeaderAction
+                      href="/member-area/members"
+                      title={t('memberArea.me.allMembers')}
+                      testID="all-members"
+                    />
+                  </HeaderActions>
                 )
               : undefined,
         }}

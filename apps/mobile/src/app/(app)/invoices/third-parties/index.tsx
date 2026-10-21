@@ -1,10 +1,10 @@
 import type { ThirdParty } from '@multicooperativa/contracts';
-import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
+import { HeaderAction, HeaderActions } from '@/ui/header-action';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { useBrandColor } from '@/branding/brand';
 import { messageFor } from '@/api/api-error';
 import { listStyles } from '@/features/invoicing/components';
 import { useThirdParties } from '@/features/invoicing/queries';
@@ -20,7 +20,6 @@ type Filter = 'all' | 'supplier' | 'customer';
 
 /** US-INV-01: suppliers and customers of the cooperative. */
 export default function ThirdPartiesScreen() {
-  const brand = useBrandColor();
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('invoicing');
   // Opened from the Suppliers or Customers tile: the list is fixed to that type.
@@ -39,18 +38,17 @@ export default function ThirdPartiesScreen() {
           ...(fixed && { title: t(`invoicing.thirdParties.filter.${fixed}`) }),
           headerRight: canManage
             ? () => (
-                <Link
-                  href={
-                    fixed
-                      ? `/invoices/third-parties/editor?type=${fixed}`
-                      : '/invoices/third-parties/editor'
-                  }
-                  testID="new-third-party"
-                >
-                  <Text style={[listStyles.headerLink, { color: brand }]}>
-                    {t('invoicing.thirdParties.new')}
-                  </Text>
-                </Link>
+                <HeaderActions>
+                  <HeaderAction
+                    href={
+                      fixed
+                        ? `/invoices/third-parties/editor?type=${fixed}`
+                        : '/invoices/third-parties/editor'
+                    }
+                    title={t('invoicing.thirdParties.new')}
+                    testID="new-third-party"
+                  />
+                </HeaderActions>
               )
             : undefined,
         }}
