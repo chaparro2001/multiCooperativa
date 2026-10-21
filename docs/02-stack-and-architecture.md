@@ -85,7 +85,7 @@ Each module follows the Clean Architecture layers (domain, application, infrastr
 | Assemblies                  | Calls to meeting, agenda, votings, quorum and majorities                                                           |
 | Documents                   | Document repository and indexing for RAG                                                                           |
 | Invoices and delivery notes | Third parties (suppliers and customers), purchases and sales, reconciliation, due dates, claims, vision extraction |
-| Member area                 | Member data and capital contributions                                                                              |
+| Member area (`members`)     | Member data and capital contributions                                                                              |
 | AI assistant                | RAG and tool calling with the user's permissions                                                                   |
 | Notifications               | Consumes events from the other modules and sends push                                                              |
 

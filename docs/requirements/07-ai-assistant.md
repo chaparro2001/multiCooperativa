@@ -1,6 +1,6 @@
 # Requirements · 07 · AI assistant
 
-**Date**: 2026-10-04 · **Status**: Accepted in essence. Implemented except `my_contributions` (waits for the member area) and the conversation history screen.
+**Date**: 2026-10-04 · **Status**: Accepted in essence. Implemented except the conversation history screen.
 
 Conversational assistant that answers the user's questions about their cooperative by combining two sources:
 
@@ -102,7 +102,7 @@ As a user, I want to ask follow-up questions without repeating the context.
 | `list_third_parties(type?, created_from?, created_to?, include_inactive?, limit?)` | Invoices · read      | Suppliers and customers, newest first (default 10, max 50); inactive ones only if the user can manage |
 | `upcoming_assemblies()`                                                            | Assemblies · read    | Called assemblies and votable items                                                                   |
 | `voting_result(assembly?)`                                                         | Assemblies · read    | Results of closed votings                                                                             |
-| `my_contributions()`                                                               | Member area · read   | The user's capital and latest movements                                                               |
+| `my_contributions(n?)`                                                             | Member area · read   | The user's own capital and latest movements (`n` up to 20, default 10), whatever their scope          |
 | `latest_announcements(n?)`                                                         | Announcements · read | Recent published announcements                                                                        |
 
 ## 4. Flow
@@ -191,5 +191,5 @@ The last route is not in the first draft: the app needs it to reopen a conversat
 - **Unit**: tool selection according to permissions for the 4 profiles.
 - **Integration with a simulated model**: each tool invokes its use case with the correct context.
 - **Isolation**: two cooperatives with almost identical documents; no question retrieves chunks from the other.
-- **Evaluation**: 20 questions with expected tools, citations and facts (`modules/assistant/evaluation`). They run in CI through the production use case with fixed data and a rule-based model, and against the real model with `pnpm --filter @multicooperativa/api ai:eval`.
+- **Evaluation**: 23 questions with expected tools, citations and facts (`modules/assistant/evaluation`). They run in CI through the production use case with fixed data and a rule-based model, and against the real model with `pnpm --filter @multicooperativa/api ai:eval`.
 - **Injection**: test document with malicious instructions; the assistant neither follows them nor widens its access.

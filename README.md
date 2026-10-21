@@ -176,13 +176,13 @@ El estado de cada tarea está en [docs/03-implementation-plan.md](docs/03-implem
 - **Documentos con búsqueda semántica**: repositorio con versiones, URLs firmadas, extracción de texto, troceado, embeddings y pgvector filtrado por cooperativa.
 - **Asambleas**: convocatoria con orden del día y censo, votación con restricción única en base de datos, cálculo de quórum y mayorías, resultados y control de votación para el consejo.
 - **Facturas y albaranes**: terceros (proveedores y clientes), albaranes y facturas de compra y venta con importes en decimal exacto, conciliación con tolerancia, estados, resumen de pagos y cobros, proceso idempotente de vencimientos (cada hora), captura con cámara y revisión, **extracción con IA** (Gemini visión, validada con Zod y confirmada por una persona) y **explicación de discrepancias con IA**.
-- **Asistente de IA**: chat con citas y enlaces a los recursos, RAG sobre los documentos, herramientas de solo lectura filtradas por permisos (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`), conversaciones, límite de uso por hora, conjunto de evaluación de 20 preguntas y, para el administrador de cada cooperativa, la elección del modelo local en Ajustes (US-AI-07, ADR-014).
+- **Área del socio**: mis datos (número de socio, fecha de alta, perfil, contacto), mi capital y mis movimientos, de solo lectura para el socio (US-MEM-01, US-MEM-02); el consejo rector, el gestor y el administrador consultan el capital de todos los socios con el total de la cooperativa (US-MEM-04) y el gestor y el administrador registran aportaciones, reembolsos y correcciones (US-MEM-03). Importes en decimal exacto, movimientos inmutables, capital nunca negativo y doble aislamiento (por cooperativa y, con alcance propio, por socio).
+- **Asistente de IA**: chat con citas y enlaces a los recursos, RAG sobre los documentos, herramientas de solo lectura filtradas por permisos (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`, `my_contributions`), conversaciones, límite de uso por hora, conjunto de evaluación de 23 preguntas y, para el administrador de cada cooperativa, la elección del modelo local en Ajustes (US-AI-07, ADR-014).
 
 ## 6. Limitaciones y trabajo futuro
 
 Lo siguiente **no está implementado** en la entrega:
 
-- **Área del socio** (movimientos de capital y consulta). Por eso la herramienta `my_contributions` del asistente tampoco existe.
 - **Notificaciones push** (módulo de notificaciones, tokens de dispositivo, navegación desde la notificación).
 - **Sentry** en app y backend.
 - **Tests E2E con Maestro**.
@@ -311,7 +311,7 @@ Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
 - **Puerta de calidad local**: Husky ejecuta lint, typecheck y tests en el pre-commit.
 - **Límites entre módulos**: regla ESLint propia (`tools/eslint/module-boundaries.js`, con sus tests) que impide importar un módulo del backend por una ruta distinta de su `index.ts` (ADR-002).
 - **Seguridad**: denegación por defecto en cada caso de uso, 404 para recursos de otra cooperativa y 403 para módulos sin permiso, Argon2id para contraseñas, JWT con refresh rotatorio, bloqueo por intentos fallidos, tests parametrizados de la matriz perfiles x módulos, tests de aislamiento, CORS configurable por entorno y secretos fuera del repositorio (solo `.env.example`).
-- **IA**: conjunto de evaluación de 20 preguntas para el asistente (`ai:eval`).
+- **IA**: conjunto de evaluación de 23 preguntas para el asistente (`ai:eval`).
 
 ## 12. Desarrollo asistido por IA
 

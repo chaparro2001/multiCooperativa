@@ -152,7 +152,7 @@ docker compose --env-file .env.server run --rm --no-deps api pnpm --filter @mult
 docker compose --env-file .env.server run --rm --no-deps -e API_URL=http://api:3000 api pnpm --filter @multicooperativa/api db:seed:content
 ```
 
-`db:seed` needs `--allow-production` because the container runs with `NODE_ENV=production`. Never run `prisma migrate reset` here: it wipes the database. Demo users: see [sample-data.md](sample-data.md); handy ones are `admin@sanisidro.test`, `socio@sanisidro.test`, `gestor@sanisidro.test` and `lucia@demo.test`, with the password you set in `SEED_PASSWORD` (default `demo-cooperativa-2026` when empty).
+The seed is additive: on a server whose demo cooperatives already exist, running it again adds only the sample capital movements of the member area (the migration that creates their table runs when the API starts). `db:seed` needs `--allow-production` because the container runs with `NODE_ENV=production`. Never run `prisma migrate reset` here: it wipes the database. Demo users: see [sample-data.md](sample-data.md); handy ones are `admin@sanisidro.test`, `socio@sanisidro.test`, `gestor@sanisidro.test` and `lucia@demo.test`, with the password you set in `SEED_PASSWORD` (default `demo-cooperativa-2026` when empty).
 
 ### 7. Check the public URL
 

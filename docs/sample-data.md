@@ -37,10 +37,29 @@ The names, emails and passwords below are tenant data and stay as defined in the
 | gestor@laesperanza.test | Miguel Ortega | Manager         | No        | Active |
 | socio@laesperanza.test  | Isabel Romero | Member          | Yes (003) | Active |
 
+## Share capital (member area)
+
+Capital movements of the demo partners (`DEMO_COOPERATIVES` in `apps/api/src/dev/demo-seed.ts`). The seed also fills each partner's joining date with the day of their first movement. Managers are not partners and have no capital; Marta (invited) has none yet.
+
+| Cooperative  | Partner       | Movements                                                           | Capital    |
+| ------------ | ------------- | ------------------------------------------------------------------- | ---------- |
+| San Isidro   | Ana Torres    | mandatory 600.00, voluntary 150.00                                  | 750.00 €   |
+| San Isidro   | Carlos Ruiz   | mandatory 600.00, voluntary 500.00, refund 100.00                   | 1,000.00 € |
+| San Isidro   | Javier López  | mandatory 600.00, voluntary 250.50, refund 100.00, correction -0.50 | 750.00 €   |
+| San Isidro   | Lucía Martín  | mandatory 600.00                                                    | 600.00 €   |
+| San Isidro   | Pedro Sanz    | mandatory 600.00                                                    | 600.00 €   |
+| San Isidro   | Marta Díaz    | none (zero capital and the explanatory message)                     | 0.00 €     |
+| La Esperanza | Rosa Navarro  | mandatory 900.00                                                    | 900.00 €   |
+| La Esperanza | Lucía Martín  | mandatory 900.00, voluntary 300.00                                  | 1,200.00 € |
+| La Esperanza | Isabel Romero | mandatory 900.00, voluntary 100.00                                  | 1,000.00 € |
+
+The capital movements are **additive and idempotent, also on cooperatives that already exist**: a partner who already has any movement is left alone, so running the seed again (or on the hosted demo, after updating) adds only what is missing and never duplicates.
+
 ## Cases they cover
 
 - **Cooperative selector (US-ACC-05)**: Lucía is in both, with a different profile in each.
 - **Permission-based navigation (US-ACC-06)**: one user of each predefined profile in each cooperative.
 - **Voting depends on being a member (BR-ACC-06)**: managers are hired staff and are not members.
 - **Suspended membership (BR-ACC-09)**: Pedro cannot sign in because he has no active cooperative.
+- **Member area (US-MEM-01..04)**: `socio@sanisidro.test` sees only their own record and movements (another member answers 404); `consejo@sanisidro.test` lists every partner's capital but cannot register (403); `gestor@sanisidro.test` and `admin@sanisidro.test` register movements; Javier's history has a refund and a correction.
 - **Activation from an invitation (US-ACC-01)**: the seed prints Marta's `multicooperativa://invitation?token=…` link. It only appears in the run that creates the cooperative, because the database stores the token hash and not the token.

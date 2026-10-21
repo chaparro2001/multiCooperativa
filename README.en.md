@@ -176,13 +176,13 @@ The status of each task is in [docs/03-implementation-plan.md](docs/03-implement
 - **Documents with semantic search**: repository with versions, signed URLs, text extraction, chunking, embeddings and pgvector filtered by cooperative.
 - **Assemblies**: call to meeting with agenda and census, voting with a unique constraint in the database, quorum and majority calculation, results and voting control for the board.
 - **Invoices and delivery notes**: third parties (suppliers and customers), purchase and sales delivery notes and invoices with exact decimal amounts, reconciliation with tolerance, statuses, payments and collections summary, idempotent due-dates process (hourly), camera capture and review, **AI extraction** (Gemini vision, validated with Zod and confirmed by a person) and **AI discrepancy explanation**.
-- **AI assistant**: chat with citations and links to resources, RAG over documents, read-only tools filtered by permissions (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`), conversations, hourly usage limit, an evaluation set of 20 questions and, for each cooperative's administrator, the choice of the local model in Settings (US-AI-07, ADR-014).
+- **Member area**: my data (partner number, joining date, profile, contact), my capital and my movements, read-only for the member (US-MEM-01, US-MEM-02); the governing board, manager and administrator consult every partner's capital with the cooperative's total (US-MEM-04), and the manager and administrator register contributions, refunds and corrections (US-MEM-03). Exact decimal amounts, immutable movements, capital never negative and double isolation (by cooperative and, with own scope, by member).
+- **AI assistant**: chat with citations and links to resources, RAG over documents, read-only tools filtered by permissions (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`, `my_contributions`), conversations, hourly usage limit, an evaluation set of 23 questions and, for each cooperative's administrator, the choice of the local model in Settings (US-AI-07, ADR-014).
 
 ## 6. Limitations and future work
 
 The following is **not implemented** in the delivery:
 
-- **Member area** (capital movements and read access). This is why the assistant's `my_contributions` tool does not exist either.
 - **Push notifications** (notifications module, device tokens, navigation from the notification).
 - **Sentry** in app and backend.
 - **E2E tests with Maestro**.
@@ -311,7 +311,7 @@ ADRs are immutable: a decision that changes produces a new ADR.
 - **Local quality gate**: Husky runs lint, typecheck and tests on pre-commit.
 - **Module boundaries**: custom ESLint rule (`tools/eslint/module-boundaries.js`, with its own tests) that forbids importing a backend module through any path other than its `index.ts` (ADR-002).
 - **Security**: deny by default in every use case, 404 for resources of another cooperative and 403 for modules without permission, Argon2id for passwords, JWT with rotating refresh, lockout after failed attempts, parameterized profiles x modules matrix tests, isolation tests, environment-configurable CORS and secrets outside the repository (only `.env.example`).
-- **AI**: evaluation set of 20 questions for the assistant (`ai:eval`).
+- **AI**: evaluation set of 23 questions for the assistant (`ai:eval`).
 
 ## 12. AI-assisted development
 
