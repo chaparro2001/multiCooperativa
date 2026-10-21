@@ -1,8 +1,8 @@
 import type { DocumentSearchHit, DocumentSummary } from '@multicooperativa/contracts';
 import { router, Stack } from 'expo-router';
-import { useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, SectionList, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { groupByCategory } from '@/features/documents/grouping';
@@ -10,9 +10,9 @@ import { useDocumentList, useDocumentSearch } from '@/features/documents/queries
 import { formatDay } from '@/i18n/format';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
+import { Card, List, SegmentedButtons, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { colors } from '@/ui/theme';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 type Mode = 'title' | 'content';
@@ -23,9 +23,19 @@ export default function DocumentListScreen() {
   const { canManage } = useModuleAccess('documents');
   const [mode, setMode] = useState<Mode>('title');
   const [text, setText] = useState('');
+  const { colors } = useTheme();
+  const modeButtons = useMemo(
+    () =>
+      (['title', 'content'] as const).map((value) => ({
+        value,
+        label: t(`documents.list.mode.${value}`),
+        testID: `mode-${value}`,
+      })),
+    [t],
+  );
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <Stack.Screen
         options={{
           headerRight: canManage
@@ -60,22 +70,11 @@ export default function DocumentListScreen() {
           returnKeyType="search"
           testID="document-search"
         />
-        <View style={styles.modes} accessibilityRole="tablist">
-          {(['title', 'content'] as const).map((value) => (
-            <Pressable
-              key={value}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: mode === value }}
-              onPress={() => setMode(value)}
-              style={[styles.mode, mode === value && styles.modeSelected]}
-              testID={`mode-${value}`}
-            >
-              <Text style={[styles.modeText, mode === value && styles.modeTextSelected]}>
-                {t(`documents.list.mode.${value}`)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <SegmentedButtons
+          value={mode}
+          onValueChange={(value) => setMode(value as Mode)}
+          buttons={modeButtons}
+        />
       </View>
       {mode === 'title' ? (
         <ByTitle search={text} canManage={canManage} />
@@ -86,9 +85,21 @@ export default function DocumentListScreen() {
   );
 }
 
+const keyById = (item: DocumentSummary) => item.id;
+const keyByHit = (hit: DocumentSearchHit, i: number) => `${hit.documentId}-${hit.page}-${i}`;
+
+const renderSectionHeader = ({ section }: { section: { title: string } }) => (
+  <List.Subheader style={styles.section}>{section.title}</List.Subheader>
+);
+
 function ByTitle({ search, canManage }: { search: string; canManage: boolean }) {
   const { t } = useTranslation();
   const list = useDocumentList(search);
+  const { colors } = useTheme();
+  const renderItem = useCallback(
+    ({ item }: { item: DocumentSummary }) => <DocumentRow item={item} canManage={canManage} />,
+    [canManage],
+  );
   if (list.isPending) return <Loading />;
   if (list.isError) return <ErrorText>{messageFor(list.error)}</ErrorText>;
 
@@ -96,55 +107,76 @@ function ByTitle({ search, canManage }: { search: string; canManage: boolean }) 
     <SectionList
       testID="document-list"
       sections={groupByCategory(list.data.items)}
-      keyExtractor={(item) => item.id}
+      keyExtractor={keyById}
       contentContainerStyle={styles.list}
       stickySectionHeadersEnabled={false}
       ListEmptyComponent={
-        <Text style={styles.empty}>
+        <Text variant="bodyMedium" style={[styles.empty, { color: colors.onSurfaceVariant }]}>
           {search ? t('documents.list.noMatch') : t('documents.list.empty')}
         </Text>
       }
-      renderSectionHeader={({ section }) => <Text style={styles.section}>{section.title}</Text>}
-      renderItem={({ item }) => <DocumentRow item={item} canManage={canManage} />}
+      renderSectionHeader={renderSectionHeader}
+      renderItem={renderItem}
     />
   );
 }
 
-function DocumentRow({ item, canManage }: { item: DocumentSummary; canManage: boolean }) {
+const DocumentRow = memo(function DocumentRow({
+  item,
+  canManage,
+}: {
+  item: DocumentSummary;
+  canManage: boolean;
+}) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
+  const open = useCallback(() => router.push(`/documents/${item.id}`), [item.id]);
   return (
-    <Pressable
+    <Card
+      mode="contained"
       accessibilityRole="button"
-      onPress={() => router.push(`/documents/${item.id}`)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      onPress={open}
       testID={`document-${item.title}`}
     >
-      <Text style={styles.title}>{item.title}</Text>
-      <View style={styles.meta}>
-        <Text style={styles.detail}>{formatDay(item.documentDate)}</Text>
-        {item.status === 'withdrawn' && (
-          <Badge label={t('enums.documentStatus.withdrawn')} tone="danger" />
-        )}
-        {canManage && item.indexingStatus && item.indexingStatus !== 'indexed' && (
-          <Badge
-            label={
-              item.indexingStatus === 'pending'
-                ? t('documents.list.indexing')
-                : t('documents.list.notAvailableForAssistant')
-            }
-            tone="warning"
-          />
-        )}
-      </View>
-    </Pressable>
+      <Card.Content style={styles.content}>
+        <Text variant="titleMedium">{item.title}</Text>
+        <View style={styles.meta}>
+          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+            {formatDay(item.documentDate)}
+          </Text>
+          {item.status === 'withdrawn' ? (
+            <Badge label={t('enums.documentStatus.withdrawn')} tone="danger" />
+          ) : null}
+          {canManage && item.indexingStatus && item.indexingStatus !== 'indexed' ? (
+            <Badge
+              label={
+                item.indexingStatus === 'pending'
+                  ? t('documents.list.indexing')
+                  : t('documents.list.notAvailableForAssistant')
+              }
+              tone="warning"
+            />
+          ) : null}
+        </View>
+      </Card.Content>
+    </Card>
   );
-}
+});
 
 function ByContent({ query }: { query: string }) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const search = useDocumentSearch(query);
+  const renderItem = useCallback(
+    ({ item }: { item: DocumentSearchHit }) => <HitRow hit={item} />,
+    [],
+  );
   if (query.trim().length < 3) {
-    return <Text style={styles.empty}>{t('documents.list.minChars', { min: 3 })}</Text>;
+    return (
+      <Text variant="bodyMedium" style={[styles.empty, { color: colors.onSurfaceVariant }]}>
+        {t('documents.list.minChars', { min: 3 })}
+      </Text>
+    );
   }
   if (search.isPending) return <Loading />;
   if (search.isError) return <ErrorText>{messageFor(search.error)}</ErrorText>;
@@ -153,53 +185,41 @@ function ByContent({ query }: { query: string }) {
     <FlatList
       testID="content-results"
       data={search.data.items}
-      keyExtractor={(hit, i) => `${hit.documentId}-${hit.page}-${i}`}
+      keyExtractor={keyByHit}
       contentContainerStyle={styles.list}
-      ListEmptyComponent={<Text style={styles.empty}>{t('documents.list.noResults')}</Text>}
-      renderItem={({ item }) => <HitRow hit={item} />}
+      ListEmptyComponent={
+        <Text variant="bodyMedium" style={[styles.empty, { color: colors.onSurfaceVariant }]}>
+          {t('documents.list.noResults')}
+        </Text>
+      }
+      renderItem={renderItem}
     />
   );
 }
 
-function HitRow({ hit }: { hit: DocumentSearchHit }) {
+const HitRow = memo(function HitRow({ hit }: { hit: DocumentSearchHit }) {
   const { t } = useTranslation();
+  const open = useCallback(() => router.push(`/documents/${hit.documentId}`), [hit.documentId]);
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => router.push(`/documents/${hit.documentId}`)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-    >
-      <Text style={styles.title}>
-        {t('documents.list.hitTitle', { title: hit.title, page: hit.page })}
-      </Text>
-      <Text style={styles.excerpt} numberOfLines={4}>
-        {hit.excerpt}
-      </Text>
-    </Pressable>
+    <Card mode="contained" accessibilityRole="button" onPress={open}>
+      <Card.Content style={styles.content}>
+        <Text variant="titleMedium">
+          {t('documents.list.hitTitle', { title: hit.title, page: hit.page })}
+        </Text>
+        <Text variant="bodyMedium" numberOfLines={4}>
+          {hit.excerpt}
+        </Text>
+      </Card.Content>
+    </Card>
   );
-}
+});
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff' },
+  screen: { flex: 1 },
   search: { padding: 16, paddingBottom: 8, gap: 10 },
-  modes: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 10, padding: 3 },
-  mode: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  modeSelected: { backgroundColor: '#fff' },
-  modeText: { color: colors.muted, fontWeight: '500' },
-  modeTextSelected: { color: colors.text },
   list: { padding: 16, paddingTop: 0, gap: 10 },
-  section: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.muted,
-    textTransform: 'uppercase',
-    marginTop: 12,
-  },
-  empty: { color: colors.muted, fontSize: 15, padding: 16, textAlign: 'center' },
-  row: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 6 },
-  pressed: { opacity: 0.7 },
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
+  section: { paddingHorizontal: 0, marginTop: 4 },
+  empty: { padding: 16, textAlign: 'center' },
+  content: { gap: 6 },
   meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
-  detail: { fontSize: 13, color: colors.muted },
-  excerpt: { fontSize: 14, color: colors.text, lineHeight: 20 },
 });
