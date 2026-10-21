@@ -177,7 +177,7 @@ services:
       ASSISTANT_OLLAMA_TIMEOUT_MS: ${ASSISTANT_OLLAMA_TIMEOUT_MS:-90000}
       # No email provider (ADR-016): inviting returns the activation link to the administrator, who passes it on.
       INVITATION_DELIVERY: link
-      WEB_APP_URL: ${WEB_APP_URL:-https://chaparro2001.github.io/multiCooperativa}
+      WEB_APP_URL: ${WEB_APP_URL:-https://cooperativa.chaparro2001.com}
       # The image caps the heap at 320 MB for Render's 512 MB; this server has room.
       NODE_OPTIONS: --max-old-space-size=768
       # .env.server also holds the tunnel token: the API must not receive it.

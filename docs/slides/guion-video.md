@@ -28,7 +28,7 @@ Decir: el socio está poco informado (convocatorias en papel, documentos sin loc
 
 ### 1:30-2:15 Login como socio
 
-Pantalla: demo web (URL https://chaparro2001.github.io/multiCooperativa/).
+Pantalla: demo web (URL https://cooperativa.chaparro2001.com/).
 Hacer: login con `socio@sanisidro.test`. Mostrar que la navegación solo ofrece lo que el perfil permite.
 Decir: el backend decide los permisos; la app solo oculta.
 

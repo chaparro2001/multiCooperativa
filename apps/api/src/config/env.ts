@@ -95,7 +95,7 @@ const envSchema = z
       .pipe(z.array(z.url({ protocol: /^https?$/ }))),
     /** How invitation links reach the invitee: printed to the API console (development) or returned to the inviting administrator (ADR-016). In production `console` makes inviting answer 503. */
     INVITATION_DELIVERY: z.enum(['console', 'link']).default('console'),
-    /** Public URL of the web app (with its base path); invitation links are `${WEB_APP_URL}/invitation?token=…`. Required with INVITATION_DELIVERY=link. */
+    /** Public URL of the web app (origin or origin plus path); invitation links are `${WEB_APP_URL}/invitation?token=…`. Required with INVITATION_DELIVERY=link. */
     WEB_APP_URL: z
       .url({ protocol: /^https?$/ })
       .transform((value) => value.replace(/\/+$/, ''))

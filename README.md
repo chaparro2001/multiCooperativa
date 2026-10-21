@@ -10,7 +10,7 @@ Entrega: 26/10/2026 · Cierre de funcionalidad: 22/10/2026.
 
 | Entregable            | Enlace                                                                                                                                                                      |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Demo (web)            | https://chaparro2001.github.io/multiCooperativa/                                                                                                                            |
+| Demo (web)            | https://cooperativa.chaparro2001.com/                                                                                                                                       |
 | API                   | https://api-cooperativa.chaparro2001.com                                                                                                                                    |
 | Presentación (slides) | [docs/slides/multicooperativa-tfm.pptx](docs/slides/multicooperativa-tfm.pptx) ([PDF](docs/slides/multicooperativa-tfm.pdf), [guion del vídeo](docs/slides/guion-video.md)) |
 | Vídeo de la demo      | <!-- TODO: URL del vídeo -->                                                                                                                                                |
@@ -231,7 +231,7 @@ Resumen de [docs/04-deployment.md](docs/04-deployment.md). Coste de 0 EUR y sin 
 
 | Pieza            | Servicio                                                                                                                                                                   |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| App web          | GitHub Pages (export web de Expo, despliegue por Actions)                                                                                                                  |
+| App web          | GitHub Pages en `cooperativa.chaparro2001.com` (export web de Expo, Actions)                                                                                               |
 | API              | Contenedor Docker en un servidor propio, expuesto con Cloudflare Tunnel (`api-cooperativa.chaparro2001.com`; enlaces de ficheros por `files-cooperativa.chaparro2001.com`) |
 | Base de datos    | PostgreSQL 17 con pgvector (contenedor)                                                                                                                                    |
 | Ficheros         | RustFS, compatible con S3 (contenedor)                                                                                                                                     |

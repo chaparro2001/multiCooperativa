@@ -49,12 +49,15 @@ jobs:
           EXPO_PUBLIC_API_URL: ${{ vars.API_URL }}
         run: pnpm exec expo export --platform web --output-dir dist
 
-      # Pages answers unknown paths with 404.html: serving the app there keeps deep links working.
+      # Served at the root of cooperativa.chaparro2001.com (ADR-017). Pages answers unknown paths with
+      # 404.html: serving the app there keeps deep links working.
       - name: SPA fallback and no Jekyll
         working-directory: apps/mobile/dist
         run: |
           cp index.html 404.html
           touch .nojekyll
+          # Custom domain (ADR-017); also kept in Settings > Pages. Harmless with Actions deploys.
+          echo cooperativa.chaparro2001.com > CNAME
 
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:

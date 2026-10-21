@@ -55,9 +55,9 @@ services:
         value: gemini-embedding-2
       - key: ASSISTANT_MESSAGE_LIMIT_PER_HOUR
         value: '30'
-      # Browser origins allowed by CORS: the GitHub Pages site (origin only, no path).
+      # Browser origins allowed by CORS: the web app (origin only, no path); github.io kept during the move to the custom domain (ADR-017).
       - key: CORS_ORIGINS
-        value: https://chaparro2001.github.io
+        value: https://cooperativa.chaparro2001.com,https://chaparro2001.github.io
       # Bearer secret of POST /jobs/due-dates; the same value goes in the GitHub secret JOBS_TOKEN.
       - key: JOBS_TOKEN
         sync: false

@@ -10,7 +10,7 @@ Delivery: 26/10/2026 · Feature freeze: 22/10/2026.
 
 | Deliverable   | Link                                                                                                                                                                                 |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Demo (web)    | https://chaparro2001.github.io/multiCooperativa/                                                                                                                                     |
+| Demo (web)    | https://cooperativa.chaparro2001.com/                                                                                                                                                |
 | API           | https://api-cooperativa.chaparro2001.com                                                                                                                                             |
 | Slides        | [docs/slides/multicooperativa-tfm.pptx](docs/slides/multicooperativa-tfm.pptx) ([PDF](docs/slides/multicooperativa-tfm.pdf), [video script, in Spanish](docs/slides/guion-video.md)) |
 | Demo video    | <!-- TODO: video URL -->                                                                                                                                                             |
@@ -231,7 +231,7 @@ Summary of [docs/04-deployment.md](docs/04-deployment.md). Cost: 0 EUR, no credi
 
 | Piece         | Service                                                                                                |
 | ------------- | ------------------------------------------------------------------------------------------------------ |
-| Web app       | GitHub Pages (Expo web export, deployed by Actions)                                                    |
+| Web app       | GitHub Pages at `cooperativa.chaparro2001.com` (Expo web export, Actions)                              |
 | API           | Docker container on a home server, exposed with Cloudflare Tunnel (`api-cooperativa.chaparro2001.com`) |
 | Database      | PostgreSQL 17 with pgvector (container)                                                                |
 | Files         | RustFS, S3-compatible (container)                                                                      |
