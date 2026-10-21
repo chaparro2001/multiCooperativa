@@ -446,7 +446,7 @@
     "placeholder": "Escribe tu pregunta",
     "send": "Enviar",
     "thinking": "Pensando…",
-    "newConversation": "Nueva",
+    "newConversation": "Nueva conversación",
     "history": {
       "open": "Historial",
       "title": "Historial",
@@ -471,7 +471,7 @@
   "announcements": {
     "pinned": "Fijado",
     "list": {
-      "new": "Nuevo",
+      "new": "Nuevo comunicado",
       "empty": "Todavía no hay comunicados.",
       "unreadLabel": "{{title}}, no leído",
       "createdOn": "Creado el {{date}}",
@@ -512,7 +512,7 @@
       "votes_other": "{{count}} votos"
     },
     "list": {
-      "new": "Nueva",
+      "new": "Nueva asamblea",
       "empty": "No hay asambleas convocadas.",
       "openVotings_one": "{{count}} votación abierta",
       "openVotings_other": "{{count}} votaciones abiertas",
@@ -601,7 +601,7 @@
   },
   "documents": {
     "list": {
-      "upload": "Subir",
+      "upload": "Subir documento",
       "searchByTitle": "Buscar por título",
       "searchByContent": "Pregunta o tema",
       "placeholderTitle": "Estatutos, acta…",
@@ -647,7 +647,6 @@
   },
   "invoicing": {
     "home": {
-      "thirdParties": "Terceros",
       "registerInvoice": "Registrar factura",
       "registerNote": "Registrar albarán",
       "scan": "Escanear",
@@ -715,7 +714,9 @@
       "title": "Proveedores y clientes",
       "record": "Ficha",
       "edit": "Proveedor o cliente",
-      "new": "Nuevo",
+      "new": "Nuevo proveedor o cliente",
+      "newSupplier": "Nuevo proveedor",
+      "newCustomer": "Nuevo cliente",
       "search": "Buscar por nombre o NIF",
       "empty": "No hay proveedores ni clientes.",
       "emptySupplier": "No hay proveedores.",
@@ -876,7 +877,7 @@
       "capital": "Mi capital",
       "capitalTotal": "Capital aportado",
       "movements": "Movimientos",
-      "allMembers": "Socios",
+      "allMembers": "Ver socios",
       "notPartner": "No eres socio de la cooperativa, así que no tienes capital aportado."
     },
     "movements": {

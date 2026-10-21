@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useBrandColor } from '@/branding/brand';
@@ -27,7 +28,7 @@ export function Checkbox({
       testID={testID}
     >
       <View style={[styles.box, checked && { backgroundColor: brand, borderColor: brand }]}>
-        {checked && <Text style={styles.tick}>✓</Text>}
+        {checked && <Check size={16} strokeWidth={3} color="#fff" aria-hidden />}
       </View>
       <Text style={styles.label}>{label}</Text>
     </Pressable>
@@ -46,6 +47,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#fff',
   },
-  tick: { color: '#fff', fontSize: 14, fontWeight: '700' },
   label: { flex: 1, fontSize: 15, color: colors.text },
 });

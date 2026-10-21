@@ -1,3 +1,16 @@
+import {
+  Bot,
+  FileText,
+  Handshake,
+  Megaphone,
+  Package,
+  Receipt,
+  Truck,
+  UserRound,
+  Users,
+  Vote,
+  type LucideIcon,
+} from 'lucide-react-native';
 import type { Module, MyPermissionsResponse } from '@multicooperativa/contracts';
 
 export interface ModuleEntry {
@@ -11,8 +24,8 @@ export interface ModuleEntry {
     | 'invoicing.home.notes'
     | 'invoicing.thirdParties.filter.supplier'
     | 'invoicing.thirdParties.filter.customer';
-  /** Shown in the home grid; decorative, screen readers read the title (`enums.module.<module>`). */
-  emoji: string;
+  /** Shown in the home grid; decorative icon, screen readers read the title (`enums.module.<module>`). */
+  icon: LucideIcon;
   /** Screen of the module inside the cooperative. */
   route: `/${string}`;
   /** Not built yet: the home shows a "coming soon" badge and the screen a placeholder. */
@@ -21,22 +34,22 @@ export interface ModuleEntry {
 
 /** Order of the home grid. */
 export const MODULE_ENTRIES: readonly ModuleEntry[] = [
-  { id: 'announcements', module: 'announcements', emoji: '📢', route: '/announcements' },
-  { id: 'assemblies', module: 'assemblies', emoji: '🗳️', route: '/assemblies' },
-  { id: 'documents', module: 'documents', emoji: '📄', route: '/documents' },
+  { id: 'announcements', module: 'announcements', icon: Megaphone, route: '/announcements' },
+  { id: 'assemblies', module: 'assemblies', icon: Vote, route: '/assemblies' },
+  { id: 'documents', module: 'documents', icon: FileText, route: '/documents' },
   // Invoices and delivery notes share one screen fixed to a kind by the query param (BR-INV-01: same permission).
   {
     id: 'invoices',
     module: 'invoicing',
     titleKey: 'invoicing.home.invoices',
-    emoji: '🧾',
+    icon: Receipt,
     route: '/invoices?kind=invoice',
   },
   {
     id: 'delivery-notes',
     module: 'invoicing',
     titleKey: 'invoicing.home.notes',
-    emoji: '📦',
+    icon: Package,
     route: '/invoices?kind=delivery_note',
   },
   // Suppliers and customers are master data of the invoicing module (BR-INV-01): same permission.
@@ -45,20 +58,27 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
     id: 'suppliers',
     module: 'invoicing',
     titleKey: 'invoicing.thirdParties.filter.supplier',
-    emoji: '🚚',
+    icon: Truck,
     route: '/invoices/third-parties?type=supplier',
   },
   {
     id: 'customers',
     module: 'invoicing',
     titleKey: 'invoicing.thirdParties.filter.customer',
-    emoji: '🤝',
+    icon: Handshake,
     route: '/invoices/third-parties?type=customer',
   },
-  { id: 'member-area', module: 'member-area', emoji: '👤', route: '/member-area' },
-  { id: 'assistant', module: 'assistant', emoji: '🤖', route: '/assistant' },
-  { id: 'users', module: 'users', emoji: '👥', route: '/members' },
+  { id: 'member-area', module: 'member-area', icon: UserRound, route: '/member-area' },
+  { id: 'assistant', module: 'assistant', icon: Bot, route: '/assistant' },
+  { id: 'users', module: 'users', icon: Users, route: '/members' },
 ];
+
+/** Icon of a home tile, shared by the places that point at the same screen (single source). */
+export function moduleIcon(id: string): LucideIcon {
+  const entry = MODULE_ENTRIES.find((e) => e.id === id);
+  if (!entry) throw new Error(`Unknown module entry: ${id}`);
+  return entry.icon;
+}
 
 export interface VisibleModule extends ModuleEntry {
   /** "Manage" level: the screen shows create, edit and delete actions (US-ACC-06). */

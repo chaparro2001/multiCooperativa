@@ -1,3 +1,4 @@
+import { Handshake, Package, Receipt, Truck } from 'lucide-react-native';
 import { describe, expect, it } from 'vitest';
 
 import { i18n } from '../i18n';
@@ -51,7 +52,7 @@ describe('navigation by permissions (US-ACC-06)', () => {
         id: 'invoices',
         module: 'invoicing',
         titleKey: 'invoicing.home.invoices',
-        emoji: '🧾',
+        icon: Receipt,
         route: '/invoices?kind=invoice',
         canManage: true,
       },
@@ -59,7 +60,7 @@ describe('navigation by permissions (US-ACC-06)', () => {
         id: 'delivery-notes',
         module: 'invoicing',
         titleKey: 'invoicing.home.notes',
-        emoji: '📦',
+        icon: Package,
         route: '/invoices?kind=delivery_note',
         canManage: true,
       },
@@ -67,7 +68,7 @@ describe('navigation by permissions (US-ACC-06)', () => {
         id: 'suppliers',
         module: 'invoicing',
         titleKey: 'invoicing.thirdParties.filter.supplier',
-        emoji: '🚚',
+        icon: Truck,
         route: '/invoices/third-parties?type=supplier',
         canManage: true,
       },
@@ -75,7 +76,7 @@ describe('navigation by permissions (US-ACC-06)', () => {
         id: 'customers',
         module: 'invoicing',
         titleKey: 'invoicing.thirdParties.filter.customer',
-        emoji: '🤝',
+        icon: Handshake,
         route: '/invoices/third-parties?type=customer',
         canManage: true,
       },
