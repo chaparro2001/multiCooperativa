@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { contrastWithWhite, MIN_CONTRAST, PRESET_COLORS } from '@/features/branding/brand-color';
+
 import { colors, createPaperTheme } from './theme';
 
 // Paper pulls in react-native, which does not load in Node: only the base tokens are needed here.
@@ -34,4 +36,16 @@ describe('Paper theme from the brand colour (ADR-018, ADR-020)', () => {
       createPaperTheme('#1a4f9c').colors.primary,
     );
   });
+
+  it.each([...PRESET_COLORS, '#1a4f9c'])(
+    'paints selected chips and segmented options in the brand %s with readable text (ADR-018)',
+    (brand) => {
+      const theme = createPaperTheme(brand);
+      expect(theme.colors.secondaryContainer).toBe(brand);
+      expect(theme.colors.onSecondaryContainer).toBe('#ffffff');
+      expect(contrastWithWhite(theme.colors.secondaryContainer)).toBeGreaterThanOrEqual(
+        MIN_CONTRAST,
+      );
+    },
+  );
 });

@@ -45,8 +45,10 @@ export function createPaperTheme(brandColor: string | null = null): MD3Theme {
       onPrimaryContainer: mix(brand, BLACK, 0.6),
       secondary,
       onSecondary: WHITE,
-      secondaryContainer: mix(secondary, WHITE, 0.85),
-      onSecondaryContainer: mix(secondary, BLACK, 0.6),
+      // Paper paints selected chips and segmented options with `secondaryContainer`: ADR-018 wants
+      // them in the brand, so it is the brand itself with white text (4.5:1 is guaranteed).
+      secondaryContainer: brand,
+      onSecondaryContainer: WHITE,
       tertiary: secondary,
       onTertiary: WHITE,
       tertiaryContainer: mix(secondary, WHITE, 0.85),
