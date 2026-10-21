@@ -66,21 +66,21 @@ Permissions are defined by module, level and scope (ADR-004). The backend decide
 
 ## 2. Tech stack
 
-| Layer            | Choice                                                                                                                      |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Mobile app       | Expo + React Native + TypeScript, Expo Router                                                                               |
-| Client data      | TanStack Query; tokens in the device's secure storage                                                                       |
-| User-facing text | i18next + react-i18next + expo-localization; `es` default (ADR-008)                                                         |
-| Contracts        | Shared package with Zod schemas (validate on the server and type the app)                                                   |
-| Backend          | Node + TypeScript, modular monolith with Clean Architecture and internal events                                             |
-| API              | REST, JWT authentication, stable error codes                                                                                |
-| Persistence      | PostgreSQL + Prisma; pgvector for RAG                                                                                       |
-| Language model   | Assistant: local `qwen3:8b` in Ollama on the home server (ADR-013); vision and explanations: Gemini (ADR-009); behind ports |
-| Embeddings       | Local `bge-m3` with Ollama (ADR-006); Gemini embeddings in the hosted demo (ADR-010)                                        |
-| Files            | S3-compatible storage with expiring signed URLs (ADR-005); RustFS locally                                                   |
-| Tests            | Vitest and React Native Testing Library                                                                                     |
-| Quality          | ESLint, Prettier, Husky (pre-commit), custom module-boundaries rule                                                         |
-| Delivery         | GitHub Actions; demo with the API on a home server (Cloudflare Tunnel) and GitHub Pages (web)                               |
+| Layer            | Choice                                                                                                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mobile app       | Expo + React Native + TypeScript, Expo Router                                                                                                                                          |
+| Client data      | TanStack Query; tokens in the device's secure storage                                                                                                                                  |
+| User-facing text | i18next + react-i18next + expo-localization; `es` default (ADR-008)                                                                                                                    |
+| Contracts        | Shared package with Zod schemas (validate on the server and type the app)                                                                                                              |
+| Backend          | Node + TypeScript, modular monolith with Clean Architecture and internal events                                                                                                        |
+| API              | REST, JWT authentication, stable error codes                                                                                                                                           |
+| Persistence      | PostgreSQL + Prisma; pgvector for RAG                                                                                                                                                  |
+| Language model   | Assistant: local Ollama model on the home server, `qwen3:4b-instruct` by default and `qwen3:8b` selectable (ADR-013, ADR-015); vision and explanations: Gemini (ADR-009); behind ports |
+| Embeddings       | Local `bge-m3` with Ollama (ADR-006); Gemini embeddings in the hosted demo (ADR-010)                                                                                                   |
+| Files            | S3-compatible storage with expiring signed URLs (ADR-005); RustFS locally                                                                                                              |
+| Tests            | Vitest and React Native Testing Library                                                                                                                                                |
+| Quality          | ESLint, Prettier, Husky (pre-commit), custom module-boundaries rule                                                                                                                    |
+| Delivery         | GitHub Actions; demo with the API on a home server (Cloudflare Tunnel) and GitHub Pages (web)                                                                                          |
 
 ## 3. Local setup and run
 
@@ -119,7 +119,7 @@ To enable the assistant (with the default provider), invoice extraction and disc
 
 **Model per cooperative (ADR-014)**: with the local provider, each cooperative's administrator chooses the assistant's model in Settings among `ASSISTANT_OLLAMA_MODELS` (only models installed in Ollama are offered; the app never downloads one).
 
-**Assistant on a local model (ADR-013)**: with `ASSISTANT_LLM_PROVIDER=ollama` the assistant answers with an Ollama model (`ASSISTANT_OLLAMA_MODEL`, default `qwen3:8b`; `pnpm ai:pull:chat` downloads it), uses no Gemini quota and sends no question to the cloud. This is what the home-server demo uses. Gemini stays for invoice extraction (vision) and discrepancy explanations. With the local model a question takes about 7 s on average on a 12-core CPU (p90 26 s) and it passes 19 of the 22 evaluation questions.
+**Assistant on a local model (ADR-013)**: with `ASSISTANT_LLM_PROVIDER=ollama` the assistant answers with an Ollama model (`ASSISTANT_OLLAMA_MODEL`, default `qwen3:8b`; `pnpm ai:pull:chat` downloads it), uses no Gemini quota and sends no question to the cloud. This is what the home-server demo uses, with `qwen3:4b-instruct` as the default model (user-reported as acceptably fast on that CPU; not measured with the evaluation set, ADR-015) and `qwen3:8b` selectable per cooperative in Settings (ADR-014). Gemini stays for invoice extraction (vision) and discrepancy explanations. With the local model a question takes about 7 s on average on a 12-core CPU (p90 26 s) and it passes 19 of the 22 evaluation questions (benchmark of `qwen3:8b` on the development Mac; `qwen3:4b-instruct` passed 18 of 22 in 5.0 s on average).
 
 Without the Gemini key (and with the `gemini` provider) the assistant answers 503 and **the rest of the app works normally**. The AI features that use Gemini (invoice extraction, discrepancy explanation) are not available either. Local embeddings are served by Ollama, not Gemini.
 
@@ -236,7 +236,7 @@ Summary of [docs/04-deployment.md](docs/04-deployment.md). Cost: 0 EUR, no credi
 | Database      | PostgreSQL 17 with pgvector (container)                                                                |
 | Files         | RustFS, S3-compatible (container)                                                                      |
 | Embeddings    | Ollama with bge-m3 (container, ADR-006)                                                                |
-| Assistant     | Ollama with `qwen3:8b` on the server (ADR-013)                                                         |
+| Assistant     | Ollama with `qwen3:4b-instruct` (default) or `qwen3:8b` on the server (ADR-013, ADR-015)               |
 | Vision        | Gemini API (free key): invoice extraction and explanations                                             |
 | Scheduled job | GitHub Actions cron every hour (due dates)                                                             |
 

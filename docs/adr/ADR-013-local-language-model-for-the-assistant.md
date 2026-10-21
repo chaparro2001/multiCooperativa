@@ -2,7 +2,7 @@
 
 **Date**: 2026-10-21
 
-**Status**: Accepted
+**Status**: Accepted (default model of the hosted demo amended by ADR-015)
 
 ## Context
 
