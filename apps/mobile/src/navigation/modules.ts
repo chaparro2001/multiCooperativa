@@ -18,7 +18,7 @@ export const MODULE_ENTRIES: readonly ModuleEntry[] = [
   { module: 'invoicing', emoji: '🧾', route: '/invoices' },
   { module: 'member-area', emoji: '👤', route: '/member-area', comingSoon: true },
   { module: 'assistant', emoji: '🤖', route: '/assistant' },
-  { module: 'users', emoji: '👥', route: '/members', comingSoon: true },
+  { module: 'users', emoji: '👥', route: '/members' },
 ];
 
 export interface VisibleModule extends ModuleEntry {

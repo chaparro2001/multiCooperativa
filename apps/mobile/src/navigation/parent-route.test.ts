@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parentRoute } from './parent-route';
 
-describe('parentRoute (US-INV-06)', () => {
+describe('parentRoute (US-INV-06, US-ACC-08)', () => {
   it.each([
     ['/', null],
     ['/invoices', '/'],
@@ -15,6 +15,9 @@ describe('parentRoute (US-INV-06)', () => {
     ['/announcements/abc', '/announcements'],
     ['/assemblies/vote', '/assemblies'],
     ['/settings', '/'],
+    ['/members', '/'],
+    ['/members/abc', '/members'],
+    ['/members/invite', '/members'],
   ])('%s -> %s', (path, parent) => {
     expect(parentRoute(path)).toBe(parent);
   });
