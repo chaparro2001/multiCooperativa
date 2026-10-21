@@ -70,6 +70,47 @@ export const SAMPLE_ANNOUNCEMENTS: SampleAnnouncement[] = [
   },
 ];
 
+const addDays = (day: string, days: number): string => {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+/**
+ * Fictitious invoicing records for the hosted demo (BR-INV-16): an invoice due in 5 days and a
+ * delivery note pending for 34 days, relative to `today` (YYYY-MM-DD) so the badges of the home
+ * show something whenever the seed runs. Identified by their numbers, so a second run adds nothing.
+ */
+export function sampleInvoicing(today: string) {
+  return {
+    supplier: {
+      nif: 'B12345674',
+      name: 'Fertilizantes del Sur, S.L.',
+      isSupplier: true,
+      isCustomer: false,
+      email: null,
+      phone: null,
+    },
+    note: {
+      operation: 'purchase' as const,
+      number: 'DEMO-A-001',
+      date: addDays(today, -34),
+      lines: [{ concept: 'Abono NPK 15-15-15', quantity: '1200', unit: 'kg' }],
+    },
+    invoice: {
+      operation: 'purchase' as const,
+      number: 'DEMO-F-001',
+      issueDate: addDays(today, -25),
+      dueDate: addDays(today, 5),
+      base: '1000.00',
+      vatRate: '21',
+      total: '1210.00',
+      lines: [],
+      deliveryNoteIds: [] as string[],
+    },
+  };
+}
+
 const WIDTH = 88;
 const LINES_PER_PAGE = 46;
 

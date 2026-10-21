@@ -7,19 +7,32 @@
  *   API_URL=https://multicooperativa-api.onrender.com SEED_PASSWORD='…' \
  *     pnpm --filter @multicooperativa/api db:seed:content
  *
- * Idempotent: documents and announcements whose title already exists are skipped. A cold API
+ * Idempotent: documents and announcements whose title already exists are skipped, and so are the
+ * sample supplier, delivery note and invoice (by NIF and number). A cold API
  * takes about a minute to answer the first request. Vectors of different providers are not
  * comparable: never index here and search against another environment.
  */
 import {
   announcementSummarySchema,
   authTokensSchema,
+  deliveryNoteSchema,
   documentSummarySchema,
+  invoiceSchema,
+  listDeliveryNotesResponseSchema,
+  listInvoicesResponseSchema,
+  listThirdPartiesResponseSchema,
   meResponseSchema,
+  thirdPartySchema,
 } from '@multicooperativa/contracts';
 import { z } from 'zod';
 
-import { buildSamplePdf, SAMPLE_ANNOUNCEMENTS, SAMPLE_DOCUMENTS } from '../src/dev/sample-content';
+import {
+  buildSamplePdf,
+  SAMPLE_ANNOUNCEMENTS,
+  SAMPLE_DOCUMENTS,
+  sampleInvoicing,
+} from '../src/dev/sample-content';
+import { todayInSpain } from '../src/modules/invoicing';
 
 const ADMIN_EMAIL = 'admin@sanisidro.test';
 const DEMO_PASSWORD = 'demo-cooperativa-2026';
@@ -123,6 +136,65 @@ for (const sample of SAMPLE_ANNOUNCEMENTS) {
     accessToken,
   );
   console.log(`Published: ${sample.title}`);
+}
+
+// Fictitious invoicing records so the home badges show something (BR-INV-16): one invoice due in
+// a few days and one delivery note pending for more than 30 days. Dates are relative to today.
+const invoicing = sampleInvoicing(todayInSpain());
+const suppliers = await call(
+  listThirdPartiesResponseSchema,
+  `${base}/third-parties`,
+  {},
+  accessToken,
+);
+let supplier = suppliers.items.find((party) => party.nif === invoicing.supplier.nif);
+if (!supplier) {
+  supplier = await call(
+    thirdPartySchema,
+    `${base}/third-parties`,
+    { method: 'POST', body: JSON.stringify(invoicing.supplier) },
+    accessToken,
+  );
+  console.log(`Third party created: ${supplier.name}`);
+}
+const multipart = (record: object) => {
+  const form = new FormData();
+  form.append('data', JSON.stringify(record));
+  return form;
+};
+const existingNotes = await call(
+  listDeliveryNotesResponseSchema,
+  `${base}/delivery-notes`,
+  {},
+  accessToken,
+);
+if (existingNotes.items.some((note) => note.number === invoicing.note.number)) {
+  console.log(`Delivery note already there: ${invoicing.note.number}`);
+} else {
+  await call(
+    deliveryNoteSchema,
+    `${base}/delivery-notes`,
+    { method: 'POST', body: multipart({ ...invoicing.note, thirdPartyId: supplier.id }) },
+    accessToken,
+  );
+  console.log(`Delivery note registered: ${invoicing.note.number}`);
+}
+const existingInvoices = await call(
+  listInvoicesResponseSchema,
+  `${base}/invoices`,
+  {},
+  accessToken,
+);
+if (existingInvoices.items.some((invoice) => invoice.number === invoicing.invoice.number)) {
+  console.log(`Invoice already there: ${invoicing.invoice.number}`);
+} else {
+  await call(
+    invoiceSchema,
+    `${base}/invoices`,
+    { method: 'POST', body: multipart({ ...invoicing.invoice, thirdPartyId: supplier.id }) },
+    accessToken,
+  );
+  console.log(`Invoice registered: ${invoicing.invoice.number}`);
 }
 
 // Indexing is asynchronous: wait so that a failing embeddings provider is noticed now.

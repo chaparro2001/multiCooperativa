@@ -54,6 +54,12 @@ As a user with manage level, I want to correct or withdraw a published announcem
 
 - **Given** a published announcement, **when** I mark it as pinned, **then** it appears at the top of the list until I unmark it.
 
+#### US-ANN-08 · Unread count on the home
+
+- **Given** published announcements I have not opened, **when** I see the home, **then** the Announcements tile shows a red badge with how many they are ("99+" above 99); with none, no badge.
+- **Given** a draft, a withdrawn announcement or one of another cooperative, **when** the count is computed, **then** it is not counted.
+- **Given** I open an unread announcement, **when** I go back to the home, **then** the count has decreased by one.
+
 #### US-ANN-07 · See how many have read it
 
 - **Given** a published announcement, **when** I view it with manage level, **then** I see how many users have read it out of the total of active memberships.
@@ -130,15 +136,16 @@ erDiagram
 
 ## 6. API
 
-| Method | Route                                                                      | Use                      | Level  |
-| ------ | -------------------------------------------------------------------------- | ------------------------ | ------ |
-| GET    | `/cooperatives/{cooperativeId}/announcements`                              | Paginated list           | Read   |
-| GET    | `/cooperatives/{cooperativeId}/announcements/{announcementId}`             | Detail; records the read | Read   |
-| POST   | `/cooperatives/{cooperativeId}/announcements`                              | Create draft             | Manage |
-| PATCH  | `/cooperatives/{cooperativeId}/announcements/{announcementId}`             | Edit, pin                | Manage |
-| POST   | `/cooperatives/{cooperativeId}/announcements/{announcementId}/publish`     | Publish                  | Manage |
-| POST   | `/cooperatives/{cooperativeId}/announcements/{announcementId}/withdraw`    | Withdraw                 | Manage |
-| POST   | `/cooperatives/{cooperativeId}/announcements/{announcementId}/attachments` | Upload attachment        | Manage |
+| Method | Route                                                                      | Use                                     | Level  |
+| ------ | -------------------------------------------------------------------------- | --------------------------------------- | ------ |
+| GET    | `/cooperatives/{cooperativeId}/announcements`                              | Paginated list                          | Read   |
+| GET    | `/cooperatives/{cooperativeId}/announcements/unread-count`                 | `{ unread }`: published, not read by me | Read   |
+| GET    | `/cooperatives/{cooperativeId}/announcements/{announcementId}`             | Detail; records the read                | Read   |
+| POST   | `/cooperatives/{cooperativeId}/announcements`                              | Create draft                            | Manage |
+| PATCH  | `/cooperatives/{cooperativeId}/announcements/{announcementId}`             | Edit, pin                               | Manage |
+| POST   | `/cooperatives/{cooperativeId}/announcements/{announcementId}/publish`     | Publish                                 | Manage |
+| POST   | `/cooperatives/{cooperativeId}/announcements/{announcementId}/withdraw`    | Withdraw                                | Manage |
+| POST   | `/cooperatives/{cooperativeId}/announcements/{announcementId}/attachments` | Upload attachment                       | Manage |
 
 Contract (schemas in `packages/contracts/src/announcements.ts`):
 
@@ -154,6 +161,7 @@ Contract (schemas in `packages/contracts/src/announcements.ts`):
 1. Announcements list.
 2. Announcement detail.
 3. Editor (manage level): draft, attachments, publish.
+4. Home tile with the unread count badge (US-ANN-08).
 
 ## 8. Test strategy
 

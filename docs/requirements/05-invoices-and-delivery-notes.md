@@ -85,7 +85,8 @@ As a user with access to the module, I want to see delivery notes and invoices f
 As a manager, I want to know which invoices are pending payment or collection and which are overdue.
 
 - **Given** a pending invoice whose due date has passed, **when** the daily process runs, **then** it becomes overdue and `InvoiceOverdue` is emitted.
-- **Given** a pending invoice that falls due in 3 days, **when** the daily process runs, **then** `InvoiceDueSoon` is emitted.
+- **Given** a pending invoice that falls due within the cooperative's notice window (N days, BR-INV-15; 15 by default), **when** the daily process runs, **then** `InvoiceDueSoon` is emitted once.
+- **Given** invoices that are overdue or due within the next N days, **when** I see the home, **then** the Invoices tile shows a red badge with how many they are (BR-INV-16), and the list highlights them with "Due in X days" or "Overdue".
 - **Given** a pending or overdue received invoice, **when** I mark it as paid with its date, **then** it becomes paid. On an issued invoice the action is "collected".
 - **Given** the summary, **when** I consult it, **then** I see the total pending to pay and to collect, and the overdue amount of each.
 
@@ -99,6 +100,7 @@ As a manager, I want to know which invoices are pending payment or collection an
 #### US-INV-09 · Uninvoiced delivery notes
 
 - **Given** delivery notes pending invoicing for more than 30 days, **when** I consult the dashboard, **then** they appear highlighted by third party.
+- **Given** delivery notes pending invoicing that are older than 30 days or will reach 30 days within the next N days (BR-INV-15, BR-INV-16), **when** I see the home, **then** the Delivery notes tile shows a red badge with how many they are, and the list marks them "Not invoiced X days".
 
 ### Could
 
@@ -117,22 +119,24 @@ As a manager, I want to know which invoices are pending payment or collection an
 
 ## 3. Business rules
 
-| Id        | Rule                                                                                                                                                                        |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| BR-INV-01 | Third parties, delivery notes and invoices belong to a single cooperative.                                                                                                  |
-| BR-INV-02 | The tax ID of a third party is unique within each cooperative. The same tax ID can exist in other cooperatives as a different third party.                                  |
-| BR-INV-03 | A purchase delivery note only admits suppliers; a sales one, only customers.                                                                                                |
-| BR-INV-04 | The delivery note number is unique per third party. The invoice number is unique per third party for received invoices and per cooperative for issued ones.                 |
-| BR-INV-05 | A delivery note can only be invoiced once.                                                                                                                                  |
-| BR-INV-06 | An invoice only groups pending delivery notes of the same third party and the same operation.                                                                               |
-| BR-INV-07 | Total = base + VAT, rounded to 2 decimals with a tolerance of €0.01.                                                                                                        |
-| BR-INV-08 | Quantities are compared per item and unit. There is a discrepancy if the relative difference exceeds the tolerance (by default 1 %) or if an item appears on one side only. |
-| BR-INV-09 | A pending invoice becomes overdue when its due date is earlier than today.                                                                                                  |
-| BR-INV-10 | A paid or collected invoice does not return to pending or overdue.                                                                                                          |
-| BR-INV-11 | No data extracted by AI is saved without human confirmation.                                                                                                                |
-| BR-INV-12 | The reconciliation result is decided by the numeric rule. The AI only drafts the explanation.                                                                               |
-| BR-INV-13 | Amounts in euros with exact decimals; never in floating point.                                                                                                              |
-| BR-INV-14 | A third party with documents is not deleted; it is deactivated and is no longer offered for new records.                                                                    |
+| Id        | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-INV-01 | Third parties, delivery notes and invoices belong to a single cooperative.                                                                                                                                                                                                                                                                                                                                                                   |
+| BR-INV-02 | The tax ID of a third party is unique within each cooperative. The same tax ID can exist in other cooperatives as a different third party.                                                                                                                                                                                                                                                                                                   |
+| BR-INV-03 | A purchase delivery note only admits suppliers; a sales one, only customers.                                                                                                                                                                                                                                                                                                                                                                 |
+| BR-INV-04 | The delivery note number is unique per third party. The invoice number is unique per third party for received invoices and per cooperative for issued ones.                                                                                                                                                                                                                                                                                  |
+| BR-INV-05 | A delivery note can only be invoiced once.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| BR-INV-06 | An invoice only groups pending delivery notes of the same third party and the same operation.                                                                                                                                                                                                                                                                                                                                                |
+| BR-INV-07 | Total = base + VAT, rounded to 2 decimals with a tolerance of €0.01.                                                                                                                                                                                                                                                                                                                                                                         |
+| BR-INV-08 | Quantities are compared per item and unit. There is a discrepancy if the relative difference exceeds the tolerance (by default 1 %) or if an item appears on one side only.                                                                                                                                                                                                                                                                  |
+| BR-INV-09 | A pending invoice becomes overdue when its due date is earlier than today.                                                                                                                                                                                                                                                                                                                                                                   |
+| BR-INV-10 | A paid or collected invoice does not return to pending or overdue.                                                                                                                                                                                                                                                                                                                                                                           |
+| BR-INV-11 | No data extracted by AI is saved without human confirmation.                                                                                                                                                                                                                                                                                                                                                                                 |
+| BR-INV-12 | The reconciliation result is decided by the numeric rule. The AI only drafts the explanation.                                                                                                                                                                                                                                                                                                                                                |
+| BR-INV-13 | Amounts in euros with exact decimals; never in floating point.                                                                                                                                                                                                                                                                                                                                                                               |
+| BR-INV-14 | A third party with documents is not deleted; it is deactivated and is no longer offered for new records.                                                                                                                                                                                                                                                                                                                                     |
+| BR-INV-15 | Each cooperative has a notice window of N days (whole number from 1 to 90, 15 by default) that only its administrator (users module, manage level) changes in Settings > Billing; changes are audited as `cooperative.invoicing_settings_changed`. The daily process warns `InvoiceDueSoon` with each cooperative's own N.                                                                                                                   |
+| BR-INV-16 | Attention counts of the home badges: **invoices** = pending or overdue (never settled or voided) invoices, purchases and sales, whose due date is on or before today + N (overdue ones included); **delivery notes** = pending invoicing (never invoiced or voided) older than 30 days (US-INV-09) or reaching 30 days within N days, that is, dated on or before today − (30 − N). With N of 30 or more every pending delivery note counts. |
 
 ### Statuses
 
@@ -282,38 +286,41 @@ erDiagram
 
 ## 7. Events
 
-| Event                    | When                            | Consumer                                       |
-| ------------------------ | ------------------------------- | ---------------------------------------------- |
-| `DeliveryNoteRegistered` | On registering a delivery note  | Audit                                          |
-| `InvoiceRegistered`      | On registering an invoice       | Audit                                          |
-| `DiscrepancyDetected`    | On reconciling with differences | Notifications (to those who manage the module) |
-| `InvoiceDueSoon`         | 3 days before the due date      | Notifications (to those who manage the module) |
-| `InvoiceOverdue`         | On becoming overdue             | Notifications (to those who manage the module) |
+| Event                    | When                                   | Consumer                                       |
+| ------------------------ | -------------------------------------- | ---------------------------------------------- |
+| `DeliveryNoteRegistered` | On registering a delivery note         | Audit                                          |
+| `InvoiceRegistered`      | On registering an invoice              | Audit                                          |
+| `DiscrepancyDetected`    | On reconciling with differences        | Notifications (to those who manage the module) |
+| `InvoiceDueSoon`         | N days before the due date (BR-INV-15) | Notifications (to those who manage the module) |
+| `InvoiceOverdue`         | On becoming overdue                    | Notifications (to those who manage the module) |
 
 ## 8. API
 
-| Method | Route                                                                | Use                                                                      | Level  |
-| ------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------ |
-| GET    | `/cooperatives/{cooperativeId}/third-parties`                        | List with filter by type                                                 | Read   |
-| GET    | `/cooperatives/{cooperativeId}/third-parties/{thirdPartyId}`         | Record with documents and balance                                        | Read   |
-| POST   | `/cooperatives/{cooperativeId}/third-parties`                        | Create                                                                   | Manage |
-| PATCH  | `/cooperatives/{cooperativeId}/third-parties/{thirdPartyId}`         | Edit or deactivate                                                       | Manage |
-| GET    | `/cooperatives/{cooperativeId}/delivery-notes`                       | Filterable list                                                          | Read   |
-| GET    | `/cooperatives/{cooperativeId}/delivery-notes/{deliveryNoteId}`      | Detail                                                                   | Read   |
-| POST   | `/cooperatives/{cooperativeId}/delivery-notes`                       | Register                                                                 | Manage |
-| GET    | `/cooperatives/{cooperativeId}/invoices`                             | Filterable list                                                          | Read   |
-| GET    | `/cooperatives/{cooperativeId}/invoices/summary`                     | Pending and overdue payments and collections                             | Read   |
-| GET    | `/cooperatives/{cooperativeId}/invoices/{invoiceId}`                 | Detail with reconciliation                                               | Read   |
-| POST   | `/cooperatives/{cooperativeId}/invoices`                             | Register and reconcile                                                   | Manage |
-| POST   | `/cooperatives/{cooperativeId}/invoices/{invoiceId}/settle`          | Mark as paid or collected                                                | Manage |
-| POST   | `/cooperatives/{cooperativeId}/invoices/{invoiceId}/explanations`    | Draft (AI) the plain-language explanation of the discrepancies           | Read   |
-| POST   | `/cooperatives/{cooperativeId}/extractions`                          | Extract data from image or PDF                                           | Manage |
-| GET    | `/cooperatives/{cooperativeId}/claims`                               | List                                                                     | Read   |
-| POST   | `/cooperatives/{cooperativeId}/claims`                               | Open                                                                     | Manage |
-| POST   | `/cooperatives/{cooperativeId}/claims/{claimId}/notes`               | Add note                                                                 | Manage |
-| POST   | `/cooperatives/{cooperativeId}/claims/{claimId}/resolve`             | Resolve                                                                  | Manage |
-| POST   | `/cooperatives/{cooperativeId}/delivery-notes/{deliveryNoteId}/void` | Void a delivery note pending invoicing                                   | Manage |
-| POST   | `/cooperatives/{cooperativeId}/invoices/{invoiceId}/void`            | Void a pending or overdue invoice (its delivery notes return to pending) | Manage |
+| Method | Route                                                                | Use                                                                        | Level                          |
+| ------ | -------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------ |
+| GET    | `/cooperatives/{cooperativeId}/third-parties`                        | List with filter by type                                                   | Read                           |
+| GET    | `/cooperatives/{cooperativeId}/third-parties/{thirdPartyId}`         | Record with documents and balance                                          | Read                           |
+| POST   | `/cooperatives/{cooperativeId}/third-parties`                        | Create                                                                     | Manage                         |
+| PATCH  | `/cooperatives/{cooperativeId}/third-parties/{thirdPartyId}`         | Edit or deactivate                                                         | Manage                         |
+| GET    | `/cooperatives/{cooperativeId}/delivery-notes`                       | Filterable list                                                            | Read                           |
+| GET    | `/cooperatives/{cooperativeId}/delivery-notes/{deliveryNoteId}`      | Detail                                                                     | Read                           |
+| POST   | `/cooperatives/{cooperativeId}/delivery-notes`                       | Register                                                                   | Manage                         |
+| GET    | `/cooperatives/{cooperativeId}/invoices`                             | Filterable list                                                            | Read                           |
+| GET    | `/cooperatives/{cooperativeId}/invoices/summary`                     | Pending and overdue payments and collections                               | Read                           |
+| GET    | `/cooperatives/{cooperativeId}/invoicing/attention`                  | `{ invoices, deliveryNotes, days }`: counts of the home badges (BR-INV-16) | Read                           |
+| GET    | `/cooperatives/{cooperativeId}/invoicing/settings`                   | `{ dueSoonDays }` (BR-INV-15)                                              | Read, or administrator         |
+| PUT    | `/cooperatives/{cooperativeId}/invoicing/settings`                   | Change `dueSoonDays` (1 to 90); audited                                    | Administrator (`users:manage`) |
+| GET    | `/cooperatives/{cooperativeId}/invoices/{invoiceId}`                 | Detail with reconciliation                                                 | Read                           |
+| POST   | `/cooperatives/{cooperativeId}/invoices`                             | Register and reconcile                                                     | Manage                         |
+| POST   | `/cooperatives/{cooperativeId}/invoices/{invoiceId}/settle`          | Mark as paid or collected                                                  | Manage                         |
+| POST   | `/cooperatives/{cooperativeId}/invoices/{invoiceId}/explanations`    | Draft (AI) the plain-language explanation of the discrepancies             | Read                           |
+| POST   | `/cooperatives/{cooperativeId}/extractions`                          | Extract data from image or PDF                                             | Manage                         |
+| GET    | `/cooperatives/{cooperativeId}/claims`                               | List                                                                       | Read                           |
+| POST   | `/cooperatives/{cooperativeId}/claims`                               | Open                                                                       | Manage                         |
+| POST   | `/cooperatives/{cooperativeId}/claims/{claimId}/notes`               | Add note                                                                   | Manage                         |
+| POST   | `/cooperatives/{cooperativeId}/claims/{claimId}/resolve`             | Resolve                                                                    | Manage                         |
+| POST   | `/cooperatives/{cooperativeId}/delivery-notes/{deliveryNoteId}/void` | Void a delivery note pending invoicing                                     | Manage                         |
+| POST   | `/cooperatives/{cooperativeId}/invoices/{invoiceId}/void`            | Void a pending or overdue invoice (its delivery notes return to pending)   | Manage                         |
 
 Contract (schemas in `packages/contracts/src/invoicing.ts`):
 
@@ -322,23 +329,25 @@ Contract (schemas in `packages/contracts/src/invoicing.ts`):
 - The invoice carries `lines` (mandatory if it groups delivery notes) and `deliveryNoteIds`. It is registered, grouped and reconciled in one transaction that locks the delivery notes: two simultaneous invoices cannot invoice the same delivery note.
 - `GET /third-parties/{thirdPartyId}` is the record: data, delivery notes, invoices and the outstanding balance to pay and to collect.
 - `GET /invoices/summary` returns, for payments (`toPay`) and collections (`toCollect`), the pending amount (includes overdue) and the overdue amount, with amount and number of invoices; also open-discrepancy invoices and delivery notes pending invoicing for more than 30 days (US-INV-09).
-- Daily due-date process (US-INV-07): the API runs it on startup and every hour, and it also exists as a script (`jobs:due-dates`) for a cron. It marks as overdue the pending invoices with a due date before today (Spanish time) and warns of those falling due in the next 3 days; with a window instead of an exact day, a day without running does not lose warnings. Each warning is recorded in `InvoiceReminder` and is only emitted if it was recorded now: repeating it, even simultaneously, duplicates nothing (NFR-INV-04).
+- Daily due-date process (US-INV-07): the API runs it on startup and every hour, and it also exists as a script (`jobs:due-dates`) for a cron. It marks as overdue the pending invoices with a due date before today (Spanish time) and warns of those falling due within each cooperative's own notice window (BR-INV-15, 15 days by default, stored in `InvoicingSettings.dueSoonDays`); with a window instead of an exact day, a day without running does not lose warnings. Each warning is recorded in `InvoiceReminder` and is only emitted if it was recorded now: repeating it, even simultaneously, duplicates nothing (NFR-INV-04).
 - Errors: `400 invalid_document`, `400 invalid_third_party`, `400 invalid_amount`, `400 total_mismatch` with `details.expected` and `details.difference`, `404 not_found`, `409 third_party_exists` with `details.thirdPartyId`, `409 duplicate_number` and `409 invalid_invoice_transition`.
 
 ## 9. Screens
 
 1. Summary: pending and overdue payments and collections, open discrepancies.
-2. Purchases and sales, each with delivery notes and invoices, and filters. The home has two tiles on it: **Invoices** (summary of payments and collections, open discrepancies, register and scan an invoice) and **Delivery notes** (delivery notes, the warning of more than 30 days without invoicing US-INV-09, register and scan a delivery note); both need the invoicing permission (BR-INV-01) and the list is fixed to its kind. The combined view (without `kind`) stays reachable by route.
+2. Purchases and sales, each with delivery notes and invoices, and filters. The home has two tiles on it: **Invoices** (summary of payments and collections, open discrepancies, register and scan an invoice) and **Delivery notes** (delivery notes, the warning of more than 30 days without invoicing US-INV-09, register and scan a delivery note); both need the invoicing permission (BR-INV-01), carry a red count badge (BR-INV-16, "99+" above 99, only when greater than zero) and the list is fixed to its kind, highlighting the counted rows with their reason ("Due in X days", "Overdue", "Not invoiced X days"). The combined view (without `kind`) stays reachable by route.
 3. Delivery note detail.
 4. Invoice detail, with delivery notes, reconciliation and PDF.
 5. Third parties: list and record.
 6. Camera capture and proposal review.
 7. Manual registration forms.
 8. Claims (if there is margin).
+9. Settings > Billing (administrator only): the notice days N, with field validation (1 to 90).
 
 ## 10. Test strategy
 
 - **Domain with TDD**: third-party type by operation, totals balancing, invoicing uniqueness, grouping by third party and operation, reconciliation with tolerance, statuses, due date by date, tax ID validation.
 - **Extraction**: tests with sample photos and PDFs and the AI provider simulated; operation deduction by tax ID; nothing is ever persisted without confirmation.
 - **Permissions and isolation**: a member without access receives 403; the governing board reads but does not register; a third party of another cooperative responds 404 even if the tax ID matches; extraction never resolves third parties of another cooperative.
-- **Daily process**: idempotency of due dates and warnings.
+- **Daily process**: idempotency of due dates and warnings; the window is each cooperative's N.
+- **Attention counts**: window edge dates, N of 30 or more, settled/voided/invoiced excluded, isolation between cooperatives, settings 403 for non-administrators and audit.
