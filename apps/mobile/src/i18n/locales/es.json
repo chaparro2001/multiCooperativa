@@ -68,7 +68,10 @@
         "title": "Escribe un título de hasta 150 caracteres.",
         "category": "Elige una categoría válida.",
         "documentDate": "La fecha del documento no es válida.",
-        "file": "El archivo debe ser un PDF o una foto (JPEG o PNG) de hasta 10 MB."
+        "file": "El archivo debe ser un PDF o una foto (JPEG o PNG) de hasta 10 MB.",
+        "invoiceNoticeDays": "Escribe un número entero entre 1 y 90.",
+        "noteDeadlineDays": "Escribe un número entero entre 1 y 365.",
+        "noteNoticeDays": "El aviso debe ser menor que el plazo para facturar."
       },
       "invalid_amount": {
         "base": "Escribe un importe válido, con hasta dos decimales.",
@@ -397,9 +400,28 @@
     "signOut": "Cerrar sesión",
     "invoicing": {
       "title": "Facturación",
-      "description": "Avisos de la cooperativa sobre facturas y albaranes. El número de días se aplica a los avisos de vencimiento, a las insignias de la pantalla de inicio y a los albaranes que están a punto de cumplir 30 días sin facturar.",
-      "dueSoonDays": "Días de aviso de vencimiento",
-      "hint": "Entre 1 y 90 días. Por defecto, 15.",
+      "description": "Avisos de la cooperativa sobre facturas y albaranes. Cada aviso se puede activar o desactivar y tiene sus propios días. Se aplican a las insignias de la pantalla de inicio, a las filas resaltadas de las listas y, en las facturas, a los avisos de vencimiento.",
+      "enabled": "Activado",
+      "days": "Número de días",
+      "invoiceNotice": {
+        "title": "Facturas: aviso antes del vencimiento",
+        "hint": "Avisar de las facturas que vencen en los próximos N días. Entre 1 y 90 días; por defecto, 15.",
+        "off": "Desactivado: no hay aviso previo. La insignia solo cuenta las facturas ya vencidas y no se envían recordatorios de vencimiento."
+      },
+      "noteDeadline": {
+        "title": "Albaranes: plazo para facturar",
+        "hint": "Un albarán debe facturarse en N días desde su fecha. Entre 1 y 365 días; por defecto, 30.",
+        "off": "Desactivado: no hay plazo para facturar. No se muestran insignia ni avisos de albaranes sin facturar."
+      },
+      "noteNotice": {
+        "title": "Albaranes: aviso antes de ese plazo",
+        "hint": "Avisar N días antes de ese plazo. Debe ser menor que el plazo para facturar. Entre 1 y 365 días; por defecto, 15.",
+        "off": "Desactivado: la insignia solo cuenta los albaranes que ya han superado el plazo.",
+        "deadlineOff": "Sin efecto mientras el plazo para facturar esté desactivado. Se conserva el valor."
+      },
+      "errors": {
+        "noticeNotShorter": "El aviso debe ser menor que el plazo para facturar ({{deadline}} días)."
+      },
       "save": "Guardar",
       "saved": "Guardado. Ya se aplica a los avisos."
     }
@@ -644,8 +666,8 @@
       "overdue_other": "{{amount}} vencidas ({{count}})",
       "openDiscrepancies_one": "{{count}} factura con discrepancia sin resolver.",
       "openDiscrepancies_other": "{{count}} facturas con discrepancia sin resolver.",
-      "staleNotes_one": "{{count}} albarán lleva más de 30 días sin facturar.",
-      "staleNotes_other": "{{count}} albaranes llevan más de 30 días sin facturar."
+      "staleNotes_one": "{{count}} albarán ha superado el plazo para facturarse.",
+      "staleNotes_other": "{{count}} albaranes han superado el plazo para facturarse."
     },
     "row": {
       "invoiceNumber": "Factura {{number}}",

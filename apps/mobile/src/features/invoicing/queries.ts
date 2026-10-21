@@ -7,6 +7,7 @@ import {
   invoiceDetailSchema,
   invoiceSchema,
   invoicingAttentionSchema,
+  type InvoicingSettings,
   invoicingSettingsSchema,
   invoicingSummarySchema,
   listDeliveryNotesResponseSchema,
@@ -56,7 +57,7 @@ export function useInvoicingAttention(enabled = true) {
   });
 }
 
-/** BR-INV-15: the cooperative's notice days. */
+/** BR-INV-15: the cooperative's three alerts. */
 export function useInvoicingSettings() {
   const { api } = useServices();
   const { base, key } = useScope();
@@ -68,10 +69,10 @@ export function useInvoicingSettings() {
 
 export function useUpdateInvoicingSettings() {
   const { api } = useServices();
-  return useInvoicingMutation((dueSoonDays: number, base) =>
+  return useInvoicingMutation((settings: InvoicingSettings, base) =>
     api.request(`${base}/invoicing/settings`, {
       method: 'PUT',
-      body: { dueSoonDays },
+      body: settings,
       schema: invoicingSettingsSchema,
     }),
   );

@@ -42,7 +42,7 @@ export default function InvoicingHomeScreen() {
   const notes = useDeliveryNotes(operation);
   // BR-INV-16: the rows that count in the home badge are highlighted with their reason.
   const attention = useInvoicingAttention();
-  const days = attention.data?.days;
+  const alertSettings = attention.data?.settings;
   const today = todayInSpain();
   const kind: Kind = fixed ?? (section === 'notes' ? 'delivery_note' : 'invoice');
   const refresh = usePullToRefresh(async () => {
@@ -135,7 +135,7 @@ export default function InvoicingHomeScreen() {
               <InvoiceRow
                 key={invoice.id}
                 invoice={invoice}
-                attention={days === undefined ? null : invoiceAttention(invoice, today, days)}
+                attention={alertSettings ? invoiceAttention(invoice, today, alertSettings) : null}
               />
             ))
           }
@@ -147,7 +147,7 @@ export default function InvoicingHomeScreen() {
               <NoteRow
                 key={note.id}
                 note={note}
-                attention={days === undefined ? null : noteAttention(note, today, days)}
+                attention={alertSettings ? noteAttention(note, today, alertSettings) : null}
               />
             ))
           }

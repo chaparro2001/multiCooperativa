@@ -1,17 +1,11 @@
 import type {
   DeliveryNote,
+  DeliveryNoteStatus,
   Invoice,
+  InvoicingSettings,
   Module,
   PaymentStatus,
-  DeliveryNoteStatus,
 } from '@multicooperativa/contracts';
-
-/** US-INV-09: pending delivery notes older than this many days are stale (same as the server). */
-export const STALE_NOTE_DAYS = 30;
-
-/** BR-INV-15: bounds of the notice days a cooperative can choose. */
-export const DUE_SOON_DAYS_MIN = 1;
-export const DUE_SOON_DAYS_MAX = 90;
 
 /** Calendar day in Spain (YYYY-MM-DD), where the cooperatives are; the server counts with the same day. */
 export function todayInSpain(now = new Date()): string {
@@ -34,43 +28,54 @@ export type InvoiceAttention =
   { kind: 'overdue'; days: number } | { kind: 'dueToday' } | { kind: 'dueSoon'; days: number };
 
 /**
- * BR-INV-16 on one invoice: still to pay or collect and overdue or due within `days` days.
- * Same rule as the server, which decides the counts; this only marks the rows of the list.
+ * BR-INV-16 on one invoice: still to pay or collect and overdue or, with the invoice notice on,
+ * due within its days. With the notice off only the overdue ones are marked (not even "due
+ * today"). Same rule as the server, which decides the counts; this only marks the rows.
  */
 export function invoiceAttention(
   invoice: Pick<Invoice, 'paymentStatus' | 'dueDate'>,
   today: string,
-  days: number,
+  settings: Pick<InvoicingSettings, 'invoiceNoticeEnabled' | 'invoiceNoticeDays'>,
 ): InvoiceAttention | null {
   const status: PaymentStatus = invoice.paymentStatus;
   if (status !== 'pending' && status !== 'overdue') return null;
   const left = daysBetween(today, invoice.dueDate);
   if (left < 0) return { kind: 'overdue', days: -left };
-  if (left > days) return null;
+  if (!settings.invoiceNoticeEnabled || left > settings.invoiceNoticeDays) return null;
   return left === 0 ? { kind: 'dueToday' } : { kind: 'dueSoon', days: left };
 }
 
 export interface NoteAttention {
   /** Days since the delivery note date. */
   days: number;
-  /** Already past the 30 days (red) or reaching them within the notice window (amber). */
+  /** Already past the deadline (red) or reaching it within the notice (amber). */
   stale: boolean;
 }
 
 /**
- * BR-INV-16 on one delivery note: pending invoicing and either older than 30 days or reaching
- * them within `days` days; with `days` of 30 or more every pending note counts.
+ * BR-INV-16 on one delivery note: pending invoicing and either past the cooperative's deadline
+ * or, with the notice on, reaching it within the notice days. With the deadline off there is no
+ * such concept: nothing is marked. A stored notice not shorter than the deadline marks every
+ * pending note, as the server counts them.
  */
 export function noteAttention(
   note: Pick<DeliveryNote, 'status' | 'date'>,
   today: string,
-  days: number,
+  settings: Pick<
+    InvoicingSettings,
+    'noteDeadlineEnabled' | 'noteDeadlineDays' | 'noteNoticeEnabled' | 'noteNoticeDays'
+  >,
 ): NoteAttention | null {
   const status: DeliveryNoteStatus = note.status;
-  if (status !== 'pending_invoicing') return null;
+  if (status !== 'pending_invoicing' || !settings.noteDeadlineEnabled) return null;
   const age = daysBetween(note.date, today);
-  if (days < STALE_NOTE_DAYS && age < STALE_NOTE_DAYS - days) return null;
-  return { days: Math.max(age, 0), stale: age >= STALE_NOTE_DAYS };
+  const { noteDeadlineDays: deadline, noteNoticeDays: notice } = settings;
+  if (settings.noteNoticeEnabled) {
+    if (notice < deadline && age < deadline - notice) return null;
+  } else if (age < deadline) {
+    return null;
+  }
+  return { days: Math.max(age, 0), stale: age >= deadline };
 }
 
 /**
