@@ -22,7 +22,7 @@ import { ErrorText, Loading } from '@/ui/screen';
 import { colors } from '@/ui/theme';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 
-import { Segmented } from '@/features/invoicing/segmented';
+import { Segmented } from '@/ui/chip';
 import { moduleIcon } from '@/navigation/modules';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 

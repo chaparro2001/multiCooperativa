@@ -897,5 +897,21 @@
         "amount_not_positive": "El importe debe ser mayor que cero (solo una corrección puede ser negativa)."
       }
     }
+  },
+  "ui": {
+    "loading": "Cargando…",
+    "aiNotice": {
+      "privacy": "Privacidad",
+      "proposal": "Propuesta de la IA",
+      "info": "Asistente IA"
+    },
+    "tally": {
+      "favor": "A favor",
+      "against": "En contra",
+      "abstentions": "Abstenciones"
+    },
+    "map": {
+      "directions": "Cómo llegar"
+    }
   }
 }

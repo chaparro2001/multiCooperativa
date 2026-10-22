@@ -11,7 +11,7 @@ import {
   useThirdPartySheet,
   useUpdateThirdParty,
 } from '@/features/invoicing/queries';
-import { Chip } from '@/features/invoicing/segmented';
+import { Chip } from '@/ui/chip';
 import {
   THIRD_PARTY_FIELDS,
   THIRD_PARTY_SERVER_MAPPING,

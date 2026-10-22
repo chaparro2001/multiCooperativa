@@ -8,7 +8,7 @@ import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { messageFor } from '@/api/api-error';
 import { listStyles } from '@/features/invoicing/components';
 import { useThirdParties } from '@/features/invoicing/queries';
-import { Segmented } from '@/features/invoicing/segmented';
+import { Segmented } from '@/ui/chip';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { ErrorText, Loading } from '@/ui/screen';

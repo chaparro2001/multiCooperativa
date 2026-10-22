@@ -30,7 +30,7 @@ import {
   useRegisterInvoice,
   useThirdParties,
 } from '@/features/invoicing/queries';
-import { Chip, Segmented } from '@/features/invoicing/segmented';
+import { Chip, Segmented } from '@/ui/chip';
 import { formatDay } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { DayField } from '@/ui/date-field';
