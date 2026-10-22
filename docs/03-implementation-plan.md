@@ -100,6 +100,16 @@ Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assis
 - [x] Keyset pagination (`{ items, nextCursor }`, `limit` and `before`, like the assistant history) of delivery notes, invoices, documents, members and a member's capital movements, with composite indexes starting with `cooperativeId`; totals, summaries and badges stay computed by the server. The mobile lists are `FlatList`/`SectionList` with `useInfiniteQuery`. No new dependency.
 - [x] Document search debounced 300 ms (`useDebouncedValue`) with `keepPreviousData`, so the lists do not flash while typing.
 
+## Design system migration (22–24 Oct)
+
+Adopts [design-system/](design-system/README.md) in `apps/mobile` ([ADR-024](adr/ADR-024-adopt-the-design-system.md)); gap analysis and phases in [06-design-system-migration.md](06-design-system-migration.md). Visual change; same data, copy, permissions and Maestro selectors.
+
+- [ ] Phase 0: tokens in `ui/theme.ts` (`space`, `radius`, `size`, `shadow`, `layout`, `scrim`, `focusRing`), `colors.surface` renamed `surfaceVariant`, nine rounded values of `tokens.json`/`tokens.css` corrected, theme tests.
+- [ ] Phase 1 and 2: complete kit in `src/ui` (base components, cards and rows, banners, progress and votes, map card, assistant pieces, action bar, states and skeletons) with a reference in `src/ui/README.md`.
+- [ ] Phase 3: screens on the kit (home, announcements, assemblies, invoices, entry, capture and register, member area and members, documents, assistant, settings).
+- [ ] Behaviour items: home attention strip, "Cómo llegar" map card, cooperative colour dot, admin Settings sub-pages, quorum mark, sticky action bar in the register form.
+- [ ] Regression: `pnpm e2e`, Expo web at 390 and 960 in three presets, screenshots for the report.
+
 ## Milestone 7 · Quality and delivery (23–25 Oct)
 
 - [x] E2E with Maestro (`apps/mobile/.maestro`, `pnpm e2e`, local only): login and home tiles, cooperative switch, vote in an open assembly, invoices summary and purchase/sale switch. Scanning an invoice and the assistant are not covered (they need the camera and an LLM). Reason for the dependency changes: Maestro is an external CLI (not an npm dependency); `pnpm-workspace.yaml` overrides `expo-modules-jsi` to 57.1.3 because 57.1.1 does not compile with Xcode 26 (Swift 6.2), which blocks any iOS development build.

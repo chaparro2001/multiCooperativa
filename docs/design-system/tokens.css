@@ -41,7 +41,7 @@
   --on-primary: #ffffff;
   --primary-container: #dde6f2;
   --on-primary-container: #0c2443;
-  --secondary: #3e5e88;
+  --secondary: #3f5f88;
   --secondary-container: var(--primary-container);
   --on-secondary-container: var(--on-primary-container);
   --elevation-1: #f4f7fb;
@@ -78,7 +78,7 @@
   --on-primary: #ffffff;
   --primary-container: #dbeae9;
   --on-primary-container: #062f2c;
-  --secondary: #376c6b;
+  --secondary: #376d6b;
   --secondary-container: var(--primary-container);
   --on-secondary-container: var(--on-primary-container);
   --elevation-1: #f3f8f8;
@@ -115,7 +115,7 @@
   --on-primary: #ffffff;
   --primary-container: #e9dff9;
   --on-primary-container: #2c1057;
-  --secondary: #6646a0;
+  --secondary: #6646a1;
   --secondary-container: var(--primary-container);
   --on-secondary-container: var(--on-primary-container);
   --elevation-1: #f8f4fd;
@@ -152,7 +152,7 @@
   --on-primary: #ffffff;
   --primary-container: #f0dce4;
   --on-primary-container: #3f091f;
-  --secondary: #7e3d5a;
+  --secondary: #7e3d5b;
   --secondary-container: var(--primary-container);
   --on-secondary-container: var(--on-primary-container);
   --elevation-1: #faf3f6;
@@ -189,14 +189,14 @@
   --on-primary: #ffffff;
   --primary-container: #f4e5da;
   --on-primary-container: #482104;
-  --secondary: #8a5b38;
+  --secondary: #8a5b39;
   --secondary-container: var(--primary-container);
   --on-secondary-container: var(--on-primary-container);
   --elevation-1: #fbf6f3;
   --elevation-2: #f9f1eb;
   --elevation-3: #f7ece4;
   --elevation-4: #f6eae1;
-  --elevation-5: #f4e7dd;
+  --elevation-5: #f5e7dd;
   --background: #ffffff;
   --surface: #ffffff;
   --surface-variant: #f4f6f5;
@@ -224,7 +224,7 @@
 [data-theme="red"] {
   --primary: #b91c1c;
   --on-primary: #ffffff;
-  --primary-container: #f4dddd;
+  --primary-container: #f5dddd;
   --on-primary-container: #4a0b0b;
   --secondary: #8c4042;
   --secondary-container: var(--primary-container);
@@ -261,9 +261,9 @@
 [data-theme="slate"] {
   --primary: #374151;
   --on-primary: #ffffff;
-  --primary-container: #e1e2e5;
+  --primary-container: #e1e3e5;
   --on-primary-container: #161a20;
-  --secondary: #4b525c;
+  --secondary: #4b525d;
   --secondary-container: var(--primary-container);
   --on-secondary-container: var(--on-primary-container);
   --elevation-1: #f5f6f6;
