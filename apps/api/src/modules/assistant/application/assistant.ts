@@ -1,4 +1,4 @@
-import { log } from '../../../shared/infrastructure/log';
+import type { Logger } from '../../../shared/logger';
 import { hasAccess, ModuleAccessDeniedError, requireAccess } from '../../access';
 import { extractCitations, type Source } from '../domain/citations';
 import { buildSystemPrompt } from '../domain/system-prompt';
@@ -49,6 +49,7 @@ export interface AssistantDeps {
   /** Day in the cooperative's calendar (YYYY-MM-DD), for the system prompt. */
   today: () => string;
   messageLimitPerHour: number;
+  logger: Logger;
   onMetrics?: (metrics: RequestMetrics) => void;
 }
 
@@ -202,7 +203,7 @@ async function runTool(
     }
     if (error instanceof InvalidToolInputError) return fail(call, error.message);
     // The model never sees internals; the operator does.
-    log.error('assistant_tool_failed', {
+    deps.logger.error('assistant_tool_failed', {
       tool: call.name,
       error: error instanceof Error ? error.message : error,
     });
@@ -225,7 +226,12 @@ export async function sendMessage(
 
   const conversation = await deps.conversations.find(cooperativeId, membershipId, conversationId);
   if (!conversation) throw new ConversationNotFoundError();
-  const model = await resolveCooperativeLanguageModel(deps.localModels, deps.model, cooperativeId);
+  const model = await resolveCooperativeLanguageModel(
+    deps.localModels,
+    deps.model,
+    cooperativeId,
+    deps.logger,
+  );
   if (!model) throw new AssistantUnavailableError();
 
   // BR-AI-08
@@ -275,7 +281,7 @@ export async function sendMessage(
         })),
       });
     } catch (error) {
-      log.error('assistant_model_call_failed', {
+      deps.logger.error('assistant_model_call_failed', {
         error: error instanceof Error ? error.message : error,
       });
       throw error instanceof AssistantRefusedError || error instanceof AssistantUnavailableError

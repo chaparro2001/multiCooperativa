@@ -27,6 +27,7 @@ import {
 import type { LanguageModel, ModelRequest } from './ports/language-model';
 import type { AssistantSettingStore, LocalModelRuntime } from './ports/local-models';
 import { FakeHostedGateway, FakeSecretCipher, InMemoryHostedStore } from './testing/hosted-fakes';
+import { CapturingLogger } from './testing/capturing-logger';
 import { InMemoryConversationStore } from './testing/in-memory-conversation-store';
 import { say, ScriptedLanguageModel } from './testing/scripted-language-model';
 
@@ -84,6 +85,7 @@ let gateway: FakeHostedGateway;
 let cipher: FakeSecretCipher | null;
 let audits: { cooperativeId: string; event: { action: string; detail: Record<string, unknown> } }[];
 let deps: ModelSettingsDeps;
+let logger: CapturingLogger;
 
 const build = (local: LocalModelRuntime | null = new FakeRuntime()): ModelSettingsDeps => ({
   local,
@@ -95,6 +97,7 @@ const build = (local: LocalModelRuntime | null = new FakeRuntime()): ModelSettin
 });
 
 beforeEach(() => {
+  logger = new CapturingLogger();
   store = new InMemoryHostedStore();
   gateway = new FakeHostedGateway();
   cipher = new FakeSecretCipher();
@@ -319,6 +322,7 @@ describe('the assistant uses the hosted provider (ADR-019)', () => {
       now: () => new Date('2026-10-21T10:00:00Z'),
       today: () => '2026-10-21',
       messageLimitPerHour: 30,
+      logger,
     };
   }
 
@@ -352,18 +356,16 @@ describe('the assistant uses the hosted provider (ADR-019)', () => {
   ])(
     'falls back to the server model on a %s error, warning without the key',
     async (_name, error) => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       gateway.chatModel = hostedModel(() => {
         throw error;
       });
       expect(await ask(assistantDeps(null))).toBe('local answer from qwen3:8b');
-      expect(warn).toHaveBeenCalledOnce();
-      expect(String(warn.mock.calls[0]?.[0])).not.toContain(KEY);
+      expect(logger.of('warn')).toHaveLength(1);
+      expect(JSON.stringify(logger.of('warn'))).not.toContain(KEY);
     },
   );
 
   it('falls back to the default model when the server runs on Gemini', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
     gateway.chatModel = hostedModel(() => {
       throw new HostedProviderTransientError('busy', 503);
     });
@@ -374,18 +376,19 @@ describe('the assistant uses the hosted provider (ADR-019)', () => {
   });
 
   it('falls back when the stored key cannot be decrypted (master key rotated)', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     gateway.chatModel = hostedModel(() => say('hosted answer'));
     const rotated = {
       ...deps,
       hosted: { store, gateway, cipher: new FakeSecretCipher('master-2') },
     };
-    const model = await resolveCooperativeLanguageModel(rotated, null, COOP);
+    const model = await resolveCooperativeLanguageModel(rotated, null, COOP, logger);
     expect((await model!.generate({ system: '', messages: [], tools: [] })).text).toBe(
       'local answer from qwen3:8b',
     );
     expect(gateway.created).toEqual([]);
-    expect(warn).toHaveBeenCalledOnce();
+    expect(logger.of('warn')).toEqual([
+      { level: 'warn', event: 'assistant_hosted_key_unreadable', fields: { cooperativeId: COOP } },
+    ]);
   });
 
   it('does not hide an error that is not the provider’s (assistant unavailable stays 503)', async () => {
@@ -405,7 +408,6 @@ describe('the assistant uses the hosted provider (ADR-019)', () => {
   });
 
   it('stays on the fallback for the rest of the request and drops the hosted turns it cannot continue', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
     const hosted: LanguageModel = {
       generate: async () => {
         throw new HostedProviderError('boom');
