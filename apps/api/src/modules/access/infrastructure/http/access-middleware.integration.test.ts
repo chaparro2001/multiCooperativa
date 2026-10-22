@@ -126,6 +126,22 @@ describe('GET /me (US-ACC-05)', () => {
     ]);
   });
 
+  it('includes each cooperative brand colour, null when it has no branding (US-ACC-14)', async () => {
+    await addMember('admin@campo.es', seaCoop, 'Socio');
+    await prisma.cooperativeBranding.create({
+      data: { cooperativeId: seaCoop, primaryColor: '#7A1F5C' },
+    });
+    const { accessToken } = await loginAs('admin@campo.es');
+
+    const response = await request(app).get('/me').set(bearer(accessToken));
+
+    const me = meResponseSchema.parse(response.body);
+    expect(me.memberships.map((m) => [m.cooperativeName, m.primaryColor])).toEqual([
+      ['Cooperativa del Campo', null],
+      ['Cooperativa del Mar', '#7A1F5C'],
+    ]);
+  });
+
   it('does not include suspended memberships', async () => {
     const membership = await addMember('admin@campo.es', seaCoop, 'Socio');
     await prisma.membership.update({

@@ -7,9 +7,10 @@ import { validateLogin } from '@/auth/form-validation';
 import { useForm } from '@/forms/use-form';
 import { useSession } from '@/session/session-context';
 import { AppLogo } from '@/ui/app-logo';
+import { Banner } from '@/ui/banner';
 import { Button } from '@/ui/button';
 import { FormSummary } from '@/ui/field';
-import { ErrorText, Screen } from '@/ui/screen';
+import { Screen } from '@/ui/screen';
 import { Text, useTheme } from '@/ui/paper';
 import { TextField } from '@/ui/text-field';
 
@@ -68,7 +69,7 @@ export default function LoginScreen() {
         onSubmitEditing={submit}
         testID="password-field"
       />
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {error ? <Banner tone="danger">{error}</Banner> : null}
       <FormSummary form={form} />
       <Button
         title={t('auth.login.submit')}

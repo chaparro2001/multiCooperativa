@@ -26,6 +26,8 @@ export const meResponseSchema = z.object({
       membershipId: z.uuid(),
       cooperativeId: z.uuid(),
       cooperativeName: z.string(),
+      /** The cooperative's #RRGGBB brand colour; null = the default green (US-ACC-14). */
+      primaryColor: z.string().nullable(),
       profileName: z.string(),
       isPartner: z.boolean(),
     }),

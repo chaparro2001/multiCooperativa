@@ -18,7 +18,7 @@ import { useServices } from '../app-services';
 import { useSession } from '../session/session-context';
 import { BIOMETRICS_KEY } from '../session/storage-keys';
 import { Button } from '../ui/button';
-import { Text, useTheme } from '../ui/paper';
+import { Icon, Text, useTheme } from '../ui/paper';
 import { shouldLock } from './biometric-lock';
 
 interface BiometricsValue {
@@ -155,7 +155,10 @@ function LockScreen({
   }, [tryUnlock]);
 
   return (
-    <View style={[styles.lock, { backgroundColor: colors.background }]} testID="lock-screen">
+    <View style={[styles.lock, { backgroundColor: colors.elevation.level5 }]} testID="lock-screen">
+      <View style={styles.icon}>
+        <Icon source="fingerprint" size={48} color={colors.primary} />
+      </View>
       <Text variant="titleLarge" style={styles.centered}>
         {t('auth.lock.title')}
       </Text>
@@ -196,4 +199,5 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   centered: { textAlign: 'center' },
+  icon: { alignItems: 'center' },
 });
