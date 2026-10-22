@@ -12,22 +12,31 @@ export function formatDay(value: string): string {
   return formatDate(date);
 }
 
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+const numberFormatters = new Map<string, Intl.NumberFormat>();
+
+/** Formatters are costly to build; keep one per locale and variant (the locale can change at runtime). */
+function dateFormatter(variant: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const locale = currentLocale();
+  const key = `${locale}|${variant}`;
+  let formatter = dateFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    dateFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
 export function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat(currentLocale(), {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(date);
+  return dateFormatter('date', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
 }
 
 export function formatTime(date: Date): string {
-  return new Intl.DateTimeFormat(currentLocale(), { hour: '2-digit', minute: '2-digit' }).format(
-    date,
-  );
+  return dateFormatter('time', { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
 export function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat(currentLocale(), {
+  return dateFormatter('dateTime', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -37,7 +46,14 @@ export function formatDateTime(iso: string): string {
 }
 
 export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
-  return new Intl.NumberFormat(currentLocale(), options).format(value);
+  const locale = currentLocale();
+  const key = `${locale}|${options ? JSON.stringify(options) : ''}`;
+  let formatter = numberFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, options);
+    numberFormatters.set(key, formatter);
+  }
+  return formatter.format(value);
 }
 
 /** Human-readable file size: bytes, then KB and MB with the locale's decimal separator. */

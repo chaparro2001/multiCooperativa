@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Share, StyleSheet, View } from 'react-native';
 
+import { formatDate } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { Card, Text, useTheme } from '@/ui/paper';
 
@@ -14,14 +15,10 @@ const canShare = Platform.OS !== 'web' || typeof globalThis.navigator?.share ===
  * single-use link and passes it on. It is shown here and nowhere else.
  */
 export function InvitationLinkCard({ url, expiresAt }: { url: string; expiresAt: string }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const [copied, setCopied] = useState(false);
-  const expiry = new Intl.DateTimeFormat(i18n.language, {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(expiresAt));
+  const expiry = formatDate(new Date(expiresAt));
 
   async function copy() {
     await Clipboard.setStringAsync(url);
