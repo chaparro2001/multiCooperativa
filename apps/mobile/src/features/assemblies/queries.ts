@@ -25,11 +25,12 @@ function useScope() {
 }
 
 /** US-ASM-03. */
-export function useAssemblyList() {
+export function useAssemblyList(enabled = true) {
   const { api } = useServices();
   const { base, key } = useScope();
   return useQuery({
     queryKey: [...key, 'list'],
+    enabled,
     queryFn: () => api.request(base, { schema: listAssembliesResponseSchema }),
   });
 }

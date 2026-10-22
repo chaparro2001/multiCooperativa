@@ -7,10 +7,13 @@ import { routeServerError } from '@/forms/server-errors';
 import { FormScope, useForm } from '@/forms/use-form';
 import { useBrand } from '@/branding/brand';
 import { Button } from '@/ui/button';
+import { HomeTile } from '@/ui/home-tile';
 import { FormSummary } from '@/ui/field';
-import { Divider, Text, useTheme } from '@/ui/paper';
+import { Icon, PaperProvider, Text, useTheme } from '@/ui/paper';
+import { paperSettings } from '@/ui/paper-settings';
 import { ErrorText } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
+import { createPaperTheme, size, space } from '@/ui/theme';
 import { contrastWithWhite, MIN_CONTRAST, parseHexColor, PRESET_COLORS } from './brand-color';
 import { BRAND_FIELDS, BRAND_SERVER_MAPPING, validateBrandColor } from './form-validation';
 import { useSetBrandColor } from './queries';
@@ -40,6 +43,8 @@ export function AppearanceSection() {
 
   const candidate = parseHexColor(text);
   const ratio = candidate ? contrastWithWhite(candidate) : null;
+  const previewTheme = createPaperTheme(candidate ?? brand.primaryColor);
+  const isCustom = candidate !== null && !(PRESET_COLORS as readonly string[]).includes(candidate);
   const readable = ratio !== null && ratio >= MIN_CONTRAST;
   const ratioText =
     ratio === null ? '' : ratio.toLocaleString(i18n.language, { maximumFractionDigits: 2 });
@@ -68,9 +73,6 @@ export function AppearanceSection() {
   return (
     <FormScope form={form}>
       <View style={styles.section} testID="appearance-section">
-        <Text variant="labelMedium" style={[styles.label, detailColor]}>
-          {t('settings.appearance.title')}
-        </Text>
         <Text variant="bodyMedium" style={detailColor}>
           {t('settings.appearance.description')}
         </Text>
@@ -90,13 +92,36 @@ export function AppearanceSection() {
                   setColorSaved(false);
                   setColor.reset();
                 }}
-                style={[styles.swatchRing, active && { borderColor: colors.onSurface }]}
+                style={[
+                  styles.swatch,
+                  { backgroundColor: color },
+                  active && { borderColor: colors.onSurface },
+                ]}
                 testID={`brand-swatch-${color.slice(1)}`}
               >
-                <View style={[styles.swatch, { backgroundColor: color }]} />
+                {active ? <Icon source="check" size={24} color="#FFFFFF" /> : null}
               </Pressable>
             );
           })}
+          {/* The typed colour: shown as the ninth swatch while it is not one of the presets. */}
+          <View
+            accessible
+            accessibilityRole="radio"
+            accessibilityLabel={t('settings.appearance.color.custom')}
+            accessibilityState={{ checked: isCustom }}
+            style={[
+              styles.swatch,
+              { backgroundColor: isCustom ? candidate : colors.surfaceVariant },
+              isCustom && { borderColor: colors.onSurface },
+            ]}
+            testID="brand-swatch-custom"
+          >
+            <Icon
+              source={isCustom ? 'check' : 'palette-outline'}
+              size={24}
+              color={isCustom ? '#FFFFFF' : colors.onSurfaceVariant}
+            />
+          </View>
         </View>
         <TextField
           label={t('settings.appearance.color.hex')}
@@ -123,24 +148,31 @@ export function AppearanceSection() {
         <Text variant="bodyMedium" style={detailColor}>
           {t('settings.appearance.color.preview')}
         </Text>
-        <View style={styles.preview}>
-          <View style={styles.previewButton}>
-            <Button
-              title={t('settings.appearance.color.previewPrimary')}
-              color={candidate ?? brand.primaryColor}
+        <PaperProvider theme={previewTheme} settings={paperSettings}>
+          <View style={styles.preview}>
+            <HomeTile
+              icon="receipt-text-outline"
+              title={t('settings.appearance.color.previewTile')}
               onPress={() => undefined}
-              testID="brand-preview-primary"
+              style={styles.previewTile}
+              testID="brand-preview-tile"
             />
+            <View style={styles.previewButtons}>
+              <Button
+                title={t('settings.appearance.color.previewPrimary')}
+                color={candidate ?? brand.primaryColor}
+                onPress={() => undefined}
+                testID="brand-preview-primary"
+              />
+              <Button
+                title={t('settings.appearance.color.previewSecondary')}
+                variant="secondary"
+                color={candidate ?? brand.primaryColor}
+                onPress={() => undefined}
+              />
+            </View>
           </View>
-          <View style={styles.previewButton}>
-            <Button
-              title={t('settings.appearance.color.previewSecondary')}
-              variant="secondary"
-              color={candidate ?? brand.primaryColor}
-              onPress={() => undefined}
-            />
-          </View>
-        </View>
+        </PaperProvider>
 
         {colorBanner && <ErrorText>{colorBanner}</ErrorText>}
         <FormSummary form={form} />
@@ -165,25 +197,23 @@ export function AppearanceSection() {
           />
         ) : null}
       </View>
-      <Divider />
     </FormScope>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { gap: 10 },
-  label: { textTransform: 'uppercase' },
-  swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  swatchRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  section: { gap: space[3] },
+  swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3] },
+  swatch: {
+    width: size.control,
+    height: size.control,
+    borderRadius: size.control / 2,
     borderWidth: 2,
     borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  swatch: { width: 32, height: 32, borderRadius: 16 },
-  preview: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  previewButton: { flexGrow: 1, flexBasis: 220 },
+  preview: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  previewTile: { width: 128 },
+  previewButtons: { flex: 1, gap: space[2] },
 });

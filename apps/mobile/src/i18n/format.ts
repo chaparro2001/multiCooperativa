@@ -6,7 +6,7 @@ export function currentLocale(): string {
   return INTL_LOCALES[resolveLanguage(i18n.language)];
 }
 
-/** "15 March 2026" style, from an ISO date or a calendar day (YYYY-MM-DD, read as that day). */
+/** "15 mar 2026" style, from an ISO date or a calendar day (YYYY-MM-DD, read as that day). */
 export function formatDay(value: string): string {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00`) : new Date(value);
   return formatDate(date);
@@ -27,8 +27,9 @@ function dateFormatter(variant: string, options: Intl.DateTimeFormatOptions): In
   return formatter;
 }
 
+/** Short month, as the design system writes dates ("22 oct 2026"; ADR-024). */
 export function formatDate(date: Date): string {
-  return dateFormatter('date', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+  return dateFormatter('date', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
 }
 
 export function formatTime(date: Date): string {

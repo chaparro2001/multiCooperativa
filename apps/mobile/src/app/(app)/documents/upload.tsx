@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native';
 
+import { space } from '@/ui/theme';
+
 import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
 import {
@@ -18,7 +20,8 @@ import { formatSize, today } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
 import { FieldGroup, FormSummary } from '@/ui/field';
-import { Chip, Text } from '@/ui/paper';
+import { Chip } from '@/ui/chip';
+import { Text } from '@/ui/paper';
 import { ErrorText, Screen } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
 
@@ -96,17 +99,14 @@ export default function UploadDocumentScreen() {
         maxLength={150}
         testID="document-title-field"
       />
-      <Text variant="labelLarge">{t('documents.upload.category')}</Text>
-      <FieldGroup name="category" style={styles.chips}>
+      <FieldGroup name="category" label={t('documents.upload.category')} style={styles.chips}>
         {DOCUMENT_CATEGORIES.map((value) => (
           <Chip
             key={value}
+            label={categoryTitle(value)}
             selected={category === value}
-            showSelectedOverlay
             onPress={() => setCategory(value)}
-          >
-            {categoryTitle(value)}
-          </Chip>
+          />
         ))}
       </FieldGroup>
       <DateField
@@ -130,6 +130,6 @@ export default function UploadDocumentScreen() {
 }
 
 const styles = StyleSheet.create({
-  fileGroup: { gap: 8 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  fileGroup: { gap: space[2] },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
 });

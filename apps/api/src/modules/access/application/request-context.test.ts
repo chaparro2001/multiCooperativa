@@ -2,9 +2,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { createPermission } from '../domain/permission';
 import { CooperativeNotFoundError, UnauthenticatedError } from './errors';
-import type { AccessContextStore, ActiveMembership } from './ports/access-context-store';
+import type {
+  AccessContextStore,
+  ActiveMembership,
+  UserSummary,
+} from './ports/access-context-store';
 import type { AccessTokenVerifier } from './ports/tokens';
-import { authenticateRequest, resolveCooperativeContext } from './request-context';
+import { authenticateRequest, getMe, resolveCooperativeContext } from './request-context';
 import { FakeClock, InMemorySessions } from './testing/fakes';
 
 const COOP = '11111111-1111-4111-8111-111111111111';
@@ -108,5 +112,40 @@ describe('cooperative context (ADR-003)', () => {
     await expect(resolveCooperativeContext({ contexts }, session, 'abc')).rejects.toThrow(
       CooperativeNotFoundError,
     );
+  });
+});
+
+describe('GET /me (US-ACC-05, US-ACC-14)', () => {
+  const summary: UserSummary = {
+    id: 'user-1',
+    email: 'ada@campo.es',
+    name: 'Ada',
+    memberships: [
+      {
+        membershipId: 'mem-1',
+        cooperativeId: COOP,
+        cooperativeName: 'Campo',
+        primaryColor: '#7A1F5C',
+        profileName: 'Socio',
+        isPartner: true,
+      },
+      {
+        membershipId: 'mem-2',
+        cooperativeId: OTHER_COOP,
+        cooperativeName: 'Mar',
+        primaryColor: null,
+        profileName: 'Socio',
+        isPartner: false,
+      },
+    ],
+  };
+  const contexts: AccessContextStore = {
+    findActiveMembership: async () => null,
+    findUserSummary: async (userId) => (userId === 'user-1' ? summary : null),
+  };
+
+  it('returns each membership with its cooperative colour, null for the default theme', async () => {
+    const me = await getMe({ contexts }, { userId: 'user-1', sessionId: 'sess-1' });
+    expect(me.memberships.map((m) => m.primaryColor)).toEqual(['#7A1F5C', null]);
   });
 });

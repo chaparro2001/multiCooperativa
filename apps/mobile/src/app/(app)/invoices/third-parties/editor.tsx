@@ -11,15 +11,18 @@ import {
   useThirdPartySheet,
   useUpdateThirdParty,
 } from '@/features/invoicing/queries';
-import { Chip } from '@/features/invoicing/segmented';
+import { Chip } from '@/ui/chip';
 import {
   THIRD_PARTY_FIELDS,
   THIRD_PARTY_SERVER_MAPPING,
   validateThirdParty,
 } from '@/features/invoicing/third-party-validation';
+import { ActionBar } from '@/ui/action-bar';
+import { Banner } from '@/ui/banner';
 import { Button } from '@/ui/button';
 import { FieldGroup, FormSummary } from '@/ui/field';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { ErrorText, Screen } from '@/ui/screen';
+import { ErrorState, Skeleton } from '@/ui/states';
 import { TextField } from '@/ui/text-field';
 import { Text } from '@/ui/paper';
 
@@ -32,11 +35,17 @@ export default function ThirdPartyEditorScreen() {
 
 function Editor({ id }: { id: string }) {
   const sheet = useThirdPartySheet(id);
-  if (sheet.isPending) return <Loading />;
+  if (sheet.isPending) {
+    return (
+      <Screen>
+        <Skeleton variant="detail" />
+      </Screen>
+    );
+  }
   if (sheet.isError) {
     return (
       <Screen>
-        <ErrorText>{messageFor(sheet.error)}</ErrorText>
+        <ErrorState message={messageFor(sheet.error)} onRetry={() => sheet.refetch()} />
       </Screen>
     );
   }
@@ -127,7 +136,22 @@ function Form({
   }
 
   return (
-    <Screen testID="third-party-editor" form={form}>
+    <Screen
+      testID="third-party-editor"
+      form={form}
+      footer={
+        <ActionBar>
+          <FormSummary form={form} />
+          <Button
+            title={t('common.actions.save')}
+            block
+            onPress={submit}
+            loading={create.isPending || update.isPending}
+            testID="save-third-party"
+          />
+        </ActionBar>
+      }
+    >
       {!existing && role ? (
         <Stack.Screen
           options={{
@@ -193,21 +217,20 @@ function Form({
         keyboardType="phone-pad"
         testID="third-party-phone"
       />
-      {error ? <ErrorText>{error}</ErrorText> : null}
-      <FormSummary form={form} />
+      {error && !duplicate ? <ErrorText>{error}</ErrorText> : null}
       {duplicate ? (
-        <Button
-          title={t('invoicing.thirdParties.openExisting')}
-          variant="secondary"
-          onPress={() => router.replace(`/invoices/third-parties/${duplicate}`)}
-        />
+        <Banner
+          action={
+            <Button
+              title={t('invoicing.thirdParties.openExisting')}
+              variant="text"
+              onPress={() => router.replace(`/invoices/third-parties/${duplicate}`)}
+            />
+          }
+        >
+          {error ?? t('invoicing.thirdParties.openExisting')}
+        </Banner>
       ) : null}
-      <Button
-        title={t('common.actions.save')}
-        onPress={submit}
-        loading={create.isPending || update.isPending}
-        testID="save-third-party"
-      />
     </Screen>
   );
 }

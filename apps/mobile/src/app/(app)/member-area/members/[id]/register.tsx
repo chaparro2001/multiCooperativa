@@ -18,9 +18,12 @@ import { useEuros } from '@/features/invoicing/components';
 import { today } from '@/i18n/format';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
-import { FormSummary } from '@/ui/field';
-import { Chip, Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { Banner } from '@/ui/banner';
+import { Chip } from '@/ui/chip';
+import { FieldGroup, FormSummary } from '@/ui/field';
+import { Text, useTheme } from '@/ui/paper';
+import { Screen } from '@/ui/screen';
+import { ErrorState, Skeleton } from '@/ui/states';
 import { TextField } from '@/ui/text-field';
 
 const parseDay = (day: string) => new Date(`${day}T12:00:00`);
@@ -43,13 +46,9 @@ export default function RegisterMovementScreen() {
     validate: validateMovement,
   });
 
-  if (statement.isPending) return <Loading />;
+  if (statement.isPending) return <Skeleton variant="detail" />;
   if (statement.isError) {
-    return (
-      <Screen>
-        <ErrorText>{messageFor(statement.error)}</ErrorText>
-      </Screen>
-    );
+    return <ErrorState message={messageFor(statement.error)} onRetry={() => statement.refetch()} />;
   }
   const { member, capital } = statement.data.pages[0]!;
   const hint = { color: colors.onSurfaceVariant };
@@ -81,20 +80,20 @@ export default function RegisterMovementScreen() {
       <Text variant="bodyMedium" style={hint}>
         {t('memberArea.register.currentCapital', { amount: euros(capital) })}
       </Text>
-      <Text variant="labelLarge">{t('memberArea.register.type')}</Text>
-      <View style={styles.chips}>
-        {MOVEMENT_TYPES.map((value) => (
-          <Chip
-            key={value}
-            mode="outlined"
-            selected={type === value}
-            onPress={() => setType(value)}
-            testID={`type-${value}`}
-          >
-            {t(`enums.capitalMovementType.${value}`)}
-          </Chip>
-        ))}
-      </View>
+      <FieldGroup label={t('memberArea.register.type')}>
+        <View style={styles.chips}>
+          {MOVEMENT_TYPES.map((value) => (
+            <Chip
+              key={value}
+              selected={type === value}
+              onPress={() => setType(value)}
+              testID={`type-${value}`}
+            >
+              {t(`enums.capitalMovementType.${value}`)}
+            </Chip>
+          ))}
+        </View>
+      </FieldGroup>
       <DateField
         label={t('memberArea.register.date')}
         name="date"
@@ -121,17 +120,12 @@ export default function RegisterMovementScreen() {
         testID="movement-amount"
       />
       {type === 'refund' ? (
-        <Text variant="bodyMedium" style={hint}>
-          {t('memberArea.register.refundHint')}
-        </Text>
+        <Banner tone="info">{t('memberArea.register.refundHint')}</Banner>
       ) : null}
       {type === 'correction' ? (
-        <Text variant="bodyMedium" style={hint}>
-          {t('memberArea.register.correctionHint')}
-        </Text>
+        <Banner tone="info">{t('memberArea.register.correctionHint')}</Banner>
       ) : null}
-      {error ? <ErrorText>{error}</ErrorText> : null}
-      <FormSummary form={form} />
+      <FormSummary form={form}>{error}</FormSummary>
       <Button
         title={t('memberArea.register.submit')}
         onPress={() => void submit()}

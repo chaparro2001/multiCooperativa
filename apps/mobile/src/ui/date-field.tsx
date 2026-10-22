@@ -2,11 +2,12 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, StyleSheet, View } from 'react-native';
-import { Button, Text, useTheme } from 'react-native-paper';
+import { Button, Icon, Text, useTheme } from 'react-native-paper';
 
 import { currentLocale, formatDate, formatTime } from '@/i18n/format';
 
 import { FieldGroup } from './field';
+import { colors as fixed } from './theme';
 import { fromInputValue, toInputValue } from './web-date-input';
 
 export interface DateFieldProps {
@@ -25,6 +26,8 @@ export interface DateFieldProps {
   name?: string;
   /** Message shown under the field with a red frame (overrides the form's). */
   error?: string;
+  /** Low-confidence value read by the AI: alert icon in warning next to the label. */
+  warning?: boolean;
 }
 
 /**
@@ -42,13 +45,17 @@ export function DateField({
   testID,
   name,
   error,
+  warning = false,
 }: DateFieldProps) {
   const { t } = useTranslation();
   const initial = () => suggested?.() ?? minimumDate ?? new Date();
 
   return (
     <View style={styles.field} testID={testID}>
-      <Text variant="labelLarge">{label}</Text>
+      <View style={styles.labelRow}>
+        <Text variant="labelLarge">{label}</Text>
+        {warning ? <Icon source="alert-outline" size={18} color={fixed.warning} /> : null}
+      </View>
       <FieldGroup name={name} error={error} testID={testID ? `${testID}-group` : undefined}>
         {value === null ? (
           <Button mode="outlined" onPress={() => onChange(initial())} style={styles.add}>
@@ -113,6 +120,7 @@ export function DayField({
   testID,
   name,
   error,
+  warning,
 }: {
   label: string;
   value: string;
@@ -122,6 +130,7 @@ export function DayField({
   testID?: string;
   name?: string;
   error?: string;
+  warning?: boolean;
 }) {
   return (
     <DateField
@@ -133,6 +142,7 @@ export function DayField({
       testID={testID}
       name={name}
       error={error}
+      warning={warning}
     />
   );
 }
@@ -211,6 +221,7 @@ function AndroidPicker({
 
 const styles = StyleSheet.create({
   field: { gap: 6 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   add: { alignSelf: 'flex-start' },
   androidContent: { minHeight: 48 },

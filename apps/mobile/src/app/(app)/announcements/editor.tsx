@@ -1,7 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
@@ -21,9 +21,11 @@ import {
 import { pickPdf } from '@/features/shared/pdf-upload';
 import { formatSize } from '@/i18n/format';
 import { Button } from '@/ui/button';
-import { FormSummary } from '@/ui/field';
+import { FieldGroup, FormSummary } from '@/ui/field';
 import { Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { ErrorText, Screen } from '@/ui/screen';
+import { Skeleton } from '@/ui/states';
+import { space } from '@/ui/theme';
 import { TextField } from '@/ui/text-field';
 
 const TITLE_MAX = 120;
@@ -62,7 +64,7 @@ export default function AnnouncementEditorScreen() {
     setLoaded(true);
   }
 
-  if (!loaded) return <Loading />;
+  if (!loaded) return <Skeleton variant="detail" />;
   const status = existing.data?.status ?? 'draft';
   const attachments = existing.data?.attachments ?? [];
 
@@ -123,18 +125,18 @@ export default function AnnouncementEditorScreen() {
         testID="body-field"
       />
       {status === 'published' ? (
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
           {t('announcements.editor.publishedHint')}
         </Text>
       ) : null}
 
-      <View style={styles.section}>
-        <Text variant="titleSmall">
-          {t('announcements.editor.attachments', {
-            current: attachments.length,
-            max: MAX_ATTACHMENTS,
-          })}
-        </Text>
+      <FieldGroup
+        label={t('announcements.editor.attachments', {
+          current: attachments.length,
+          max: MAX_ATTACHMENTS,
+        })}
+        style={styles.section}
+      >
         {attachments.map((attachment) => (
           <Text key={attachment.id} variant="bodyMedium">
             {attachment.name} · {formatSize(attachment.size)}
@@ -157,7 +159,7 @@ export default function AnnouncementEditorScreen() {
             testID="add-attachment"
           />
         ) : null}
-      </View>
+      </FieldGroup>
 
       {error ? <ErrorText>{error}</ErrorText> : null}
       <FormSummary form={form} />
@@ -205,5 +207,5 @@ export default function AnnouncementEditorScreen() {
 
 const styles = StyleSheet.create({
   body: { minHeight: 200, paddingTop: 12 },
-  section: { gap: 8 },
+  section: { gap: space[2] },
 });

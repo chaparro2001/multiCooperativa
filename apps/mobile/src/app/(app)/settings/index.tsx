@@ -1,20 +1,21 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { useBiometrics } from '@/auth/biometrics';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
-import { AppearanceSection } from '@/features/branding/appearance-section';
 import { canEditBranding } from '@/features/branding/brand-color';
 import { canEditInvoicingSettings } from '@/features/invoicing/attention';
-import { InvoicingSettingsSection } from '@/features/invoicing/settings-section';
-import { AssistantModelSection } from '@/features/assistant/model-settings-section';
 import { canChooseAssistantModel } from '@/features/assistant/model-settings';
 import { useSession } from '@/session/session-context';
 import { Button } from '@/ui/button';
-import { Divider, Switch, Text, useTheme } from '@/ui/paper';
+import { ListRow } from '@/ui/list-row';
+import { Icon, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Screen } from '@/ui/screen';
+import { SectionTitle } from '@/ui/section-title';
+import { SwitchRow } from '@/ui/switch-row';
+import { space } from '@/ui/theme';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -31,20 +32,27 @@ export default function SettingsScreen() {
     if (!changed) setBiometricsError(t('auth.lock.failed'));
   }
 
+  const openAppearance = useCallback(() => router.push('/settings/appearance'), []);
+  const openInvoicing = useCallback(() => router.push('/settings/invoicing'), []);
+  const openAssistant = useCallback(() => router.push('/settings/assistant'), []);
+
+  // US-ACC-14, BR-INV-15, US-AI-07: only the administrator sees each one; the API enforces it.
+  const canBrand = canEditBranding(permissions?.permissions);
+  const canInvoicing = canEditInvoicingSettings(permissions?.permissions);
+  const canAssistant = canChooseAssistantModel(permissions?.permissions);
+  const chevron = <Icon source="chevron-right" size={24} color={colors.onSurfaceVariant} />;
+
   return (
     <Screen testID="settings-screen">
-      <View style={styles.section}>
+      <View style={styles.group}>
         <Text variant="titleMedium">{me?.name}</Text>
         <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
           {me?.email}
         </Text>
       </View>
-      <Divider />
 
-      <View style={styles.section}>
-        <Text variant="labelMedium" style={[styles.label, { color: colors.onSurfaceVariant }]}>
-          {t('settings.cooperative')}
-        </Text>
+      <View style={styles.group}>
+        <SectionTitle small>{t('settings.cooperative')}</SectionTitle>
         <Text variant="titleMedium">{cooperative?.cooperativeName}</Text>
         {(me?.memberships.length ?? 0) > 1 && (
           <Button
@@ -55,31 +63,52 @@ export default function SettingsScreen() {
           />
         )}
       </View>
-      <Divider />
 
       {/* US-ACC-04: without biometrics set up on the device, the option is not offered. */}
       {biometrics.available && (
-        <View style={[styles.section, styles.row]}>
-          <Text variant="titleMedium">{t('settings.biometrics')}</Text>
-          <Switch
+        <View style={styles.group}>
+          <SwitchRow
+            label={t('settings.biometrics')}
             value={biometrics.enabled}
             onValueChange={toggleBiometrics}
-            accessibilityLabel={t('settings.biometrics')}
             testID="biometrics-switch"
           />
         </View>
       )}
-      {biometrics.available && <Divider />}
       {biometricsError ? <ErrorText>{biometricsError}</ErrorText> : null}
 
-      {/* US-ACC-14: only the administrator sees it; the API enforces it. */}
-      {canEditBranding(permissions?.permissions) && <AppearanceSection />}
-
-      {/* BR-INV-15: only the administrator sees it; the API enforces it. */}
-      {canEditInvoicingSettings(permissions?.permissions) && <InvoicingSettingsSection />}
-
-      {/* US-AI-07: only the administrator sees it; the API enforces it. */}
-      {canChooseAssistantModel(permissions?.permissions) && <AssistantModelSection />}
+      {canBrand || canInvoicing || canAssistant ? (
+        <View style={styles.group}>
+          <SectionTitle small>{t('settings.admin.title')}</SectionTitle>
+          {canBrand ? (
+            <ListRow
+              title={t('settings.appearance.title')}
+              meta={t('settings.admin.appearance')}
+              status={chevron}
+              onPress={openAppearance}
+              testID="settings-appearance-link"
+            />
+          ) : null}
+          {canInvoicing ? (
+            <ListRow
+              title={t('settings.invoicing.title')}
+              meta={t('settings.admin.invoicing')}
+              status={chevron}
+              onPress={openInvoicing}
+              testID="settings-invoicing-link"
+            />
+          ) : null}
+          {canAssistant ? (
+            <ListRow
+              title={t('settings.assistantModel.title')}
+              meta={t('settings.admin.assistant')}
+              status={chevron}
+              onPress={openAssistant}
+              testID="settings-assistant-link"
+            />
+          ) : null}
+        </View>
+      ) : null}
 
       <Button
         title={t('settings.signOut')}
@@ -96,7 +125,5 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: 6 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  label: { textTransform: 'uppercase' },
+  group: { gap: space[2] },
 });

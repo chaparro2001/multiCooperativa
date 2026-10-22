@@ -58,6 +58,13 @@ export class PrismaAccessContextStore implements AccessContextStore {
     });
     if (!user) return null;
 
+    // Branding lives in its own table keyed by cooperative (ADR-018); no row means the default theme.
+    const branding = await this.prisma.cooperativeBranding.findMany({
+      where: { cooperativeId: { in: user.memberships.map((m) => m.cooperative.id) } },
+      select: { cooperativeId: true, primaryColor: true },
+    });
+    const colorByCooperative = new Map(branding.map((b) => [b.cooperativeId, b.primaryColor]));
+
     return {
       id: user.id,
       email: user.email,
@@ -66,6 +73,7 @@ export class PrismaAccessContextStore implements AccessContextStore {
         membershipId: membership.id,
         cooperativeId: membership.cooperative.id,
         cooperativeName: membership.cooperative.name,
+        primaryColor: colorByCooperative.get(membership.cooperative.id) ?? null,
         profileName: membership.profile.name,
         isPartner: membership.isPartner,
       })),

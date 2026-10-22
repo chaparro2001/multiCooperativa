@@ -13,8 +13,13 @@ import { formatDateTime, formatSize } from '@/i18n/format';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
-import { Card, Divider, Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { SectionTitle } from '@/ui/section-title';
+import { Card } from '@/ui/card';
+import { Divider, Icon, Text, useTheme } from '@/ui/paper';
+import { ProgressBar } from '@/ui/progress-bar';
+import { ErrorText, Screen } from '@/ui/screen';
+import { ErrorState, Skeleton } from '@/ui/states';
+import { space } from '@/ui/theme';
 import { openUrl } from '@/ui/open-url';
 import { confirmAction } from '@/ui/confirm';
 
@@ -29,11 +34,11 @@ export default function AnnouncementScreen() {
   const update = useUpdateAnnouncement();
   const [error, setError] = useState<string | null>(null);
 
-  if (detail.isPending) return <Loading />;
+  if (detail.isPending) return <Skeleton variant="detail" />;
   if (detail.isError) {
     return (
       <Screen>
-        <ErrorText>{messageFor(detail.error)}</ErrorText>
+        <ErrorState message={messageFor(detail.error)} onRetry={() => detail.refetch()} />
       </Screen>
     );
   }
@@ -79,12 +84,12 @@ export default function AnnouncementScreen() {
         ) : null}
       </View>
       <Text variant="headlineSmall">{announcement.title || t('common.untitled')}</Text>
-      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+      <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
         {announcement.authorName ?? t('announcements.detail.unknownAuthor')}
         {announcement.publishedAt ? ` · ${formatDateTime(announcement.publishedAt)}` : ''}
       </Text>
       {announcement.editedAt ? (
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
           {t('announcements.detail.editedOn', { date: formatDateTime(announcement.editedAt) })}
         </Text>
       ) : null}
@@ -96,24 +101,23 @@ export default function AnnouncementScreen() {
 
       {announcement.attachments.length > 0 ? (
         <View style={styles.section}>
-          <Divider />
-          <Text variant="titleSmall">{t('announcements.detail.attachments')}</Text>
+          <SectionTitle small>{t('announcements.detail.attachments')}</SectionTitle>
           {announcement.attachments.map((attachment) => (
             <Card
               key={attachment.id}
-              mode="contained"
-              accessibilityRole="button"
               onPress={() => run(() => openAttachment(attachment.id))}
               testID={`attachment-${attachment.name}`}
+              style={styles.attachment}
             >
-              <Card.Content style={styles.attachment}>
-                <Text variant="titleSmall" style={{ color: colors.primary }}>
+              <Icon source="file-pdf-box" size={32} color={colors.primary} />
+              <View style={styles.attachmentText}>
+                <Text variant="labelLarge" numberOfLines={2}>
                   {attachment.name}
                 </Text>
-                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
                   {formatSize(attachment.size)}
                 </Text>
-              </Card.Content>
+              </View>
             </Card>
           ))}
         </View>
@@ -123,12 +127,15 @@ export default function AnnouncementScreen() {
         <View style={styles.section}>
           <Divider />
           {announcement.readStats ? (
-            <Text variant="bodyMedium" testID="read-stats">
-              {t('announcements.detail.readStats', {
+            <ProgressBar
+              label={t('announcements.detail.readStats', {
                 readCount: announcement.readStats.readCount,
                 count: announcement.readStats.activeMembers,
               })}
-            </Text>
+              value={announcement.readStats.readCount}
+              total={announcement.readStats.activeMembers}
+              testID="read-stats"
+            />
           ) : null}
           {error ? <ErrorText>{error}</ErrorText> : null}
           {announcement.status !== 'withdrawn' && (
@@ -175,7 +182,8 @@ export default function AnnouncementScreen() {
 }
 
 const styles = StyleSheet.create({
-  badges: { flexDirection: 'row', gap: 6 },
-  section: { gap: 10 },
-  attachment: { gap: 2 },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  section: { gap: space[3] },
+  attachment: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  attachmentText: { flex: 1, gap: space[1] },
 });

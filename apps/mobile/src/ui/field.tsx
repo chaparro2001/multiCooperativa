@@ -1,11 +1,11 @@
 import { type ReactNode, useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
-import { HelperText } from 'react-native-paper';
+import { HelperText, Icon, Text, useTheme } from 'react-native-paper';
 
 import { type FormApi, useFormContext } from '@/forms/use-form';
 
-import { colors } from './theme';
+import { colors, radius, space } from './theme';
 
 /**
  * Shared plumbing of every input: the message to show (an explicit `error`, or the one the
@@ -77,18 +77,21 @@ export function FieldError({
 }
 
 /**
- * Frame for controls that are not a text box (chip groups, pickers, the lines editor): red
- * border and message when invalid, the plain layout otherwise.
+ * Labels a group of controls that are not a text box (chip groups, pickers, the lines editor)
+ * and, when invalid, frames it in a 2 px red outline with the message below. The optional `label`
+ * (`labelLarge`) turns red with the frame, so the error is never colour-only.
  */
 export function FieldGroup({
   name,
   error,
+  label,
   children,
   style,
   testID,
 }: {
   name?: string;
   error?: string;
+  label?: string;
   children: ReactNode;
   style?: ViewStyle;
   testID?: string;
@@ -96,6 +99,11 @@ export function FieldGroup({
   const { message, view, errorId, accessibility } = useField({ name, error });
   return (
     <View ref={view} style={styles.group} testID={testID} collapsable={false}>
+      {label ? (
+        <Text variant="labelLarge" style={message ? styles.invalidLabel : undefined}>
+          {label}
+        </Text>
+      ) : null}
       <View style={[style, message ? styles.invalidFrame : null]} {...accessibility}>
         {children}
       </View>
@@ -110,29 +118,40 @@ export function FieldGroup({
 }
 
 const styles = StyleSheet.create({
-  group: { gap: 6 },
+  group: { gap: space[2] },
   flush: { paddingHorizontal: 0 },
+  invalidLabel: { color: colors.danger },
   invalidFrame: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.danger,
-    borderRadius: 10,
-    padding: 8,
+    borderRadius: radius.sm,
+    padding: space[2],
   },
+  summary: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  summaryText: { flex: 1 },
 });
 
-/** Shown next to the submit button while some field is still wrong (after the first attempt). */
-export function FormSummary({ form }: { form: FormApi }) {
+/**
+ * The message above the submit button while some field is still wrong (after the first attempt):
+ * alert icon and red text. `children` replaces the generic copy, for a server error that does not
+ * belong to a field ("Ya existe un documento con este número."); it then shows even when no
+ * field is invalid.
+ */
+export function FormSummary({ form, children }: { form: FormApi; children?: ReactNode }) {
   const { t } = useTranslation();
-  if (form.invalidFields().length === 0) return null;
+  const { colors: theme } = useTheme();
+  if (!children && form.invalidFields().length === 0) return null;
   return (
-    <HelperText
-      type="error"
+    <View
+      style={styles.summary}
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
-      style={styles.flush}
       testID="form-summary"
     >
-      {t('forms.fixFields')}
-    </HelperText>
+      <Icon source="alert-circle-outline" size={20} color={theme.error} />
+      <Text variant="bodyMedium" style={[styles.summaryText, { color: theme.error }]}>
+        {children ?? t('forms.fixFields')}
+      </Text>
+    </View>
   );
 }

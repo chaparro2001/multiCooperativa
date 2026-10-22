@@ -21,10 +21,13 @@ import {
   useRateMessage,
   useSendMessage,
 } from '@/features/assistant/queries';
+import { ChatBubble, Composer, SourceCard, Thinking } from '@/features/assistant/components';
+import { Banner } from '@/ui/banner';
+import { Card } from '@/ui/card';
+import { Chip } from '@/ui/chip';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
-import { Button } from '@/ui/button';
-import { Card, Chip, Text, TextInput, useTheme } from '@/ui/paper';
-import { ErrorText } from '@/ui/screen';
+import { Text, useTheme } from '@/ui/paper';
+import { space } from '@/ui/theme';
 
 /**
  * Keyed by cooperative: switching cooperative mounts a new chat, so a new conversation
@@ -198,42 +201,36 @@ function Chat() {
             {suggestions.map((key) => (
               <Card
                 key={key}
-                mode="outlined"
-                accessibilityRole="button"
-                onPress={() => send(t(`assistant.suggestions.${key}`))}
+                onPress={() => void send(t(`assistant.suggestions.${key}`))}
                 style={{ borderColor: colors.primary, backgroundColor: colors.primaryContainer }}
                 testID={`suggestion-${key}`}
               >
-                <Card.Content style={styles.suggestion}>
-                  <Text variant="bodyMedium">{t(`assistant.suggestions.${key}`)}</Text>
-                </Card.Content>
+                <Text variant="bodyMedium" style={{ color: colors.onPrimaryContainer }}>
+                  {t(`assistant.suggestions.${key}`)}
+                </Text>
               </Card>
             ))}
           </View>
         }
         renderItem={renderItem}
         ListFooterComponent={
-          busy ? (
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
-              {t('assistant.thinking')}
-            </Text>
-          ) : null
+          <View style={styles.footer}>
+            {busy ? <Thinking /> : null}
+            {error ? (
+              <Banner tone="danger" testID="error-message">
+                {error}
+              </Banner>
+            ) : null}
+          </View>
         }
       />
-      {error ? (
-        <View style={styles.error}>
-          <ErrorText>{error}</ErrorText>
-        </View>
-      ) : null}
-      <Composer busy={busy} onSend={send} />
+      <ComposerBar busy={busy} onSend={send} />
     </KeyboardAvoidingView>
   );
 }
 
 /** Owns the draft, so typing re-renders only the composer and not the message list. */
-function Composer({ busy, onSend }: { busy: boolean; onSend(text: string): Promise<boolean> }) {
-  const { t } = useTranslation();
-  const { colors } = useTheme();
+function ComposerBar({ busy, onSend }: { busy: boolean; onSend(text: string): Promise<boolean> }) {
   const [draft, setDraft] = useState('');
 
   async function submit() {
@@ -244,28 +241,14 @@ function Composer({ busy, onSend }: { busy: boolean; onSend(text: string): Promi
   }
 
   return (
-    <View style={[styles.composer, { borderTopColor: colors.outlineVariant }]}>
-      <TextInput
-        mode="outlined"
-        dense
-        style={styles.input}
-        value={draft}
-        onChangeText={setDraft}
-        placeholder={t('assistant.placeholder')}
-        accessibilityLabel={t('assistant.placeholder')}
-        multiline
-        maxLength={2000}
-        editable={!busy}
-        testID="assistant-input"
-      />
-      <Button
-        title={t('assistant.send')}
-        onPress={submit}
-        disabled={!draft.trim()}
-        loading={busy}
-        testID="assistant-send"
-      />
-    </View>
+    <Composer
+      value={draft}
+      onChangeText={setDraft}
+      onSend={() => void submit()}
+      disabled={busy}
+      testID="assistant-input"
+      sendTestID="assistant-send"
+    />
   );
 }
 
@@ -280,15 +263,7 @@ const MessageBubble = memo(function MessageBubble({
   const mine = message.role === 'user';
   const { colors } = useTheme();
   return (
-    <View
-      style={[
-        styles.bubble,
-        mine
-          ? [styles.mine, { backgroundColor: colors.primary }]
-          : [styles.theirs, { backgroundColor: colors.surfaceVariant }],
-        message.pending && styles.dim,
-      ]}
-    >
+    <ChatBubble role={message.role} pending={message.pending}>
       {mine ? (
         <Text variant="bodyLarge" style={{ color: colors.onPrimary }} selectable>
           {message.content}
@@ -301,33 +276,20 @@ const MessageBubble = memo(function MessageBubble({
           <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant }}>
             {t('assistant.sources')}
           </Text>
-          {message.citations.map((citation) => (
-            <Card
+          {message.citations.map((citation, index) => (
+            <SourceCard
               key={citation.ref}
-              mode="outlined"
-              accessibilityRole="link"
+              n={index + 1}
+              title={
+                citation.page
+                  ? t('assistant.citationPage', { title: citation.title, page: citation.page })
+                  : citation.title
+              }
+              excerpt={citation.excerpt ?? undefined}
               accessibilityLabel={t('assistant.openSource', { title: citation.title })}
               onPress={() => router.push(citationTarget(citation))}
-              style={{ backgroundColor: colors.surface }}
               testID={`citation-${citation.ref}`}
-            >
-              <Card.Content style={styles.citation}>
-                <Text variant="labelLarge" style={{ color: colors.primary }}>
-                  {citation.page
-                    ? t('assistant.citationPage', { title: citation.title, page: citation.page })
-                    : citation.title}
-                </Text>
-                {citation.excerpt ? (
-                  <Text
-                    variant="bodySmall"
-                    style={{ color: colors.onSurfaceVariant }}
-                    numberOfLines={2}
-                  >
-                    {citation.excerpt}
-                  </Text>
-                ) : null}
-              </Card.Content>
-            </Card>
+            />
           ))}
         </View>
       )}
@@ -346,29 +308,15 @@ const MessageBubble = memo(function MessageBubble({
           ))}
         </View>
       )}
-    </View>
+    </ChatBubble>
   );
 });
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  messages: { padding: 16, gap: 12, flexGrow: 1 },
-  empty: { gap: 12, paddingTop: 24 },
-  suggestion: { paddingVertical: 12 },
-  bubble: { borderRadius: 14, padding: 12, gap: 8, maxWidth: '92%' },
-  mine: { alignSelf: 'flex-end' },
-  theirs: { alignSelf: 'flex-start' },
-  dim: { opacity: 0.6 },
-  citations: { gap: 6 },
-  citation: { paddingVertical: 8, gap: 2 },
-  rating: { flexDirection: 'row', gap: 8 },
-  error: { paddingHorizontal: 16 },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    padding: 12,
-    borderTopWidth: 1,
-  },
-  input: { flex: 1, maxHeight: 120 },
+  messages: { padding: space[4], gap: space[3], flexGrow: 1 },
+  empty: { gap: space[3], paddingTop: space[6] },
+  footer: { gap: space[3] },
+  citations: { gap: space[2] },
+  rating: { flexDirection: 'row', gap: space[2] },
 });

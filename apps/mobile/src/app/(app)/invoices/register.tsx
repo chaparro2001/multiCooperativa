@@ -30,15 +30,19 @@ import {
   useRegisterInvoice,
   useThirdParties,
 } from '@/features/invoicing/queries';
-import { Chip, Segmented } from '@/features/invoicing/segmented';
+import { Chip, Segmented } from '@/ui/chip';
 import { formatDay } from '@/i18n/format';
+import { ActionBar } from '@/ui/action-bar';
+import { Banner } from '@/ui/banner';
 import { Button } from '@/ui/button';
+import { Card } from '@/ui/card';
 import { DayField } from '@/ui/date-field';
 import { FieldGroup, FormSummary } from '@/ui/field';
 import { ErrorText, Screen } from '@/ui/screen';
+import { SectionTitle } from '@/ui/section-title';
 import { TextField } from '@/ui/text-field';
-import { Card, Text, TouchableRipple, useTheme } from '@/ui/paper';
-import { colors } from '@/ui/theme';
+import { Icon, Text, TextInput, TouchableRipple, useTheme } from '@/ui/paper';
+import { colors, space } from '@/ui/theme';
 
 /**
  * US-INV-02, US-INV-03 and the review step of US-INV-05. Whether typed or proposed by the
@@ -69,7 +73,9 @@ export default function RegisterScreen() {
 
   const patch = (change: Partial<RegistrationDraft>) => setDraft((d) => ({ ...d, ...change }));
   const review = (field: ExtractionField) => draft.lowConfidence.includes(field);
-  const mark = (label: string, field: ExtractionField) => (review(field) ? `${label} ⚠` : label);
+  // Low-confidence fields carry an alert icon in warning inside the field (the label stays plain).
+  const warnIcon = (field: ExtractionField) =>
+    review(field) ? <TextInput.Icon icon="alert-outline" color={colors.warning} /> : undefined;
   const isInvoice = draft.kind === 'invoice';
 
   async function submit() {
@@ -101,17 +107,28 @@ export default function RegisterScreen() {
   const suggestedTotal = computeTotal(draft.base, draft.vatRate);
 
   return (
-    <Screen testID="register-screen" form={form}>
-      {params.noData === '1' && (
-        <Text variant="bodyMedium" style={styles.notice} testID="no-data">
-          {t('invoicing.form.noData')}
-        </Text>
-      )}
+    <Screen
+      testID="register-screen"
+      form={form}
+      footer={
+        <ActionBar>
+          <FormSummary form={form}>{error}</FormSummary>
+          <Button
+            title={t('invoicing.form.confirm')}
+            block
+            onPress={submit}
+            loading={registerInvoice.isPending || registerNote.isPending}
+            testID="confirm-registration"
+          />
+        </ActionBar>
+      }
+    >
+      {params.noData === '1' && <Banner testID="no-data">{t('invoicing.form.noData')}</Banner>}
       {draft.lowConfidence.length > 0 && (
-        <Text variant="bodyMedium" style={styles.notice} testID="low-confidence">
-          {t('invoicing.form.reviewFields')}
-        </Text>
+        <Banner testID="low-confidence">{t('invoicing.form.reviewFields')}</Banner>
       )}
+
+      <SectionTitle>{t('invoicing.form.sections.document')}</SectionTitle>
 
       <Segmented
         value={draft.kind}
@@ -135,7 +152,8 @@ export default function RegisterScreen() {
       <PartyPicker draft={draft} patch={patch} warn={review('thirdParty')} />
 
       <TextField
-        label={mark(t('invoicing.form.number'), 'number')}
+        label={t('invoicing.form.number')}
+        right={warnIcon('number')}
         name="number"
         value={draft.number}
         onChangeText={(number) => patch({ number })}
@@ -144,10 +162,8 @@ export default function RegisterScreen() {
         testID="form-number"
       />
       <DayField
-        label={mark(
-          isInvoice ? t('invoicing.form.issueDate') : t('invoicing.form.noteDate'),
-          'date',
-        )}
+        label={isInvoice ? t('invoicing.form.issueDate') : t('invoicing.form.noteDate')}
+        warning={review('date')}
         name="date"
         value={draft.date}
         onChange={(date) => patch({ date })}
@@ -157,15 +173,18 @@ export default function RegisterScreen() {
       {isInvoice && (
         <>
           <DayField
-            label={mark(t('invoicing.form.dueDate'), 'dueDate')}
+            label={t('invoicing.form.dueDate')}
+            warning={review('dueDate')}
             name="dueDate"
             value={draft.dueDate}
             onChange={(dueDate) => patch({ dueDate })}
             suggested={() => dueDateAfter(draft.date)}
             testID="form-due-date"
           />
+          <SectionTitle>{t('invoicing.form.sections.amounts')}</SectionTitle>
           <TextField
-            label={mark(t('invoicing.form.base'), 'base')}
+            label={t('invoicing.form.base')}
+            right={warnIcon('base')}
             name="base"
             value={draft.base}
             onChangeText={(base) => patch({ base })}
@@ -173,7 +192,8 @@ export default function RegisterScreen() {
             testID="form-base"
           />
           <TextField
-            label={mark(t('invoicing.form.vatRate'), 'vatRate')}
+            label={t('invoicing.form.vatRate')}
+            right={warnIcon('vatRate')}
             name="vatRate"
             value={draft.vatRate}
             onChangeText={(vatRate) => patch({ vatRate })}
@@ -181,7 +201,8 @@ export default function RegisterScreen() {
             testID="form-vat"
           />
           <TextField
-            label={mark(t('invoicing.form.total'), 'total')}
+            label={t('invoicing.form.total')}
+            right={warnIcon('total')}
             name="total"
             value={draft.total}
             onChangeText={(total) => patch({ total })}
@@ -230,15 +251,6 @@ export default function RegisterScreen() {
           </TouchableRipple>
         </View>
       )}
-
-      {error ? <ErrorText>{error}</ErrorText> : null}
-      <FormSummary form={form} />
-      <Button
-        title={t('invoicing.form.confirm')}
-        onPress={submit}
-        loading={registerInvoice.isPending || registerNote.isPending}
-        testID="confirm-registration"
-      />
     </Screen>
   );
 }
@@ -281,12 +293,13 @@ function PartyPicker({
 
   return (
     <FieldGroup name="thirdPartyId" style={styles.group} testID="party-picker">
-      <Text variant="labelLarge">
-        {warn ? `${t('invoicing.form.thirdParty')} ⚠` : t('invoicing.form.thirdParty')}
-      </Text>
+      <View style={styles.labelRow}>
+        <Text variant="labelLarge">{t('invoicing.form.thirdParty')}</Text>
+        {warn ? <Icon source="alert-outline" size={18} color={colors.warning} /> : null}
+      </View>
       {draft.suggestedParty && !draft.thirdPartyId && (
-        <Card mode="contained">
-          <Card.Content style={styles.boxContent}>
+        <Card style={styles.boxContent}>
+          <>
             <Text variant="bodyMedium">
               {t('invoicing.form.unknownParty', {
                 name: draft.suggestedParty.name,
@@ -301,7 +314,7 @@ function PartyPicker({
               testID="create-suggested-party"
             />
             {error ? <ErrorText>{error}</ErrorText> : null}
-          </Card.Content>
+          </>
         </Card>
       )}
       <TextField
@@ -364,13 +377,16 @@ function LinesEditor({
 
   return (
     <FieldGroup name="lines" style={styles.group} testID="lines">
-      <Text variant="labelLarge">
-        {warn ? `${t('invoicing.form.lines')} ⚠` : t('invoicing.form.lines')}
-        {required ? ' *' : ''}
-      </Text>
+      <View style={styles.labelRow}>
+        <SectionTitle>
+          {t('invoicing.form.lines')}
+          {required ? ' *' : ''}
+        </SectionTitle>
+        {warn ? <Icon source="alert-outline" size={18} color={colors.warning} /> : null}
+      </View>
       {lines.map((line, index) => (
-        <Card key={index} mode="contained">
-          <Card.Content style={styles.boxContent}>
+        <Card key={index} style={styles.boxContent}>
+          <>
             <TextField
               label={t('invoicing.form.concept')}
               name={`lines.${index}.concept`}
@@ -408,7 +424,7 @@ function LinesEditor({
                 {t('invoicing.form.removeLine')}
               </Text>
             </TouchableRipple>
-          </Card.Content>
+          </>
         </Card>
       ))}
       <Button
@@ -434,12 +450,16 @@ function NotesToGroup({
   onChange(ids: string[]): void;
 }) {
   const { t } = useTranslation();
+  const { colors: theme } = useTheme();
   const notes = useDeliveryNotes(operation, { pendingFor: thirdPartyId });
   const items = allItems(notes.data);
   if (items.length === 0) return null;
   return (
     <FieldGroup name="deliveryNoteIds" style={styles.group} testID="notes-to-group">
-      <Text variant="labelLarge">{t('invoicing.form.groupNotes')}</Text>
+      <SectionTitle>{t('invoicing.home.notes')}</SectionTitle>
+      <Text variant="bodyMedium" style={{ color: theme.onSurfaceVariant }}>
+        {t('invoicing.form.groupNotes')}
+      </Text>
       <View style={styles.chips}>
         {items.map((note) => (
           <Chip
@@ -462,19 +482,19 @@ function NotesToGroup({
 }
 
 const styles = StyleSheet.create({
-  notice: {
-    backgroundColor: colors.warningContainer,
-    color: colors.warning,
-    borderRadius: 10,
-    padding: 10,
-  },
-  group: { gap: 8 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  boxContent: { gap: 8 },
-  lineRow: { flexDirection: 'row', gap: 8 },
+  group: { gap: space[2] },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  boxContent: { gap: space[2] },
+  lineRow: { flexDirection: 'row', gap: space[2] },
   flex: { flex: 1 },
   remove: { color: colors.danger },
-  scan: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, alignItems: 'center' },
+  scan: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: space[2],
+    alignItems: 'center',
+  },
   scanText: { flexShrink: 1 },
 });
 

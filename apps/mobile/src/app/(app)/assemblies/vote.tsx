@@ -2,14 +2,16 @@ import type { VoteChoice } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ApiError, messageFor } from '@/api/api-error';
 import { useCastVote } from '@/features/assemblies/queries';
 import { Button } from '@/ui/button';
-import { RadioButton, Text, useTheme } from '@/ui/paper';
+import { Text, useTheme } from '@/ui/paper';
 import { ErrorText, Screen } from '@/ui/screen';
+import { space } from '@/ui/theme';
 import { confirmAction } from '@/ui/confirm';
+import { VoteOption } from '@/ui/vote-option';
 
 const CHOICES: VoteChoice[] = ['in_favor', 'against', 'abstention'];
 
@@ -50,6 +52,7 @@ export default function VoteScreen() {
     return (
       <Screen testID="vote-confirmed">
         <Stack.Screen options={{ title: t('assemblies.vote.recordedTitle') }} />
+        <Text variant="headlineSmall">{t('assemblies.vote.recordedTitle')}</Text>
         <Text variant="titleMedium" style={{ color: colors.primary }}>
           {t('assemblies.vote.recorded', { choice: t(`enums.voteChoice.${cast}`) })}
         </Text>
@@ -67,28 +70,21 @@ export default function VoteScreen() {
     <Screen testID="vote-screen">
       <Stack.Screen options={{ title: t('assemblies.vote.title') }} />
       <Text variant="bodyLarge">{t('assemblies.vote.choose')}</Text>
-      <RadioButton.Group
-        value={choice ?? ''}
-        onValueChange={(value) => setChoice(value as VoteChoice)}
-      >
+      <View style={styles.options}>
         {CHOICES.map((value) => (
-          <RadioButton.Item
+          <VoteOption
             key={value}
-            value={value}
             label={t(`enums.voteChoice.${value}`)}
-            color={colors.primary}
-            labelVariant="titleMedium"
-            style={[
-              styles.choice,
-              { borderColor: choice === value ? colors.primary : colors.outlineVariant },
-            ]}
+            selected={choice === value}
+            onPress={() => setChoice(value)}
             testID={`option-${value}`}
           />
         ))}
-      </RadioButton.Group>
+      </View>
       {error ? <ErrorText>{error}</ErrorText> : null}
       <Button
         title={t('assemblies.vote.submit')}
+        block
         onPress={confirm}
         disabled={!choice}
         loading={vote.isPending}
@@ -102,5 +98,5 @@ export default function VoteScreen() {
 }
 
 const styles = StyleSheet.create({
-  choice: { borderWidth: 2, borderRadius: 12, marginBottom: 10 },
+  options: { gap: space[3] },
 });

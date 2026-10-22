@@ -306,15 +306,15 @@ erDiagram
 
 Authentication (without cooperative):
 
-| Method | Route                      | Use                                    |
-| ------ | -------------------------- | -------------------------------------- |
-| POST   | `/auth/login`              | Sign in                                |
-| POST   | `/auth/refresh`            | Renew the session                      |
-| POST   | `/auth/logout`             | Sign out                               |
-| POST   | `/auth/invitations/accept` | Activate access from an invitation     |
-| POST   | `/auth/password/forgot`    | Request recovery                       |
-| POST   | `/auth/password/reset`     | Set a new password                     |
-| GET    | `/me`                      | User data and their active memberships |
+| Method | Route                      | Use                                                                                                 |
+| ------ | -------------------------- | --------------------------------------------------------------------------------------------------- |
+| POST   | `/auth/login`              | Sign in                                                                                             |
+| POST   | `/auth/refresh`            | Renew the session                                                                                   |
+| POST   | `/auth/logout`             | Sign out                                                                                            |
+| POST   | `/auth/invitations/accept` | Activate access from an invitation                                                                  |
+| POST   | `/auth/password/forgot`    | Request recovery                                                                                    |
+| POST   | `/auth/password/reset`     | Set a new password                                                                                  |
+| GET    | `/me`                      | User data and their active memberships, each with its cooperative's `primaryColor` (null = default) |
 
 Authentication contract (schemas in `packages/contracts/src/auth.ts`):
 

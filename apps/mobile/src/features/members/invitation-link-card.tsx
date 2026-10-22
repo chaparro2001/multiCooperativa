@@ -5,7 +5,8 @@ import { Platform, Share, StyleSheet, View } from 'react-native';
 
 import { formatDate } from '@/i18n/format';
 import { Button } from '@/ui/button';
-import { Card, Text, useTheme } from '@/ui/paper';
+import { Text, useTheme } from '@/ui/paper';
+import { radius, shadow, space } from '@/ui/theme';
 
 /** The browser share sheet exists only on some web platforms; native always has one. */
 const canShare = Platform.OS !== 'web' || typeof globalThis.navigator?.share === 'function';
@@ -34,42 +35,41 @@ export function InvitationLinkCard({ url, expiresAt }: { url: string; expiresAt:
   }
 
   return (
-    <Card mode="outlined" testID="invitation-link-card">
-      <Card.Content style={styles.content}>
-        <Text variant="bodyMedium">
-          {t('members.invitationLink.explanation', { date: expiry })}
-        </Text>
-        <Text
-          selectable
-          variant="bodySmall"
-          style={[styles.link, { color: colors.onSurfaceVariant }]}
-          testID="invitation-link"
-        >
-          {url}
-        </Text>
-        <View style={styles.actions}>
+    <View
+      style={[styles.card, { backgroundColor: colors.surface, boxShadow: shadow[3] }]}
+      testID="invitation-link-card"
+    >
+      <Text variant="bodyMedium">{t('members.invitationLink.explanation', { date: expiry })}</Text>
+      <Text
+        selectable
+        variant="bodySmall"
+        style={[styles.link, { color: colors.onSurfaceVariant }]}
+        testID="invitation-link"
+      >
+        {url}
+      </Text>
+      <View style={styles.actions}>
+        <Button
+          title={copied ? t('members.invitationLink.copied') : t('members.invitationLink.copy')}
+          variant="secondary"
+          onPress={() => void copy()}
+          testID="invitation-link-copy"
+        />
+        {canShare && (
           <Button
-            title={copied ? t('members.invitationLink.copied') : t('members.invitationLink.copy')}
+            title={t('members.invitationLink.share')}
             variant="secondary"
-            onPress={() => void copy()}
-            testID="invitation-link-copy"
+            onPress={() => void share()}
+            testID="invitation-link-share"
           />
-          {canShare && (
-            <Button
-              title={t('members.invitationLink.share')}
-              variant="secondary"
-              onPress={() => void share()}
-              testID="invitation-link-share"
-            />
-          )}
-        </View>
-      </Card.Content>
-    </Card>
+        )}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { gap: 12 },
+  card: { borderRadius: radius.md, padding: space[4], gap: space[3] },
   link: { fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) },
-  actions: { gap: 8 },
+  actions: { gap: space[2] },
 });

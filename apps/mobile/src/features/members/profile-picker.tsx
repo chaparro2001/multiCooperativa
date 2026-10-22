@@ -2,9 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { Chip } from '@/ui/chip';
 import { FieldGroup } from '@/ui/field';
-import { Chip, Text } from '@/ui/paper';
-import { ErrorText, Loading } from '@/ui/screen';
+import { ErrorText } from '@/ui/screen';
+import { Skeleton } from '@/ui/states';
+import { space } from '@/ui/theme';
 
 import { useProfiles } from './queries';
 
@@ -21,17 +23,15 @@ export function ProfilePicker({
 }) {
   const { t } = useTranslation();
   const profiles = useProfiles();
-  if (profiles.isPending) return <Loading />;
+  if (profiles.isPending) return <Skeleton variant="list" rows={2} />;
   if (profiles.isError) return <ErrorText>{messageFor(profiles.error)}</ErrorText>;
 
   return (
-    <FieldGroup name={name} style={styles.group}>
-      <Text variant="labelLarge">{t('members.fields.profile')}</Text>
+    <FieldGroup name={name} label={t('members.fields.profile')}>
       <View style={styles.chips}>
         {profiles.data.map((profile) => (
           <Chip
             key={profile.id}
-            mode="outlined"
             selected={value === profile.id}
             onPress={() => onChange(profile.id)}
             testID={`profile-${profile.name}`}
@@ -45,6 +45,5 @@ export function ProfilePicker({
 }
 
 const styles = StyleSheet.create({
-  group: { gap: 6 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
 });

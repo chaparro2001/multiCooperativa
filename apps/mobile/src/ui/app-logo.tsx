@@ -20,8 +20,11 @@ export function AppLogo({ size = 72 }: { size?: number }) {
         style={{ width: size, height: size }}
         testID="app-logo"
       />
-      <Text variant="headlineMedium" style={{ color: colors.primary }}>
-        multiCooperativa
+      <Text variant="headlineMedium" style={{ color: colors.onSurface }}>
+        multi
+        <Text variant="headlineMedium" style={{ color: colors.primary }}>
+          Cooperativa
+        </Text>
       </Text>
     </View>
   );

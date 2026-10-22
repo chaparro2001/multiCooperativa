@@ -4,7 +4,11 @@ import { formatDay, formatSize, formatTime, today } from './format';
 
 describe('formatting with the current language', () => {
   it('shows a calendar day in Spanish without a time-zone shift', () => {
-    expect(formatDay('2026-03-15')).toBe('15 de marzo de 2026');
+    expect(formatDay('2026-03-15')).toBe('15 mar 2026');
+  });
+
+  it('writes dates with the short month of the design system', () => {
+    expect(formatDay('2026-10-22')).toBe('22 oct 2026');
   });
 
   it('shows the time with two digits', () => {

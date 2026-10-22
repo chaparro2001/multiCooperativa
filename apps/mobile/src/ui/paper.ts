@@ -20,5 +20,5 @@ export {
   TouchableRipple,
   useTheme,
 } from 'react-native-paper';
-export { Chip, SegmentedButtons } from './chip';
+export { Chip, Segmented, SegmentedButtons } from './chip';
 export type { MD3Theme } from 'react-native-paper';

@@ -15,6 +15,8 @@ export interface UserSummary {
     membershipId: string;
     cooperativeId: string;
     cooperativeName: string;
+    /** Branding colour of the cooperative; null = default theme. */
+    primaryColor: string | null;
     profileName: string;
     isPartner: boolean;
   }[];

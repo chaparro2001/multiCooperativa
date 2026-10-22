@@ -6,14 +6,17 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
-import { listStyles } from '@/features/invoicing/components';
 import { useThirdParties } from '@/features/invoicing/queries';
-import { Segmented } from '@/features/invoicing/segmented';
+import { Segmented } from '@/ui/chip';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
-import { ErrorText, Loading } from '@/ui/screen';
+import { SCREEN_PADDING } from '@/ui/screen';
+import { EmptyState, ErrorState, Skeleton } from '@/ui/states';
+import { ListRow } from '@/ui/list-row';
+import { moduleIcon } from '@/navigation/modules';
+import { space } from '@/ui/theme';
 import { TextField } from '@/ui/text-field';
-import { Card, Text, useTheme } from '@/ui/paper';
+import { TextInput, useTheme } from '@/ui/paper';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 
 type Filter = 'all' | 'supplier' | 'customer';
@@ -68,6 +71,7 @@ export default function ThirdPartiesScreen() {
           value={search}
           onChangeText={setSearch}
           returnKeyType="search"
+          left={<TextInput.Icon icon="magnify" />}
           testID="third-party-search"
         />
         {!fixed && (
@@ -83,24 +87,28 @@ export default function ThirdPartiesScreen() {
         )}
       </View>
       {list.isPending ? (
-        <Loading />
+        <Skeleton />
       ) : list.isError ? (
-        <ErrorText>{messageFor(list.error)}</ErrorText>
+        <ErrorState message={messageFor(list.error)} onRetry={() => list.refetch()} />
       ) : (
         <FlatList
           testID="third-party-list"
           data={list.data.items}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyOf}
+          ItemSeparatorComponent={Separator}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <Text variant="bodyLarge" style={listStyles.empty}>
-              {fixed === 'supplier'
-                ? t('invoicing.thirdParties.emptySupplier')
-                : fixed === 'customer'
-                  ? t('invoicing.thirdParties.emptyCustomer')
-                  : t('invoicing.thirdParties.empty')}
-            </Text>
+            <EmptyState
+              icon={moduleIcon(fixed === 'customer' ? 'customers' : 'suppliers')}
+              message={
+                fixed === 'supplier'
+                  ? t('invoicing.thirdParties.emptySupplier')
+                  : fixed === 'customer'
+                    ? t('invoicing.thirdParties.emptyCustomer')
+                    : t('invoicing.thirdParties.empty')
+              }
+            />
           }
           renderItem={renderItem}
         />
@@ -109,33 +117,37 @@ export default function ThirdPartiesScreen() {
   );
 }
 
+const keyOf = (item: ThirdParty) => item.id;
+const Separator = () => <View style={styles.separator} />;
+
 export const PartyRow = memo(function PartyRow({ party }: { party: ThirdParty }) {
   const { t } = useTranslation();
   const onPress = useCallback(() => router.push(`/invoices/third-parties/${party.id}`), [party.id]);
+  const badges = [
+    party.isSupplier ? (
+      <Badge key="supplier" label={t('invoicing.thirdParties.supplier')} tone="info" />
+    ) : null,
+    party.isCustomer ? (
+      <Badge key="customer" label={t('invoicing.thirdParties.customer')} tone="info" />
+    ) : null,
+    !party.active ? (
+      <Badge key="inactive" label={t('invoicing.thirdParties.inactive')} tone="danger" />
+    ) : null,
+  ];
   return (
-    <Card
-      mode="contained"
-      accessibilityRole="button"
+    <ListRow
+      title={party.name}
+      meta={party.nif}
+      badges={badges}
       onPress={onPress}
       testID={`third-party-${party.nif}`}
-    >
-      <Card.Content style={styles.rowContent}>
-        <Text variant="titleMedium">{party.name}</Text>
-        <Text variant="bodySmall">{party.nif}</Text>
-        <View style={styles.badges}>
-          {party.isSupplier && <Badge label={t('invoicing.thirdParties.supplier')} tone="info" />}
-          {party.isCustomer && <Badge label={t('invoicing.thirdParties.customer')} tone="info" />}
-          {!party.active && <Badge label={t('invoicing.thirdParties.inactive')} tone="danger" />}
-        </View>
-      </Card.Content>
-    </Card>
+    />
   );
 });
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  filters: { padding: 16, paddingBottom: 8, gap: 10 },
-  list: { padding: 16, paddingTop: 0, gap: 10 },
-  rowContent: { gap: 4 },
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  filters: { padding: SCREEN_PADDING, paddingBottom: space[2], gap: space[3] },
+  list: { padding: SCREEN_PADDING, paddingTop: 0 },
+  separator: { height: space[3] },
 });

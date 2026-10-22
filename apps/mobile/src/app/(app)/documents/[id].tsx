@@ -18,8 +18,12 @@ import { formatDateTime, formatDay, formatSize } from '@/i18n/format';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
-import { Card, Divider, Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { Card } from '@/ui/card';
+import { Divider, Text, useTheme } from '@/ui/paper';
+import { SectionTitle } from '@/ui/section-title';
+import { ErrorText, Screen } from '@/ui/screen';
+import { ErrorState, Skeleton } from '@/ui/states';
+import { space } from '@/ui/theme';
 import { openUrl } from '@/ui/open-url';
 import { confirmAction } from '@/ui/confirm';
 
@@ -46,11 +50,11 @@ export default function DocumentScreen() {
   const [opening, setOpening] = useState(false);
   const [republished, setRepublished] = useState(false);
 
-  if (document.isPending) return <Loading />;
+  if (document.isPending) return <Skeleton variant="detail" />;
   if (document.isError) {
     return (
       <Screen>
-        <ErrorText>{messageFor(document.error)}</ErrorText>
+        <ErrorState message={messageFor(document.error)} onRetry={() => document.refetch()} />
       </Screen>
     );
   }
@@ -96,7 +100,7 @@ export default function DocumentScreen() {
     <Screen testID="document-screen">
       <Stack.Screen options={{ title: categoryTitle(data.category) }} />
       <Text variant="headlineSmall">{data.title}</Text>
-      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+      <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
         {formatDay(data.documentDate)} · {formatSize(data.size)}
       </Text>
       {data.status === 'withdrawn' ? (
@@ -169,23 +173,19 @@ export default function DocumentScreen() {
             />
           ) : null}
 
-          <Text variant="titleSmall" style={styles.sectionTitle}>
-            {t('documents.detail.versionHistory')}
-          </Text>
+          <SectionTitle small>{t('documents.detail.versionHistory')}</SectionTitle>
           {versions.data?.versions.map((version) => (
-            <Card key={version.id} mode="contained">
-              <Card.Content style={styles.version}>
-                <Text variant="bodyLarge">
-                  {version.isCurrent
-                    ? t('documents.detail.currentVersion', { name: version.fileName })
-                    : version.fileName}
-                </Text>
-                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-                  {formatDateTime(version.uploadedAt)}
-                  {version.uploadedByName ? ` · ${version.uploadedByName}` : ''} ·{' '}
-                  {formatSize(version.size)}
-                </Text>
-              </Card.Content>
+            <Card key={version.id} style={styles.version}>
+              <Text variant="bodyLarge">
+                {version.isCurrent
+                  ? t('documents.detail.currentVersion', { name: version.fileName })
+                  : version.fileName}
+              </Text>
+              <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+                {formatDateTime(version.uploadedAt)}
+                {version.uploadedByName ? ` · ${version.uploadedByName}` : ''} ·{' '}
+                {formatSize(version.size)}
+              </Text>
             </Card>
           ))}
 
@@ -212,8 +212,7 @@ export default function DocumentScreen() {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: 10 },
-  sectionTitle: { marginTop: 8 },
-  indexing: { gap: 8 },
-  version: { gap: 2 },
+  section: { gap: space[3] },
+  indexing: { gap: space[2] },
+  version: { gap: space[1] },
 });

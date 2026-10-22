@@ -24,6 +24,21 @@
       "mb": "{{value}} MB"
     }
   },
+  "home": {
+    "attention": {
+      "title": "Pendiente para ti",
+      "votes_one": "{{count}} votación abierta",
+      "votes_other": "{{count}} votaciones abiertas",
+      "votesMeta": "Tu voto cuenta",
+      "invoices_one": "{{count}} factura vencida o por vencer",
+      "invoices_other": "{{count}} facturas vencidas o por vencer",
+      "invoicesMeta": "Revisa los pagos",
+      "assembly": "Próxima asamblea",
+      "announcements_one": "{{count}} comunicado sin leer",
+      "announcements_other": "{{count}} comunicados sin leer",
+      "announcementsMeta": "Mira las novedades"
+    }
+  },
   "forms": {
     "fixFields": "Revisa los campos marcados en rojo.",
     "errors": {
@@ -318,6 +333,12 @@
     }
   },
   "settings": {
+    "admin": {
+      "title": "Administración",
+      "appearance": "Color de la cooperativa",
+      "invoicing": "Avisos de facturas y albaranes",
+      "assistant": "Quién responde al asistente"
+    },
     "title": "Ajustes",
     "cooperative": "Cooperativa",
     "switchCooperative": "Cambiar de cooperativa",
@@ -374,7 +395,9 @@
         "invalid": "Escribe el color como #RRGGBB, por ejemplo #1E5AA8.",
         "contrastOk": "Contraste con el texto blanco: {{ratio}}:1. Se lee bien.",
         "contrastLow": "Contraste con el texto blanco: {{ratio}}:1. Es insuficiente: se necesita al menos 4,5:1.",
-        "preview": "Así se verán los botones:",
+        "preview": "Así se verá:",
+        "custom": "Personalizado",
+        "previewTile": "Facturas",
         "previewPrimary": "Botón principal",
         "previewSecondary": "Botón secundario",
         "save": "Guardar color",
@@ -530,6 +553,7 @@
       "tally": "A favor {{inFavor}} · En contra {{against}} · Abstenciones {{abstentions}}",
       "quorumReached": "Con quórum en {{call}} convocatoria",
       "quorumMissed": "Sin quórum en {{call}} convocatoria",
+      "quorumRequired": "Quórum necesario: {{percent}} % del censo",
       "myVote": "Tu voto: {{choice}}",
       "vote": "Votar",
       "reschedule": "Cambiar fecha",
@@ -567,6 +591,8 @@
     "editor": {
       "newTitle": "Nueva asamblea",
       "editTitle": "Editar convocatoria",
+      "type": "Tipo de asamblea",
+      "majority": "Mayoría necesaria",
       "firstCall": "Primera convocatoria",
       "secondCall": "Segunda convocatoria (opcional)",
       "place": "Lugar",
@@ -735,18 +761,27 @@
       "chooseImage": "Elegir imagen",
       "choosePdf": "Elegir un PDF",
       "reading": "Leyendo el documento…",
+      "steps": {
+        "received": "Imagen recibida",
+        "recognized": "Texto reconocido",
+        "extracting": "Extrayendo importes y líneas"
+      },
       "cameraDenied": "No hay permiso para usar la cámara. Puedes elegir una imagen en su lugar.",
       "privacy": "El documento se envía a nuestro servidor, que lo lee con un modelo de IA de Google (Gemini). No se guarda nada hasta que lo confirmes. En la demo, no subas documentos reales de terceros.",
       "manually": "Rellenar a mano"
     },
     "form": {
       "title": "Registrar documento",
+      "sections": {
+        "document": "Documento",
+        "amounts": "Importes"
+      },
       "kind": {
         "invoice": "Factura",
         "delivery_note": "Albarán"
       },
       "noData": "No se han podido leer los datos del documento. Rellena el formulario a mano.",
-      "reviewFields": "Revisa los datos leídos: los campos marcados con ⚠ tienen poca confianza. No se guardará nada hasta que confirmes.",
+      "reviewFields": "Revisa los datos leídos. Los marcados con ⚠ se han leído con poca seguridad. No se guardará nada hasta que confirmes.",
       "thirdParty": "Proveedor o cliente",
       "searchParty": "Buscar",
       "noParties": "No hay terceros de este tipo. Crea uno.",
@@ -896,6 +931,22 @@
         "amount_invalid": "Escribe un importe válido, con hasta dos decimales.",
         "amount_not_positive": "El importe debe ser mayor que cero (solo una corrección puede ser negativa)."
       }
+    }
+  },
+  "ui": {
+    "loading": "Cargando…",
+    "aiNotice": {
+      "privacy": "Privacidad",
+      "proposal": "Propuesta de la IA",
+      "info": "Asistente IA"
+    },
+    "tally": {
+      "favor": "A favor",
+      "against": "En contra",
+      "abstentions": "Abstenciones"
+    },
+    "map": {
+      "directions": "Cómo llegar"
     }
   }
 }

@@ -7,7 +7,7 @@ import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { messageFor } from '@/api/api-error';
 import { allItems } from '@/api/paged';
 import { useLoadMore } from '@/api/use-load-more';
-import { InvoiceRow, listStyles, NoteRow, useEuros } from '@/features/invoicing/components';
+import { InvoiceRow, NoteRow, useEuros } from '@/features/invoicing/components';
 import { todayInSpain } from '@/features/invoicing/attention';
 import {
   useDeliveryNotes,
@@ -17,12 +17,15 @@ import {
 } from '@/features/invoicing/queries';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Button } from '@/ui/button';
-import { Card, Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading } from '@/ui/screen';
-import { colors } from '@/ui/theme';
+import { Banner } from '@/ui/banner';
+import { useTheme } from '@/ui/paper';
+import { SCREEN_PADDING } from '@/ui/screen';
+import { EmptyState, ErrorState, ListFooter, Skeleton } from '@/ui/states';
+import { SummaryCard } from '@/ui/summary-card';
+import { space } from '@/ui/theme';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 
-import { Segmented } from '@/features/invoicing/segmented';
+import { Segmented } from '@/ui/chip';
 import { moduleIcon } from '@/navigation/modules';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
@@ -67,6 +70,7 @@ export default function InvoicingHomeScreen() {
     [query.data],
   );
   const loadMore = useLoadMore(query);
+  const { refetch: refetchQuery } = query;
   const renderItem = useCallback(
     ({ item }: { item: Invoice | DeliveryNote }) =>
       section === 'invoices' ? (
@@ -169,16 +173,19 @@ export default function InvoicingHomeScreen() {
         ListHeaderComponent={header}
         ListEmptyComponent={
           query.isPending ? (
-            <Loading />
+            <Skeleton />
           ) : query.isError ? (
-            <ErrorText>{messageFor(query.error)}</ErrorText>
+            <ErrorState message={messageFor(query.error)} onRetry={refetchQuery} />
           ) : (
-            <Text variant="bodyLarge" style={listStyles.empty}>
-              {t(section === 'invoices' ? 'invoicing.home.noInvoices' : 'invoicing.home.noNotes')}
-            </Text>
+            <EmptyState
+              icon={moduleIcon(section === 'invoices' ? 'invoices' : 'delivery-notes')}
+              message={t(
+                section === 'invoices' ? 'invoicing.home.noInvoices' : 'invoicing.home.noNotes',
+              )}
+            />
           )
         }
-        ListFooterComponent={query.isFetchingNextPage ? <Loading /> : null}
+        ListFooterComponent={<ListFooter loading={query.isFetchingNextPage} />}
         onEndReachedThreshold={0.4}
         onEndReached={loadMore}
       />
@@ -193,10 +200,11 @@ const Separator = () => <View style={styles.separator} />;
 function SummaryCards({ kind }: { kind: Kind | null }) {
   const { t } = useTranslation();
   const euros = useEuros();
-  const { colors: theme } = useTheme();
   const summary = useInvoicingSummary();
-  if (summary.isPending) return <Loading />;
-  if (summary.isError) return <ErrorText>{messageFor(summary.error)}</ErrorText>;
+  if (summary.isPending) return <Skeleton rows={1} />;
+  if (summary.isError) {
+    return <ErrorState message={messageFor(summary.error)} onRetry={() => summary.refetch()} />;
+  }
   const { toPay, toCollect, openDiscrepancies, staleDeliveryNotes } = summary.data;
 
   const showInvoices = kind !== 'delivery_note';
@@ -213,42 +221,34 @@ function SummaryCards({ kind }: { kind: Kind | null }) {
               ['toCollect', toCollect],
             ] as const
           ).map(([key, amounts]) => (
-            <Card key={key} mode="contained" style={styles.card} testID={`summary-${key}`}>
-              <Card.Content style={styles.cardContent}>
-                <Text variant="labelLarge" style={{ color: theme.onSurfaceVariant }}>
-                  {t(`invoicing.summary.${key}`)}
-                </Text>
-                <Text variant="headlineSmall" style={styles.cardAmount}>
-                  {euros(amounts.pending)}
-                </Text>
-                <Text variant="bodySmall" style={{ color: theme.onSurfaceVariant }}>
-                  {t('invoicing.summary.invoices', { count: amounts.pendingCount })}
-                </Text>
-                <Text
-                  variant="bodySmall"
-                  style={
-                    amounts.overdueCount > 0 ? styles.overdue : { color: theme.onSurfaceVariant }
-                  }
-                >
-                  {t('invoicing.summary.overdue', {
-                    amount: euros(amounts.overdue),
-                    count: amounts.overdueCount,
-                  })}
-                </Text>
-              </Card.Content>
-            </Card>
+            <SummaryCard
+              key={key}
+              style={styles.card}
+              label={t(`invoicing.summary.${key}`)}
+              amount={amounts.pending}
+              meta={t('invoicing.summary.invoices', { count: amounts.pendingCount })}
+              overdue={
+                amounts.overdueCount > 0
+                  ? t('invoicing.summary.overdue', {
+                      amount: euros(amounts.overdue),
+                      count: amounts.overdueCount,
+                    })
+                  : undefined
+              }
+              testID={`summary-${key}`}
+            />
           ))}
         </View>
       )}
       {showInvoices && openDiscrepancies > 0 && (
-        <Text variant="bodyMedium" style={styles.alert} testID="summary-discrepancies">
+        <Banner testID="summary-discrepancies">
           {t('invoicing.summary.openDiscrepancies', { count: openDiscrepancies })}
-        </Text>
+        </Banner>
       )}
       {showNotes && staleDeliveryNotes > 0 && (
-        <Text variant="bodyMedium" style={styles.alert} testID="summary-stale">
+        <Banner testID="summary-stale">
           {t('invoicing.summary.staleNotes', { count: staleDeliveryNotes })}
-        </Text>
+        </Banner>
       )}
     </View>
   );
@@ -256,21 +256,12 @@ function SummaryCards({ kind }: { kind: Kind | null }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: 16 },
-  summary: { gap: 8 },
-  cards: { flexDirection: 'row', gap: 10 },
+  content: { padding: SCREEN_PADDING },
+  summary: { gap: space[3] },
+  cards: { flexDirection: 'row', gap: space[3] },
   card: { flex: 1 },
-  cardContent: { gap: 2 },
-  cardAmount: { fontWeight: '700' },
-  overdue: { color: colors.danger, fontWeight: '600' },
-  alert: {
-    backgroundColor: colors.warningContainer,
-    color: colors.warning,
-    borderRadius: 10,
-    padding: 10,
-  },
-  actions: { flexDirection: 'row', gap: 10 },
+  actions: { flexDirection: 'row', gap: space[3] },
   action: { flex: 1 },
-  header: { gap: 14, marginBottom: 14 },
-  separator: { height: 10 },
+  header: { gap: space[4], marginBottom: space[4] },
+  separator: { height: space[3] },
 });

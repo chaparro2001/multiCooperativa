@@ -4,30 +4,40 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
-import { Fact, InvoiceRow, NoteRow, useEuros } from '@/features/invoicing/components';
+import { Fact, InvoiceRow, NoteRow } from '@/features/invoicing/components';
 import { useThirdPartySheet, useUpdateThirdParty } from '@/features/invoicing/queries';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { Card } from '@/ui/card';
+import { Money } from '@/ui/money';
+import { ErrorState, Skeleton } from '@/ui/states';
+import { ErrorText, Screen } from '@/ui/screen';
+import { SectionTitle } from '@/ui/section-title';
 import { Text, useTheme } from '@/ui/paper';
+import { space } from '@/ui/theme';
 
 /** US-INV-06: record of a third party with its documents and outstanding balance. BR-INV-14: it is deactivated, not deleted. */
 export default function ThirdPartyScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const euros = useEuros();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { canManage } = useModuleAccess('invoicing');
   const sheet = useThirdPartySheet(id);
   const update = useUpdateThirdParty();
   const [error, setError] = useState<string | null>(null);
 
-  if (sheet.isPending) return <Loading />;
+  if (sheet.isPending) {
+    return (
+      <Screen>
+        <Skeleton variant="detail" />
+      </Screen>
+    );
+  }
   if (sheet.isError) {
     return (
       <Screen>
-        <ErrorText>{messageFor(sheet.error)}</ErrorText>
+        <ErrorState message={messageFor(sheet.error)} onRetry={() => sheet.refetch()} />
       </Screen>
     );
   }
@@ -53,57 +63,44 @@ export default function ThirdPartyScreen() {
   return (
     <Screen testID="third-party-screen">
       <Stack.Screen options={{ title: party.name }} />
-      <Text variant="titleLarge">{party.name}</Text>
+      <Text variant="headlineSmall">{party.name}</Text>
       <View style={styles.badges}>
         {party.isSupplier && <Badge label={t('invoicing.thirdParties.supplier')} tone="info" />}
         {party.isCustomer && <Badge label={t('invoicing.thirdParties.customer')} tone="info" />}
         {!party.active && <Badge label={t('invoicing.thirdParties.inactive')} tone="danger" />}
       </View>
-      <View style={styles.block}>
+      <Card style={styles.block}>
         <Fact label={t('invoicing.thirdParties.nif')}>{party.nif}</Fact>
         {party.email ? <Fact label={t('invoicing.thirdParties.email')}>{party.email}</Fact> : null}
         {party.phone ? <Fact label={t('invoicing.thirdParties.phone')}>{party.phone}</Fact> : null}
-      </View>
+      </Card>
 
       <View style={styles.block} testID="balance">
-        <Text
-          variant="labelLarge"
-          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-        >
-          {t('invoicing.thirdParties.balance')}
-        </Text>
+        <SectionTitle>{t('invoicing.thirdParties.balance')}</SectionTitle>
         {party.isSupplier && (
-          <Fact label={t('invoicing.summary.toPay')}>{euros(party.balance.toPay.pending)}</Fact>
+          <Fact label={t('invoicing.summary.toPay')}>
+            <Money amount={party.balance.toPay.pending} variant="bodyMedium" />
+          </Fact>
         )}
         {party.isCustomer && (
           <Fact label={t('invoicing.summary.toCollect')}>
-            {euros(party.balance.toCollect.pending)}
+            <Money amount={party.balance.toCollect.pending} variant="bodyMedium" />
           </Fact>
         )}
       </View>
 
-      <Text
-        variant="labelLarge"
-        style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-      >
-        {t('invoicing.home.invoices')}
-      </Text>
+      <SectionTitle>{t('invoicing.home.invoices')}</SectionTitle>
       {party.invoices.length === 0 && (
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+        <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
           {t('invoicing.home.noInvoices')}
         </Text>
       )}
       {party.invoices.map((invoice) => (
         <InvoiceRow key={invoice.id} invoice={invoice} />
       ))}
-      <Text
-        variant="labelLarge"
-        style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-      >
-        {t('invoicing.home.notes')}
-      </Text>
+      <SectionTitle>{t('invoicing.home.notes')}</SectionTitle>
       {party.deliveryNotes.length === 0 && (
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+        <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
           {t('invoicing.home.noNotes')}
         </Text>
       )}
@@ -140,7 +137,6 @@ export default function ThirdPartyScreen() {
 }
 
 const styles = StyleSheet.create({
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  block: { gap: 8 },
-  sectionTitle: { textTransform: 'uppercase' },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  block: { gap: space[2] },
 });

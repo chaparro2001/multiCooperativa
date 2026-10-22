@@ -12,10 +12,12 @@ import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
 import { useSession } from '@/session/session-context';
 import { AppLogo } from '@/ui/app-logo';
+import { Banner } from '@/ui/banner';
 import { Button } from '@/ui/button';
 import { FormSummary } from '@/ui/field';
-import { ErrorText, Screen } from '@/ui/screen';
-import { Text, useTheme } from '@/ui/paper';
+import { Screen } from '@/ui/screen';
+import { Icon, Text, useTheme } from '@/ui/paper';
+import { ErrorState } from '@/ui/states';
 import { TextField } from '@/ui/text-field';
 
 /** US-ACC-01: opened from multicooperativa://invitation?token=… */
@@ -34,7 +36,7 @@ export default function InvitationScreen() {
   if (!token) {
     return (
       <Screen>
-        <ErrorText>{t('auth.invitation.invalidLink')}</ErrorText>
+        <ErrorState message={t('auth.invitation.invalidLink')} onRetry={false} />
       </Screen>
     );
   }
@@ -67,7 +69,10 @@ export default function InvitationScreen() {
     // Existing account: the link does not open a session by itself.
     return (
       <Screen testID="invitation-activated">
-        <Text variant="headlineSmall">{t('auth.invitation.activatedTitle')}</Text>
+        <View style={styles.success}>
+          <Icon source="check-circle-outline" size={48} color={colors.primary} />
+        </View>
+        <Text variant="headlineLarge">{t('auth.invitation.activatedTitle')}</Text>
         <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
           {status === 'signedIn'
             ? t('auth.invitation.activatedSignedIn')
@@ -90,7 +95,7 @@ export default function InvitationScreen() {
       <View style={styles.logo}>
         <AppLogo />
       </View>
-      <Text variant="headlineSmall">{t('auth.invitation.title')}</Text>
+      <Text variant="headlineLarge">{t('auth.invitation.title')}</Text>
       <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
         {t('auth.invitation.instructions')}
       </Text>
@@ -115,7 +120,7 @@ export default function InvitationScreen() {
         onSubmitEditing={submit}
         testID="confirm-password-field"
       />
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {error ? <Banner tone="danger">{error}</Banner> : null}
       <FormSummary form={form} />
       <Button
         title={t('auth.invitation.submit')}
@@ -129,4 +134,5 @@ export default function InvitationScreen() {
 
 const styles = StyleSheet.create({
   logo: { marginTop: 16 },
+  success: { alignItems: 'center' },
 });

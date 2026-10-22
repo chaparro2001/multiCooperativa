@@ -4,24 +4,30 @@ import { ActivityIndicator, Text, useTheme } from 'react-native-paper';
 
 import { type FormApi, FormScope, ScrollerProvider } from '@/forms/use-form';
 
-export const SCREEN_PADDING = 24;
-export const SCREEN_MAX_WIDTH = 960;
+import { layout, space } from './theme';
+
+export const SCREEN_PADDING = space[6];
+export const SCREEN_MAX_WIDTH = layout.maxWidth;
 
 /** Distance kept above the invalid field the screen scrolls to. */
-const SCROLL_MARGIN = 24;
+const SCROLL_MARGIN = space[6];
 
 /**
  * Scrollable screen body that keeps inputs above the keyboard. With `form`, its fields (those
- * with a `name`) show the form's errors and the screen scrolls to the first invalid one.
+ * with a `name`) show the form's errors and the screen scrolls to the first invalid one. With
+ * `footer`, that content stays pinned below the scroll view (sticky `ActionBar`).
  */
 export function Screen({
   children,
   testID,
   form,
+  footer,
 }: {
   children: ReactNode;
   testID?: string;
   form?: FormApi;
+  /** Rendered below the scroll view and always visible, e.g. an `ActionBar`. */
+  footer?: ReactNode;
 }) {
   const { colors } = useTheme();
   const scroll = useRef<ScrollView>(null);
@@ -46,7 +52,7 @@ export function Screen({
     >
       <ScrollView
         ref={scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, footer ? styles.withFooter : null]}
         keyboardShouldPersistTaps="handled"
         onScroll={(event) => {
           offset.current = event.nativeEvent.contentOffset.y;
@@ -56,6 +62,7 @@ export function Screen({
       >
         {form ? <FormScope form={form}>{children}</FormScope> : children}
       </ScrollView>
+      {footer}
     </KeyboardAvoidingView>
   );
   return <ScrollerProvider value={scrollTo}>{body}</ScrollerProvider>;
@@ -89,10 +96,12 @@ const styles = StyleSheet.create({
   // Capped and centred so wide browser windows (web build) keep a readable column; no effect on phones.
   content: {
     padding: SCREEN_PADDING,
-    gap: 16,
+    gap: space[4],
     width: '100%',
     maxWidth: SCREEN_MAX_WIDTH,
     alignSelf: 'center',
   },
+  // Room for the last field above a sticky footer.
+  withFooter: { paddingBottom: space[12] },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });
