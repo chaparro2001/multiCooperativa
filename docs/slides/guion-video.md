@@ -91,7 +91,7 @@ Pantalla: editor.
 2. Estructura de un módulo en `apps/api/src/modules/<módulo>/`: `domain`, `application`, `infrastructure` e `index.ts` como única interfaz pública; mencionar la regla ESLint de fronteras.
 3. Un test de dominio (TDD) y señalar un identificador de requisito (`US-...`, `BR-...`) en el nombre.
 4. Un ADR (por ejemplo ADR-013, modelo local para el asistente, o ADR-012, servidor propio) y recordar que hay 21; ADR-020 es la migración a react-native-paper y el último, ADR-021, retira el logo por cooperativa (la superficie de subida de ficheros no compensaba antes de la entrega).
-5. El conjunto de evaluación del asistente (23 preguntas, `ai:eval`) y el benchmark de modelos locales del ADR-013 (qwen3:8b 19/22, qwen3:4b-instruct 18/22, gemma4:e4b 15/22).
+5. El conjunto de evaluación del asistente (26 preguntas, `ai:eval`) y el benchmark de modelos locales del ADR-013 (qwen3:8b 19/22, qwen3:4b-instruct 18/22, gemma4:e4b 15/22).
 6. Cifras (a fecha 2026-10-22): 1148 tests unitarios y 523 de integración, y 166 de 167 commits co-autorados con Claude.
 7. Proceso con IA, en una o dos frases: `skills-lock.json` y `.agents/skills` (skills de la comunidad fijadas, siempre por debajo de `CLAUDE.md`, los ADR y las especificaciones) y agentes en paralelo: la migración a Paper la hizo un orquestador con un subagente de base, siete en paralelo sobre carpetas de funcionalidad disjuntas, uno de verificación y otro que lanzó la app en web con Playwright, hizo capturas y encontró errores visuales que se corrigieron. Antes también trabajé con agentes en git worktrees.
 

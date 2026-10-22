@@ -48,6 +48,7 @@ Specifications: [02-announcements](requirements/02-announcements.md) · [03-docu
 - [x] Republish a withdrawn document (US-DOC-08).
 - [x] Indexing: text extraction, chunking, embeddings, pgvector with `cooperativeId`.
 - [x] Hybrid retrieval (vector + Spanish full-text, RRF) and minimum similarity threshold (ADR-022).
+- [x] RAG quality (ADR-023): retrieval benchmark `rag:eval` (NFR-DOC-05, real pipeline, 42 golden questions); accent-insensitive full text (`unaccent`); structure-aware chunking with section and title header (reindex on deploy through the migration); per-document diversity and neighbour expansion for the assistant; Gemini vector floor 0.60; standalone-query rule for follow-ups and 3 multi-turn evaluation cases. No new dependency (`unaccent` is a PostgreSQL contrib extension; `pdf-lib`, already a dependency, builds the benchmark PDFs).
 - [x] App: announcements list and detail; documents list and viewer; editor for managers.
 
 ## Milestone 3 · Assemblies (12–14 Oct)

@@ -105,20 +105,21 @@ As a user with manage level, I want to publish again a document I withdrew, so t
 ## 4. Indexing
 
 1. Extraction of the PDF text, page by page.
-2. Splitting into chunks of about 800 text units with overlap, respecting paragraphs.
-3. Computation of the embedding of each chunk.
+2. Removal of page furniture (page numbers and headers or footers repeated on at least half of the pages) and splitting into chunks of about 800 text units that respect the structure of the document (titles, chapters, articles and numbered items are kept whole when they fit; a chunk never mixes pages or chapters); only an oversize unit is split, with overlap. Each chunk keeps its section path (ADR-023).
+3. Computation of the embedding of each chunk, prefixed with the document title (contextual header, ADR-023); the chunk's own text, the one cited, does not include it.
 4. Storage in PostgreSQL with pgvector, together with `cooperativeId`, `documentId` and page.
 
 Indexing is asynchronous with respect to upload: the document can be read immediately even if the index takes time.
 
 ## 5. Non-functional requirements
 
-| Id         | Requirement                                                                                                                          |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| NFR-DOC-01 | A 50-page document is indexed in under 60 seconds.                                                                                   |
-| NFR-DOC-02 | Files are served with signed URLs that expire after 5 minutes.                                                                       |
-| NFR-DOC-03 | Search over the index always filters by `cooperativeId` (and published documents) before ranking, in both arms of the hybrid search. |
-| NFR-DOC-04 | Files are stored outside the database, with unguessable keys.                                                                        |
+| Id         | Requirement                                                                                                                                                                                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NFR-DOC-01 | A 50-page document is indexed in under 60 seconds.                                                                                                                                                                                                                     |
+| NFR-DOC-02 | Files are served with signed URLs that expire after 5 minutes.                                                                                                                                                                                                         |
+| NFR-DOC-03 | Search over the index always filters by `cooperativeId` (and published documents) before ranking, in both arms of the hybrid search.                                                                                                                                   |
+| NFR-DOC-04 | Files are stored outside the database, with unguessable keys.                                                                                                                                                                                                          |
+| NFR-DOC-05 | A retrieval benchmark (`rag:eval`: real pipeline, golden Spanish questions with expected document, page and passage) reports hit@1, hit@5, MRR and no-answer precision per search arm; changes to chunking, thresholds or search state the before and after (ADR-023). |
 
 ## 6. Model
 
@@ -187,8 +188,8 @@ Contract (schemas in `packages/contracts/src/documents.ts`):
 - A single current version is also guaranteed by the database (partial unique index), even with simultaneous uploads.
 - Errors: `400 invalid_document`, `400 file_rejected` with `details.reason` (`not_pdf`, `too_large`, `empty`), `404 not_found` and `409 invalid_document_transition`.
 - Events: `DocumentPublished` (`cooperativeId`, `documentId`, `versionId`) and `DocumentWithdrawn` (`cooperativeId`, `documentId`), emitted after saving. The module itself consumes them to index.
-- Indexing (ADR-006): in-process queue, one version at a time; the upload does not wait for it. On startup, the API re-enqueues pending versions. Chunks of up to 800 characters plus 150 of overlap, without mixing pages. Embeddings with `bge-m3` (1024 dimensions) on Ollama. Measured: 50 pages in 16 s locally.
-- `GET /documents/search?q=` (3 to 300 characters) returns up to 5 chunks (the same number the assistant gives the model) with `documentId`, `title`, `category`, `page`, `excerpt` and `score`. It searches only published documents of the cooperative and filters before ranking. The search is hybrid ([ADR-022](../adr/ADR-022-hybrid-retrieval-and-similarity-threshold.md)): exact cosine similarity over the embeddings (dropping fragments below a minimum similarity per embeddings provider, `EMBEDDING_MIN_SCORE`) plus Spanish full-text search on any of the query terms, fused with Reciprocal Rank Fusion; a fragment enters through the text search only if it contains at least half (rounded up, at least 2 when the question has 2 or more) of the distinct question terms and reaches a lower similarity floor (`EMBEDDING_TEXT_MIN_SCORE`); `score` is always the cosine similarity. If the embeddings service does not respond: `503 search_unavailable`.
+- Indexing (ADR-006): in-process queue, one version at a time; the upload does not wait for it. On startup, the API re-enqueues pending versions. Structure-aware chunks of up to about 800 characters (overlap of 150 only inside an oversize unit), without mixing pages (ADR-023); a version already indexed before ADR-023 is reindexed at the first start (its migration marks it `pending`). Embeddings with `bge-m3` (1024 dimensions) on Ollama. Measured: 50 pages in 16 s locally.
+- `GET /documents/search?q=` (3 to 300 characters) returns up to 5 chunks (the same number the assistant gives the model) with `documentId`, `title`, `category`, `page`, `excerpt` and `score`. It searches only published documents of the cooperative and filters before ranking. The search is hybrid ([ADR-022](../adr/ADR-022-hybrid-retrieval-and-similarity-threshold.md)): exact cosine similarity over the embeddings (dropping fragments below a minimum similarity per embeddings provider, `EMBEDDING_MIN_SCORE`; default 0.60 for Gemini after the benchmark, ADR-023) plus accent-insensitive Spanish full-text search (`spanish_unaccent`, over the document title and the fragment) on any of the query terms, fused with Reciprocal Rank Fusion; a fragment enters through the text search only if it contains at least half (rounded up, at least 2 when the question has 2 or more) of the distinct question terms and reaches a lower similarity floor (`EMBEDDING_TEXT_MIN_SCORE`); `score` is always the cosine similarity. A document takes at most 2 of the 5 results when other documents have candidates (ADR-023). The assistant's search additionally gives the model each fragment with its adjacent text (up to 1600 characters), while citations keep the fragment's own page and text. If the embeddings service does not respond: `503 search_unavailable`.
 - `POST /documents/{documentId}/republish` responds `204`, sets the current version to pending and emits `DocumentPublished`; `409` if the document is not withdrawn. A withdrawn document reports `indexingStatus: null`.
 - `POST /documents/{documentId}/reindex` responds `202` and leaves the current version as pending.
 
@@ -201,6 +202,7 @@ Contract (schemas in `packages/contracts/src/documents.ts`):
 ## 10. Test strategy
 
 - **Domain**: a single current version, status transitions, format and size validation.
-- **Indexing**: deterministic chunking on a sample PDF; deletion of chunks on withdrawal or versioning.
+- **Retrieval benchmark** (NFR-DOC-05): unit tests of the judging and metrics; `pnpm --filter @multicooperativa/api rag:eval` (needs `db:up` and `GEMINI_API_KEY`) is run by hand.
+- **Indexing**: deterministic structure-aware chunking on a sample PDF (headings, articles, page furniture, contextual header); deletion of chunks on withdrawal or versioning.
 - **Isolation**: search never returns chunks from another cooperative, even if the text matches exactly.
 - **Permissions**: upload, versions, withdrawal and republishing rejected with 403 without manage level.
