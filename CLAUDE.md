@@ -86,9 +86,12 @@ pnpm --filter @multicooperativa/mobile start     # Expo app
 pnpm lint                    # ESLint (includes the boundaries between modules)
 pnpm format                  # Prettier
 pnpm typecheck
-pnpm test                    # unit tests (no database)
+pnpm test                    # unit tests (no database) plus the type-level tests of packages/contracts (*.test-d.ts)
+pnpm test:coverage           # unit tests with a v8 coverage summary; HTML report in coverage/ (no thresholds)
 pnpm test:integration        # *.integration.test.ts tests against the multicooperativa_test DB and the multicooperativa-test bucket (need pnpm db:up; the Ollama ones are skipped if there is no model)
 ```
+
+Integration tests run in CI (after `db:deploy`) and locally with `pnpm test:integration` once `pnpm db:up` is running. They are not part of the pre-commit hook (lint, typecheck and unit tests only).
 
 Environment variables: copy `apps/api/.env.example` and `apps/mobile/.env.example` to `.env`.
 

@@ -6,5 +6,7 @@ export default defineConfig({
     fsModuleCache: true,
     name: 'contracts',
     include: ['src/**/*.test.ts'],
+    // Type-level tests (expectTypeOf) run through tsc, only in this project.
+    typecheck: { enabled: true, include: ['**/*.test-d.ts'] },
   },
 });
