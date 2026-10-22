@@ -343,7 +343,7 @@ Contract (schemas in `packages/contracts/src/invoicing.ts`):
 6. Camera capture and proposal review.
 7. Manual registration forms.
 8. Claims (if there is margin).
-9. Settings > Billing (administrator only): three blocks, one per alert (invoice notice 1 to 90 days, delivery note deadline 1 to 365, notice before it 1 to 365 and shorter than the deadline), each with an "Activated" checkbox and a number field disabled when it is off, helper texts, field validation and the API's `details.field` errors; the note notice shows disabled with a hint when the deadline is off.
+9. Settings > Billing, a sub-page of Settings (administrator only): three blocks, one per alert (invoice notice 1 to 90 days, delivery note deadline 1 to 365, notice before it 1 to 365 and shorter than the deadline), each with an "Activated" checkbox and a number field disabled when it is off, helper texts, field validation and the API's `details.field` errors; the note notice shows disabled with a hint when the deadline is off.
 
 ## 10. Test strategy
 

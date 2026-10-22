@@ -248,7 +248,7 @@ Contract (schemas in `packages/contracts/src/assemblies.ts`):
 ## 8. Screens
 
 1. Assemblies list.
-2. Detail with agenda and documentation.
+2. Detail with agenda and documentation; the place appears in a card with a "Cómo llegar" action that opens the platform's native maps with the place text as the query (no map library, no coordinates).
 3. Voting on an item, with confirmation.
 4. Result.
 5. Call editor and voting control (manage level).

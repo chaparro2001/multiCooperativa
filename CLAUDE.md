@@ -11,6 +11,7 @@ Read before implementing any module:
 - Vision and scope: `docs/01-vision-and-scope.md`
 - Stack and architecture: `docs/02-stack-and-architecture.md`
 - Plan by milestones (tick tasks when completed): `docs/03-implementation-plan.md`
+- Design system, before any UI work: `docs/design-system/README.md` and `screens.md` (ADR-024; migration record in `docs/06-design-system-migration.md`)
 - Decisions: `docs/adr/`
 - Specification of each module: `docs/requirements/`
 
@@ -18,7 +19,7 @@ If the code and the documentation do not match, stop and ask. If a decision chan
 
 ## Stack
 
-- App: Expo + React Native + TypeScript, Expo Router, react-native-paper (Material Design 3), TanStack Query, i18next + react-i18next + expo-localization.
+- App: Expo + React Native + TypeScript, Expo Router, react-native-paper (Material Design 3) behind the design-system kit in `src/ui` (ADR-024), TanStack Query, i18next + react-i18next + expo-localization.
 - Backend: Node + TypeScript, modular monolith with Clean Architecture.
 - Data: PostgreSQL, Prisma, pgvector.
 - Contracts: Zod schemas in `packages/contracts`, used by app and backend.

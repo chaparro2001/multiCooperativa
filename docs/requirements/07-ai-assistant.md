@@ -62,7 +62,7 @@ As a user, I want to ask follow-up questions without repeating the context.
 
 #### US-AI-07 · Choose the assistant's local model
 
-- **Given** I administer the cooperative (module `users`, manage level) and the server runs the assistant on local models, **when** I open Settings, **then** I see the "AI assistant" section with the models I can choose (allowlisted by the operator and installed), the one in use marked, and I can save another one.
+- **Given** I administer the cooperative (module `users`, manage level) and the server runs the assistant on local models, **when** I open Settings, **then** I see the "AI assistant" sub-page with the models I can choose (allowlisted by the operator and installed), the one in use marked, and I can save another one.
 - **Given** I saved a model, **when** any member of my cooperative asks the assistant, **then** the answer comes from that model; other cooperatives keep theirs.
 - **Given** the saved model is no longer allowed or installed, **when** someone asks, **then** the server default answers and nothing fails.
 - **Given** I do not administer the cooperative, **then** I do not see the section and the API answers 403; a user of another cooperative gets 404.

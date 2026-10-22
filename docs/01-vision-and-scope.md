@@ -28,7 +28,7 @@ The member of a cooperative participates little and is poorly informed:
 
 ## MVP modules
 
-1. **Access and profiles**: login, biometric unlock, memberships in several cooperatives, four predefined profiles and profile assignment.
+1. **Access and profiles**: login, biometric unlock, memberships in several cooperatives, four predefined profiles and profile assignment. The home also lists what needs the user ("Pendiente para ti").
 2. **Announcements**: publication by the board and reading by members, with push notifications.
 3. **Assemblies**: call to meeting, agenda, documentation and advisory voting per item, with quorum and majorities.
 4. **Documents**: bylaws, regulations, minutes and annual accounts. They feed the assistant's RAG.

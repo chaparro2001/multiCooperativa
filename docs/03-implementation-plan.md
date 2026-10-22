@@ -84,7 +84,7 @@ Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assis
 - [x] Tools filtered by permissions reusing the use cases (including `my_contributions`, over the member area).
 - [x] RAG with citations.
 - [x] Conversations and usage limit.
-- [x] Evaluation set of 23 questions (`pnpm --filter @multicooperativa/api ai:eval`).
+- [x] Evaluation set of 26 questions (`pnpm --filter @multicooperativa/api ai:eval`).
 - [x] App: chat with citations and links.
 - [x] Conversation history: list, reopen, new conversation and delete (US-AI-04).
 
@@ -104,11 +104,12 @@ Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assis
 
 Adopts [design-system/](design-system/README.md) in `apps/mobile` ([ADR-024](adr/ADR-024-adopt-the-design-system.md)); gap analysis and phases in [06-design-system-migration.md](06-design-system-migration.md). Visual change; same data, copy, permissions and Maestro selectors.
 
-- [ ] Phase 0: tokens in `ui/theme.ts` (`space`, `radius`, `size`, `shadow`, `layout`, `scrim`, `focusRing`), `colors.surface` renamed `surfaceVariant`, nine rounded values of `tokens.json`/`tokens.css` corrected, theme tests.
-- [ ] Phase 1 and 2: complete kit in `src/ui` (base components, cards and rows, banners, progress and votes, map card, assistant pieces, action bar, states and skeletons) with a reference in `src/ui/README.md`.
-- [ ] Phase 3: screens on the kit (home, announcements, assemblies, invoices, entry, capture and register, member area and members, documents, assistant, settings).
-- [ ] Behaviour items: home attention strip, "Cómo llegar" map card, cooperative colour dot, admin Settings sub-pages, quorum mark, sticky action bar in the register form.
-- [ ] Regression: `pnpm e2e`, Expo web at 390 and 960 in three presets, screenshots for the report.
+- [x] Phase 0 (`cda78ab`): tokens in `ui/theme.ts` (`space`, `radius`, `size`, `shadow`, `layout`, `scrim`, `focusRing`), `colors.surface` renamed `surfaceVariant`, nine rounded values of `tokens.json`/`tokens.css` corrected, theme tests.
+- [x] Phase 1 and 2 (`7d81302`, `be37041`): complete kit in `src/ui` (base components, cards and rows, banners, progress and votes, map card, assistant pieces, action bar, states and skeletons) with a reference in `src/ui/README.md`.
+- [x] Phase 3 (`93212d2`, `27d13d6`, `5207744`, `c254d5c`, `5b485eb`, `3eebdf9`, `90f6694`): screens on the kit (home, announcements, assemblies, invoices, entry, capture and register, member area and members, documents, assistant, settings).
+- [x] Behaviour items (`93212d2`, `27d13d6`, `5207744`, `5b485eb`, `90f6694`, `b17e96b`): home attention strip, "Cómo llegar" map card, cooperative colour dot, admin Settings sub-pages, quorum mark, sticky action bar in the register form.
+- [x] Regression: lint, typecheck, 1338 unit tests, Expo web at 390 and 960 as administrator and member, no console errors. Outcome and deviations in [06-design-system-migration.md](06-design-system-migration.md#9-outcome).
+- [ ] Re-run `pnpm e2e` (Maestro) after the migration and take screenshots for the report.
 
 ## Milestone 7 · Quality and delivery (23–25 Oct)
 

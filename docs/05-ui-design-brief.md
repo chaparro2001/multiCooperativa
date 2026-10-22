@@ -1,6 +1,8 @@
 # 05 · UI design brief
 
-**Date**: 2026-10-22 · **Status**: Draft
+**Date**: 2026-10-22 · **Status**: Implemented
+
+> The brief was turned into the design system in [design-system/](design-system/README.md) and applied to `apps/mobile` ([ADR-024](adr/ADR-024-adopt-the-design-system.md), [06-design-system-migration.md](06-design-system-migration.md)). The content below is kept unchanged as the record of the brief; where it describes "today", it means the app before the migration.
 
 Brief for an AI design tool (Claude Design, v0, Figma AI or similar) to propose a new visual design for the mobile app. It describes every screen that exists today: what it shows, what the user can do, its states and who sees it. The output will be applied back to `apps/mobile`, so it must stay within the constraints in [§3](#3-hard-constraints).
 

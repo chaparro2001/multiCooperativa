@@ -12,9 +12,9 @@ Grabación de pantalla mientras se explica en voz alta (la cara es opcional). Du
 - [ ] **Contraseña de la demo a mano** (`<contraseña demo>`); no la muestres en pantalla al teclearla.
 - [ ] Ventana del navegador limpia (sin marcadores ni pestañas personales), **zoom del navegador** al 110-125 % para que se lea, y **notificaciones del sistema desactivadas** (modo No molestar).
 - [ ] Una sesión por perfil lista o los cuatro usuarios apuntados: `socio@sanisidro.test`, `gestor@sanisidro.test`, `admin@sanisidro.test` (y `consejo@sanisidro.test` si quieres citarlo).
-- [ ] **Color de marca de la demo distinto del verde por defecto** (que se note) y una pantalla con chips o segmentos a mano (filtros de facturas, opción de voto) para el momento Material Design; anota el color original para restaurarlo después.
+- [ ] **Color de marca de la demo distinto del verde por defecto** (que se note) y una pantalla con chips o segmentos a mano (filtros de facturas, opción de voto) para el momento del sistema de diseño; anota el color original para restaurarlo después. Una asamblea con votación abierta, comunicados sin leer y una factura por vencer para que la franja "Pendiente para ti" tenga contenido, y `lucia@demo.test` (dos cooperativas) si quieres enseñar el selector.
 - [ ] Para la parte del administrador: un correo ficticio para la invitación (por ejemplo `nueva@sanisidro.test`) y un color de ejemplo.
-- [ ] Tener abiertos en el editor: `CLAUDE.md`, un módulo de `apps/api/src/modules/`, un fichero de test, un ADR, el conjunto de evaluación del asistente, `skills-lock.json` y `src/ui`.
+- [ ] Tener abiertos en el editor: `CLAUDE.md`, un módulo de `apps/api/src/modules/`, un fichero de test, un ADR, el conjunto de evaluación del asistente, `skills-lock.json`, `src/ui` y `docs/design-system/`.
 - [ ] Diapositivas abiertas para la introducción, el despliegue y el cierre.
 - [ ] Prueba corta de micrófono y de grabación de pantalla.
 
@@ -27,13 +27,13 @@ Decir: quién eres, que es el TFM del Máster de Desarrollo con IA de BIG school
 
 ### 0:30-1:15 El problema
 
-Pantalla: diapositivas 2 y 3.
+Pantalla: diapositivas 2 y 3 (y, de pasada, la 6, que muestra la interfaz y cómo se llegó a ella).
 Decir: el socio está poco informado (convocatorias en papel, documentos sin localizar), y albaranes y facturas en papel provocan descuadres, impagos y cobros pendientes detectados tarde. Los cuatro perfiles: socio, consejo rector, gestor y administrador. Una app estándar para cualquier cooperativa, con datos aislados entre cooperativas; el backend decide los permisos y la app solo oculta.
 
 ### 1:15-1:40 Entrada como socio
 
 Pantalla: https://cooperativa.chaparro2001.com (cierra la diapositiva y pasa al navegador).
-Hacer: login con `socio@sanisidro.test`. Señalar que la navegación y las fichas de inicio solo ofrecen lo que el perfil permite, el color de la cooperativa y el aspecto Material Design de la interfaz (react-native-paper, ADR-020).
+Hacer: login con `socio@sanisidro.test`. Señalar el inicio: la franja "Pendiente para ti" (votaciones abiertas, próxima asamblea, comunicados sin leer, y facturas por vencer en perfiles de gestión), que se construye en el cliente con los endpoints existentes, y las fichas, que solo ofrecen lo que el perfil permite. Mencionar el color de la cooperativa y el sistema de diseño (ADR-024, sobre react-native-paper, ADR-020). Opcional: con `lucia@demo.test` enseñar antes el selector de cooperativa con su punto de color.
 
 ### 1:40-2:05 Socio: comunicados
 
@@ -46,7 +46,7 @@ Decir: los documentos se trocean y se vectorizan con un modelo local (bge-m3, en
 
 ### 2:50-3:25 Socio: asamblea y voto
 
-Hacer: abrir la asamblea, revisar el orden del día y emitir el voto.
+Hacer: abrir la asamblea, señalar la tarjeta del lugar con "Cómo llegar" (abre el mapa del dispositivo con el texto del lugar; sin librería de mapas ni geocodificación), revisar el orden del día, ver la barra de participación con la marca del quórum necesario y emitir el voto con "Votar".
 Decir: el voto tiene una restricción única en base de datos; el quórum y las mayorías se calculan en el dominio.
 
 ### 3:25-3:50 Socio: área del socio
@@ -68,7 +68,7 @@ Decir: el modelo es local, en el servidor propio, así que la pregunta no sale a
 
 Hacer: cerrar sesión y entrar con `gestor@sanisidro.test`.
 
-1. Listado de facturas y albaranes y resumen de pagos y cobros.
+1. Listado de facturas y albaranes (filas con una insignia de estado, esqueletos al cargar) y resumen de pagos y cobros.
 2. Escaneo con IA: subir la factura de ejemplo (en web, el selector de ficheros; en nativo, la cámara). Mostrar los campos extraídos y **revisarlos antes de confirmar**. Decir que se valida con un esquema Zod y que nunca se guarda sin confirmación humana (aquí se usa Gemini, con reintentos y modelo alternativo).
 3. Abrir la factura que no cuadra con su albarán y pedir la explicación de la discrepancia; el detalle numérico manda y se minimizan los datos enviados al modelo.
 4. Proveedores y clientes: abrir las fichas (son dos entradas propias en el inicio) y crear o editar uno rápidamente.
@@ -78,8 +78,8 @@ Hacer: cerrar sesión y entrar con `gestor@sanisidro.test`.
 Hacer: cerrar sesión y entrar con `admin@sanisidro.test`.
 
 1. **Miembros e invitación con enlace**: abrir la lista de miembros, invitar a `nueva@sanisidro.test`, mostrar el enlace de invitación y copiarlo. Decir que no hay proveedor de correo (ADR-016): el administrador recibe el enlace y lo entrega por el canal que prefiera; caduca a los 7 días y es de un solo uso. Opcional: cambiar el perfil de un miembro.
-2. **Ajustes, Apariencia**: elegir un color y ver cómo cambia la app; probar un color demasiado claro y enseñar que se rechaza por contraste insuficiente (WCAG AA, 4,5:1); el color se guarda por cooperativa y lo ven todos sus miembros. ADR-018 (el logo se eliminó en ADR-021).
-   **Momento Material Design (unos 15 segundos):** con el color elegido, mostrar que el tema Material Design 3 se genera a partir de ese color y llega a los controles: los chips, los segmentos y las opciones seleccionadas (por ejemplo, el filtro de la lista de facturas o la opción de voto) usan el color de la cooperativa, mientras que el rojo de error y el de aviso no cambian. Decir en una frase que los componentes están centralizados en `src/ui` y que las pantallas no importan Paper directamente (ADR-020).
+2. **Ajustes, Apariencia** (Ajustes está dividido en subpáginas: Apariencia, Facturación y Asistente IA): elegir un color y ver cómo cambia la app; probar un color demasiado claro y enseñar que se rechaza por contraste insuficiente (WCAG AA, 4,5:1); el color se guarda por cooperativa y lo ven todos sus miembros. ADR-018 (el logo se eliminó en ADR-021).
+   **Momento del sistema de diseño (unos 15 segundos):** con el color elegido, mostrar que el tema Material Design 3 y los tokens del sistema de diseño se generan a partir de ese color y llegan a los controles: los chips, los segmentos y las opciones seleccionadas (por ejemplo, el filtro de la lista de facturas o la opción de voto) usan el color de la cooperativa, mientras que el rojo de error y el de aviso no cambian. Decir en una frase que los componentes están centralizados en el kit de `src/ui` y que las pantallas no importan Paper directamente (ADR-020, ADR-024).
 3. **Selector de modelo del asistente**: en Ajustes, abrir el selector y mostrar los modelos locales instalados (qwen3:4b-instruct por defecto, qwen3:8b); cambiar de modelo y hacer una pregunta. Decir en una frase que una cooperativa también puede usar un proveedor externo con su propia clave, cifrada en el servidor (ADR-019); no pegues ninguna clave real en pantalla.
 4. **Historial**: en el asistente, abrir el historial de conversaciones, reabrir una y eliminar otra.
 
@@ -90,23 +90,23 @@ Pantalla: editor.
 1. `CLAUDE.md`: el contrato con el agente (reglas no negociables, forma de trabajar, comandos) y su sección de skills de la comunidad.
 2. Estructura de un módulo en `apps/api/src/modules/<módulo>/`: `domain`, `application`, `infrastructure` e `index.ts` como única interfaz pública; mencionar la regla ESLint de fronteras.
 3. Un test de dominio (TDD) y señalar un identificador de requisito (`US-...`, `BR-...`) en el nombre.
-4. Un ADR (por ejemplo ADR-013, modelo local para el asistente, o ADR-012, servidor propio) y recordar que hay 21; ADR-020 es la migración a react-native-paper y el último, ADR-021, retira el logo por cooperativa (la superficie de subida de ficheros no compensaba antes de la entrega).
+4. Un ADR (por ejemplo ADR-013, modelo local para el asistente, o ADR-012, servidor propio) y recordar que hay 24; ADR-020 es la migración a react-native-paper, ADR-021 retira el logo por cooperativa, ADR-022 y ADR-023 mejoran la recuperación de documentos (RAG) y el último, ADR-024, adopta el sistema de diseño de `docs/design-system/`.
 5. El conjunto de evaluación del asistente (26 preguntas, `ai:eval`) y el benchmark de modelos locales del ADR-013 (qwen3:8b 19/22, qwen3:4b-instruct 18/22, gemma4:e4b 15/22).
-6. Cifras (a fecha 2026-10-22): 1148 tests unitarios y 523 de integración, y 166 de 167 commits co-autorados con Claude.
-7. Proceso con IA, en una o dos frases: `skills-lock.json` y `.agents/skills` (skills de la comunidad fijadas, siempre por debajo de `CLAUDE.md`, los ADR y las especificaciones) y agentes en paralelo: la migración a Paper la hizo un orquestador con un subagente de base, siete en paralelo sobre carpetas de funcionalidad disjuntas, uno de verificación y otro que lanzó la app en web con Playwright, hizo capturas y encontró errores visuales que se corrigieron. Antes también trabajé con agentes en git worktrees.
+6. Cifras (a fecha 2026-10-22): 1338 tests unitarios (133 ficheros) y 574 de integración (30 ficheros), y 236 de 237 commits sin fusiones co-autorados con Claude (`git rev-list --no-merges`).
+7. Proceso con IA, en una o dos frases: `skills-lock.json` y `.agents/skills` (skills de la comunidad fijadas, siempre por debajo de `CLAUDE.md`, los ADR y las especificaciones) y agentes en paralelo. El flujo del diseño (diapositiva 6): brief de interfaz (`docs/05-ui-design-brief.md`), herramienta de diseño con IA que genera el sistema de diseño (`docs/design-system/`: tokens, 8 colores de marca, unos 40 componentes, 14 pantallas), análisis de brechas con la app (`docs/06-design-system-migration.md`) y migración por un orquestador con un subagente de base, siete en paralelo sobre carpetas de funcionalidad disjuntas, uno de verificación y otro que lanzó la app en web con Playwright, hizo capturas y encontró errores visuales que se corrigieron. Antes también trabajé con agentes en git worktrees.
 
 ### 8:30-9:15 Despliegue
 
-Pantalla: diapositiva 11.
+Pantalla: diapositiva 12.
 Decir: coste 0 EUR y sin tarjeta; Render y Railway pedían tarjeta, así que la API corre en un servidor de casa (Windows, Docker Desktop, i5-10500, 32 GB) con Cloudflare Tunnel (ADR-012), sin abrir puertos del router. La web, en GitHub Pages con dominio propio (ADR-017); los ficheros, con URLs firmadas; un cron de GitHub Actions cada hora para los vencimientos. Límites: depende de que el servidor esté encendido y no es un sistema de registro.
 
 ### 9:15-10:00 Cierre
 
-Pantalla: diapositivas 13 y 14.
+Pantalla: diapositivas 14 y 15.
 Decir: lo implementado (los siete módulos del MVP), lo que queda (notificaciones push, Sentry, E2E con Maestro, reclamaciones de facturas, binarios nativos) y lo aprendido: sin tarjeta no hay nube gratuita, la cuota de Gemini llevó al modelo local, y evaluar con el modelo real encontró errores reales. Dónde están el repositorio y la demo. Agradecer.
 
 ## Después de grabar
 
 - [ ] Revisar que no aparecen contraseñas, claves, enlaces de invitación vigentes ni datos reales.
 - [ ] Eliminar de la demo los datos creados durante la toma (invitación de prueba, proveedor de ejemplo, conversaciones) y restaurar el color de marca original.
-- [ ] Subir el vídeo y completar la URL en el README (`<!-- TODO: URL del vídeo -->`) y en la diapositiva 14.
+- [ ] Subir el vídeo y completar la URL en el README (`<!-- TODO: URL del vídeo -->`) y en la diapositiva 15.

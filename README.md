@@ -68,7 +68,7 @@ Los permisos se definen por módulo, nivel y alcance (ADR-004). El backend decid
 
 | Capa               | Elección                                                                                                                                                                                       |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| App móvil          | Expo + React Native + TypeScript, Expo Router, react-native-paper (Material Design 3, ADR-020)                                                                                                 |
+| App móvil          | Expo + React Native + TypeScript, Expo Router, react-native-paper (Material Design 3, ADR-020) con el kit del sistema de diseño en `src/ui` (ADR-024)                                          |
 | Datos del cliente  | TanStack Query; tokens en el almacenamiento seguro del dispositivo                                                                                                                             |
 | Textos de usuario  | i18next + react-i18next + expo-localization; `es` por defecto (ADR-008)                                                                                                                        |
 | Contratos          | Paquete compartido con esquemas Zod (validan en servidor y tipan la app)                                                                                                                       |
@@ -178,7 +178,8 @@ El estado de cada tarea está en [docs/03-implementation-plan.md](docs/03-implem
 - **Facturas y albaranes**: terceros (proveedores y clientes), albaranes y facturas de compra y venta con importes en decimal exacto, conciliación con tolerancia, estados, resumen de pagos y cobros, proceso idempotente de vencimientos (cada hora) con tres avisos configurables y desactivables por cooperativa (aviso antes del vencimiento de las facturas, plazo para facturar los albaranes y aviso previo a ese plazo) e insignias de atención en la pantalla de inicio, captura con cámara y revisión, **extracción con IA** (Gemini visión, validada con Zod y confirmada por una persona) y **explicación de discrepancias con IA**.
 - **Área del socio**: mis datos (número de socio, fecha de alta, perfil, contacto), mi capital y mis movimientos, de solo lectura para el socio (US-MEM-01, US-MEM-02); el consejo rector, el gestor y el administrador consultan el capital de todos los socios con el total de la cooperativa (US-MEM-04) y el gestor y el administrador registran aportaciones, reembolsos y correcciones (US-MEM-03). Importes en decimal exacto, movimientos inmutables, capital nunca negativo y doble aislamiento (por cooperativa y, con alcance propio, por socio).
 - **Asistente de IA**: chat con citas y enlaces a los recursos, RAG sobre los documentos, herramientas de solo lectura filtradas por permisos (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`, `my_contributions`), conversaciones con historial (reabrir y eliminar, US-AI-04), límite de uso por hora, conjunto de evaluación de 26 preguntas y, para el administrador de cada cooperativa, la elección del modelo local en Ajustes (US-AI-07, ADR-014).
-- **Apariencia por cooperativa**: el administrador elige en Ajustes el color principal (se rechaza si el texto blanco no alcanza un contraste WCAG AA de 4,5:1); todos los miembros ven la aplicación con ese color (US-ACC-14, ADR-018; el logo se eliminó en ADR-021).
+- **Apariencia por cooperativa**: el administrador elige en Ajustes el color principal (se rechaza si el texto blanco no alcanza un contraste WCAG AA de 4,5:1); todos los miembros ven la aplicación con ese color (US-ACC-14, ADR-018; el logo se eliminó en ADR-021). Es una subpágina de Ajustes, junto a Facturación y Asistente IA (solo administrador).
+- **Interfaz**: sistema de diseño propio (`docs/design-system/`, ADR-024) con tokens en `theme.ts` y kit de componentes en `apps/mobile/src/ui`; inicio con la franja «Pendiente para ti» (votaciones abiertas, facturas por vencer o vencidas, próxima asamblea, comunicados sin leer), estados de carga, vacío y error, y fechas como «22 oct 2026».
 
 ## 6. Limitaciones y trabajo futuro
 
@@ -312,16 +313,17 @@ Los ADR son inmutables: una decisión que cambia produce un ADR nuevo.
 - [ADR-021](docs/adr/ADR-021-remove-cooperative-logo.md): se elimina el logo por cooperativa (el color principal se mantiene).
 - [ADR-022](docs/adr/ADR-022-hybrid-retrieval-and-similarity-threshold.md): búsqueda híbrida (vectorial + texto completo en español con RRF) y umbral mínimo de similitud.
 - [ADR-023](docs/adr/ADR-023-rag-quality-benchmark-and-retrieval-improvements.md): calidad del RAG: benchmark de recuperación, texto completo sin acentos, fragmentación por estructura con cabecera contextual y expansión de vecinos.
+- [ADR-024](docs/adr/ADR-024-adopt-the-design-system.md): adopción del sistema de diseño (`docs/design-system/`): tokens en `theme.ts`, kit completo en `src/ui` y comportamientos asociados (franja «Pendiente para ti», «Cómo llegar», marca de quórum, subpáginas de Ajustes).
 
 ## 11. Calidad
 
-- **Tests unitarios** (`pnpm test`): 1271 tests en 127 ficheros (API 955, app 295, contratos 21), todos en verde a fecha 2026-10-22.
-- **Tests de integración** (`pnpm test:integration`): contra PostgreSQL y almacenamiento S3 reales, incluido el test de aislamiento entre cooperativas. 573 tests en 30 ficheros, todos en verde (2026-10-22).
+- **Tests unitarios** (`pnpm test`): 1338 tests en 133 ficheros (API 942, app 363, contratos 24, reglas ESLint 9), todos en verde a fecha 2026-10-22.
+- **Tests de integración** (`pnpm test:integration`): contra PostgreSQL y almacenamiento S3 reales, incluido el test de aislamiento entre cooperativas. 574 tests en 30 ficheros, todos en verde (2026-10-22).
 - **CI** (GitHub Actions, en cada push y pull request): comprobación de formato, lint, typecheck, tests, migraciones sobre un Postgres con pgvector y tests de integración. Hay además workflows de despliegue de GitHub Pages y de cron de vencimientos.
 - **Puerta de calidad local**: Husky ejecuta lint, typecheck y tests en el pre-commit.
 - **Límites entre módulos**: regla ESLint propia (`tools/eslint/module-boundaries.js`, con sus tests) que impide importar un módulo del backend por una ruta distinta de su `index.ts` (ADR-002).
 - **Seguridad**: denegación por defecto en cada caso de uso, 404 para recursos de otra cooperativa y 403 para módulos sin permiso, Argon2id para contraseñas, JWT con refresh rotatorio, bloqueo por intentos fallidos, tests parametrizados de la matriz perfiles x módulos, tests de aislamiento, CORS configurable por entorno y secretos fuera del repositorio (solo `.env.example`).
-- **IA**: conjunto de evaluación de 23 preguntas para el asistente (`ai:eval`).
+- **IA**: conjunto de evaluación de 26 preguntas para el asistente (`ai:eval`).
 
 ## 12. Desarrollo asistido por IA
 
@@ -338,7 +340,7 @@ El proyecto se ha construido con Spec Driven Development usando Claude Code:
 | Tema del máster                      | Evidencia en el proyecto                                                                                                                                                         |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Spec Driven Development              | `docs/requirements/`, plan por hitos con tareas marcadas, IDs de especificación en tests y commits                                                                               |
-| ADRs y Docs as Code                  | `docs/adr/` (23 ADR inmutables), documentación versionada junto al código, diagramas Mermaid                                                                                     |
+| ADRs y Docs as Code                  | `docs/adr/` (24 ADR inmutables), documentación versionada junto al código, diagramas Mermaid                                                                                     |
 | Clean Architecture con TypeScript    | Capas `domain/application/infrastructure` por módulo, puertos y adaptadores, regla ESLint de límites entre módulos                                                               |
 | Testing, TDD y puerta de calidad     | Vitest, tests de dominio primero, tests de integración, Husky en pre-commit                                                                                                      |
 | CI/CD con GitHub Actions             | `ci.yml` (formato, lint, typecheck, tests, migraciones, integración), despliegue de Pages y cron                                                                                 |
