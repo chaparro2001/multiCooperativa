@@ -52,6 +52,8 @@ const envSchema = z
     /** Ollama service that computes the embeddings (ADR-006). */
     OLLAMA_URL: z.url({ protocol: /^https?$/ }).optional(),
     EMBEDDING_MODEL: z.string().min(1).default('bge-m3'),
+    /** Time limit of one Ollama embeddings call (a batch of fragments), sized for a CPU-only host. */
+    EMBEDDING_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(120_000),
     /** Gemini API key (ADR-009), shared by the AI assistant and document extraction. Without it both answer 503; the rest works. */
     GEMINI_API_KEY: z.string().min(1).optional(),
     /** Gemini model shared by the assistant and document extraction: Flash class, free tier. */

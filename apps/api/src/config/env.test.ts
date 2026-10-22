@@ -36,6 +36,7 @@ describe('loadEnv', () => {
       GEMINI_EMBEDDING_MODEL: 'gemini-embedding-2',
       OLLAMA_URL: 'http://localhost:11434',
       EMBEDDING_MODEL: 'bge-m3',
+      EMBEDDING_TIMEOUT_MS: 120_000,
       GEMINI_MODEL: 'gemini-3.8-flash',
       GEMINI_FALLBACK_MODELS: [
         'gemini-3.6-flash',

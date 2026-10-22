@@ -7,10 +7,13 @@ import {
 /** Texts per request: large enough to be fast, small enough to keep each call short. */
 export const BATCH_SIZE = 16;
 
+/** One batch on a CPU-only host can take a while (the model may also need to load first). */
+export const DEFAULT_EMBEDDING_TIMEOUT_MS = 120_000;
+
 /** Ollama's HTTP API (`POST /api/embed`) with a local model, bge-m3 by default (ADR-006). */
 export class OllamaEmbedder implements Embedder {
   constructor(
-    private readonly settings: { url: string; model: string },
+    private readonly settings: { url: string; model: string; timeoutMs?: number },
     private readonly doFetch: typeof fetch = fetch,
   ) {}
 
@@ -29,6 +32,7 @@ export class OllamaEmbedder implements Embedder {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: this.settings.model, input }),
+        signal: AbortSignal.timeout(this.settings.timeoutMs ?? DEFAULT_EMBEDDING_TIMEOUT_MS),
       });
     } catch (error) {
       throw new EmbeddingUnavailableError('Cannot connect to the embeddings service.', error);
