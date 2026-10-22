@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
@@ -41,14 +41,14 @@ export default function RescheduleAssemblyScreen() {
     validate: (values) => validateReschedule(values),
   });
 
-  useEffect(() => {
-    const data = assembly.data;
-    if (loaded || !data) return;
+  // Seeds the form from the server once (adjusting state during render, not in an effect).
+  const data = assembly.data;
+  if (!loaded && data) {
     setFirstCall(new Date(data.firstCallAt));
     setSecondCall(data.secondCallAt ? new Date(data.secondCallAt) : null);
     setPlace(data.place);
     setLoaded(true);
-  }, [assembly.data, loaded]);
+  }
 
   if (!loaded) {
     return assembly.isError ? (

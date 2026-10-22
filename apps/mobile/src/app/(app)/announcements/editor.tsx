@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -55,13 +55,12 @@ export default function AnnouncementEditorScreen() {
       validateAnnouncement(values, mode === 'publish' || !isDraft ? 'publish' : 'draft'),
   });
 
-  useEffect(() => {
-    if (!loaded && existing.data) {
-      setTitle(existing.data.title);
-      setBody(existing.data.body);
-      setLoaded(true);
-    }
-  }, [existing.data, loaded]);
+  // Seeds the form from the server once (adjusting state during render, not in an effect).
+  if (!loaded && existing.data) {
+    setTitle(existing.data.title);
+    setBody(existing.data.body);
+    setLoaded(true);
+  }
 
   if (!loaded) return <Loading />;
   const status = existing.data?.status ?? 'draft';

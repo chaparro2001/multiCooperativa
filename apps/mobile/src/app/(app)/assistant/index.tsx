@@ -63,6 +63,8 @@ function Chat() {
   }
 
   // Reopened conversation: its messages come from the server once, then the chat continues locally.
+  // The error branch must fire once per failed load, which render-time adjusting cannot express.
+  /* eslint-disable react-hooks/set-state-in-effect -- syncs a server query into local chat state */
   useEffect(() => {
     if (!openId || opened.isFetching) return;
     if (opened.data && opened.data.id !== conversationId) {
@@ -73,6 +75,7 @@ function Chat() {
       setError(messageFor(opened.error));
     }
   }, [openId, opened.data, opened.error, opened.isFetching, conversationId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // "New conversation" from the history.
   const lastFresh = useRef(fresh);
@@ -92,7 +95,7 @@ function Chat() {
       return () => {
         current = false;
       };
-    }, [conversationId]),
+    }, [conversationId, exists]),
   );
 
   /** Resolves to false when the send failed, so the composer can give the text back. */
@@ -101,6 +104,7 @@ function Chat() {
     if (!content || busy) return false;
     setError(null);
     const pending: ChatMessage = {
+      // eslint-disable-next-line react-hooks/purity -- runs in an event handler, never during render
       id: `pending-${Date.now()}`,
       role: 'user',
       content,

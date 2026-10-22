@@ -1,5 +1,5 @@
 import type { AssistantSource } from '@multicooperativa/contracts';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -45,16 +45,21 @@ export function AssistantModelSection() {
     validate: (values) => (settings ? validateHosted(values, settings) : {}),
   });
 
-  useEffect(() => {
-    if (settings?.current) setSelected(settings.current);
-  }, [settings?.current]);
+  // Both blocks adjust state during render when the server data changes (not in an effect).
+  const current = settings?.current;
+  const [seenCurrent, setSeenCurrent] = useState<typeof current>();
+  if (current !== seenCurrent) {
+    setSeenCurrent(current);
+    if (current) setSelected(current);
+  }
 
   // The form follows what the server stores; the typed key is dropped after every save.
-  useEffect(() => {
-    if (!settings) return;
+  const [seenSettings, setSeenSettings] = useState<typeof settings>();
+  if (settings && settings !== seenSettings) {
+    setSeenSettings(settings);
     setSource(settings.source);
     setDraft(hostedDraftFrom(settings));
-  }, [settings]);
+  }
 
   if (query.isError) return <ErrorText>{messageFor(query.error)}</ErrorText>;
   if (!settings) return <ActivityIndicator />;
