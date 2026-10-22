@@ -34,8 +34,19 @@ const unhandledErrors: ErrorRequestHandler = (error, _req, res, _next) => {
       );
     return;
   }
+  if (error?.type === 'entity.too.large') {
+    res.status(413).json({ error: 'payload_too_large' } satisfies ApiError);
+    return;
+  }
   console.error(error instanceof Error ? error.stack : error);
   res.status(500).json({ error: 'internal_error' } satisfies ApiError);
+};
+
+/** Response headers that cost nothing and close two cheap holes (no helmet: one dependency less). */
+const securityHeaders: RequestHandler = (_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
 };
 
 export interface AppOptions {
@@ -58,8 +69,10 @@ export function createApp({
 
   app.disable('x-powered-by');
   app.set('trust proxy', trustProxy);
+  app.use(securityHeaders);
   app.use(corsMiddleware(corsOrigins));
-  app.use(express.json());
+  // 100 kb is express's default, kept explicit: bigger bodies answer 413 `payload_too_large`.
+  app.use(express.json({ limit: '100kb' }));
 
   app.get('/health', (_req, res) => {
     const body: HealthResponse = { status: 'ok' };
