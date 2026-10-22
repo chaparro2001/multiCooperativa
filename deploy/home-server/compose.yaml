@@ -142,6 +142,9 @@ services:
     build: *api-build
     image: multicooperativa-api:server
     restart: unless-stopped
+    # Reaps zombies and forwards signals; the API shuts down gracefully within 10 s.
+    init: true
+    stop_grace_period: 15s
     depends_on:
       postgres:
         condition: service_healthy

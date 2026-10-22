@@ -21,8 +21,10 @@ if (!production) await files.ensureBucket();
 
 const gemini = env.GEMINI_API_KEY ? createGeminiClient(env.GEMINI_API_KEY) : undefined;
 
+const prisma = createPrismaClient(env.DATABASE_URL);
+
 const { app, indexing, runDueDates } = createApi({
-  prisma: createPrismaClient(env.DATABASE_URL),
+  prisma,
   jwtSecret: env.JWT_SECRET,
   files,
   // Ollama locally (ADR-006); Gemini in the hosted demo (ADR-010). Vectors of different models
@@ -72,7 +74,7 @@ const { app, indexing, runDueDates } = createApi({
   jobsToken: env.JOBS_TOKEN,
 });
 
-app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, () => {
   log.info('api_listening', { port: env.PORT, env: env.NODE_ENV });
 });
 
@@ -93,4 +95,36 @@ const dueDates = () =>
     })
     .catch((error) => log.error('due_dates_failed', { error: describeError(error) }));
 void dueDates();
-setInterval(dueDates, HOUR).unref();
+const dueDatesTimer = setInterval(dueDates, HOUR);
+dueDatesTimer.unref();
+
+// Graceful shutdown (docker stop / Render deploy send SIGTERM): stop accepting connections, let
+// the in-flight requests finish, close the database pool and leave; a hard timeout bounds it.
+const SHUTDOWN_TIMEOUT_MS = 10_000;
+let shuttingDown = false;
+function shutdown(signal: string): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log.info('api_shutting_down', { signal });
+  setTimeout(() => {
+    log.error('api_shutdown_timeout', { timeoutMs: SHUTDOWN_TIMEOUT_MS });
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS).unref();
+  clearInterval(dueDatesTimer);
+  server.close(async (closeError) => {
+    if (closeError) log.error('api_close_failed', { error: describeError(closeError) });
+    try {
+      await prisma.$disconnect();
+    } catch (error) {
+      log.error('prisma_disconnect_failed', { error: describeError(error) });
+    }
+    process.exit(closeError ? 1 : 0);
+  });
+  // Idle keep-alive connections would otherwise hold close() until the hard timeout.
+  server.closeIdleConnections();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('unhandledRejection', (reason) =>
+  log.error('unhandled_rejection', { error: describeError(reason) }),
+);
