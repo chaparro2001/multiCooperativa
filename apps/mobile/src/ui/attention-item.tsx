@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import { Icon, Text, useTheme } from 'react-native-paper';
 
 import { Card } from './card';
@@ -17,6 +17,7 @@ export function AttentionItem({
   meta,
   badge,
   onPress,
+  style,
   testID,
 }: {
   icon: IconName;
@@ -24,11 +25,13 @@ export function AttentionItem({
   meta?: string;
   badge?: ReactNode;
   onPress(): void;
+  /** The parent sets the column width on wide windows (three per row). */
+  style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
   const { colors } = useTheme();
   return (
-    <Card onPress={onPress} testID={testID} style={styles.card}>
+    <Card onPress={onPress} testID={testID} style={[styles.card, style]}>
       <View style={styles.row}>
         <Icon source={icon} size={24} color={colors.primary} />
         <View style={styles.text}>

@@ -22,6 +22,8 @@ import { Skeleton } from '@/ui/states';
 import { space } from '@/ui/theme';
 
 const GAP = space[3];
+/** Tile height on wide windows, where squares would be too tall (ScreenHomeWeb). */
+const WIDE_TILE_HEIGHT = 160;
 
 const ATTENTION_ICONS = {
   votes: 'vote-outline',
@@ -68,6 +70,12 @@ export default function HomeScreen() {
   const columns = columnsFor(width);
   const contentWidth = Math.min(width, SCREEN_MAX_WIDTH) - 2 * SCREEN_PADDING;
   const cellWidth = (contentWidth - GAP * (columns - 1)) / columns;
+  // Wide windows (ScreenHomeWeb): fixed-height tiles instead of squares, strip in three columns.
+  const wide = columns === 4;
+  const tileStyle = wide
+    ? { width: cellWidth, height: WIDE_TILE_HEIGHT, aspectRatio: 'auto' as const }
+    : { width: cellWidth };
+  const attentionWidth = wide ? { width: (contentWidth - GAP * 2) / 3 } : undefined;
   const title = (entry: VisibleModule) => t(entry.titleKey ?? `enums.module.${entry.module}`);
   const attentionTitle = (item: AttentionItemData): string => {
     const count = item.count ?? 0;
@@ -120,16 +128,19 @@ export default function HomeScreen() {
       {pending.length > 0 ? (
         <View style={styles.attention} testID="home-attention">
           <SectionTitle>{t('home.attention.title')}</SectionTitle>
-          {pending.map((item) => (
-            <AttentionItem
-              key={item.kind}
-              icon={ATTENTION_ICONS[item.kind]}
-              title={attentionTitle(item)}
-              meta={attentionMeta(item)}
-              onPress={() => router.push(item.route as Href)}
-              testID={`attention-${item.kind}`}
-            />
-          ))}
+          <View style={wide ? styles.attentionRow : styles.attention}>
+            {pending.map((item) => (
+              <AttentionItem
+                key={item.kind}
+                icon={ATTENTION_ICONS[item.kind]}
+                title={attentionTitle(item)}
+                meta={attentionMeta(item)}
+                onPress={() => router.push(item.route as Href)}
+                style={attentionWidth}
+                testID={`attention-${item.kind}`}
+              />
+            ))}
+          </View>
         </View>
       ) : null}
       <View style={styles.grid}>
@@ -143,7 +154,7 @@ export default function HomeScreen() {
               count={badge?.count ?? 0}
               countLabel={badge ? t(badge.labelKey, { count: badge.count }) : undefined}
               onPress={() => router.push(entry.route as Href)}
-              style={{ width: cellWidth }}
+              style={tileStyle}
               testID={`module-${entry.id}`}
               countTestID={`count-badge-${entry.id}`}
             />
@@ -156,5 +167,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   attention: { gap: space[2] },
+  attentionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
 });
