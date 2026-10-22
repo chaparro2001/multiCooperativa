@@ -159,7 +159,7 @@ describe('open (US-DOC-03)', () => {
     });
   });
 
-  it('a document of another cooperative does not exist (ADR-003)', async () => {
+  it('a document of another cooperative does not exist (ADR-003, BR-DOC-01)', async () => {
     const document = await upload();
 
     await expect(getDocument(deps, context('manage', OTHER_COOP), document.id)).rejects.toThrow(

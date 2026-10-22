@@ -133,7 +133,7 @@ describe('getAssistantModelSettings with hosted providers', () => {
 });
 
 describe('setHostedProvider', () => {
-  it('verifies the key against the provider, stores it encrypted and never returns it', async () => {
+  it('verifies the key against the provider, stores it encrypted and never returns it (BR-AI-10)', async () => {
     const result = await setHostedProvider(deps, admin, groq);
 
     expect(gateway.listCalls).toEqual([{ provider: 'groq', apiKey: KEY }]);

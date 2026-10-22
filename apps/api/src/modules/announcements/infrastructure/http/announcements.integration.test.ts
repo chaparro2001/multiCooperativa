@@ -239,7 +239,7 @@ describe('announcements over HTTP (US-ANN-01..07)', () => {
     expect(responses.map((r) => r.status)).toEqual([403, 403, 403, 403, 403]);
   });
 
-  it('an announcement of another cooperative answers 404 (ADR-003)', async () => {
+  it('an announcement of another cooperative answers 404 (ADR-003, BR-ANN-01)', async () => {
     const created = await draft();
     await request(app).post(`${base()}/${created.id}/publish`).set(as(admin));
 

@@ -44,7 +44,7 @@ describe('vote (US-ASM-05)', () => {
     ).not.toThrow();
   });
 
-  it('Given I have already voted, then it is rejected and the cast vote is reported', () => {
+  it('Given I have already voted, then it is rejected and the cast vote is reported (BR-ASM-03)', () => {
     try {
       assertCanVote({ votingStatus: 'open', inCensus: true, previousVote: 'against' });
       expect.unreachable();

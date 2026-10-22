@@ -233,7 +233,7 @@ describe('read (US-ANN-03)', () => {
     }
   });
 
-  it('an announcement of another cooperative does not exist (ADR-003)', async () => {
+  it('an announcement of another cooperative does not exist (ADR-003, BR-ANN-01)', async () => {
     const result = await publishedAnnouncement();
 
     await expect(

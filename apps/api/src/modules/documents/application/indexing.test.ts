@@ -186,7 +186,7 @@ describe('indexing (requirements/03, section 4)', () => {
     ).rejects.toThrow(InvalidDocumentTransitionError);
   });
 
-  it('BR-DOC-05: a new version replaces the fragments of the previous one', async () => {
+  it('BR-DOC-05: a new version replaces the fragments of the previous one, so only the current one is indexed (BR-DOC-04)', async () => {
     const document = await upload(pdfWith('Old text about tractors.'));
     await indexer.idle();
 
@@ -205,7 +205,7 @@ describe('indexing (requirements/03, section 4)', () => {
     expect(indexing.fragments).toEqual([]);
   });
 
-  it('a job for a version that is no longer current is discarded', async () => {
+  it('a job for a version that is no longer current is discarded (BR-DOC-04)', async () => {
     const document = await upload(pdfWith('version one'));
     await addVersion(deps, context('manage'), document.id, pdfWith('version two'));
     await indexer.idle();
@@ -241,7 +241,7 @@ describe('content search (US-DOC-07)', () => {
     expect(best).toMatchObject({ documentId: document.id, page: 2, title: 'Bylaws' });
   });
 
-  it('never returns fragments of another cooperative, even if the text matches exactly (ADR-003)', async () => {
+  it('never returns fragments of another cooperative, even if the text matches exactly (ADR-003, BR-AI-04)', async () => {
     const text = 'The ordinary general assembly is held in June.';
     await upload(pdfWith(text), context('manage', OTHER));
     await indexer.idle();
