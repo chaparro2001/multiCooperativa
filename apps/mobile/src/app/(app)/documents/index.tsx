@@ -11,12 +11,17 @@ import { groupByCategory } from '@/features/documents/grouping';
 import { useDocumentList, useDocumentSearch } from '@/features/documents/queries';
 import { formatDay } from '@/i18n/format';
 import { useModuleAccess } from '@/navigation/use-module-access';
+import { SourceCard } from '@/features/assistant/components';
 import { Badge } from '@/ui/badge';
-import { Card, List, SegmentedButtons, Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading } from '@/ui/screen';
-import { TextField } from '@/ui/text-field';
-import { useDebouncedValue } from '@/ui/use-debounced-value';
+import { Segmented } from '@/ui/chip';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
+import { ListRow } from '@/ui/list-row';
+import { useTheme } from '@/ui/paper';
+import { SectionTitle } from '@/ui/section-title';
+import { EmptyState, ErrorState, ListFooter, Skeleton } from '@/ui/states';
+import { TextField } from '@/ui/text-field';
+import { space } from '@/ui/theme';
+import { useDebouncedValue } from '@/ui/use-debounced-value';
 
 type Mode = 'title' | 'content';
 
@@ -29,12 +34,11 @@ export default function DocumentListScreen() {
   // The server is asked once the user stops typing, not on every keystroke.
   const query = useDebouncedValue(text);
   const { colors } = useTheme();
-  const modeButtons = useMemo(
+  const modeOptions = useMemo(
     () =>
       (['title', 'content'] as const).map((value) => ({
         value,
         label: t(`documents.list.mode.${value}`),
-        testID: `mode-${value}`,
       })),
     [t],
   );
@@ -75,10 +79,11 @@ export default function DocumentListScreen() {
           returnKeyType="search"
           testID="document-search"
         />
-        <SegmentedButtons
+        <Segmented<Mode>
           value={mode}
-          onValueChange={(value) => setMode(value as Mode)}
-          buttons={modeButtons}
+          onChange={setMode}
+          options={modeOptions}
+          testIDPrefix="mode"
         />
       </View>
       {mode === 'title' ? (
@@ -94,21 +99,22 @@ const keyById = (item: DocumentSummary) => item.id;
 const keyByHit = (hit: DocumentSearchHit, i: number) => `${hit.documentId}-${hit.page}-${i}`;
 
 const renderSectionHeader = ({ section }: { section: { title: string } }) => (
-  <List.Subheader style={styles.section}>{section.title}</List.Subheader>
+  <SectionTitle>{section.title}</SectionTitle>
 );
 
 function ByTitle({ search, canManage }: { search: string; canManage: boolean }) {
   const { t } = useTranslation();
   const list = useDocumentList(search);
-  const { colors } = useTheme();
   const renderItem = useCallback(
     ({ item }: { item: DocumentSummary }) => <DocumentRow item={item} canManage={canManage} />,
     [canManage],
   );
   const loadMore = useLoadMore(list);
   const sections = useMemo(() => groupByCategory(allItems(list.data)), [list.data]);
-  if (list.isPending) return <Loading />;
-  if (list.isError) return <ErrorText>{messageFor(list.error)}</ErrorText>;
+  if (list.isPending) return <Skeleton variant="list" />;
+  if (list.isError) {
+    return <ErrorState message={messageFor(list.error)} onRetry={() => list.refetch()} />;
+  }
 
   return (
     <SectionList
@@ -116,20 +122,24 @@ function ByTitle({ search, canManage }: { search: string; canManage: boolean }) 
       sections={sections}
       onEndReachedThreshold={0.4}
       onEndReached={loadMore}
-      ListFooterComponent={list.isFetchingNextPage ? <Loading /> : null}
+      ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
       keyExtractor={keyById}
       contentContainerStyle={styles.list}
       stickySectionHeadersEnabled={false}
+      ItemSeparatorComponent={Separator}
       ListEmptyComponent={
-        <Text variant="bodyMedium" style={[styles.empty, { color: colors.onSurfaceVariant }]}>
-          {search ? t('documents.list.noMatch') : t('documents.list.empty')}
-        </Text>
+        <EmptyState
+          icon="file-document-outline"
+          message={search ? t('documents.list.noMatch') : t('documents.list.empty')}
+        />
       }
       renderSectionHeader={renderSectionHeader}
       renderItem={renderItem}
     />
   );
 }
+
+const Separator = () => <View style={styles.separator} />;
 
 const DocumentRow = memo(function DocumentRow({
   item,
@@ -139,57 +149,46 @@ const DocumentRow = memo(function DocumentRow({
   canManage: boolean;
 }) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
   const open = useCallback(() => router.push(`/documents/${item.id}`), [item.id]);
+  // One badge per row: withdrawn first, otherwise (managers) the indexing state.
+  const status =
+    item.status === 'withdrawn' ? (
+      <Badge label={t('enums.documentStatus.withdrawn')} tone="danger" />
+    ) : canManage && item.indexingStatus && item.indexingStatus !== 'indexed' ? (
+      <Badge
+        label={
+          item.indexingStatus === 'pending'
+            ? t('documents.list.indexing')
+            : t('documents.list.notAvailableForAssistant')
+        }
+        tone="warning"
+      />
+    ) : undefined;
   return (
-    <Card
-      mode="contained"
-      accessibilityRole="button"
+    <ListRow
+      title={item.title}
+      meta={formatDay(item.documentDate)}
+      status={status}
       onPress={open}
       testID={`document-${item.title}`}
-    >
-      <Card.Content style={styles.content}>
-        <Text variant="titleMedium">{item.title}</Text>
-        <View style={styles.meta}>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-            {formatDay(item.documentDate)}
-          </Text>
-          {item.status === 'withdrawn' ? (
-            <Badge label={t('enums.documentStatus.withdrawn')} tone="danger" />
-          ) : null}
-          {canManage && item.indexingStatus && item.indexingStatus !== 'indexed' ? (
-            <Badge
-              label={
-                item.indexingStatus === 'pending'
-                  ? t('documents.list.indexing')
-                  : t('documents.list.notAvailableForAssistant')
-              }
-              tone="warning"
-            />
-          ) : null}
-        </View>
-      </Card.Content>
-    </Card>
+    />
   );
 });
 
 function ByContent({ query }: { query: string }) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
   const search = useDocumentSearch(query);
   const renderItem = useCallback(
-    ({ item }: { item: DocumentSearchHit }) => <HitRow hit={item} />,
-    [],
+    ({ item }: { item: DocumentSearchHit }) => <HitRow hit={item} query={query} />,
+    [query],
   );
   if (query.trim().length < 3) {
-    return (
-      <Text variant="bodyMedium" style={[styles.empty, { color: colors.onSurfaceVariant }]}>
-        {t('documents.list.minChars', { min: 3 })}
-      </Text>
-    );
+    return <EmptyState icon="text-search" message={t('documents.list.minChars', { min: 3 })} />;
   }
-  if (search.isPending) return <Loading />;
-  if (search.isError) return <ErrorText>{messageFor(search.error)}</ErrorText>;
+  if (search.isPending) return <Skeleton variant="list" />;
+  if (search.isError) {
+    return <ErrorState message={messageFor(search.error)} onRetry={() => search.refetch()} />;
+  }
 
   return (
     <FlatList
@@ -197,39 +196,30 @@ function ByContent({ query }: { query: string }) {
       data={search.data.items}
       keyExtractor={keyByHit}
       contentContainerStyle={styles.list}
-      ListEmptyComponent={
-        <Text variant="bodyMedium" style={[styles.empty, { color: colors.onSurfaceVariant }]}>
-          {t('documents.list.noResults')}
-        </Text>
-      }
+      ItemSeparatorComponent={Separator}
+      ListEmptyComponent={<EmptyState icon="text-search" message={t('documents.list.noResults')} />}
       renderItem={renderItem}
     />
   );
 }
 
-const HitRow = memo(function HitRow({ hit }: { hit: DocumentSearchHit }) {
+const HitRow = memo(function HitRow({ hit, query }: { hit: DocumentSearchHit; query: string }) {
   const { t } = useTranslation();
   const open = useCallback(() => router.push(`/documents/${hit.documentId}`), [hit.documentId]);
   return (
-    <Card mode="contained" accessibilityRole="button" onPress={open}>
-      <Card.Content style={styles.content}>
-        <Text variant="titleMedium">
-          {t('documents.list.hitTitle', { title: hit.title, page: hit.page })}
-        </Text>
-        <Text variant="bodyMedium" numberOfLines={4}>
-          {hit.excerpt}
-        </Text>
-      </Card.Content>
-    </Card>
+    <SourceCard
+      title={t('documents.list.hitTitle', { title: hit.title, page: hit.page })}
+      excerpt={hit.excerpt}
+      excerptLines={4}
+      highlight={query}
+      onPress={open}
+    />
   );
 });
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  search: { padding: 16, paddingBottom: 8, gap: 10 },
-  list: { padding: 16, paddingTop: 0, gap: 10 },
-  section: { paddingHorizontal: 0, marginTop: 4 },
-  empty: { padding: 16, textAlign: 'center' },
-  content: { gap: 6 },
-  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  search: { padding: space[4], paddingBottom: space[2], gap: space[3] },
+  list: { padding: space[4], paddingTop: 0 },
+  separator: { height: space[3] },
 });
