@@ -78,7 +78,7 @@ Los permisos se definen por módulo, nivel y alcance (ADR-004). El backend decid
 | Modelo de lenguaje | Asistente: modelo local de Ollama en el servidor propio, `qwen3:4b-instruct` por defecto y `qwen3:8b` seleccionable (ADR-013, ADR-015); visión y explicaciones: Gemini (ADR-009); tras puertos |
 | Embeddings         | `bge-m3` local con Ollama (ADR-006); Gemini embeddings en la demo alojada (ADR-010)                                                                                                            |
 | Ficheros           | Almacenamiento compatible S3 con URLs firmadas que caducan (ADR-005); RustFS en local                                                                                                          |
-| Tests              | Vitest (unitarios e integración); React Native Testing Library y Maestro previstos, no entregados                                                                                                                                                        |
+| Tests              | Vitest (unitarios e integración); React Native Testing Library y Maestro previstos, no entregados                                                                                              |
 | Calidad            | ESLint, Prettier, Husky (pre-commit), regla propia de límites entre módulos                                                                                                                    |
 | Entrega            | GitHub Actions; demo con la API en un servidor propio (Cloudflare Tunnel) y GitHub Pages (web)                                                                                                 |
 
