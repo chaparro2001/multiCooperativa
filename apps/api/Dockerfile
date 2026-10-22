@@ -49,4 +49,6 @@ WORKDIR /app/apps/api
 EXPOSE 3000
 
 # Migrations use DIRECT_URL (non-pooled) when set; the API uses DATABASE_URL (pooled).
-CMD ["pnpm", "run", "start:prod"]
+# `exec` replaces the shell with node, so node is PID 1 and receives SIGTERM (graceful shutdown);
+# going through `pnpm run` would leave pnpm/sh in between. Same commands as `start:prod`.
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && exec node --import tsx src/main.ts"]

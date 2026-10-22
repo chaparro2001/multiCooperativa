@@ -179,6 +179,13 @@ describe('announcements over HTTP (US-ANN-01..07)', () => {
     expect(await prisma.announcementRead.count()).toBe(1);
   });
 
+  it('a malformed list offset answers 400 invalid_request, not 500 (US-ANN-02)', async () => {
+    const response = await request(app).get(`${base()}?offset=abc`).set(as(member));
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({ error: 'invalid_request' });
+  });
+
   it('publishing without a body reports what is missing', async () => {
     const created = announcementSchema.parse(
       (await request(app).post(base()).set(as(admin)).send({ title: 'Title only', body: '' })).body,

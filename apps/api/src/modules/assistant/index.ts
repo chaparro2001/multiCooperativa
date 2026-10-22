@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import type { RequestHandler } from 'express';
 
+import { log } from '../../shared/infrastructure/log';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
 import { type AssistantDeps, type RequestMetrics } from './application/assistant';
 import type { DataSources } from './application/tool-executors';
@@ -85,8 +86,7 @@ export function createOllamaLanguageModel(settings: {
 }
 
 /** NFR-AI-04: one line per request, with no personal content. */
-const logMetrics = (metrics: RequestMetrics) =>
-  console.info(JSON.stringify({ event: 'assistant_request', ...metrics }));
+const logMetrics = (metrics: RequestMetrics) => log.info('assistant_request', { ...metrics });
 
 /** Calendar day in Spain, where the cooperatives are (YYYY-MM-DD). */
 const todayInSpain = (now: Date) =>

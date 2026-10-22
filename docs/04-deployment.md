@@ -141,7 +141,7 @@ The first run builds the API image and downloads about 3 GB (including the `bge-
 docker compose --env-file .env.server ps
 ```
 
-`api`, `postgres` and `ollama` should be `healthy`, `storage` and `cloudflared` `running`; `bucket-init` and `ollama-pull` show `exited (0)`, which is correct (they are one-shot jobs). The API applies the database migrations on every start. If something fails: `docker compose --env-file .env.server logs api`.
+`api`, `postgres` and `ollama` should be `healthy`, `storage` and `cloudflared` `running`; `bucket-init` and `ollama-pull` show `exited (0)`, which is correct (they are one-shot jobs). The `api` container's health check calls `GET /ready`, which runs `SELECT 1` against the database (2 s timeout) and answers 503 `{"status":"unavailable"}` when it cannot; `GET /health` stays a dependency-free liveness probe (the one the keep-awake cron and the checks below use). Every response carries an `X-Request-Id` header (the caller's, if it is a sane token), which also appears in the 500 error log line. The API applies the database migrations on every start. If something fails: `docker compose --env-file .env.server logs api`.
 
 ### 6. Seed the demo data
 

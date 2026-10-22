@@ -5,6 +5,7 @@
  * and when one model keeps failing the next one of the fallback list is tried.
  * Free of any SDK: errors are recognized by their shape.
  */
+import { log } from './log';
 
 export interface ResilienceOptions {
   /** Calls per model, the first one included. */
@@ -103,8 +104,7 @@ function describeStatus(error: unknown): number | string | undefined {
 }
 
 /** One JSON line, with no message and no content. */
-export const logRetry = (event: RetryEvent): void =>
-  console.warn(JSON.stringify({ event: 'gemini_retry', ...event }));
+export const logRetry = (event: RetryEvent): void => log.warn('gemini_retry', { ...event });
 
 /**
  * Runs `call` against the first model and, while it keeps failing with a transient error,

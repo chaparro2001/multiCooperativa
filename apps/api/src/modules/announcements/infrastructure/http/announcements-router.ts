@@ -55,7 +55,7 @@ export function createAnnouncementsRouter(
   });
 
   router.get(base, ...read, async (req, res) => {
-    const { offset } = listAnnouncementsQuerySchema.parse(req.query);
+    const { offset } = parseBody(listAnnouncementsQuerySchema, req.query);
     const page = await useCases.listAnnouncements(deps, getCooperativeContext(res), offset);
     res.json({
       items: page.items.map((item) => ({

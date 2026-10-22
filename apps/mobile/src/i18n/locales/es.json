@@ -223,6 +223,7 @@
     },
     "codes": {
       "invalid_request": "Revisa los datos introducidos.",
+      "payload_too_large": "Los datos enviados son demasiado grandes.",
       "invalid_credentials": "Email o contraseña incorrectos.",
       "login_locked": "Demasiados intentos fallidos. Espera unos minutos y vuelve a intentarlo.",
       "too_many_requests": "Demasiadas peticiones. Espera unos minutos y vuelve a intentarlo.",

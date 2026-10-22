@@ -23,6 +23,7 @@ import { createMembersModule } from './modules/members';
 import { type EventBus, InProcessEventBus } from './shared/events';
 import { createJobsRouter } from './shared/infrastructure/http/jobs-router';
 import type { FileStorage } from './shared/files/file-storage';
+import { describeError, log } from './shared/infrastructure/log';
 import type { PrismaClient } from './shared/infrastructure/prisma';
 
 /** Every internal event of the app: the union grows with each module that emits. */
@@ -76,10 +77,7 @@ export function createApi(deps: ApiDeps): Api {
     deps.events ??
     new InProcessEventBus<AppEvent>({
       onHandlerError: (error, event) =>
-        console.error(
-          `Fallo al procesar ${event.type}:`,
-          error instanceof Error ? error.stack : error,
-        ),
+        log.error('event_handler_failed', { type: event.type, error: describeError(error) }),
     });
 
   const access = createAccessModule({
@@ -182,6 +180,7 @@ export function createApi(deps: ApiDeps): Api {
     ],
     trustProxy: deps.trustProxy,
     corsOrigins: deps.corsOrigins,
+    readiness: () => deps.prisma.$queryRaw`SELECT 1`,
   });
   return {
     app,

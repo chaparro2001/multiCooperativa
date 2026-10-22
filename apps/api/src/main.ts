@@ -9,6 +9,7 @@ import {
   createGeminiClient,
 } from './modules/invoicing';
 import { S3FileStorage, s3SettingsFromEnv } from './shared/files/s3-file-storage';
+import { describeError, log } from './shared/infrastructure/log';
 import { createPrismaClient } from './shared/infrastructure/prisma';
 
 const env = loadEnv(process.env);
@@ -20,8 +21,10 @@ if (!production) await files.ensureBucket();
 
 const gemini = env.GEMINI_API_KEY ? createGeminiClient(env.GEMINI_API_KEY) : undefined;
 
+const prisma = createPrismaClient(env.DATABASE_URL);
+
 const { app, indexing, runDueDates } = createApi({
-  prisma: createPrismaClient(env.DATABASE_URL),
+  prisma,
   jwtSecret: env.JWT_SECRET,
   files,
   // Ollama locally (ADR-006); Gemini in the hosted demo (ADR-010). Vectors of different models
@@ -71,15 +74,15 @@ const { app, indexing, runDueDates } = createApi({
   jobsToken: env.JOBS_TOKEN,
 });
 
-app.listen(env.PORT, () => {
-  console.log(`API listening on port ${env.PORT} (${env.NODE_ENV})`);
+const server = app.listen(env.PORT, () => {
+  log.info('api_listening', { port: env.PORT, env: env.NODE_ENV });
 });
 
 // Whatever a restart left half-done is re-indexed in the background (ADR-006).
 indexing
   .resumePending()
-  .then((count) => count > 0 && console.log(`Indexing: ${count} pending versions queued`))
-  .catch((error) => console.error('Could not resume the pending indexing jobs:', error));
+  .then((count) => count > 0 && log.info('indexing_resumed', { count }))
+  .catch((error) => log.error('indexing_resume_failed', { error: describeError(error) }));
 
 // Invoice due dates (US-INV-07): on startup and every hour. A free host sleeps when idle, so an
 // external cron also calls POST /jobs/due-dates. It works by dates and is
@@ -88,8 +91,40 @@ const HOUR = 60 * 60 * 1000;
 const dueDates = () =>
   runDueDates()
     .then(({ overdue, dueSoon }) => {
-      if (overdue + dueSoon > 0) console.log(`Due dates: ${overdue} overdue, ${dueSoon} notices`);
+      if (overdue + dueSoon > 0) log.info('due_dates_processed', { overdue, dueSoon });
     })
-    .catch((error) => console.error('Due-dates process failed:', error));
+    .catch((error) => log.error('due_dates_failed', { error: describeError(error) }));
 void dueDates();
-setInterval(dueDates, HOUR).unref();
+const dueDatesTimer = setInterval(dueDates, HOUR);
+dueDatesTimer.unref();
+
+// Graceful shutdown (docker stop / Render deploy send SIGTERM): stop accepting connections, let
+// the in-flight requests finish, close the database pool and leave; a hard timeout bounds it.
+const SHUTDOWN_TIMEOUT_MS = 10_000;
+let shuttingDown = false;
+function shutdown(signal: string): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log.info('api_shutting_down', { signal });
+  setTimeout(() => {
+    log.error('api_shutdown_timeout', { timeoutMs: SHUTDOWN_TIMEOUT_MS });
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS).unref();
+  clearInterval(dueDatesTimer);
+  server.close(async (closeError) => {
+    if (closeError) log.error('api_close_failed', { error: describeError(closeError) });
+    try {
+      await prisma.$disconnect();
+    } catch (error) {
+      log.error('prisma_disconnect_failed', { error: describeError(error) });
+    }
+    process.exit(closeError ? 1 : 0);
+  });
+  // Idle keep-alive connections would otherwise hold close() until the hard timeout.
+  server.closeIdleConnections();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('unhandledRejection', (reason) =>
+  log.error('unhandled_rejection', { error: describeError(reason) }),
+);
