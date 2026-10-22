@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { pageQuerySchema, pageResponseSchema } from './pagination';
+
 export const moduleSchema = z.enum([
   'announcements',
   'assemblies',
@@ -57,8 +59,17 @@ export const memberSchema = z.object({
   partnerNumber: z.string().nullable(),
 });
 
-/** GET /cooperatives/{id}/members: everyone except removed members (US-ACC-10). */
-export const listMembersResponseSchema = z.object({ members: z.array(memberSchema) });
+/** GET /cooperatives/{id}/members?q=…&status=…: everyone except removed members, by name (US-ACC-10). */
+export const listMembersQuerySchema = z
+  .object({
+    /** Name or email, case-insensitive. */
+    q: z.string().trim().max(100).optional(),
+    status: z.enum(['invited', 'active', 'suspended']).optional(),
+  })
+  .extend(pageQuerySchema.shape);
+
+/** Keyset pages by (name, id). */
+export const listMembersResponseSchema = pageResponseSchema(memberSchema);
 
 export const profileSchema = z.object({
   id: z.uuid(),

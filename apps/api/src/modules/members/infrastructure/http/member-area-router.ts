@@ -1,6 +1,7 @@
 import {
   type CapitalMovement,
   type ListMembersCapitalResponse,
+  listMovementsQuerySchema,
   type MemberMovementsResponse,
   type MemberRecord as MemberRecordDto,
   type MyMemberAreaResponse,
@@ -41,6 +42,7 @@ const toStatement = (statement: useCases.MemberStatement): MemberMovementsRespon
   member: toMember(statement.member),
   capital: formatMoney(statement.balanceCents),
   movements: statement.movements.map(toMovement),
+  nextCursor: statement.nextCursor,
 });
 
 /** HTTP adapter of the member area (docs/requirements/06-member-area.md, section 4). */
@@ -61,8 +63,12 @@ export function createMemberAreaRouter(
     } satisfies MyMemberAreaResponse);
   });
 
-  router.get(`${base}/me/movements`, ...read, async (_req, res) => {
-    const statement = await useCases.listMyMovements(deps, getCooperativeContext(res));
+  router.get(`${base}/me/movements`, ...read, async (req, res) => {
+    const q = parseBody(listMovementsQuerySchema, req.query);
+    const statement = await useCases.listMyMovements(deps, getCooperativeContext(res), {
+      limit: q.limit,
+      before: q.before,
+    });
     res.json(toStatement(statement));
   });
 
@@ -78,10 +84,12 @@ export function createMemberAreaRouter(
   });
 
   router.get(`${base}/members/:membershipId/movements`, ...read, async (req, res) => {
+    const q = parseBody(listMovementsQuerySchema, req.query);
     const statement = await useCases.listMemberMovements(
       deps,
       getCooperativeContext(res),
       String(req.params.membershipId),
+      { limit: q.limit, before: q.before },
     );
     res.json(toStatement(statement));
   });

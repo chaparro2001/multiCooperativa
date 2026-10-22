@@ -5,9 +5,10 @@ import {
   type RegisterCapitalMovementRequest,
   registerCapitalMovementResponseSchema,
 } from '@multicooperativa/contracts';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useServices } from '@/app-services';
+import { nextCursorOf, pagedPath } from '@/api/paged';
 import { cooperativeKey, useActiveCooperative } from '@/cooperatives/active-cooperative';
 
 function useScope() {
@@ -28,13 +29,18 @@ export function useMyRecord() {
   });
 }
 
-/** US-MEM-02: my movements, newest first. */
+/** US-MEM-02: my movements, newest first, a page at a time; every page carries the whole capital. */
 export function useMyMovements() {
   const { api } = useServices();
   const { base, key } = useScope();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: [...key, 'me', 'movements'],
-    queryFn: () => api.request(`${base}/me/movements`, { schema: memberMovementsResponseSchema }),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      api.request(pagedPath(`${base}/me/movements`, {}, pageParam), {
+        schema: memberMovementsResponseSchema,
+      }),
+    getNextPageParam: nextCursorOf,
   });
 }
 
@@ -52,12 +58,14 @@ export function useMemberCapitals() {
 export function useMemberMovements(membershipId: string) {
   const { api } = useServices();
   const { base, key } = useScope();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: [...key, 'members', membershipId, 'movements'],
-    queryFn: () =>
-      api.request(`${base}/members/${membershipId}/movements`, {
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      api.request(pagedPath(`${base}/members/${membershipId}/movements`, {}, pageParam), {
         schema: memberMovementsResponseSchema,
       }),
+    getNextPageParam: nextCursorOf,
   });
 }
 

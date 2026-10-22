@@ -382,3 +382,61 @@ describe('indexing and search (requirements/03, section 4; US-DOC-06, US-DOC-07)
     expect((await search('ab')).status).toBe(400);
   });
 });
+
+describe('document list pages (US-DOC-02)', () => {
+  const page = (query: Record<string, string | number>, token = member) =>
+    request(app).get(base()).query(query).set(as(token));
+
+  it('walks every document once by date, title and id, keeping category and title filters', async () => {
+    // Three documents share date and title: the id breaks the tie between pages.
+    for (let i = 0; i < 3; i += 1) await upload('Minutes', 'minutes', '2026-03-31', pdf(`m${i}`));
+    await upload('Bylaws', 'bylaws', '2024-05-10');
+    await upload('Accounts 2025', 'accounts', '2026-04-15');
+    await upload('Minutes of June', 'minutes', '2026-06-30');
+
+    const titles: string[] = [];
+    const ids: string[] = [];
+    let before: string | undefined;
+    let pages = 0;
+    do {
+      const body = listDocumentsResponseSchema.parse(
+        (await page({ limit: 2, ...(before && { before }) })).body,
+      );
+      titles.push(...body.items.map((d) => d.title));
+      ids.push(...body.items.map((d) => d.id));
+      before = body.nextCursor ?? undefined;
+      pages += 1;
+    } while (before);
+
+    expect(pages).toBe(3);
+    expect(new Set(ids).size).toBe(6);
+    expect(titles).toEqual([
+      'Minutes of June',
+      'Accounts 2025',
+      'Minutes',
+      'Minutes',
+      'Minutes',
+      'Bylaws',
+    ]);
+
+    const first = listDocumentsResponseSchema.parse(
+      (await page({ category: 'minutes', limit: 2 })).body,
+    );
+    const second = listDocumentsResponseSchema.parse(
+      (await page({ category: 'minutes', limit: 2, before: first.nextCursor! })).body,
+    );
+    expect(first.items.map((d) => d.category)).toEqual(['minutes', 'minutes']);
+    expect(second.items.map((d) => d.title)).toEqual(['Minutes', 'Minutes']);
+    expect(second.nextCursor).toBeNull();
+    const byTitle = listDocumentsResponseSchema.parse(
+      (await page({ q: 'minutes', limit: 3 })).body,
+    );
+    expect(byTitle.items).toHaveLength(3);
+    expect(byTitle.nextCursor).not.toBeNull();
+  });
+
+  it('refuses a cursor it did not issue and a limit out of range', async () => {
+    expect((await page({ before: 'bogus' })).status).toBe(400);
+    expect((await page({ limit: 101 })).status).toBe(400);
+  });
+});

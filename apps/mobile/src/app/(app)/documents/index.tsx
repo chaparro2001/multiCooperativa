@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, SectionList, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { allItems } from '@/api/paged';
+import { useLoadMore } from '@/api/use-load-more';
 import { groupByCategory } from '@/features/documents/grouping';
 import { useDocumentList, useDocumentSearch } from '@/features/documents/queries';
 import { formatDay } from '@/i18n/format';
@@ -13,6 +15,7 @@ import { Badge } from '@/ui/badge';
 import { Card, List, SegmentedButtons, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
+import { useDebouncedValue } from '@/ui/use-debounced-value';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 type Mode = 'title' | 'content';
@@ -23,6 +26,8 @@ export default function DocumentListScreen() {
   const { canManage } = useModuleAccess('documents');
   const [mode, setMode] = useState<Mode>('title');
   const [text, setText] = useState('');
+  // The server is asked once the user stops typing, not on every keystroke.
+  const query = useDebouncedValue(text);
   const { colors } = useTheme();
   const modeButtons = useMemo(
     () =>
@@ -77,9 +82,9 @@ export default function DocumentListScreen() {
         />
       </View>
       {mode === 'title' ? (
-        <ByTitle search={text} canManage={canManage} />
+        <ByTitle search={query} canManage={canManage} />
       ) : (
-        <ByContent query={text} />
+        <ByContent query={query} />
       )}
     </View>
   );
@@ -100,13 +105,18 @@ function ByTitle({ search, canManage }: { search: string; canManage: boolean }) 
     ({ item }: { item: DocumentSummary }) => <DocumentRow item={item} canManage={canManage} />,
     [canManage],
   );
+  const loadMore = useLoadMore(list);
+  const sections = useMemo(() => groupByCategory(allItems(list.data)), [list.data]);
   if (list.isPending) return <Loading />;
   if (list.isError) return <ErrorText>{messageFor(list.error)}</ErrorText>;
 
   return (
     <SectionList
       testID="document-list"
-      sections={groupByCategory(list.data.items)}
+      sections={sections}
+      onEndReachedThreshold={0.4}
+      onEndReached={loadMore}
+      ListFooterComponent={list.isFetchingNextPage ? <Loading /> : null}
       keyExtractor={keyById}
       contentContainerStyle={styles.list}
       stickySectionHeadersEnabled={false}

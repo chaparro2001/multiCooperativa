@@ -1,4 +1,5 @@
 import type { PrismaClient } from '../../../shared/infrastructure/prisma';
+import type { PageRequest } from '../../../shared/pagination';
 import type { DocumentCategory, DocumentState } from '../domain/document';
 import type {
   DocumentRecord,
@@ -61,12 +62,27 @@ const toData = (state: DocumentState) => ({
   status: state.status,
 });
 
+/** Rows after the cursor [documentDate, title, id] of (date desc, title asc, id asc). */
+function afterDocument(cursor: PageRequest['cursor']) {
+  if (!cursor) return {};
+  const [day, title, id] = cursor as [string, string, string];
+  const documentDate = fromDay(day);
+  return {
+    OR: [
+      { documentDate: { lt: documentDate } },
+      { documentDate, title: { gt: title } },
+      { documentDate, title, id: { gt: id } },
+    ],
+  };
+}
+
 export class PrismaDocumentStore implements DocumentStore {
   constructor(private readonly prisma: PrismaClient) {}
 
   async list(
     cooperativeId: string,
     query: { onlyPublished: boolean; category?: DocumentCategory; search?: string },
+    page: PageRequest,
   ): Promise<DocumentWithCurrent[]> {
     const rows = await this.prisma.document.findMany({
       where: {
@@ -74,8 +90,11 @@ export class PrismaDocumentStore implements DocumentStore {
         ...(query.onlyPublished && { status: 'published' }),
         ...(query.category && { category: query.category }),
         ...(query.search && { title: { contains: query.search, mode: 'insensitive' } }),
+        ...afterDocument(page.cursor),
       },
-      orderBy: [{ documentDate: 'desc' }, { title: 'asc' }],
+      // Unique and stable: the title can repeat on the same date, the id breaks the tie.
+      orderBy: [{ documentDate: 'desc' }, { title: 'asc' }, { id: 'asc' }],
+      take: page.limit,
       select: withCurrentSelect,
     });
     return rows.map(toWithCurrent);

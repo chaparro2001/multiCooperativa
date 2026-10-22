@@ -1,4 +1,5 @@
-import type { PrismaClient } from '../../../shared/infrastructure/prisma';
+import type { Prisma, PrismaClient } from '../../../shared/infrastructure/prisma';
+import type { PageRequest } from '../../../shared/pagination';
 import { type DeliveryNoteState, type InvoiceState, type Line } from '../domain/documents';
 import {
   DEFAULT_INVOICING_NOTICE_SETTINGS,
@@ -113,6 +114,37 @@ const toNote = (row: NoteRow): DeliveryNoteRecord => ({
   createdAt: row.createdAt,
 });
 
+/** Unique and stable: (date, number) can repeat across third parties, the id breaks the tie. */
+const NOTE_ORDER: Prisma.DeliveryNoteOrderByWithRelationInput[] = [
+  { date: 'desc' },
+  { number: 'desc' },
+  { id: 'desc' },
+];
+
+function noteWhere(cooperativeId: string, filter: DocumentFilter & { status?: string }) {
+  return {
+    cooperativeId,
+    ...(filter.operation && { operation: filter.operation }),
+    ...(filter.thirdPartyId && { thirdPartyId: filter.thirdPartyId }),
+    ...(filter.status && { status: filter.status as DeliveryNoteRecord['status'] }),
+    ...dateRange(filter, 'date'),
+  };
+}
+
+/** Rows after the cursor [date, number, id] in NOTE_ORDER (all descending). */
+function afterNote(cursor: PageRequest['cursor']) {
+  if (!cursor) return {};
+  const [d, number, id] = cursor as [string, string, string];
+  const date = fromDay(d);
+  return {
+    OR: [
+      { date: { lt: date } },
+      { date, number: { lt: number } },
+      { date, number, id: { lt: id } },
+    ],
+  };
+}
+
 export class PrismaDeliveryNoteStore implements DeliveryNoteStore, StaleNotesQuery {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -121,14 +153,22 @@ export class PrismaDeliveryNoteStore implements DeliveryNoteStore, StaleNotesQue
     filter: DocumentFilter & { status?: DeliveryNoteRecord['status'] },
   ) {
     const rows = await this.prisma.deliveryNote.findMany({
-      where: {
-        cooperativeId,
-        ...(filter.operation && { operation: filter.operation }),
-        ...(filter.thirdPartyId && { thirdPartyId: filter.thirdPartyId }),
-        ...(filter.status && { status: filter.status }),
-        ...dateRange(filter, 'date'),
-      },
-      orderBy: [{ date: 'desc' }, { number: 'desc' }],
+      where: noteWhere(cooperativeId, filter),
+      orderBy: NOTE_ORDER,
+      select: noteSelect,
+    });
+    return rows.map(toNote);
+  }
+
+  async listPage(
+    cooperativeId: string,
+    filter: DocumentFilter & { status?: DeliveryNoteRecord['status'] },
+    page: PageRequest,
+  ) {
+    const rows = await this.prisma.deliveryNote.findMany({
+      where: { ...noteWhere(cooperativeId, filter), ...afterNote(page.cursor) },
+      orderBy: NOTE_ORDER,
+      take: page.limit,
       select: noteSelect,
     });
     return rows.map(toNote);
@@ -292,26 +332,60 @@ const toInvoice = (row: InvoiceRow): InvoiceRecord => ({
   createdAt: row.createdAt,
 });
 
+type InvoiceFilter = DocumentFilter & {
+  paymentStatus?: InvoiceRecord['paymentStatus'];
+  reconciliationStatus?: InvoiceRecord['reconciliationStatus'];
+};
+
+/** Unique and stable: (issueDate, number) can repeat across third parties, the id breaks the tie. */
+const INVOICE_ORDER: Prisma.InvoiceOrderByWithRelationInput[] = [
+  { issueDate: 'desc' },
+  { number: 'desc' },
+  { id: 'desc' },
+];
+
+function invoiceWhere(cooperativeId: string, filter: InvoiceFilter) {
+  return {
+    cooperativeId,
+    ...(filter.operation && { operation: filter.operation }),
+    ...(filter.thirdPartyId && { thirdPartyId: filter.thirdPartyId }),
+    ...(filter.paymentStatus && { paymentStatus: filter.paymentStatus }),
+    ...(filter.reconciliationStatus && { reconciliationStatus: filter.reconciliationStatus }),
+    ...dateRange(filter, 'issueDate'),
+  };
+}
+
+/** Rows after the cursor [issueDate, number, id] in INVOICE_ORDER (all descending). */
+function afterInvoice(cursor: PageRequest['cursor']) {
+  if (!cursor) return {};
+  const [d, number, id] = cursor as [string, string, string];
+  const issueDate = fromDay(d);
+  return {
+    OR: [
+      { issueDate: { lt: issueDate } },
+      { issueDate, number: { lt: number } },
+      { issueDate, number, id: { lt: id } },
+    ],
+  };
+}
+
 export class PrismaInvoiceStore implements InvoiceStore {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async list(
-    cooperativeId: string,
-    filter: DocumentFilter & {
-      paymentStatus?: InvoiceRecord['paymentStatus'];
-      reconciliationStatus?: InvoiceRecord['reconciliationStatus'];
-    },
-  ) {
+  async list(cooperativeId: string, filter: InvoiceFilter) {
     const rows = await this.prisma.invoice.findMany({
-      where: {
-        cooperativeId,
-        ...(filter.operation && { operation: filter.operation }),
-        ...(filter.thirdPartyId && { thirdPartyId: filter.thirdPartyId }),
-        ...(filter.paymentStatus && { paymentStatus: filter.paymentStatus }),
-        ...(filter.reconciliationStatus && { reconciliationStatus: filter.reconciliationStatus }),
-        ...dateRange(filter, 'issueDate'),
-      },
-      orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
+      where: invoiceWhere(cooperativeId, filter),
+      orderBy: INVOICE_ORDER,
+      select: invoiceSelect,
+    });
+    return rows.map(toInvoice);
+  }
+
+  async listPage(cooperativeId: string, filter: InvoiceFilter, page: PageRequest) {
+    const rows = await this.prisma.invoice.findMany({
+      where: { ...invoiceWhere(cooperativeId, filter), ...afterInvoice(page.cursor) },
+      orderBy: INVOICE_ORDER,
+      take: page.limit,
       select: invoiceSelect,
     });
     return rows.map(toInvoice);

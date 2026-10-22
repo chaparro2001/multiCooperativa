@@ -19,9 +19,11 @@ import {
   type ThirdPartyInput,
   type ThirdPartyUpdate,
 } from '@multicooperativa/contracts';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { useServices } from '@/app-services';
+import { nextCursorOf, pagedPath } from '@/api/paged';
 import { cooperativeKey, useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { appendScan, type ScanFile } from '@/features/shared/scan-file';
 
@@ -78,32 +80,52 @@ export function useUpdateInvoicingSettings() {
   );
 }
 
-/** US-INV-06: purchases and sales apart. */
+/** US-INV-06: purchases and sales apart, newest first, a page at a time. */
 export function useInvoices(operation: Operation) {
   const { api } = useServices();
   const { base, key } = useScope();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: [...key, 'invoices', operation],
-    queryFn: () =>
-      api.request(`${base}/invoices?operation=${operation}`, {
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      api.request(pagedPath(`${base}/invoices`, { operation }, pageParam), {
         schema: listInvoicesResponseSchema,
       }),
+    getNextPageParam: nextCursorOf,
   });
 }
 
+/**
+ * US-INV-06: delivery notes of one operation, a page at a time. With `pendingFor` (BR-INV-06:
+ * the notes a new invoice can group) every page is loaded: one third party has few pending
+ * notes and the form needs all of them to choose from.
+ */
 export function useDeliveryNotes(operation: Operation, options?: { pendingFor?: string }) {
   const { api } = useServices();
   const { base, key } = useScope();
-  const extra = options?.pendingFor
-    ? `&status=pending_invoicing&thirdParty=${options.pendingFor}`
-    : '';
-  return useQuery({
-    queryKey: [...key, 'delivery-notes', operation, options?.pendingFor ?? 'all'],
-    queryFn: () =>
-      api.request(`${base}/delivery-notes?operation=${operation}${extra}`, {
-        schema: listDeliveryNotesResponseSchema,
-      }),
+  const pendingFor = options?.pendingFor;
+  const query = useInfiniteQuery({
+    queryKey: [...key, 'delivery-notes', operation, pendingFor ?? 'all'],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      api.request(
+        pagedPath(
+          `${base}/delivery-notes`,
+          {
+            operation,
+            ...(pendingFor && { status: 'pending_invoicing', thirdParty: pendingFor }),
+          },
+          pageParam,
+        ),
+        { schema: listDeliveryNotesResponseSchema },
+      ),
+    getNextPageParam: nextCursorOf,
   });
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+  useEffect(() => {
+    if (pendingFor && hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [pendingFor, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  return query;
 }
 
 /** The signed file link lasts 5 minutes (NFR-INV-02): detail queries are always refetched. */

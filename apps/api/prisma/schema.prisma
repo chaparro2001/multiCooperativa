@@ -198,6 +198,8 @@ model CapitalMovement {
 
   // Statement of a member, and the cooperative's totals.
   @@index([cooperativeId, membershipId, date])
+  /// Keyset statement of a member: newest first by (date, recordedAt, id).
+  @@index([cooperativeId, membershipId, date(sort: Desc), recordedAt(sort: Desc), id(sort: Desc)], map: "CapitalMovement_statement_idx")
 }
 
 // ───────────── Announcements (requirements/02) ─────────────
@@ -290,6 +292,8 @@ model Document {
   chunks   DocumentChunk[]
 
   @@index([cooperativeId, status, category, documentDate])
+  /// Keyset list: newest date first, then title, then id (the cursor of GET /documents).
+  @@index([cooperativeId, documentDate(sort: Desc), title, id], map: "Document_list_idx")
 }
 
 model DocumentVersion {
@@ -524,8 +528,8 @@ enum ReminderKind {
 
 /// Reconciliation tolerance per cooperative (BR-INV-08). Without a row, 1 %.
 model InvoicingSettings {
-  cooperativeId        String @id @db.Uuid
-  toleranceBasisPoints Int    @default(100)
+  cooperativeId        String  @id @db.Uuid
+  toleranceBasisPoints Int     @default(100)
   /// BR-INV-15: invoices, notice before the due date (1 to 90 days). Off: only overdue invoices count.
   invoiceNoticeEnabled Boolean @default(true)
   invoiceNoticeDays    Int     @default(15)
@@ -579,6 +583,8 @@ model DeliveryNote {
   @@unique([thirdPartyId, number])
   @@index([cooperativeId, operation, status])
   @@index([invoiceId])
+  /// Keyset list: newest first by (date, number, id), always inside one cooperative and operation.
+  @@index([cooperativeId, operation, date(sort: Desc), number(sort: Desc), id(sort: Desc)], map: "DeliveryNote_list_idx")
 }
 
 model DeliveryNoteLine {
@@ -624,6 +630,8 @@ model Invoice {
   @@index([cooperativeId, operation, paymentStatus, dueDate])
   /// Due-dates job (BR-INV-15): scans pending invoices of all cooperatives by due date.
   @@index([dueDate], where: raw("\"paymentStatus\" = 'pending'"))
+  /// Keyset list: newest first by (issueDate, number, id), always inside one cooperative and operation.
+  @@index([cooperativeId, operation, issueDate(sort: Desc), number(sort: Desc), id(sort: Desc)], map: "Invoice_list_idx")
 }
 
 model InvoiceLine {
@@ -713,10 +721,10 @@ model AssistantSetting {
 
 /// US-ACC-14: one row per cooperative that customized its look; no row means the app's default theme. Owned by the branding module.
 model CooperativeBranding {
-  cooperativeId   String   @id @db.Uuid
-  /// #RRGGBB upper-case; white text on it reaches WCAG AA (BR-ACC-12).
-  primaryColor    String?
-  updatedAt       DateTime @default(now())
+  cooperativeId String   @id @db.Uuid
+  /// #RRGGBB upper-case; white text on it reaches WCAG AA (BR-ACC-16).
+  primaryColor  String?
+  updatedAt     DateTime @default(now())
 }
 
 model AssistantMessage {

@@ -3,6 +3,8 @@ import {
   invoiceDetailSchema,
   invoiceSchema,
   invoicingSummarySchema,
+  listDeliveryNotesResponseSchema,
+  listInvoicesResponseSchema,
   thirdPartySchema,
   thirdPartySheetSchema,
 } from '@multicooperativa/contracts';
@@ -384,5 +386,160 @@ describe('payments, collections and summary (US-INV-06, US-INV-07)', () => {
       .field('data', '{}');
 
     expect(response.status).toBe(403);
+  });
+});
+
+describe('keyset pagination of the lists (US-INV-06)', () => {
+  const list = (path: string, query: Record<string, string | number>, token = board) =>
+    request(app).get(`${base()}${path}`).query(query).set(as(token));
+
+  /** Follows nextCursor to the end; every page is parsed with the contract. */
+  async function crawl(
+    path: string,
+    schema: typeof listInvoicesResponseSchema | typeof listDeliveryNotesResponseSchema,
+    query: Record<string, string | number>,
+  ) {
+    const pages: { id: string; number: string }[][] = [];
+    let before: string | undefined;
+    do {
+      const response = await list(path, { ...query, ...(before && { before }) });
+      expect(response.status).toBe(200);
+      const page = schema.parse(response.body);
+      pages.push(page.items);
+      before = page.nextCursor ?? undefined;
+    } while (before);
+    return pages;
+  }
+
+  it('walks every invoice once, newest first, across page boundaries and ties on date and number', async () => {
+    // Same issue date and same number for two different suppliers: only the id breaks the tie.
+    for (const [number, date, party] of [
+      ['F-100', '2026-10-05', supplier],
+      ['F-100', '2026-10-05', otherSupplier],
+      ['F-099', '2026-10-05', supplier],
+      ['F-300', '2026-10-01', supplier],
+      ['F-200', '2026-10-07', otherSupplier],
+    ] as const) {
+      const response = await invoice({
+        number,
+        issueDate: date,
+        dueDate: '2026-12-01',
+        thirdPartyId: party,
+      });
+      expect(response.status).toBe(201);
+    }
+
+    const pages = await crawl('/invoices', listInvoicesResponseSchema, {
+      operation: 'purchase',
+      limit: 2,
+    });
+
+    expect(pages.map((page) => page.length)).toEqual([2, 2, 1]);
+    const all = pages.flat();
+    expect(new Set(all.map((row) => row.id)).size).toBe(5);
+    expect(all.map((row) => row.number)).toEqual(['F-200', 'F-100', 'F-100', 'F-099', 'F-300']);
+  });
+
+  it('keeps the filters working with the cursor and the summary does not depend on the page', async () => {
+    for (let i = 1; i <= 5; i += 1) {
+      await invoice({
+        number: `P-${i}`,
+        issueDate: `2026-10-0${i}`,
+        base: '10.00',
+        total: '12.10',
+      });
+    }
+    await invoice({ number: 'S-1', operation: 'sale', thirdPartyId: customer });
+    const mine = invoiceSchema.parse(
+      (await invoice({ number: 'P-6', issueDate: '2026-10-06', base: '10.00', total: '12.10' }))
+        .body,
+    );
+    await prisma.invoice.update({ where: { id: mine.id }, data: { paymentStatus: 'overdue' } });
+
+    const purchases = (
+      await crawl('/invoices', listInvoicesResponseSchema, { operation: 'purchase', limit: 4 })
+    ).flat();
+    const overdue = (
+      await crawl('/invoices', listInvoicesResponseSchema, {
+        operation: 'purchase',
+        status: 'overdue',
+        limit: 1,
+      })
+    ).flat();
+    const byParty = (
+      await crawl('/invoices', listInvoicesResponseSchema, {
+        thirdParty: otherSupplier,
+        limit: 1,
+      })
+    ).flat();
+
+    expect(purchases).toHaveLength(6);
+    expect(overdue.map((row) => row.number)).toEqual(['P-6']);
+    expect(byParty).toEqual([]);
+    const summary = invoicingSummarySchema.parse(
+      (await request(app).get(`${base()}/invoices/summary`).set(as(board))).body,
+    );
+    expect(summary.toPay.pendingCount).toBe(6);
+    expect(summary.toPay.pending).toBe('72.60');
+  });
+
+  it('pages delivery notes with the same cursor style and the status filter', async () => {
+    for (const number of ['A-1', 'A-2', 'A-3']) {
+      await note(number, [{ concept: 'Fertilizer', quantity: '1', unit: 'kg' }]);
+    }
+    await note('B-1', [{ concept: 'Fertilizer', quantity: '1', unit: 'kg' }], otherSupplier);
+
+    const pages = await crawl('/delivery-notes', listDeliveryNotesResponseSchema, {
+      operation: 'purchase',
+      status: 'pending_invoicing',
+      limit: 3,
+    });
+    expect(pages.map((page) => page.length)).toEqual([3, 1]);
+    expect(pages.flat().map((row) => row.number)).toEqual(['B-1', 'A-3', 'A-2', 'A-1']);
+  });
+
+  it('uses the default page size and refuses a cursor it did not issue or a limit out of range', async () => {
+    const first = await list('/invoices', {});
+    expect(listInvoicesResponseSchema.parse(first.body)).toEqual({ items: [], nextCursor: null });
+
+    expect((await list('/invoices', { before: 'not-a-cursor' })).status).toBe(400);
+    expect((await list('/delivery-notes', { limit: 0 })).status).toBe(400);
+    expect((await list('/delivery-notes', { limit: 1000 })).status).toBe(400);
+  });
+
+  it('ADR-003: a cursor from one cooperative never shows rows of another, and the other cooperative gets 404', async () => {
+    await invoice({ number: 'F-1' });
+    await invoice({ number: 'F-2', issueDate: '2026-10-06' });
+    const page = listInvoicesResponseSchema.parse((await list('/invoices', { limit: 1 })).body);
+
+    const access = createAccessModule({ prisma, jwtSecret: env.JWT_SECRET, invitationSender });
+    const other = (
+      await access.provisionCooperative({
+        name: 'Other',
+        cif: 'G12345675',
+        admin: { email: 'other-admin@coop.test', name: 'Eva', password: TEST_PASSWORD },
+      })
+    ).cooperativeId;
+    const otherToken = await memberToken(
+      { prisma, app },
+      {
+        passwordOf: 'other-admin@coop.test',
+        cooperativeId: other,
+        email: 'other-board@coop.test',
+        profileName: 'Consejo rector',
+        isPartner: true,
+      },
+    );
+
+    const own = await request(app)
+      .get(`/cooperatives/${other}/invoices`)
+      .query({ before: page.nextCursor! })
+      .set(as(otherToken));
+    expect(listInvoicesResponseSchema.parse(own.body)).toEqual({ items: [], nextCursor: null });
+    const foreign = await request(app)
+      .get(`${base()}/invoices`)
+      .query({ before: page.nextCursor! })
+      .set(as(otherToken));
+    expect([403, 404]).toContain(foreign.status);
   });
 });

@@ -98,14 +98,22 @@ export function createInvoicingDocumentsRouter(
 
   router.get(`${coop}/delivery-notes`, ...read, async (req, res) => {
     const q = query(listDeliveryNotesQuerySchema, req.query);
-    const notes = await useCases.listDeliveryNotes(deps, getCooperativeContext(res), {
-      operation: q.operation,
-      thirdPartyId: q.thirdParty,
-      from: q.from,
-      to: q.to,
-      status: q.status,
-    });
-    res.json({ items: notes.map(toDeliveryNote) } satisfies ListDeliveryNotesResponse);
+    const page = await useCases.listDeliveryNotesPage(
+      deps,
+      getCooperativeContext(res),
+      {
+        operation: q.operation,
+        thirdPartyId: q.thirdParty,
+        from: q.from,
+        to: q.to,
+        status: q.status,
+      },
+      { limit: q.limit, before: q.before },
+    );
+    res.json({
+      items: page.items.map(toDeliveryNote),
+      nextCursor: page.nextCursor,
+    } satisfies ListDeliveryNotesResponse);
   });
 
   router.get(`${coop}/delivery-notes/:noteId`, ...read, async (req, res) => {
@@ -135,15 +143,23 @@ export function createInvoicingDocumentsRouter(
 
   router.get(`${coop}/invoices`, ...read, async (req, res) => {
     const q = query(listInvoicesQuerySchema, req.query);
-    const invoices = await useCases.listInvoices(deps, getCooperativeContext(res), {
-      operation: q.operation,
-      thirdPartyId: q.thirdParty,
-      from: q.from,
-      to: q.to,
-      paymentStatus: q.status,
-      reconciliationStatus: q.reconciliation,
-    });
-    res.json({ items: invoices.map(toInvoice) } satisfies ListInvoicesResponse);
+    const page = await useCases.listInvoicesPage(
+      deps,
+      getCooperativeContext(res),
+      {
+        operation: q.operation,
+        thirdPartyId: q.thirdParty,
+        from: q.from,
+        to: q.to,
+        paymentStatus: q.status,
+        reconciliationStatus: q.reconciliation,
+      },
+      { limit: q.limit, before: q.before },
+    );
+    res.json({
+      items: page.items.map(toInvoice),
+      nextCursor: page.nextCursor,
+    } satisfies ListInvoicesResponse);
   });
 
   // Before `/:invoiceId`, which would otherwise take “summary” as an id.

@@ -9,6 +9,7 @@ export * from './branding';
 export * from './documents';
 export * from './invoicing';
 export * from './member-area';
+export * from './pagination';
 
 export const healthResponseSchema = z.object({
   status: z.literal('ok'),

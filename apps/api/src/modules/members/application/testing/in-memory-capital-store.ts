@@ -27,12 +27,29 @@ export class InMemoryCapitalStore implements CapitalStore {
     );
   }
 
-  async listMovements(cooperativeId: string, membershipId: string) {
+  async listMovements(
+    cooperativeId: string,
+    membershipId: string,
+    page: { limit: number; cursor?: readonly string[] } = { limit: Number.MAX_SAFE_INTEGER },
+  ) {
+    const [day, recorded, id] = page.cursor ?? [];
     return this.of(cooperativeId, membershipId)
       .slice()
       .sort(
-        (a, b) => b.date.localeCompare(a.date) || b.recordedAt.getTime() - a.recordedAt.getTime(),
-      );
+        (a, b) =>
+          b.date.localeCompare(a.date) ||
+          b.recordedAt.getTime() - a.recordedAt.getTime() ||
+          b.id.localeCompare(a.id),
+      )
+      .filter(
+        (row) =>
+          day === undefined ||
+          row.date < day ||
+          (row.date === day &&
+            (row.recordedAt.toISOString() < recorded! ||
+              (row.recordedAt.toISOString() === recorded && row.id < id!))),
+      )
+      .slice(0, page.limit);
   }
 
   async balances(cooperativeId: string, membershipIds: string[]) {

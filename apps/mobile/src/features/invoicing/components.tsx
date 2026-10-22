@@ -1,12 +1,13 @@
 import type {
   DeliveryNote,
   Invoice,
+  InvoicingSettings,
   Operation,
   PaymentStatus,
   ReconciliationStatus,
 } from '@multicooperativa/contracts';
 import { router } from 'expo-router';
-import { type ReactNode, useMemo } from 'react';
+import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -16,7 +17,7 @@ import { Card, Text, useTheme } from '@/ui/paper';
 import { colors } from '@/ui/theme';
 
 import { formatEuros } from './amounts';
-import type { InvoiceAttention, NoteAttention } from './attention';
+import { type InvoiceAttention, invoiceAttention, noteAttention } from './attention';
 
 export const useEuros = () => (amount: string) => formatEuros(amount, currentLocale());
 
@@ -78,17 +79,24 @@ export function InvoiceAttentionBadge({ attention }: { attention: InvoiceAttenti
   );
 }
 
-export function InvoiceRow({
+/** Memoized: the long lists re-render only the rows whose invoice (or alert settings) changed. */
+export const InvoiceRow = memo(function InvoiceRow({
   invoice,
-  attention = null,
+  settings,
+  today,
 }: {
   invoice: Invoice;
-  /** Set when the invoice counts in the home badge (BR-INV-16): highlighted with its reason. */
-  attention?: InvoiceAttention | null;
+  /** With the cooperative's alert settings the row is highlighted with its reason when it counts in the home badge (BR-INV-16). */
+  settings?: InvoicingSettings;
+  today?: string;
 }) {
   const { t } = useTranslation();
   const euros = useEuros();
   const muted = useMutedText();
+  const attention = useMemo(
+    () => (settings && today ? invoiceAttention(invoice, today, settings) : null),
+    [invoice, settings, today],
+  );
   return (
     <Card
       mode="contained"
@@ -117,18 +125,24 @@ export function InvoiceRow({
       </Card.Content>
     </Card>
   );
-}
+});
 
-export function NoteRow({
+export const NoteRow = memo(function NoteRow({
   note,
-  attention = null,
+  settings,
+  today,
 }: {
   note: DeliveryNote;
-  /** Set when the note counts in the home badge (BR-INV-16): highlighted with its age. */
-  attention?: NoteAttention | null;
+  /** With the cooperative's alert settings the row is highlighted with its age when it counts in the home badge (BR-INV-16). */
+  settings?: InvoicingSettings;
+  today?: string;
 }) {
   const { t } = useTranslation();
   const muted = useMutedText();
+  const attention = useMemo(
+    () => (settings && today ? noteAttention(note, today, settings) : null),
+    [note, settings, today],
+  );
   return (
     <Card
       mode="contained"
@@ -156,7 +170,7 @@ export function NoteRow({
       </Card.Content>
     </Card>
   );
-}
+});
 
 /** Label / value line of a detail screen. */
 export function Fact({ label, children }: { label: string; children: ReactNode }) {

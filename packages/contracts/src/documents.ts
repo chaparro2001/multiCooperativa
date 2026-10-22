@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { pageQuerySchema, pageResponseSchema } from './pagination';
+
 export const documentCategorySchema = z.enum([
   'bylaws',
   'regulations',
@@ -27,12 +29,15 @@ export const documentSummarySchema = z.object({
 });
 
 /** GET /cooperatives/{id}/documents?category=…&q=…: by date descending (US-DOC-02). */
-export const listDocumentsQuerySchema = z.object({
-  category: documentCategorySchema.optional(),
-  q: z.string().max(150).optional(),
-});
+export const listDocumentsQuerySchema = z
+  .object({
+    category: documentCategorySchema.optional(),
+    q: z.string().max(150).optional(),
+  })
+  .extend(pageQuerySchema.shape);
 
-export const listDocumentsResponseSchema = z.object({ items: z.array(documentSummarySchema) });
+/** Keyset pages by (date descending, title, id). */
+export const listDocumentsResponseSchema = pageResponseSchema(documentSummarySchema);
 
 /** GET /cooperatives/{id}/documents/{documentId}: the current version (US-DOC-03). */
 export const documentDetailSchema = documentSummarySchema.extend({

@@ -1,3 +1,4 @@
+import type { PageRequest } from '../../../../shared/pagination';
 import type { Movement, MovementType } from '../../domain/capital';
 
 export interface MovementRecord {
@@ -17,8 +18,15 @@ export interface MovementRecord {
  * without it do not exist (ADR-003). There is no update or delete: BR-MEM-01.
  */
 export interface CapitalStore {
-  /** Newest first. */
-  listMovements(cooperativeId: string, membershipId: string): Promise<MovementRecord[]>;
+  /**
+   * Newest first by (date, recordedAt, id). A keyset page: the cursor is [date, recordedAt as
+   * ISO, id] of the last row seen and `page.limit` rows are returned at most.
+   */
+  listMovements(
+    cooperativeId: string,
+    membershipId: string,
+    page: PageRequest,
+  ): Promise<MovementRecord[]>;
   /** Capital in cents of each membership that has movements; the others are absent. */
   balances(cooperativeId: string, membershipIds: string[]): Promise<Map<string, bigint>>;
   /**

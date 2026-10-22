@@ -1,3 +1,4 @@
+import type { PageRequest } from '../../../../shared/pagination';
 import type { DocumentCategory, DocumentState } from '../../domain/document';
 import type {
   DocumentRecord,
@@ -39,7 +40,9 @@ export class InMemoryDocumentStore implements DocumentStore {
   async list(
     cooperativeId: string,
     query: { onlyPublished: boolean; category?: DocumentCategory; search?: string },
+    page: PageRequest = { limit: Number.MAX_SAFE_INTEGER },
   ) {
+    const [afterDay, afterTitle, afterId] = page.cursor ?? [];
     return this.rows
       .filter((row) => row.cooperativeId === cooperativeId)
       .filter((row) => !query.onlyPublished || row.status === 'published')
@@ -48,8 +51,19 @@ export class InMemoryDocumentStore implements DocumentStore {
         (row) => !query.search || row.title.toLowerCase().includes(query.search.toLowerCase()),
       )
       .sort(
-        (a, b) => b.documentDate.localeCompare(a.documentDate) || a.title.localeCompare(b.title),
+        (a, b) =>
+          b.documentDate.localeCompare(a.documentDate) ||
+          a.title.localeCompare(b.title) ||
+          a.id.localeCompare(b.id),
       )
+      .filter(
+        (row) =>
+          afterDay === undefined ||
+          row.documentDate < afterDay ||
+          (row.documentDate === afterDay &&
+            (row.title > afterTitle! || (row.title === afterTitle && row.id > afterId!))),
+      )
+      .slice(0, page.limit)
       .map((row) => this.withCurrent(row));
   }
 

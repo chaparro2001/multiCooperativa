@@ -14,6 +14,7 @@ import { ZodError } from 'zod';
 import { corsMiddleware } from './shared/infrastructure/http/cors';
 import { describeError, log } from './shared/infrastructure/log';
 import { InvalidRequestError } from './shared/infrastructure/http/validation';
+import { InvalidCursorError } from './shared/pagination';
 
 /** Last resort: never leaks internals to the client (NFR-ACC-08 keeps tokens out of logs too). */
 // Express tells error handlers apart by their four parameters, so `_next` must stay.
@@ -35,6 +36,14 @@ const unhandledErrors: ErrorRequestHandler = (error, _req, res, _next) => {
           ? { error: 'invalid_request', details: { issues } }
           : { error: 'invalid_request' }) satisfies ApiError,
       );
+    return;
+  }
+  // A pagination cursor this server did not issue: the same 400 as any other bad query parameter.
+  if (error instanceof InvalidCursorError) {
+    res.status(400).json({
+      error: 'invalid_request',
+      details: { issues: [{ path: 'before', code: 'invalid_cursor' }] },
+    } satisfies ApiError);
     return;
   }
   if (error?.type === 'entity.too.large') {

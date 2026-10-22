@@ -186,6 +186,36 @@ describe('US-MEM-01 / US-MEM-02 · my record and my movements', () => {
     ]);
   });
 
+  it('US-MEM-02: movements come in keyset pages; the capital is the whole sum on every page', async () => {
+    // Same date for the last three: recordedAt, then the id, keep the order stable.
+    await register(manager, anaId, movement({ date: '2026-01-10', amount: '100.00' }));
+    for (const amount of ['10.00', '20.00', '30.00']) {
+      await register(manager, anaId, movement({ date: '2026-02-10', amount }));
+    }
+
+    const fetchPage = (before?: string) =>
+      request(app)
+        .get(`${area()}/me/movements`)
+        .query({ limit: 2, ...(before && { before }) })
+        .set(as(ana));
+    const first = memberMovementsResponseSchema.parse((await fetchPage()).body);
+    const second = memberMovementsResponseSchema.parse((await fetchPage(first.nextCursor!)).body);
+
+    expect([first.capital, second.capital]).toEqual(['160.00', '160.00']);
+    expect(first.movements.map((m) => m.amount)).toEqual(['30.00', '20.00']);
+    expect(second.movements.map((m) => m.amount)).toEqual(['10.00', '100.00']);
+    expect(second.nextCursor).toBeNull();
+    expect((await fetchPage('bogus')).status).toBe(400);
+
+    const viaMember = await request(app)
+      .get(`${area()}/members/${anaId}/movements`)
+      .query({ limit: 1 })
+      .set(as(board));
+    const body = memberMovementsResponseSchema.parse(viaMember.body);
+    expect(body.capital).toBe('160.00');
+    expect(body.nextCursor).not.toBeNull();
+  });
+
   it('US-MEM-01: a manager who is not a partner also has a record, with no capital', async () => {
     const response = await request(app).get(`${area()}/me`).set(as(manager));
 

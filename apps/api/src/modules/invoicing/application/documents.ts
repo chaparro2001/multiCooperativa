@@ -8,6 +8,14 @@ import {
 } from '../../../shared/domain/file-type';
 import { type FileStorage, newFileKey } from '../../../shared/files/file-storage';
 import {
+  DAY_CURSOR,
+  type Page,
+  pageRequest,
+  TEXT_CURSOR,
+  toPage,
+  UUID_CURSOR,
+} from '../../../shared/pagination';
+import {
   assertCanGroup,
   assertCanOperate,
   cancelDeliveryNote,
@@ -161,6 +169,10 @@ export async function registerDeliveryNote(
   return note;
 }
 
+/**
+ * Every delivery note of the filter, unbounded: for internal readers that filter further in
+ * memory (the assistant's tools). The app's list is `listDeliveryNotesPage`.
+ */
 export async function listDeliveryNotes(
   deps: InvoicingDeps,
   context: CooperativeContext,
@@ -168,6 +180,23 @@ export async function listDeliveryNotes(
 ): Promise<DeliveryNoteRecord[]> {
   requireRead(context);
   return deps.deliveryNotes.list(context.cooperativeId, filter);
+}
+
+const NOTE_CURSOR = [DAY_CURSOR, TEXT_CURSOR, UUID_CURSOR];
+
+/** US-INV-06: a page of delivery notes, newest first; `before` is the previous `nextCursor`. */
+export async function listDeliveryNotesPage(
+  deps: InvoicingDeps,
+  context: CooperativeContext,
+  filter: DocumentFilter & { status?: DeliveryNoteStatus },
+  page: { limit: number; before?: string },
+): Promise<Page<DeliveryNoteRecord>> {
+  requireRead(context);
+  const rows = await deps.deliveryNotes.listPage(context.cooperativeId, filter, {
+    ...pageRequest(page, NOTE_CURSOR),
+    limit: page.limit + 1,
+  });
+  return toPage(rows, page.limit, (note) => [note.date, note.number, note.id]);
 }
 
 export async function getDeliveryNote(
@@ -246,16 +275,36 @@ export async function registerInvoice(
   return invoice;
 }
 
+type InvoiceFilter = DocumentFilter & {
+  paymentStatus?: PaymentStatus;
+  reconciliationStatus?: ReconciliationStatus;
+};
+
+/** Every invoice of the filter, unbounded: for internal readers (the assistant's tools). The app's list is `listInvoicesPage`. */
 export async function listInvoices(
   deps: InvoicingDeps,
   context: CooperativeContext,
-  filter: DocumentFilter & {
-    paymentStatus?: PaymentStatus;
-    reconciliationStatus?: ReconciliationStatus;
-  },
+  filter: InvoiceFilter,
 ): Promise<InvoiceRecord[]> {
   requireRead(context);
   return deps.invoices.list(context.cooperativeId, filter);
+}
+
+const INVOICE_CURSOR = [DAY_CURSOR, TEXT_CURSOR, UUID_CURSOR];
+
+/** US-INV-06: a page of invoices, newest first; `before` is the previous `nextCursor`. */
+export async function listInvoicesPage(
+  deps: InvoicingDeps,
+  context: CooperativeContext,
+  filter: InvoiceFilter,
+  page: { limit: number; before?: string },
+): Promise<Page<InvoiceRecord>> {
+  requireRead(context);
+  const rows = await deps.invoices.listPage(context.cooperativeId, filter, {
+    ...pageRequest(page, INVOICE_CURSOR),
+    limit: page.limit + 1,
+  });
+  return toPage(rows, page.limit, (invoice) => [invoice.issueDate, invoice.number, invoice.id]);
 }
 
 export async function getInvoice(deps: InvoicingDeps, context: CooperativeContext, id: string) {

@@ -181,7 +181,7 @@ erDiagram
 Contract (schemas in `packages/contracts/src/documents.ts`):
 
 - Categories: `bylaws`, `regulations`, `minutes`, `accounts`, `other`. Title of 1 to 150 characters; document date as a day (YYYY-MM-DD). Indexing statuses: `pending`, `indexed`, `error`, `not_indexable`.
-- The list accepts `?category=` and `?q=` (case-insensitive match in the title) and orders by document date descending. The app groups by category.
+- The list accepts `?category=` and `?q=` (case-insensitive match in the title) and orders by document date descending, then title and id. It is keyset-paginated (docs/02-stack-and-architecture.md, principle 8): `?limit=` (30 by default, 100 at most) and `?before=<nextCursor>`, answering `{ items, nextCursor }`. The app groups the loaded pages by category, loads the next page when the end is near and waits 300 ms after the last keystroke before searching (by title and by content), keeping the previous results on screen meanwhile.
 - Uploading a document or a version is `multipart/form-data` with the PDF in the `file` field; when uploading the document, also `title`, `category` and `documentDate`. The type is checked by content.
 - The detail carries the signed URL of the current version (5 minutes). The indexing status and its reason are only returned with manage level.
 - A single current version is also guaranteed by the database (partial unique index), even with simultaneous uploads.

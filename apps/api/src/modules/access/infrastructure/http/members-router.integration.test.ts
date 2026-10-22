@@ -131,7 +131,7 @@ describe('member lifecycle (US-ACC-08, US-ACC-09, US-ACC-10)', () => {
     const list = listMembersResponseSchema.parse(
       (await request(app).get(`/cooperatives/${fieldCoop}/members`).set(as(adminToken))).body,
     );
-    expect(list.members.map((m) => m.email)).toEqual(['admin@campo.es']);
+    expect(list.items.map((m) => m.email)).toEqual(['admin@campo.es']);
 
     const audit = listAuditResponseSchema.parse(
       (await request(app).get(`/cooperatives/${fieldCoop}/audit`).set(as(adminToken))).body,
@@ -479,5 +479,69 @@ describe('administrator-delivered links (US-ACC-08, ADR-016)', () => {
       .get(`/cooperatives/${fieldCoop}/members`)
       .set(as(adminToken));
     expect(JSON.stringify(list.body)).not.toContain('token');
+  });
+});
+
+describe('members list: keyset pages, search and status (US-ACC-10)', () => {
+  const page = async (
+    query: Record<string, string | number>,
+    coop = fieldCoop,
+    token = adminToken,
+  ) => request(app).get(`/cooperatives/${coop}/members`).query(query).set(as(token));
+
+  it('walks every member by name once, with the filters kept across the cursor', async () => {
+    // Same display name for two members: the membership id breaks the tie between pages.
+    for (const email of ['a1@campo.es', 'a2@campo.es', 'a3@campo.es', 'a4@campo.es']) {
+      await invite(email);
+    }
+    const { membershipId } = inviteMemberResponseSchema.parse((await invite('b1@campo.es')).body);
+    await prisma.membership.update({ where: { id: membershipId }, data: { status: 'suspended' } });
+
+    const seen: string[] = [];
+    let before: string | undefined;
+    let pages = 0;
+    do {
+      const body = listMembersResponseSchema.parse(
+        (await page({ limit: 2, ...(before && { before }) })).body,
+      );
+      seen.push(...body.items.map((m) => m.email));
+      before = body.nextCursor ?? undefined;
+      pages += 1;
+    } while (before);
+
+    expect(pages).toBe(3);
+    expect(new Set(seen).size).toBe(6);
+    expect(seen).toContain('admin@campo.es');
+
+    const suspended = listMembersResponseSchema.parse((await page({ status: 'suspended' })).body);
+    expect(suspended.items.map((m) => m.email)).toEqual(['b1@campo.es']);
+    await prisma.user.update({ where: { email: 'a2@campo.es' }, data: { name: 'José Pérez' } });
+    const accents = listMembersResponseSchema.parse((await page({ q: 'jose p' })).body);
+    expect(accents.items.map((m) => m.email)).toEqual(['a2@campo.es']);
+    const percent = listMembersResponseSchema.parse((await page({ q: '%' })).body);
+    expect(percent.items).toEqual([]);
+    const searched = listMembersResponseSchema.parse(
+      (await page({ q: 'A3@CAMPO', limit: 1 })).body,
+    );
+    expect(searched.items.map((m) => m.email)).toEqual(['a3@campo.es']);
+    expect(searched.nextCursor).toBeNull();
+  });
+
+  it('reads one member for the detail screen; another cooperative sees 404, a bad cursor 400', async () => {
+    const { membershipId } = inviteMemberResponseSchema.parse((await invite('c1@campo.es')).body);
+    const own = await request(app)
+      .get(`/cooperatives/${fieldCoop}/members/${membershipId}`)
+      .set(as(adminToken));
+    expect(memberSchema.parse(own.body).email).toBe('c1@campo.es');
+
+    const seaToken = await login('admin@mar.es');
+    const foreign = await request(app)
+      .get(`/cooperatives/${seaCoop}/members/${membershipId}`)
+      .set(as(seaToken));
+    expect(foreign.status).toBe(404);
+    expect((await page({ before: 'bogus' })).status).toBe(400);
+    expect(
+      listMembersResponseSchema.parse((await page({}, seaCoop, seaToken)).body).items,
+    ).toHaveLength(1);
   });
 });

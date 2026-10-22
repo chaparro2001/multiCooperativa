@@ -15,29 +15,6 @@ export function statusTone(status: MembershipStatus): 'info' | 'warning' | 'dang
   }
 }
 
-/** Case and accent insensitive, so "jose" finds "José". */
-function normalize(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .trim();
-}
-
-/** Search by name or email plus a status filter; sorted by name. */
-export function filterMembers(members: Member[], search: string, status: StatusFilter): Member[] {
-  const needle = normalize(search);
-  return members
-    .filter((member) => status === 'all' || member.status === status)
-    .filter(
-      (member) =>
-        needle === '' ||
-        normalize(member.name).includes(needle) ||
-        normalize(member.email).includes(needle),
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
 export interface MemberActions {
   changeProfile: boolean;
   suspend: boolean;

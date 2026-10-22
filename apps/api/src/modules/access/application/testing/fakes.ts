@@ -160,8 +160,38 @@ export class InMemoryMemberStore implements MemberStore {
     return member;
   }
 
-  async listMembers() {
-    return this.members.filter((member) => member.status !== 'removed');
+  async listMembers(
+    _cooperativeId: string,
+    filter: { search?: string; status?: string } = {},
+    page: { limit: number; cursor?: readonly string[] } = { limit: Number.MAX_SAFE_INTEGER },
+  ) {
+    const needle = filter.search?.trim().toLowerCase();
+    const [name, id] = page.cursor ?? [];
+    return this.members
+      .filter((member) => member.status !== 'removed')
+      .filter((member) => !filter.status || member.status === filter.status)
+      .filter(
+        (member) =>
+          !needle ||
+          member.name.toLowerCase().includes(needle) ||
+          member.email.toLowerCase().includes(needle),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name) || a.membershipId.localeCompare(b.membershipId))
+      .filter(
+        (member) =>
+          name === undefined ||
+          member.name > name ||
+          (member.name === name && member.membershipId > id!),
+      )
+      .slice(0, page.limit);
+  }
+
+  async findMember(_cooperativeId: string, membershipId: string) {
+    return (
+      this.members.find(
+        (member) => member.membershipId === membershipId && member.status !== 'removed',
+      ) ?? null
+    );
   }
 
   async listProfiles() {

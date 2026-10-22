@@ -8,7 +8,7 @@ import { useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { InvitationLinkCard } from '@/features/members/invitation-link-card';
 import { memberActions, statusTone } from '@/features/members/members';
 import { ProfilePicker } from '@/features/members/profile-picker';
-import { useChangeMember, useMembers, useResendInvitation } from '@/features/members/queries';
+import { useChangeMember, useMember, useResendInvitation } from '@/features/members/queries';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
@@ -23,7 +23,7 @@ export default function MemberScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { me } = useActiveCooperative();
   const { canManage } = useModuleAccess('users');
-  const members = useMembers();
+  const memberQuery = useMember(id);
   const change = useChangeMember();
   const resend = useResendInvitation();
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -31,22 +31,15 @@ export default function MemberScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [link, setLink] = useState<{ url: string; expiresAt: string } | null>(null);
 
-  if (members.isPending) return <Loading />;
-  if (members.isError) {
+  if (memberQuery.isPending) return <Loading />;
+  if (memberQuery.isError || !memberQuery.data) {
     return (
       <Screen>
-        <ErrorText>{messageFor(members.error)}</ErrorText>
+        <ErrorText>{messageFor(memberQuery.error)}</ErrorText>
       </Screen>
     );
   }
-  const member = members.data.find((candidate) => candidate.membershipId === id);
-  if (!member) {
-    return (
-      <Screen>
-        <ErrorText>{t('errors.codes.not_found')}</ErrorText>
-      </Screen>
-    );
-  }
+  const member = memberQuery.data;
 
   const muted = { color: colors.onSurfaceVariant };
   const actions = memberActions(member, me?.id, canManage);

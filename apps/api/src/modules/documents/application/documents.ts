@@ -3,6 +3,14 @@ import type { EventPublisher } from '../../../shared/events';
 import { isPdf } from '../../../shared/domain/pdf';
 import { type FileStorage, newFileKey } from '../../../shared/files/file-storage';
 import {
+  DAY_CURSOR,
+  type Page,
+  pageRequest,
+  TEXT_CURSOR,
+  toPage,
+  UUID_CURSOR,
+} from '../../../shared/pagination';
+import {
   assertCanAddVersion,
   assertValidFile,
   createDocument,
@@ -96,18 +104,30 @@ async function announcePublished(deps: DocumentDeps, document: DocumentWithCurre
   });
 }
 
-/** US-DOC-02. */
+const DOCUMENT_CURSOR = [DAY_CURSOR, TEXT_CURSOR, UUID_CURSOR];
+
+/** US-DOC-02: a page of documents; `before` is the previous `nextCursor`. */
 export async function listDocuments(
   deps: DocumentDeps,
   context: CooperativeContext,
   filter: { category?: DocumentCategory; search?: string },
-): Promise<DocumentWithCurrent[]> {
+  page: { limit: number; before?: string },
+): Promise<Page<DocumentWithCurrent>> {
   requireAccess(context.permissions, 'documents', 'read');
-  return deps.documents.list(context.cooperativeId, {
-    onlyPublished: !canManage(context),
-    category: filter.category,
-    search: filter.search?.trim() || undefined,
-  });
+  const rows = await deps.documents.list(
+    context.cooperativeId,
+    {
+      onlyPublished: !canManage(context),
+      category: filter.category,
+      search: filter.search?.trim() || undefined,
+    },
+    { ...pageRequest(page, DOCUMENT_CURSOR), limit: page.limit + 1 },
+  );
+  return toPage(rows, page.limit, (document) => [
+    document.documentDate,
+    document.title,
+    document.id,
+  ]);
 }
 
 export interface DocumentDetail extends DocumentWithCurrent {

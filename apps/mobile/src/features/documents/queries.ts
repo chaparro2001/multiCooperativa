@@ -6,9 +6,16 @@ import {
   listDocumentVersionsResponseSchema,
   searchDocumentsResponseSchema,
 } from '@multicooperativa/contracts';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { useServices } from '@/app-services';
+import { nextCursorOf, pagedPath } from '@/api/paged';
 import { cooperativeKey, useActiveCooperative } from '@/cooperatives/active-cooperative';
 import { appendPdf, type PickedPdf } from '@/features/shared/pdf-upload';
 
@@ -20,17 +27,21 @@ function useScope() {
   return { base, key };
 }
 
-/** US-DOC-02: filtered on the server by title. */
+/**
+ * US-DOC-02: filtered on the server by title, newest first, a page at a time. While a new
+ * search loads, the previous list stays on screen instead of flashing.
+ */
 export function useDocumentList(search: string) {
   const { api } = useServices();
   const { base, key } = useScope();
   const q = search.trim();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: [...key, 'list', q],
-    queryFn: () =>
-      api.request(q ? `${base}?q=${encodeURIComponent(q)}` : base, {
-        schema: listDocumentsResponseSchema,
-      }),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      api.request(pagedPath(base, { q }, pageParam), { schema: listDocumentsResponseSchema }),
+    getNextPageParam: nextCursorOf,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -42,6 +53,7 @@ export function useDocumentSearch(query: string) {
   return useQuery({
     queryKey: [...key, 'search', q],
     enabled: q.length >= 3,
+    placeholderData: keepPreviousData,
     queryFn: () =>
       api.request(`${base}/search?q=${encodeURIComponent(q)}`, {
         schema: searchDocumentsResponseSchema,

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { CooperativeContext } from '../../access';
 import { InProcessEventBus } from '../../../shared/events';
 import { InMemoryFileStorage } from '../../../shared/files/in-memory-file-storage';
+import { InvalidCursorError } from '../../../shared/pagination';
 import { DocumentFileRejectedError, InvalidDocumentTransitionError } from '../domain/errors';
 import {
   addVersion,
@@ -123,15 +124,39 @@ describe('upload (US-DOC-01)', () => {
   });
 });
 
+const PAGE = { limit: 30 };
+
 describe('list (US-DOC-02)', () => {
+  it('pages with an opaque cursor in a stable order, whatever the ties on date and title', async () => {
+    await upload('Same title', 'minutes', '2026-03-31');
+    await upload('Same title', 'minutes', '2026-03-31');
+    await upload('Older', 'minutes', '2025-01-01');
+    await upload('Newest', 'minutes', '2026-06-30');
+
+    const first = await listDocuments(deps, reader, {}, { limit: 2 });
+    const second = await listDocuments(deps, reader, {}, { limit: 2, before: first.nextCursor! });
+
+    expect(first.items.map((d) => d.title)).toEqual(['Newest', 'Same title']);
+    expect(second.items.map((d) => d.title)).toEqual(['Same title', 'Older']);
+    expect(second.nextCursor).toBeNull();
+    const ids = [...first.items, ...second.items].map((d) => d.id);
+    expect(new Set(ids).size).toBe(4);
+  });
+
+  it('rejects a cursor this server did not issue', async () => {
+    await expect(listDocuments(deps, reader, {}, { limit: 2, before: 'nope' })).rejects.toThrow(
+      InvalidCursorError,
+    );
+  });
+
   it('sorts by date descending and filters by category and by title', async () => {
     await upload('Corporate bylaws', 'bylaws', '2024-01-10');
     await upload('March minutes', 'minutes', '2026-03-31');
     await upload('June minutes', 'minutes', '2026-06-30');
 
-    const all = await listDocuments(deps, reader, {});
-    const minutes = await listDocuments(deps, reader, { category: 'minutes' });
-    const found = await listDocuments(deps, reader, { search: '  MARCH ' });
+    const all = (await listDocuments(deps, reader, {}, PAGE)).items;
+    const minutes = (await listDocuments(deps, reader, { category: 'minutes' }, PAGE)).items;
+    const found = (await listDocuments(deps, reader, { search: '  MARCH ' }, PAGE)).items;
 
     expect(all.map((d) => d.title)).toEqual(['June minutes', 'March minutes', 'Corporate bylaws']);
     expect(minutes.map((d) => d.title)).toEqual(['June minutes', 'March minutes']);
@@ -219,7 +244,7 @@ describe('withdraw (US-DOC-05)', () => {
 
     await withdrawDocument(deps, manager, document.id);
 
-    expect(await listDocuments(deps, reader, {})).toEqual([]);
+    expect((await listDocuments(deps, reader, {}, PAGE)).items).toEqual([]);
     expect(events.at(-1)).toMatchObject({
       type: 'DocumentWithdrawn',
       payload: { cooperativeId: COOP, documentId: document.id },
@@ -251,7 +276,7 @@ describe('republish (US-DOC-08)', () => {
 
     expect(republished.status).toBe('published');
     expect(statuses.at(-1)).toEqual([document.current.id, 'pending']);
-    expect(await listDocuments(deps, reader, {})).toHaveLength(1);
+    expect((await listDocuments(deps, reader, {}, PAGE)).items).toHaveLength(1);
     expect(events.at(-1)).toMatchObject({
       type: 'DocumentPublished',
       payload: { cooperativeId: COOP, documentId: document.id, versionId: document.current.id },
