@@ -7,6 +7,7 @@ import express, {
 } from 'express';
 
 import { MulterError } from 'multer';
+import { ZodError } from 'zod';
 
 import { corsMiddleware } from './shared/infrastructure/http/cors';
 import { InvalidRequestError } from './shared/infrastructure/http/validation';
@@ -18,6 +19,8 @@ const unhandledErrors: ErrorRequestHandler = (error, _req, res, _next) => {
   // multipart form multer refuses (extra fields or files). File size is each module's.
   if (
     error instanceof InvalidRequestError ||
+    // Safety net: a schema parsed without `parseBody` must still answer 400, not 500.
+    error instanceof ZodError ||
     error?.type === 'entity.parse.failed' ||
     error instanceof MulterError
   ) {
