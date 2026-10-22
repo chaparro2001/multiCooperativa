@@ -24,6 +24,12 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+    /** Connection pool of the API: maximum connections, wait for a free one, idle lifetime. */
+    DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    DB_POOL_CONNECTION_TIMEOUT_MS: z.coerce.number().int().min(100).max(120_000).default(5_000),
+    DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(30_000),
+    /** Per-statement limit on the API's connections only (migrations are not affected). 0 disables it. */
+    DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(0).max(600_000).default(30_000),
     /** Signing secret of the access JWTs (HS256): at least 256 bits. */
     JWT_SECRET: z.string().min(32),
     /** Empty for AWS S3; the service URL for any other compatible one. */

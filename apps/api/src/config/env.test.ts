@@ -7,11 +7,24 @@ const JWT_SECRET = 'x'.repeat(32);
 const required = { DATABASE_URL, JWT_SECRET };
 
 describe('loadEnv', () => {
+  it('NFR-OPS: the database pool is configurable and rejects nonsense', () => {
+    expect(loadEnv({ ...required, DB_POOL_MAX: '4', DB_STATEMENT_TIMEOUT_MS: '0' })).toMatchObject({
+      DB_POOL_MAX: 4,
+      DB_STATEMENT_TIMEOUT_MS: 0,
+    });
+    expect(() => loadEnv({ ...required, DB_POOL_MAX: '0' })).toThrow();
+    expect(() => loadEnv({ ...required, DB_STATEMENT_TIMEOUT_MS: '-1' })).toThrow();
+  });
+
   it('applies the defaults, with the local docker-compose storage', () => {
     expect(loadEnv(required)).toEqual({
       NODE_ENV: 'development',
       PORT: 3000,
       DATABASE_URL,
+      DB_POOL_MAX: 10,
+      DB_POOL_CONNECTION_TIMEOUT_MS: 5_000,
+      DB_POOL_IDLE_TIMEOUT_MS: 30_000,
+      DB_STATEMENT_TIMEOUT_MS: 30_000,
       JWT_SECRET,
       S3_ENDPOINT: 'http://localhost:9000',
       S3_REGION: 'us-east-1',

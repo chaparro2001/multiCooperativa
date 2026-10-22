@@ -25,6 +25,9 @@ services:
         sync: false
       - key: DIRECT_URL
         sync: false
+      # Neon's pooler (PgBouncer) can reject the statement_timeout startup parameter: not sent here.
+      - key: DB_STATEMENT_TIMEOUT_MS
+        value: '0'
       # Signing secret of the access tokens (min. 32 chars); Render generates it.
       - key: JWT_SECRET
         generateValue: true

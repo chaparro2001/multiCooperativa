@@ -21,7 +21,12 @@ if (!production) await files.ensureBucket();
 
 const gemini = env.GEMINI_API_KEY ? createGeminiClient(env.GEMINI_API_KEY) : undefined;
 
-const prisma = createPrismaClient(env.DATABASE_URL);
+const prisma = createPrismaClient(env.DATABASE_URL, {
+  max: env.DB_POOL_MAX,
+  connectionTimeoutMs: env.DB_POOL_CONNECTION_TIMEOUT_MS,
+  idleTimeoutMs: env.DB_POOL_IDLE_TIMEOUT_MS,
+  statementTimeoutMs: env.DB_STATEMENT_TIMEOUT_MS,
+});
 
 const { app, indexing, runDueDates, purgeAuthRecords } = createApi({
   prisma,
