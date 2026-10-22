@@ -46,7 +46,13 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
       "Searches the cooperative's documents (bylaws, regulations, minutes, accounts) by meaning and returns the most relevant fragments with their document and page. Use it for any question about what the documents say.",
     inputSchema: {
       type: 'object',
-      properties: { query: { type: 'string', description: 'What to look for, in Spanish.' } },
+      properties: {
+        query: {
+          type: 'string',
+          description:
+            'What to look for, in Spanish. It must be standalone: the search does not see the conversation, so in a follow-up name the subject explicitly (for example "duración del mandato del consejo rector", not "y su mandato").',
+        },
+      },
       required: ['query'],
       additionalProperties: false,
     },
