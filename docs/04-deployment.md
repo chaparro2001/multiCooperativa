@@ -23,7 +23,7 @@ flowchart LR
 | -------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Web app        | GitHub Pages (Actions deploy)                                      | `https://cooperativa.chaparro2001.com/` (GitHub Pages custom domain, [ADR-017](adr/ADR-017-custom-domain-for-the-web-app.md)); built by `.github/workflows/pages.yml` |
 | API            | Container built from `apps/api/Dockerfile`                         | Public URL `https://api-cooperativa.chaparro2001.com` (Cloudflare Tunnel). No port is published on the host                                                           |
-| Database       | `pgvector/pgvector:pg17` container                                 | Named volume; not reachable from outside                                                                                                                              |
+| Database       | `pgvector/pgvector:0.8.7-pg17` container                           | Named volume; not reachable from outside                                                                                                                              |
 | Files          | RustFS container (S3 protocol)                                     | Private bucket `multicooperativa`, created by a one-shot container; the API signs 5-minute URLs                                                                       |
 | Embeddings     | Ollama container with `bge-m3`                                     | `EMBEDDINGS_PROVIDER=ollama` ([ADR-006](adr/ADR-006-local-model-embeddings.md))                                                                                       |
 | Assistant chat | Ollama container with `qwen3:4b-instruct` (default) and `qwen3:8b` | `ASSISTANT_LLM_PROVIDER=ollama` ([ADR-013](adr/ADR-013-local-language-model-for-the-assistant.md))                                                                    |
@@ -223,6 +223,18 @@ Always from `deploy\home-server`, with `--env-file .env.server`:
 - The API still enforces everything it enforces anywhere: JWT, per-cooperative isolation, login lockout, the assistant's per-user hourly limit (`ASSISTANT_MESSAGE_LIMIT_PER_HOUR`) and CORS limited to `CORS_ORIGINS`. `trust proxy` is set to one hop, matching the tunnel.
 - Cloudflare terminates TLS, so it can see the traffic. Use only sample data.
 - The cloud-hosted Gemini API receives the scanned documents and the discrepancy data it is asked to read or explain; its free tier may use content to improve Google's products. Do not upload real third-party documents. Embeddings and the assistant's questions and answers stay on the server (ADR-013).
+
+### Dependency audit
+
+`pnpm audit --prod` (22 October 2026) reports 7 advisories (4 high, 3 moderate). None is reachable at runtime in the deployed API:
+
+| Package (advisory)                                          | Pulled in by                      | Why it is not reachable                                                                                                               |
+| ----------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `deepmerge-ts` (stack exhaustion, high)                     | `prisma` → `@prisma/config`       | Prisma CLI, used only by `prisma migrate deploy` at start-up on our own config; the API never imports it.                             |
+| `mysql2` (auth plugin downgrade, high; zlib bomb, moderate) | `prisma` CLI                      | Needed by the CLI for MySQL support. We use PostgreSQL and never open a MySQL connection.                                             |
+| `uuid`, `node-forge`, `braces`, `decode-uri-component`      | `apps/mobile` (Expo, expo-router) | Expo build and bundling tooling (config plugins, code signing, Metro). They run on the developer machine or CI, not in the API image. |
+
+Accepted risk: low, because the vulnerable code is never fed untrusted input in production. Two of the paths have no patched version yet (`node-forge`, `braces`). Re-check before the final delivery and after every dependency update (CI prints `pnpm audit --prod --audit-level high` as a non-blocking step); drop an entry when its upstream releases a fix.
 
 ## Limitations
 
