@@ -122,9 +122,9 @@ export class PgVectorFragmentIndex implements FragmentIndex {
         FROM tsq
       ),
       txt AS (
-        SELECT cand.id, row_number() OVER (ORDER BY cand.rank DESC, cand.id)::int AS rank
+        SELECT cand.id, row_number() OVER (ORDER BY cand.rank DESC, cand.title, cand.position, cand.id)::int AS rank
         FROM (
-          SELECT c.id, ts_rank_cd(c."contentTsv", need.q) AS rank,
+          SELECT c.id, d.title, c.position, ts_rank_cd(c."contentTsv", need.q) AS rank,
                  cardinality(ARRAY(
                    SELECT unnest(tsvector_to_array(c."contentTsv"))
                    INTERSECT SELECT unnest(need.lexemes)
@@ -140,7 +140,7 @@ export class PgVectorFragmentIndex implements FragmentIndex {
             AND c."contentTsv" @@ need.q
         ) cand
         WHERE cand.matches >= cand.required AND cand.similarity >= ${this.options.minTextScore}
-        ORDER BY cand.rank DESC, cand.id
+        ORDER BY cand.rank DESC, cand.title, cand.position, cand.id
         LIMIT ${ARM_POOL}
       )
       SELECT c."documentId", c."versionId", d.title, d.category::text AS category, c.page, c.content,
@@ -152,8 +152,18 @@ export class PgVectorFragmentIndex implements FragmentIndex {
       LEFT JOIN vec ON vec.id = hit.id
       LEFT JOIN txt ON txt.id = hit.id
       WHERE c."cooperativeId" = ${cooperativeId}::uuid
-      ORDER BY c.id`;
-    return fuseRankings(rows, limit).map(({ vectorRank: _v, textRank: _t, ...hit }) => ({
+      ORDER BY d.title, c.position, c.id`;
+    const arm = query.arm ?? 'hybrid';
+    const ranked =
+      arm === 'hybrid'
+        ? fuseRankings(rows, limit)
+        : rows
+            .filter((row) => (arm === 'vector' ? row.vectorRank : row.textRank) !== null)
+            .sort((a, b) =>
+              arm === 'vector' ? a.vectorRank! - b.vectorRank! : a.textRank! - b.textRank!,
+            )
+            .slice(0, limit);
+    return ranked.map(({ vectorRank: _v, textRank: _t, ...hit }) => ({
       ...hit,
       score: Number(hit.score),
     }));

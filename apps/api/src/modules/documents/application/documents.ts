@@ -286,7 +286,17 @@ export async function searchDocuments(
   query: string,
 ): Promise<FragmentHit[]> {
   requireAccess(context.permissions, 'documents', 'read');
+  return retrieveFragments(deps, context.cooperativeId, query);
+}
+
+/** The search itself, with no permission check: the caller has already authorized it. */
+export async function retrieveFragments(
+  deps: { embedder: Embedder; index: FragmentIndex },
+  cooperativeId: string,
+  query: string,
+  arm?: 'hybrid' | 'vector' | 'text',
+): Promise<FragmentHit[]> {
   const text = query.trim();
   const [embedding] = await deps.embedder.embed([text], 'query');
-  return deps.index.search(context.cooperativeId, { text, embedding: embedding! }, SEARCH_RESULTS);
+  return deps.index.search(cooperativeId, { text, embedding: embedding!, arm }, SEARCH_RESULTS);
 }

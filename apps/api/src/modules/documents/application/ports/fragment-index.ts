@@ -5,6 +5,11 @@ export interface IndexedFragment {
   position: number;
   content: string;
   embedding: number[];
+  /**
+   * Benchmark only (NFR-DOC-05): restricts the search to one arm to measure it alone. Never set
+   * by the API or the assistant; default `hybrid`.
+   */
+  arm?: 'hybrid' | 'vector' | 'text';
 }
 
 export interface FragmentHit {
@@ -23,6 +28,11 @@ export interface FragmentHit {
 export interface SearchQuery {
   text: string;
   embedding: number[];
+  /**
+   * Benchmark only (NFR-DOC-05): restricts the search to one arm to measure it alone. Never set
+   * by the API or the assistant; default `hybrid`.
+   */
+  arm?: 'hybrid' | 'vector' | 'text';
 }
 
 /** The pgvector index of document fragments. Every method is scoped to one cooperative (ADR-003). */

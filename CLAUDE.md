@@ -80,6 +80,7 @@ pnpm --filter @multicooperativa/api db:seed      # sample data (docs/sample-data
 pnpm --filter @multicooperativa/api db:seed:content  # sample documents and announcements, through the API (hosted demo)
 pnpm --filter @multicooperativa/api jobs:due-dates  # invoice due dates (the API already runs it every hour)
 pnpm --filter @multicooperativa/api ai:eval      # evaluation set of the assistant (NFR-AI-05); --offline without GEMINI_API_KEY
+pnpm --filter @multicooperativa/api rag:eval    # retrieval benchmark of the RAG (NFR-DOC-05): real pipeline, Gemini embeddings by default (needs GEMINI_API_KEY and db:up; --sweep for thresholds)
 pnpm --filter @multicooperativa/api dev          # API at http://localhost:3000
 pnpm --filter @multicooperativa/mobile start     # Expo app
 

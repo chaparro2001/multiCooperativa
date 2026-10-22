@@ -128,6 +128,22 @@ describe('PgVectorFragmentIndex hybrid search (US-DOC-07, US-AI-02)', () => {
     }
   });
 
+  it('NFR-DOC-05 benchmark arms: the text arm alone drops what only the vector arm finds, and vice versa', async () => {
+    await addDocument(coop, 'Minutes', [
+      'Se aprobo el presupuesto de la campana de aceituna.',
+      'Otros asuntos generales sin relacion alguna con lo anterior.',
+    ]);
+    const index = new PgVectorFragmentIndex(prisma, { minVectorScore: 0, minTextScore: 0 });
+    const [embedding] = await embedder.embed(['presupuesto campana'], 'query');
+    const base = { text: 'presupuesto campana', embedding: embedding! };
+
+    const text = await index.search(coop, { ...base, arm: 'text' }, 5);
+    const vector = await index.search(coop, { ...base, arm: 'vector' }, 5);
+
+    expect(text.map((hit) => hit.page)).toEqual([1]);
+    expect(vector).toHaveLength(2);
+  });
+
   it('term coverage: a single-term query still finds the fragment, and two distinct terms are needed from 2 up', async () => {
     await addDocument(coop, 'Bylaws', ['El quorum de la asamblea es la mitad mas uno.']);
 
