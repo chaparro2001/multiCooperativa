@@ -40,11 +40,14 @@ export function createDocumentsModule(deps: {
   embedder: Embedder;
   /** Minimum cosine similarity for a vector-arm hit; depends on the embedding model (ADR-022). 0 keeps all. */
   minVectorScore?: number;
+  /** Cosine floor for text-arm hits, at most `minVectorScore` (ADR-022). 0 keeps all. */
+  minTextScore?: number;
   extractor?: PdfTextExtractor;
   now?: () => Date;
 }) {
   const index = new PgVectorFragmentIndex(deps.prisma, {
     minVectorScore: deps.minVectorScore ?? 0,
+    minTextScore: deps.minTextScore ?? 0,
   });
   const indexingStore = new PrismaIndexingStore(deps.prisma);
   const indexer = createIndexer({

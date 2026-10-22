@@ -42,7 +42,7 @@ async function addDocument(
   title: string,
   contents: string[],
   status: 'published' | 'withdrawn' = 'published',
-  index = new PgVectorFragmentIndex(prisma, { minVectorScore: 0 }),
+  index = new PgVectorFragmentIndex(prisma, { minVectorScore: 0, minTextScore: 0 }),
 ) {
   const document = await prisma.document.create({
     data: {
@@ -70,9 +70,17 @@ async function addDocument(
 
 async function search(
   text: string,
-  options: { minVectorScore?: number; limit?: number; cooperativeId?: string } = {},
+  options: {
+    minVectorScore?: number;
+    minTextScore?: number;
+    limit?: number;
+    cooperativeId?: string;
+  } = {},
 ) {
-  const index = new PgVectorFragmentIndex(prisma, { minVectorScore: options.minVectorScore ?? 0 });
+  const index = new PgVectorFragmentIndex(prisma, {
+    minVectorScore: options.minVectorScore ?? 0,
+    minTextScore: options.minTextScore ?? 0,
+  });
   const [embedding] = await embedder.embed([text], 'query');
   return index.search(
     options.cooperativeId ?? coop,
@@ -100,12 +108,53 @@ describe('PgVectorFragmentIndex hybrid search (US-DOC-07, US-AI-02)', () => {
     expect(hits[0]?.score).toBeLessThan(0.9);
   });
 
-  it('the text arm ORs the terms: a question with extra words still finds a fragment with one of them', async () => {
+  it('term coverage: a fragment matching 2 of 3 terms is found by the text arm although the vector threshold blocks it', async () => {
     await addDocument(coop, 'Minutes', ['Se aprobo el presupuesto de la campana de aceituna.']);
 
-    const hits = await search('cuando empieza la campana', { minVectorScore: 0.99 });
+    const hits = await search('presupuesto campana vacaciones', { minVectorScore: 0.99 });
 
     expect(hits).toHaveLength(1);
+  });
+
+  it('term coverage: an irrelevant question sharing only one common word with a fragment returns nothing', async () => {
+    await addDocument(coop, 'Bylaws', ['El socio debe pagar la cuota anual en enero.']);
+
+    for (const text of [
+      'edad minima para ser socio',
+      'receta de paella para el socio',
+      'quien ganara el mundial segun cada socio',
+    ]) {
+      expect(await search(text, { minVectorScore: 0.99 })).toEqual([]);
+    }
+  });
+
+  it('term coverage: a single-term query still finds the fragment, and two distinct terms are needed from 2 up', async () => {
+    await addDocument(coop, 'Bylaws', ['El quorum de la asamblea es la mitad mas uno.']);
+
+    expect(await search('quorum', { minVectorScore: 0.99 })).toHaveLength(1);
+    expect(await search('quorum cosecha', { minVectorScore: 0.99 })).toEqual([]);
+    expect(await search('quorum asamblea', { minVectorScore: 0.99 })).toHaveLength(1);
+  });
+
+  it('text floor: a text hit below the minimum similarity is dropped; above it, kept', async () => {
+    await addDocument(coop, 'Minutes', [
+      'presupuesto campana aceituna junto con muchisimas otras palabras distintas sin relacion alguna para bajar la similitud coseno del fragmento',
+    ]);
+    const [hit] = await search('presupuesto campana', { minVectorScore: 0.99 });
+    expect(hit).toBeDefined();
+
+    expect(
+      await search('presupuesto campana', {
+        minVectorScore: 0.99,
+        minTextScore: hit!.score - 0.01,
+      }),
+    ).toHaveLength(1);
+    expect(
+      await search('presupuesto campana', {
+        minVectorScore: 0.99,
+        minTextScore: hit!.score + 0.01,
+      }),
+    ).toEqual([]);
   });
 
   it('a query of only stopwords or odd characters does not fail and finds nothing by text', async () => {
@@ -127,7 +176,7 @@ describe('PgVectorFragmentIndex hybrid search (US-DOC-07, US-AI-02)', () => {
       'cultivo de olivos y almendros',
     ]);
 
-    const all = await search('asamblea general ordinaria', { minVectorScore: 0 });
+    const all = await search('asamblea general ordinaria', { minVectorScore: 0, minTextScore: 0 });
     const strict = await search('asamblea general ordinaria', { minVectorScore: 0.5 });
 
     expect(all.length).toBeGreaterThan(strict.length);
@@ -184,7 +233,7 @@ describe('PgVectorFragmentIndex hybrid search (US-DOC-07, US-AI-02)', () => {
       SELECT count(*)::int AS n FROM "DocumentChunk" WHERE "contentTsv" @@ to_tsquery('spanish', 'beta')`;
     expect(rows[0]?.n).toBe(1);
 
-    const index = new PgVectorFragmentIndex(prisma, { minVectorScore: 0 });
+    const index = new PgVectorFragmentIndex(prisma, { minVectorScore: 0, minTextScore: 0 });
     const [embedding] = await embedder.embed(['gamma'], 'document');
     await index.replaceDocument(coop, document.id, randomUUID(), [
       { page: 1, position: 0, content: 'gamma', embedding: embedding! },

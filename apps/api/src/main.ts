@@ -43,6 +43,7 @@ const { app, indexing, runDueDates, purgeAuthRecords } = createApi({
           timeoutMs: env.EMBEDDING_TIMEOUT_MS,
         }),
   embeddingMinScore: env.EMBEDDING_MIN_SCORE,
+  embeddingTextMinScore: env.EMBEDDING_TEXT_MIN_SCORE,
   // Scanned documents are read by Gemini (ADR-009); without a key, extraction answers 503.
   documentExtractor:
     gemini && new GeminiDocumentExtractor(gemini, env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODELS),

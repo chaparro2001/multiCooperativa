@@ -1,5 +1,6 @@
 import type { IndexingStatus } from '../../domain/document';
 import { fuseRankings } from '../../domain/rank-fusion';
+import { requiredTermMatches } from '../../domain/term-coverage';
 import type {
   FragmentHit,
   FragmentIndex,
@@ -32,6 +33,8 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
     private readonly documents: InMemoryDocumentStore,
     /** Mirrors the vector-arm threshold of the real index. */
     private readonly minVectorScore = 0,
+    /** Mirrors the text-arm similarity floor of the real index. */
+    private readonly minTextScore = 0,
   ) {}
 
   private version(versionId: string) {
@@ -97,6 +100,7 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
   async search(cooperativeId: string, query: SearchQuery, limit: number): Promise<FragmentHit[]> {
     const pool = 20;
     const queryTerms = terms(query.text);
+    const required = requiredTermMatches(queryTerms.size);
     const candidates = this.fragments
       .filter((f) => f.cooperativeId === cooperativeId)
       .flatMap((f) => {
@@ -124,7 +128,7 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
       .slice(0, pool)
       .forEach((c, i) => (c.vectorRank = i + 1));
     candidates
-      .filter((c) => c.shared > 0)
+      .filter((c) => c.shared >= required && c.shared > 0 && c.score >= this.minTextScore)
       .sort((a, b) => b.shared - a.shared)
       .slice(0, pool)
       .forEach((c, i) => (c.textRank = i + 1));

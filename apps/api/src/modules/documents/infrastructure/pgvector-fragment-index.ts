@@ -23,6 +23,11 @@ export interface PgVectorFragmentIndexOptions {
    * an exact term is evidence on its own. It depends on the embedding model (ADR-022).
    */
   minVectorScore: number;
+  /**
+   * Minimum cosine similarity for a text-arm hit (0..1, at most `minVectorScore`): a fragment that
+   * shares terms but is unrelated in meaning is still dropped. Also depends on the model.
+   */
+  minTextScore: number;
 }
 
 /**
@@ -74,6 +79,8 @@ export class PgVectorFragmentIndex implements FragmentIndex {
     // The text arm ORs the query terms (plainto_tsquery ANDs them, which finds nothing for a
     // natural-language question): the tsquery is built by the database from the bound text, so any
     // user text is safe. A query of only stopwords gives an empty tsquery, which matches nothing.
+    // To stop one common word from bypassing the vector threshold, a fragment must contain enough
+    // distinct query lexemes (requiredTermMatches) and reach the text-arm similarity floor.
     //
     // One statement, two CTEs over the same isolation filter. Fusion (RRF) is the pure function in
     // the domain; SQL only returns each candidate with its rank in each arm.
@@ -103,19 +110,37 @@ export class PgVectorFragmentIndex implements FragmentIndex {
         LIMIT ${ARM_POOL}
       ),
       tsq AS (
-        SELECT replace(plainto_tsquery('spanish', ${query.text})::text, '&', '|')::tsquery AS q
+        SELECT replace(plainto_tsquery('spanish', ${query.text})::text, '&', '|')::tsquery AS q,
+               tsvector_to_array(to_tsvector('spanish', ${query.text})) AS lexemes
+      ),
+      need AS (
+        -- Mirrors requiredTermMatches (domain/term-coverage.ts).
+        SELECT q, lexemes,
+               CASE WHEN cardinality(lexemes) = 0 THEN 0
+                    WHEN cardinality(lexemes) = 1 THEN 1
+                    ELSE GREATEST(2, ceil(cardinality(lexemes) / 2.0)::int) END AS required
+        FROM tsq
       ),
       txt AS (
-        SELECT c.id,
-               row_number() OVER (ORDER BY ts_rank_cd(c."contentTsv", tsq.q) DESC, c.id)::int AS rank
-        FROM "DocumentChunk" c
-        JOIN "Document" d ON d.id = c."documentId"
-        CROSS JOIN tsq
-        WHERE c."cooperativeId" = ${cooperativeId}::uuid
-          AND d."cooperativeId" = ${cooperativeId}::uuid
-          AND d.status = 'published'
-          AND c."contentTsv" @@ tsq.q
-        ORDER BY ts_rank_cd(c."contentTsv", tsq.q) DESC, c.id
+        SELECT cand.id, row_number() OVER (ORDER BY cand.rank DESC, cand.id)::int AS rank
+        FROM (
+          SELECT c.id, ts_rank_cd(c."contentTsv", need.q) AS rank,
+                 cardinality(ARRAY(
+                   SELECT unnest(tsvector_to_array(c."contentTsv"))
+                   INTERSECT SELECT unnest(need.lexemes)
+                 )) AS matches,
+                 need.required,
+                 1 - (c.embedding <=> ${vector}::vector) AS similarity
+          FROM "DocumentChunk" c
+          JOIN "Document" d ON d.id = c."documentId"
+          CROSS JOIN need
+          WHERE c."cooperativeId" = ${cooperativeId}::uuid
+            AND d."cooperativeId" = ${cooperativeId}::uuid
+            AND d.status = 'published'
+            AND c."contentTsv" @@ need.q
+        ) cand
+        WHERE cand.matches >= cand.required AND cand.similarity >= ${this.options.minTextScore}
+        ORDER BY cand.rank DESC, cand.id
         LIMIT ${ARM_POOL}
       )
       SELECT c."documentId", c."versionId", d.title, d.category::text AS category, c.page, c.content,

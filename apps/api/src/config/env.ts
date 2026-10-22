@@ -29,6 +29,24 @@ const REQUIRED_IN_PRODUCTION = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCE
  */
 export const DEFAULT_MIN_SCORE = { ollama: 0.4, gemini: 0.3 } as const;
 
+/**
+ * Default cosine floor for text-search hits per provider (ADR-022); never above the vector threshold.
+ * - ollama (bge-m3): 0.30. Off-topic questions scored 0.18-0.32 against every fragment of the
+ *   sample documents, relevant ones 0.41-0.66 with their best fragment: 0.30 drops the clearly
+ *   unrelated fragments that merely share words and keeps everything relevant.
+ * - gemini (gemini-embedding-2): 0.25, NOT calibrated, lower than the vector default so it filters little.
+ */
+export const DEFAULT_TEXT_MIN_SCORE = { ollama: 0.3, gemini: 0.25 } as const;
+
+const optionalScore = z
+  .string()
+  .transform((value) => (value.trim() === '' ? undefined : Number(value)))
+  .refine(
+    (value) => value === undefined || (Number.isFinite(value) && value >= 0 && value <= 1),
+    'must be a number between 0 and 1',
+  )
+  .optional();
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -63,14 +81,9 @@ const envSchema = z
     OLLAMA_URL: z.url({ protocol: /^https?$/ }).optional(),
     EMBEDDING_MODEL: z.string().min(1).default('bge-m3'),
     /** Minimum cosine similarity (0..1) for a vector-search hit; text matches are kept regardless (ADR-022). Scores depend on the model, so unset uses the default of EMBEDDINGS_PROVIDER (DEFAULT_MIN_SCORE). Empty counts as unset. */
-    EMBEDDING_MIN_SCORE: z
-      .string()
-      .transform((value) => (value.trim() === '' ? undefined : Number(value)))
-      .refine(
-        (value) => value === undefined || (Number.isFinite(value) && value >= 0 && value <= 1),
-        'must be a number between 0 and 1',
-      )
-      .optional(),
+    EMBEDDING_MIN_SCORE: optionalScore,
+    /** Minimum cosine similarity (0..1) for a text-search hit, at most EMBEDDING_MIN_SCORE: a fragment sharing terms with the question but unrelated in meaning is dropped (ADR-022). Unset uses the default of EMBEDDINGS_PROVIDER (DEFAULT_TEXT_MIN_SCORE). Empty counts as unset. */
+    EMBEDDING_TEXT_MIN_SCORE: optionalScore,
     /** Time limit of one Ollama embeddings call (a batch of fragments), sized for a CPU-only host. */
     EMBEDDING_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(120_000),
     /** Gemini API key (ADR-009), shared by the AI assistant and document extraction. Without it both answer 503; the rest works. */
@@ -149,6 +162,16 @@ const envSchema = z
         message: 'required with EMBEDDINGS_PROVIDER=gemini',
       });
     }
+    const minScore = env.EMBEDDING_MIN_SCORE ?? DEFAULT_MIN_SCORE[env.EMBEDDINGS_PROVIDER];
+    const textMinScore =
+      env.EMBEDDING_TEXT_MIN_SCORE ?? DEFAULT_TEXT_MIN_SCORE[env.EMBEDDINGS_PROVIDER];
+    if (textMinScore > minScore) {
+      context.addIssue({
+        code: 'custom',
+        path: ['EMBEDDING_TEXT_MIN_SCORE'],
+        message: `must not exceed EMBEDDING_MIN_SCORE (${minScore})`,
+      });
+    }
     if (
       env.NODE_ENV === 'production' &&
       env.ASSISTANT_LLM_PROVIDER === 'ollama' &&
@@ -188,6 +211,8 @@ const envSchema = z
       S3_ACCESS_KEY_ID: env.S3_ACCESS_KEY_ID ?? local?.S3_ACCESS_KEY_ID ?? '',
       S3_SECRET_ACCESS_KEY: env.S3_SECRET_ACCESS_KEY ?? local?.S3_SECRET_ACCESS_KEY ?? '',
       EMBEDDING_MIN_SCORE: env.EMBEDDING_MIN_SCORE ?? DEFAULT_MIN_SCORE[env.EMBEDDINGS_PROVIDER],
+      EMBEDDING_TEXT_MIN_SCORE:
+        env.EMBEDDING_TEXT_MIN_SCORE ?? DEFAULT_TEXT_MIN_SCORE[env.EMBEDDINGS_PROVIDER],
       OLLAMA_URL: env.OLLAMA_URL ?? (local ? LOCAL_OLLAMA_URL : ''),
       CORS_ORIGINS: env.CORS_ORIGINS.length > 0 || !local ? env.CORS_ORIGINS : LOCAL_CORS_ORIGINS,
     };

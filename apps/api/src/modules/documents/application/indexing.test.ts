@@ -280,4 +280,17 @@ describe('content search (US-DOC-07)', () => {
     expect(hits).toHaveLength(1);
     expect(none).toEqual([]);
   });
+
+  it('US-DOC-07: the text arm needs enough distinct query terms and a minimum similarity', async () => {
+    const fake = new InMemoryIndexing(store, 0.99, 0.5);
+    await fake.replaceDocument(COOP, 'd', 'v', [
+      { page: 1, position: 0, content: 'Cuota anual del socio.', embedding: [1, 0] },
+    ]);
+    store.rows.push({ id: 'd', cooperativeId: COOP, status: 'published', title: 'Fees' } as never);
+    const find = (text: string, embedding: number[]) => fake.search(COOP, { text, embedding }, 5);
+
+    expect(await find('cuota socio inversion', [0.6, 0.8])).toHaveLength(1); // 2 of 3
+    expect(await find('edad minima socio', [0.6, 0.8])).toEqual([]); // 1 of 3
+    expect(await find('cuota socio', [0, 1])).toEqual([]); // below the floor
+  });
 });
