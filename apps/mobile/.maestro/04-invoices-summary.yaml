@@ -1,0 +1,28 @@
+# Journey: an administrator opens the invoices list, sees the summary and switches purchases/sales.
+appId: com.anonymous.multicooperativa
+---
+- runFlow:
+    file: subflows/login.yaml
+    env:
+      EMAIL: admin@sanisidro.test
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 30000
+- tapOn:
+    id: module-invoices
+- extendedWaitUntil:
+    visible:
+      id: summary
+    timeout: 20000
+- assertVisible:
+    id: summary-toPay
+- assertVisible:
+    id: summary-toCollect
+- tapOn:
+    id: operation-sale
+- tapOn:
+    id: operation-purchase
+- assertVisible:
+    id: summary-toPay
+- takeScreenshot: 04-invoices-summary

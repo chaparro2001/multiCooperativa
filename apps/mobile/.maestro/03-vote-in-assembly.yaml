@@ -1,0 +1,45 @@
+# Journey: a member votes in an assembly whose voting is open (state prepared through the API).
+appId: com.anonymous.multicooperativa
+env:
+  API_URL: http://localhost:3000
+  ADMIN_EMAIL: admin@sanisidro.test
+  PASSWORD: demo-cooperativa-2026
+  COOPERATIVE_NAME: Cooperativa Agrícola San Isidro
+---
+- runScript: scripts/prepare-voting.js
+- runFlow:
+    file: subflows/login.yaml
+    env:
+      EMAIL: socio@sanisidro.test
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 30000
+- tapOn:
+    id: module-assemblies
+- extendedWaitUntil:
+    visible:
+      id: assembly-${output.assemblyId}
+    timeout: 20000
+- tapOn:
+    id: assembly-${output.assemblyId}
+- extendedWaitUntil:
+    visible:
+      id: go-to-vote
+    timeout: 20000
+- tapOn:
+    id: go-to-vote
+- tapOn:
+    id: option-in_favor
+- tapOn:
+    id: cast-vote
+# Native confirmation alert (the vote cannot be changed).
+- tapOn:
+    text: Votar
+    index: 1
+- extendedWaitUntil:
+    visible:
+      id: vote-confirmed
+    timeout: 20000
+- assertVisible: 'Tu voto ha quedado registrado: A favor'
+- takeScreenshot: 03-vote-in-assembly

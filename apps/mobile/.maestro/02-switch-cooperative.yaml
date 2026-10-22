@@ -1,0 +1,38 @@
+# Journey: a user in two cooperatives picks one, then switches to the other (different profile in each).
+appId: com.anonymous.multicooperativa
+---
+- runFlow:
+    file: subflows/login.yaml
+    env:
+      EMAIL: lucia@demo.test
+- extendedWaitUntil:
+    visible:
+      id: selector-screen
+    timeout: 30000
+- tapOn:
+    id: cooperative-Cooperativa Agrícola San Isidro
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 30000
+# Member in San Isidro: no invoicing tile.
+- assertNotVisible:
+    id: module-invoices
+- tapOn:
+    id: settings-link
+- tapOn:
+    id: switch-cooperative
+- extendedWaitUntil:
+    visible:
+      id: selector-screen
+    timeout: 15000
+- tapOn:
+    id: cooperative-Cooperativa Olivarera La Esperanza
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 30000
+# Governing board in La Esperanza: more modules (members area / assemblies management).
+- assertVisible:
+    id: module-assemblies
+- takeScreenshot: 02-switch-cooperative
