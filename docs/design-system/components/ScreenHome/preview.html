@@ -1,0 +1,57 @@
+<!-- @dsCard group="Screens" height=1325 width=1720 page subtitle="Home · Socio y Administrador · 390 · verde, azul, vino" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Home — pantallas</title>
+<style>
+  .frames { display:flex; gap:32px; padding:24px; align-items:flex-start; width:max-content; }
+  .frame-wrap { display:flex; flex-direction:column; gap:8px; }
+  .frame-label { font-size:13px; line-height:18px; color:var(--muted); font-weight:500; }
+  .phone { width:390px; min-height:844px; border:1px solid var(--border); border-radius:32px; overflow:hidden; background:var(--background); color:var(--text); display:flex; flex-direction:column; }
+  .status { height:44px; flex:none; }
+  .body { flex:1; padding:var(--space-2) var(--space-6) var(--space-6); display:flex; flex-direction:column; gap:var(--space-4); }
+  .identity { font-size:14px; line-height:20px; color:var(--secondary); margin:0 0 0 4px; }
+</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  var TILES = [
+    ['bullhorn-outline', 'Comunicados', 'comunicados sin leer', 1],
+    ['hand-back-left-outline', 'Asambleas', null, 1],
+    ['file-document-outline', 'Documentos', null, 1],
+    ['receipt-text-outline', 'Facturas', 'facturas que requieren atención', 0],
+    ['package-variant-closed', 'Albaranes', 'albaranes pendientes de facturar', 0],
+    ['office-building-outline', 'Proveedores', null, 0],
+    ['store-outline', 'Clientes', null, 0],
+    ['account-outline', 'Área del socio', null, 1],
+    ['chat-processing-outline', 'Asistente', null, 1],
+    ['account-group-outline', 'Miembros', null, 0]
+  ];
+  function home(o) {
+    var counts = { 'Comunicados': 3, 'Facturas': o.admin ? 4 : 0, 'Albaranes': o.admin ? 2 : 0 };
+    var tiles = TILES.filter(function (t) { return o.admin || t[3]; });
+    var attn = o.admin
+      ? [h(E.AttentionItem, { key: 1, icon: 'hand-back-left-outline', title: 'Votación abierta', meta: 'Asamblea · 12 nov', badge: h(E.Badge, { tone: 'warning' }, 'Abierta') }),
+         h(E.AttentionItem, { key: 2, icon: 'receipt-text-outline', title: '3 facturas vencidas', meta: '1.250,00 € por pagar', badge: h(E.Badge, { tone: 'danger' }, 'Vencida') })]
+      : [h(E.AttentionItem, { key: 1, icon: 'hand-back-left-outline', title: 'Votación abierta', meta: 'Asamblea · 12 nov', badge: h(E.Badge, { tone: 'warning' }, 'Abierta') }),
+         h(E.AttentionItem, { key: 2, icon: 'bullhorn-outline', title: '3 comunicados sin leer', meta: 'El último, hoy' })];
+    return h('div', { className: 'frame-wrap', key: o.label },
+      h('div', { className: 'frame-label' }, o.label),
+      h('div', { className: 'phone', 'data-theme': o.theme },
+        h('div', { className: 'status' }),
+        h(E.Header, { title: o.coop, actions: [{ icon: 'cog-outline', label: 'Ajustes' }] }),
+        h('div', { className: 'body' },
+          h('p', { className: 'identity' }, o.profile),
+          h('div', { className: 'mc-col', style: { gap: 8 } }, h(E.SectionTitle, null, 'Pendiente para ti'), attn),
+          h('div', { className: 'mc-grid cols-2' }, tiles.map(function (t) {
+            return h(E.HomeTile, { key: t[1], icon: t[0], title: t[1], count: counts[t[1]], countLabel: t[2] });
+          })))));
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'frames' },
+    home({ label: 'Socio · 5 módulos · verde', theme: 'green', coop: 'Cooperativa Agrícola San Isidro', profile: 'Socio' }),
+    home({ label: 'Administrador · 10 módulos · verde', theme: 'green', admin: true, coop: 'Cooperativa Agrícola San Isidro', profile: 'Administrador · Socio' }),
+    home({ label: 'Administrador · azul #1E5AA8', theme: 'blue', admin: true, coop: 'Cooperativa Olivarera La Esperanza', profile: 'Administrador' }),
+    home({ label: 'Socio · vino #9D174D', theme: 'wine', coop: 'Cooperativa Olivarera La Esperanza', profile: 'Socio' })));
+</script>
+</body>
+</html>

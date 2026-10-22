@@ -1,0 +1,110 @@
+<!-- @dsCard group="Screens" height=1226 width=1720 page subtitle="Facturas y albaranes · listado, detalle con discrepancia · 390" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Facturas — pantallas</title>
+<style>
+  .frames { display:flex; gap:32px; padding:24px; align-items:flex-start; width:max-content; }
+  .frame-wrap { display:flex; flex-direction:column; gap:8px; }
+  .frame-label { font-size:13px; line-height:18px; color:var(--muted); font-weight:500; }
+  .phone { width:390px; min-height:844px; border:1px solid var(--border); border-radius:32px; overflow:hidden; background:var(--background); color:var(--text); display:flex; flex-direction:column; }
+  .status { height:44px; flex:none; }
+  .body { flex:1; padding:var(--space-2) var(--space-4) var(--space-6); display:flex; flex-direction:column; gap:var(--space-3); }
+  .sum { display:flex; gap:var(--space-3); align-items:stretch; }
+  .sum .mc-summary { padding:var(--space-3); }
+  .sum .mc-summary-amount { font-size:22px; line-height:28px; }
+  .btns { display:flex; gap:var(--space-2); }
+  .btns .mc-btn { flex:1; padding:0 var(--space-3); }
+  .title { font-size:24px; line-height:32px; margin:0; font-weight:400; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:6px 16px; font-size:14px; line-height:20px; }
+  .kv dt { color:var(--muted); } .kv dd { margin:0; text-align:right; font-variant-numeric:tabular-nums; }
+  .kv .total { font-size:16px; font-weight:500; color:var(--text); }
+  .h2 { font-size:16px; line-height:24px; font-weight:500; margin:var(--space-2) 0 0; }
+  .line { display:flex; justify-content:space-between; font-size:14px; line-height:20px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .line:last-child { border-bottom:0; }
+  .disc-nums { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .disc-num { border-radius:var(--radius-sm); background:var(--surface-variant); padding:8px 12px; display:flex; flex-direction:column; }
+  .disc-num span { font-size:12px; line-height:16px; color:var(--muted); }
+  .disc-num b { font-size:18px; line-height:24px; font-weight:500; font-variant-numeric:tabular-nums; }
+  .disc-num.is-diff { background:var(--warning-container); }
+  .disc-num.is-diff b { color:var(--warning); }
+  .ai-expl { font-size:14px; line-height:20px; color:var(--text); margin:0; }
+</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function phone(label, title, actions, children, back) {
+    return h('div', { className: 'frame-wrap', key: label },
+      h('div', { className: 'frame-label' }, label),
+      h('div', { className: 'phone', 'data-theme': 'green' }, h('div', { className: 'status' }),
+        h(E.Header, { back: back !== false, title: title, actions: actions }),
+        h('div', { className: 'body' }, children)));
+  }
+  var hdr = [{ icon: 'office-building-outline', label: 'Proveedores' }, { icon: 'store-outline', label: 'Clientes' }];
+  function quiet(t, icon) { return h(E.Badge, { key: t, tone: 'neutral', quiet: true, icon: icon }, t); }
+
+  function invoiceRows(manager) {
+    return [
+      h(E.ListRow, { key: 1, title: 'Fertilizantes del Tajo, S.L.', amount: 1250, status: h(E.Badge, { tone: 'danger' }, 'Vencida'), meta: 'Factura F-2026-014 · vence 15 oct 2026', alert: { tone: 'danger', text: 'Vencida hace 7 días' }, badges: [quiet('Con discrepancia', 'alert-outline')] }),
+      h(E.ListRow, { key: 2, title: 'Envases Ribera, S.A.', amount: 864.3, status: h(E.Badge, { tone: 'info' }, 'Pendiente'), meta: 'Factura F-2026-021 · vence 22 oct 2026', alert: { tone: 'warning', text: 'Vence hoy' } }),
+      h(E.ListRow, { key: 3, title: 'Transportes Hermanos Gil', amount: 412, status: h(E.Badge, { tone: 'info' }, 'Pendiente'), meta: 'Factura 2026/0388 · vence 30 oct 2026', alert: { tone: 'warning', text: 'Vence en 8 días' } }),
+      h(E.ListRow, { key: 4, title: 'Gasóleos del Centro, S.L.', amount: 2310.75, status: h(E.Badge, { tone: 'info' }, 'Pendiente'), meta: 'Factura GC-11872 · vence 18 nov 2026' }),
+      h(E.ListRow, { key: 5, title: 'Fertilizantes del Tajo, S.L.', amount: 980, status: h(E.Badge, { tone: 'neutral' }, 'Pagada'), meta: 'Factura F-2026-009 · pagada el 2 oct 2026' })
+    ];
+  }
+
+  var listManager = phone('Gestor · Facturas · Compras', 'Facturas', hdr, [
+    h('div', { className: 'sum', key: 's' },
+      h(E.SummaryCard, { label: 'Pendiente de pagar', amount: 8340.5, meta: '9 facturas', overdue: '1.250,00 € vencidas (3)' }),
+      h(E.SummaryCard, { label: 'Pendiente de cobrar', amount: 15210, meta: '6 facturas' })),
+    h(E.Banner, { key: 'b', tone: 'warning' }, '3 facturas con discrepancia sin resolver.'),
+    h('div', { className: 'btns', key: 'k' }, h(E.Button, { icon: 'camera-outline' }, 'Escanear'), h(E.Button, { mode: 'secondary', icon: 'plus' }, 'Registrar factura')),
+    h(E.SegmentedButtons, { key: 'g', label: 'Tipo', value: 'c', buttons: [{ value: 'c', label: 'Compras' }, { value: 'v', label: 'Ventas' }] })
+  ].concat(invoiceRows(true)));
+
+  var listBoard = phone('Consejo rector · solo lectura · Ventas', 'Facturas', hdr, [
+    h('div', { className: 'sum', key: 's' },
+      h(E.SummaryCard, { label: 'Pendiente de pagar', amount: 8340.5, meta: '9 facturas', overdue: '1.250,00 € vencidas (3)' }),
+      h(E.SummaryCard, { label: 'Pendiente de cobrar', amount: 15210, meta: '6 facturas' })),
+    h(E.SegmentedButtons, { key: 'g', label: 'Tipo', value: 'v', buttons: [{ value: 'c', label: 'Compras' }, { value: 'v', label: 'Ventas' }] }),
+    h(E.ListRow, { key: 1, title: 'Almazara Oleosur, S.C.A.', amount: 9800, status: h(E.Badge, { tone: 'info' }, 'Pendiente'), meta: 'Factura V-2026-042 · vence 5 nov 2026', badges: [quiet('Conciliada', 'check-circle-outline')] }),
+    h(E.ListRow, { key: 2, title: 'Hortícolas Vega Baja', amount: 3150, status: h(E.Badge, { tone: 'info' }, 'Pendiente'), meta: 'Factura V-2026-040 · vence 12 nov 2026' }),
+    h(E.ListRow, { key: 3, title: 'Distribuciones Sanchís', amount: 2260, status: h(E.Badge, { tone: 'neutral' }, 'Cobrada'), meta: 'Factura V-2026-031 · cobrada el 10 oct 2026' }),
+    h(E.ListRow, { key: 4, title: 'Hortícolas Vega Baja', amount: 1120, status: h(E.Badge, { tone: 'neutral' }, 'Anulada'), meta: 'Factura V-2026-029 · 30 sep 2026' })
+  ]);
+
+  var notes = phone('Gestor · Albaranes · Compras', 'Albaranes', hdr, [
+    h(E.Banner, { key: 'b', tone: 'warning' }, '2 albaranes han superado el plazo para facturarse.'),
+    h('div', { className: 'btns', key: 'k' }, h(E.Button, { icon: 'camera-outline' }, 'Escanear'), h(E.Button, { mode: 'secondary', icon: 'plus' }, 'Registrar albarán')),
+    h(E.SegmentedButtons, { key: 'g', label: 'Tipo', value: 'c', buttons: [{ value: 'c', label: 'Compras' }, { value: 'v', label: 'Ventas' }] }),
+    h(E.ListRow, { key: 1, title: 'Fertilizantes del Tajo, S.L.', status: h(E.Badge, { tone: 'warning' }, 'Pendiente de facturar'), meta: 'Albarán A-5521 · 12 sep 2026', alert: { tone: 'danger', text: 'Sin facturar 40 días' } }),
+    h(E.ListRow, { key: 2, title: 'Envases Ribera, S.A.', status: h(E.Badge, { tone: 'warning' }, 'Pendiente de facturar'), meta: 'Albarán 77/2026 · 18 sep 2026', alert: { tone: 'danger', text: 'Sin facturar 34 días' } }),
+    h(E.ListRow, { key: 3, title: 'Transportes Hermanos Gil', status: h(E.Badge, { tone: 'warning' }, 'Pendiente de facturar'), meta: 'Albarán T-1093 · 15 oct 2026', alert: { tone: 'warning', text: 'Sin facturar 7 días' } }),
+    h(E.ListRow, { key: 4, title: 'Fertilizantes del Tajo, S.L.', status: h(E.Badge, { tone: 'neutral' }, 'Facturado'), meta: 'Albarán A-5498 · 2 sep 2026' })
+  ]);
+
+  var detail = phone('Gestor · detalle con discrepancia', 'Factura', [{ icon: 'open-in-new', label: 'Ver original' }], [
+    h('div', { className: 'mc-row', key: 'bd', style: { gap: 6 } }, h(E.Badge, { tone: 'danger' }, 'Vencida'), h(E.Badge, { tone: 'warning' }, 'Con discrepancia')),
+    h('h1', { className: 'title', key: 't' }, 'F-2026-014'),
+    h('div', { key: 'l', style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 } }, h('span', { style: { fontSize: 16, lineHeight: '24px', fontWeight: 500 } }, 'Fertilizantes del Tajo, S.L.'), h(E.Button, { mode: 'text', icon: 'office-building-outline', className: 'x' }, 'Ver ficha del tercero')),
+    h(E.Card, { key: 'kv' }, h('dl', { className: 'kv', style: { margin: 0 } },
+      h('dt', null, 'Emisión'), h('dd', null, '15 sep 2026'), h('dt', null, 'Vencimiento'), h('dd', null, '15 oct 2026'),
+      h('dt', null, 'Base'), h('dd', null, '1.033,06 €'), h('dt', null, 'IVA (21 %)'), h('dd', null, '216,94 €'),
+      h('dt', { className: 'total' }, 'Total'), h('dd', { className: 'total' }, '1.250,00 €'))),
+    h('h2', { className: 'h2', key: 'dh' }, 'Discrepancias'),
+    h(E.Card, { key: 'dc' },
+      h('p', { className: 'mc-row-title' }, 'Abono NPK 15-15-15'),
+      h('div', { className: 'disc-nums' }, h('div', { className: 'disc-num' }, h('span', null, 'Albaranes'), h('b', null, '1.200 kg')), h('div', { className: 'disc-num is-diff' }, h('span', null, 'Factura'), h('b', null, '1.250 kg'))),
+      h('p', { className: 'ai-expl' }, 'La factura incluye 50 kg más que los dos albaranes asociados; puede faltar un albarán de la entrega del 14 sep.'),
+      h(E.AiNotice, { kind: 'proposal' }, 'El detalle numérico es el que manda; la explicación es orientativa.'),
+      h(E.Button, { mode: 'secondary', icon: 'creation' }, 'Explicar con IA')),
+    h('h2', { className: 'h2', key: 'ph' }, 'Pago'),
+    h(E.DateField, { key: 'pd', label: 'Fecha de pago', mode: 'day', value: '22 oct 2026' }),
+    h(E.Button, { key: 'pb', block: true, icon: 'check' }, 'Marcar como pagada'),
+    h(E.Button, { key: 'an', block: true, mode: 'danger' }, 'Anular')
+  ]);
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'frames' }, listManager, listBoard, notes, detail));
+</script>
+</body>
+</html>

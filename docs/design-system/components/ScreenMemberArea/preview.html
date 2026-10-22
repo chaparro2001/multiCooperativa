@@ -1,0 +1,47 @@
+<!-- @dsCard group="Screens" height=978 width=1712 page subtitle="Área del socio · mi ficha, no socio, socios (gestor), registrar movimiento" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ScreenMemberArea</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement, noop = function () {};
+  function tf(o) { return h(E.TextField, Object.assign({ onChange: noop }, o)); }
+  function ph(o) { var kids = [].slice.call(arguments, 1); return h.apply(null, [E.Phone, o].concat(kids)); }
+  function row() { return h.apply(null, ['div', { className: 'mc-row', style: { gap: 8 } }].concat([].slice.call(arguments))); }
+  function left(el) { return h('div', { style: { display: 'flex' } }, el); }
+
+  function mov(c, d, v) { return h(E.ListItem, { title: c, meta: d, right: h(E.Money, { value: v, signed: true, style: { fontWeight: 500, color: v < 0 ? undefined : 'var(--text)' } }) }); }
+  var own = ph({ label: 'Mi ficha · socio', title: 'Área del socio' },
+    h(E.HeroCard, { label: 'Capital aportado', amount: 12480, meta: 'Socio n.º 214' }),
+    h('h2', { className: 'mc-h2' }, 'Mis datos'),
+    h(E.Card, null, h('div', { className: 'mc-row', style: { justifyContent: 'space-between' } }, h('span', { className: 'mc-row-title', style: { flex: 'none' } }, 'Lucía Martín'), h(E.Badge, { tone: 'info' }, 'Activo')),
+      h('dl', { className: 'mc-kv' }, h('dt', null, 'Número de socio'), h('dd', null, '214'), h('dt', null, 'Fecha de alta'), h('dd', null, '3 mar 2014'), h('dt', null, 'Perfil'), h('dd', null, 'Consejo rector'), h('dt', null, 'Email'), h('dd', null, 'lucia.martin@sanisidro.coop'))),
+    h('h2', { className: 'mc-h2' }, 'Movimientos'),
+    h(E.Group, null, mov('Aportación campaña 2026', '1 sep 2026 · Aportación voluntaria', 500), mov('Reembolso parcial', '15 jun 2026 · Reembolso', -350), mov('Cuota de entrada', '3 mar 2014 · Aportación obligatoria', 6000)));
+
+  var none = ph({ label: 'No socio · gestor contratado', title: 'Área del socio' },
+    h(E.EmptyState, { icon: 'account-outline', message: 'No eres socio de la cooperativa, así que no tienes capital aportado.' }),
+    h(E.EmptyState, { icon: 'format-list-numbered', message: 'Todavía no hay movimientos: tu capital es 0,00 €.' }),
+    h('p', { className: 'mc-fine', style: { textAlign: 'center' } }, 'Abajo: socio sin movimientos.'));
+
+  function member(n, num, cap, st) { return h(E.ListRow, { title: n, amount: cap, status: h(E.Badge, { tone: st === 'Baja' ? 'neutral' : 'info' }, st), meta: num }); }
+  var list = ph({ label: 'Socios · gestor (alcance: todos)', title: 'Socios', list: true },
+    tf({ label: 'Nombre, email o número', value: '', leftIcon: 'magnify', showCount: false }),
+    h(E.SummaryCard, { label: 'Capital social de la cooperativa', amount: 1482300, meta: '120 socios' }),
+    member('Lucía Martín', 'Socio n.º 214', 12480, 'Activo'), member('Antonio Gómez Ruiz', 'Socio n.º 12', 24000, 'Activo'), member('María Pérez Lozano', 'Socio n.º 233', 6000, 'Activo'), member('José Navarro', 'Socio n.º 87', 0, 'Baja'));
+
+  var movReg = ph({ label: 'Registrar movimiento · error', title: 'Registrar movimiento', bar: [h(E.FormSummary, { key: 1 }), h(E.Button, { key: 2, block: true }, 'Registrar movimiento')] },
+    h('p', { className: 'mc-meta' }, 'Lucía Martín · Socio n.º 214'),
+    h(E.Card, null, h('span', { className: 'mc-summary-label' }, 'Capital actual'), h('span', { className: 'mc-summary-amount' }, '12.480,00 €')),
+    h(E.FieldGroup, { label: 'Tipo' }, h(E.Chips, { single: true }, h(E.Chip, null, 'Aportación obligatoria'), h(E.Chip, null, 'Aportación voluntaria'), h(E.Chip, { selected: true }, 'Reembolso'), h(E.Chip, null, 'Corrección'))),
+    h(E.DateField, { label: 'Fecha', mode: 'day', value: '22 oct 2026' }),
+    tf({ label: 'Concepto', maxLength: 200, value: '', error: 'Escribe un concepto.' }),
+    tf({ label: 'Importe (€)', value: '15.000,00', showCount: false, error: 'El reembolso no puede superar el capital aportado (12.480,00 €).', help: 'Un reembolso no puede superar el capital.' }),
+    h('p', { className: 'mc-fine' }, 'Los movimientos no se pueden modificar una vez registrados.'));
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(E.Frames, null, own, none, list, movReg));
+
+</script>
+</body>
+</html>

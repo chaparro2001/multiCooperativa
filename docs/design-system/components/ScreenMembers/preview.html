@@ -1,0 +1,53 @@
+<!-- @dsCard group="Screens" height=980 width=1712 page subtitle="Miembros · listado, detalle de invitado, invitar, invitación registrada" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ScreenMembers</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement, noop = function () {};
+  function tf(o) { return h(E.TextField, Object.assign({ onChange: noop }, o)); }
+  function ph(o) { var kids = [].slice.call(arguments, 1); return h.apply(null, [E.Phone, o].concat(kids)); }
+  function row() { return h.apply(null, ['div', { className: 'mc-row', style: { gap: 8 } }].concat([].slice.call(arguments))); }
+  function left(el) { return h('div', { style: { display: 'flex' } }, el); }
+
+  function m(n, e, prof, st, tone, socio) { return h(E.ListRow, { title: n, status: h(E.Badge, { tone: tone }, st), meta: e, badges: [h(E.Badge, { key: 1, tone: 'neutral' }, prof)].concat(socio ? [h(E.Badge, { key: 2, quiet: true, tone: 'info', icon: 'account-check-outline' }, 'Es socio')] : []) }); }
+  var list = ph({ label: 'Listado · administrador', title: 'Miembros', actions: [{ icon: 'plus', label: 'Invitar' }], list: true },
+    tf({ label: 'Nombre o email', value: '', leftIcon: 'magnify', showCount: false }),
+    h(E.Chips, { single: true }, h(E.Chip, { selected: true }, 'Todos'), h(E.Chip, null, 'Activos'), h(E.Chip, null, 'Invitados'), h(E.Chip, null, 'Suspendidos')),
+    m('Lucía Martín', 'lucia.martin@sanisidro.coop', 'Consejo rector', 'Activo', 'info', true),
+    m('Pedro Sanz', 'gerencia@sanisidro.coop', 'Gestor', 'Activo', 'info', false),
+    m('María Pérez Lozano', 'maria.perez@correo.es', 'Socio', 'Invitado', 'warning', true),
+    m('José Navarro', 'jnavarro@correo.es', 'Socio', 'Suspendido', 'danger', true));
+
+  var det = ph({ label: 'Detalle · invitado', title: 'Miembro' },
+    row(h(E.Badge, { tone: 'warning' }, 'Invitado'), h(E.Badge, { quiet: true, tone: 'info', icon: 'account-check-outline' }, 'Es socio')),
+    h('h1', { className: 'mc-title' }, 'María Pérez Lozano'),
+    h('dl', { className: 'mc-kv' }, h('dt', null, 'Email'), h('dd', null, 'maria.perez@correo.es'), h('dt', null, 'Número de socio'), h('dd', null, '233')),
+    h(E.FieldGroup, { label: 'Perfil' }, h(E.Chips, { single: true }, h(E.Chip, { selected: true }, 'Socio'), h(E.Chip, null, 'Consejo rector'), h(E.Chip, null, 'Gestor'), h(E.Chip, null, 'Administrador'))),
+    left(h(E.Button, { mode: 'secondary' }, 'Guardar perfil')),
+    h(E.LinkCard, { url: 'https://app.multicooperativa.es/invitacion?token=7f3k…q92', meta: 'Caduca el 29 oct 2026 · un solo uso' }),
+    left(h(E.Button, { mode: 'secondary', icon: 'refresh' }, 'Generar nuevo enlace')),
+    h(E.Button, { block: true, mode: 'danger' }, 'Suspender'),
+    h(E.Banner, { tone: 'danger' }, 'Debe quedar al menos un administrador.'));
+
+  var invite = ph({ label: 'Invitar · error', title: 'Invitar', bar: [h(E.FormSummary, { key: 1 }), h(E.Button, { key: 2, block: true }, 'Invitar')] },
+    tf({ label: 'Email', value: 'lucia.martin@sanisidro.coop', showCount: false, error: 'Este email ya pertenece a un miembro de la cooperativa.' }),
+    tf({ label: 'Nombre', value: 'Lucía Martín', showCount: false }),
+    h(E.FieldGroup, { label: 'Perfil' }, h(E.Chips, { single: true }, h(E.Chip, { selected: true }, 'Socio'), h(E.Chip, null, 'Consejo rector'), h(E.Chip, null, 'Gestor'), h(E.Chip, null, 'Administrador'))),
+    h(E.Switch, { label: 'Es socio', value: true }),
+    tf({ label: 'Número de socio', value: '241', showCount: false }));
+
+  var ok = ph({ label: 'Invitación registrada', title: 'Invitar' },
+    h('div', { className: 'mc-center', style: { paddingTop: 24 } }, h(E.Icon, { name: 'check-circle-outline', size: 64, color: 'var(--primary)' }), h('h1', { className: 'mc-title' }, 'Invitación registrada'),
+      h('p', { className: 'mc-meta' }, 'Envía este enlace a Andrés Molina. Caduca en 7 días y solo sirve una vez.')),
+    h(E.LinkCard, { url: 'https://app.multicooperativa.es/invitacion?token=a91x…m4c' }),
+    h(E.Button, { block: true, mode: 'secondary' }, 'Volver a la lista'),
+    h(E.Banner, { tone: 'info' }, 'Es tu propio acceso: no puedes modificarlo desde aquí.'),
+    h('p', { className: 'mc-fine', style: { textAlign: 'center' } }, 'Arriba: aviso al abrir tu propia ficha.'));
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(E.Frames, null, list, det, invite, ok));
+
+</script>
+</body>
+</html>

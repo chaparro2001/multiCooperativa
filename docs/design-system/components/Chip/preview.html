@@ -1,0 +1,16 @@
+<!-- @dsCard group="Actions" height=188 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Chip — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h(E.FieldGroup, { label: 'Categoría' }, h(E.Chips, { single: true, label: 'Categoría' }, ['Estatutos', 'Reglamento interno', 'Actas', 'Cuentas anuales', 'Otros'].map(function (c, i) { return h(E.Chip, { key: c, selected: i === 2 }, c); }))),
+h(E.Chips, { label: 'Estado' }, h(E.Chip, { selected: true }, 'Todos'), h(E.Chip, null, 'Activos'), h(E.Chip, null, 'Invitados'), h(E.Chip, { disabled: true }, 'Suspendidos'))));
+</script>
+</body>
+</html>

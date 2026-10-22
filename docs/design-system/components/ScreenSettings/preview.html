@@ -1,0 +1,67 @@
+<!-- @dsCard group="Screens" height=1113 width=2134 page subtitle="Ajustes · socio, administrador agrupado, Apariencia, Facturación, Asistente IA" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ScreenSettings</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement, noop = function () {};
+  function tf(o) { return h(E.TextField, Object.assign({ onChange: noop }, o)); }
+  function ph(o) { var kids = [].slice.call(arguments, 1); return h.apply(null, [E.Phone, o].concat(kids)); }
+  function row() { return h.apply(null, ['div', { className: 'mc-row', style: { gap: 8 } }].concat([].slice.call(arguments))); }
+  function left(el) { return h('div', { style: { display: 'flex' } }, el); }
+
+  var member = ph({ label: 'Ajustes · socio', title: 'Ajustes' },
+    h(E.Card, null, h('span', { className: 'mc-row-title' }, 'Lucía Martín'), h('span', { className: 'mc-row-meta' }, 'lucia.martin@sanisidro.coop')),
+    h(E.Group, null,
+      h(E.ListItem, { icon: 'office-building-outline', title: 'Cooperativa Agrícola San Isidro', meta: 'Cooperativa actual', right: null }),
+      h(E.ListItem, { icon: 'swap-horizontal', title: 'Cambiar de cooperativa' })),
+    h(E.Group, null, h(E.ListItem, { icon: 'fingerprint', title: 'Desbloqueo con biometría', right: h('span', { className: 'mc-switch is-on', role: 'switch', 'aria-checked': true }) })),
+    h('div', { style: { flex: 1 } }),
+    h(E.Button, { block: true, mode: 'danger', icon: 'logout' }, 'Cerrar sesión'));
+
+  var admin = ph({ label: 'Ajustes · administrador (subpáginas)', title: 'Ajustes' },
+    h(E.Card, null, h('span', { className: 'mc-row-title' }, 'Lucía Martín'), h('span', { className: 'mc-row-meta' }, 'lucia.martin@sanisidro.coop')),
+    h(E.SectionTitle, null, 'Cuenta'),
+    h(E.Group, null, h(E.ListItem, { icon: 'swap-horizontal', title: 'Cambiar de cooperativa', meta: 'Cooperativa Agrícola San Isidro' }),
+      h(E.ListItem, { icon: 'fingerprint', title: 'Desbloqueo con biometría', right: h('span', { className: 'mc-switch is-on', role: 'switch', 'aria-checked': true }) })),
+    h(E.SectionTitle, null, 'Cooperativa'),
+    h(E.Group, null,
+      h(E.ListItem, { icon: 'image-outline', title: 'Apariencia', meta: 'Color #1F6F43' }),
+      h(E.ListItem, { icon: 'receipt-text-outline', title: 'Facturación', meta: '3 recordatorios activos' }),
+      h(E.ListItem, { icon: 'creation', title: 'Asistente IA', meta: 'Modelo local del servidor' })),
+    h('div', { style: { flex: 1 } }),
+    h(E.Button, { block: true, mode: 'danger', icon: 'logout' }, 'Cerrar sesión'));
+
+  var SW = [['#1f6f43','green'],['#1e5aa8','blue'],['#0f766e','teal'],['#6d28d9','violet'],['#9d174d','wine'],['#b45309','amber'],['#b91c1c','red'],['#374151','slate']];
+  var look = ph({ label: 'Apariencia · vista previa en vivo (vino)', title: 'Apariencia', theme: 'wine', bar: [h(E.Button, { key: 1, block: true }, 'Guardar color'), h(E.Button, { key: 2, block: true, mode: 'text' }, 'Volver al color por defecto')] },
+    h('div', { className: 'mc-swatches', role: 'radiogroup', 'aria-label': 'Color' }, SW.map(function (s) { return h('button', { key: s[0], className: 'mc-swatch' + (s[1] === 'wine' ? ' is-selected' : ''), style: { background: s[0] }, 'aria-label': s[0], role: 'radio', 'aria-checked': s[1] === 'wine' }, s[1] === 'wine' ? h(E.Icon, { name: 'check' }) : null); })),
+    tf({ label: 'Color (#RRGGBB)', value: '#9D174D', showCount: false, help: 'Se lee bien.' }),
+    h('h2', { className: 'mc-h2' }, 'Vista previa'),
+    h(E.Card, null, h('div', { className: 'mc-row' }, h(E.Button, null, 'Principal'), h(E.Button, { mode: 'secondary' }, 'Secundario')),
+      h('div', { className: 'mc-grid cols-2', style: { marginTop: 8 } }, h(E.HomeTile, { icon: 'bullhorn-outline', title: 'Comunicados', count: 3 }), h(E.HomeTile, { icon: 'hand-back-left-outline', title: 'Asambleas' }))),
+    tf({ label: 'Color (#RRGGBB)', value: '#F4B6C8', showCount: false, error: 'Es insuficiente: se necesita al menos 4,5:1.' }),
+    h('p', { className: 'mc-fine' }, 'Arriba: un color claro que no pasa el contraste.'));
+
+  function rem(label, on, days, range, help) { return h(E.Card, null, h(E.Switch, { label: label, value: on, help: on ? null : help }), on ? tf({ label: 'Días', value: String(days), showCount: false, help: range }) : null); }
+  var bill = ph({ label: 'Facturación · recordatorios', title: 'Facturación', bar: [h(E.Button, { key: 1, block: true }, 'Guardar')] },
+    rem('Aviso de vencimiento de facturas', true, 15, 'Entre 1 y 90 días antes del vencimiento.'),
+    rem('Plazo para facturar albaranes', true, 30, 'Entre 1 y 365 días desde la fecha del albarán.'),
+    rem('Aviso antes del plazo de facturación', false, 15, '', 'Desactivado: no se avisará antes de que venza el plazo para facturar.'));
+
+  function model(n, tag, use) { return h(E.ListItem, { icon: use ? 'check-circle-outline' : 'chevron-right', title: n, meta: tag, right: use ? h(E.Badge, { tone: 'info' }, 'en uso') : h(E.Badge, { tone: 'neutral', quiet: true }, 'Elegir') }); }
+  var ai = ph({ label: 'Asistente IA · quién responde', title: 'Asistente IA', bar: [h(E.Button, { key: 1, block: true }, 'Guardar')] },
+    h(E.SegmentedButtons, { label: 'Quién responde', value: 'l', buttons: [{ value: 'l', label: 'Modelo local' }, { value: 'x', label: 'Proveedor externo' }] }),
+    h(E.Group, null, model('qwen2.5-7b-instruct', 'Más preciso', true), model('llama3.2-3b', 'Más rápido', false)),
+    h(E.AiNotice, { kind: 'info', title: 'Modelo local del servidor' }, 'La primera respuesta puede tardar un poco mientras se carga el modelo.'),
+    h('h2', { className: 'mc-h2' }, 'Proveedor externo'),
+    h(E.Chips, { single: true }, h(E.Chip, null, 'Groq'), h(E.Chip, { selected: true }, 'Mistral'), h(E.Chip, null, 'NVIDIA'), h(E.Chip, null, 'OpenRouter')),
+    tf({ label: 'Modelo', value: 'mistral-small-latest', showCount: false }),
+    tf({ label: 'Clave de API', value: '', showCount: false, help: 'Clave guardada …x7Q2' }),
+    h(E.AiNotice, { kind: 'privacy' }, 'Con un proveedor externo, las preguntas y los fragmentos citados salen del servidor de la cooperativa. Si falla, se usará el modelo local.'));
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(E.Frames, null, member, admin, look, bill, ai));
+
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!-- @dsCard group="Assistant" height=308 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>SourceCard — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h(E.Sources, null,
+  h(E.SourceCard, { n: 1, title: 'Estatutos sociales · pág. 12', excerpt: 'Artículo 28. Los acuerdos de modificación de estatutos requerirán el voto favorable de dos tercios de los votos presentes y representados.' }),
+  h(E.SourceCard, { n: 2, icon: 'receipt-text-outline', title: 'Factura F-2026-014 · Fertilizantes del Tajo, S.L.', excerpt: 'Total 1.250,00 € · vence 15 oct 2026' }),
+  h(E.SourceCard, { n: 3, icon: 'hand-back-left-outline', title: 'Asamblea ordinaria · 12 nov 2026', excerpt: 'Salón de actos de la cooperativa' }))));
+</script>
+</body>
+</html>

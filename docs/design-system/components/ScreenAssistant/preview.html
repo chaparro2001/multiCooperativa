@@ -1,0 +1,62 @@
+<!-- @dsCard group="Screens" height=964 width=1712 page subtitle="Asistente · vacío con sugerencias, conversación con fuentes, error, historial" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ScreenAssistant</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement, noop = function () {};
+  function tf(o) { return h(E.TextField, Object.assign({ onChange: noop }, o)); }
+  function ph(o) { var kids = [].slice.call(arguments, 1); return h.apply(null, [E.Phone, o].concat(kids)); }
+  function row() { return h.apply(null, ['div', { className: 'mc-row', style: { gap: 8 } }].concat([].slice.call(arguments))); }
+  function left(el) { return h('div', { style: { display: 'flex' } }, el); }
+
+  function chatPhone(label, kids, value) {
+    return h('div', { className: 'mc-frame' }, h('div', { className: 'mc-frame-label' }, label),
+      h('div', { className: 'mc-device', 'data-theme': 'green' }, h('div', { className: 'mc-device-status' }),
+        h(E.Header, { title: 'Asistente', back: true, actions: [{ icon: 'history', label: 'Historial' }, { icon: 'square-edit-outline', label: 'Nueva conversación' }] }),
+        h('div', { className: 'mc-device-body', style: { gap: 12, paddingLeft: 16, paddingRight: 16 } }, kids),
+        h(E.Composer, { value: value })));
+  }
+  function sug(icon, t) { return h('button', { className: 'mc-tile', style: { aspectRatio: 'auto', minHeight: 96, gap: 8 } }, h(E.Icon, { name: icon, size: 24 }), h('span', { style: { fontSize: 15, lineHeight: '20px', color: 'var(--on-primary-container)' } }, t)); }
+  var empty = chatPhone('Vacío · sugerencias según los módulos que puede leer', [
+    h('div', { key: 'c', className: 'mc-center', style: { paddingTop: 40 } }, h(E.Icon, { name: 'chat-processing-outline', size: 48, color: 'var(--primary)' }), h('h1', { className: 'mc-title' }, '¿En qué puedo ayudarte?'),
+      h('p', { className: 'mc-meta' }, 'Pregunta sobre los documentos y datos de tu cooperativa. Solo verás lo que tu perfil puede consultar.')),
+    h('div', { key: 'g', className: 'mc-grid cols-2' },
+      sug('file-document-outline', '¿Qué quórum exigen los estatutos?'), sug('hand-back-left-outline', '¿Cuándo es la próxima asamblea?'),
+      sug('bullhorn-outline', 'Resume los últimos comunicados'), sug('receipt-text-outline', '¿Qué facturas de proveedores vencen esta semana?'))], '');
+
+  var conv = chatPhone('Conversación · fuentes y valoración', [
+    h(E.ChatBubble, { key: 1, role: 'user' }, '¿Qué facturas de proveedores vencen esta semana?'),
+    h('div', { key: 2, className: 'mc-answer' },
+      h(E.ChatBubble, null, h('p', null, 'Esta semana vencen 2 facturas de proveedores, por un total de ', h('b', null, '1.276,30 €'), ':'),
+        h('ul', null, h('li', null, 'Envases Ribera, S.A. — 864,30 €, vence hoy.'), h('li', null, 'Transportes Hermanos Gil — 412,00 €, vence el 30 oct.'))),
+      h(E.Sources, null,
+        h(E.SourceCard, { n: 1, icon: 'receipt-text-outline', title: 'Factura F-2026-021 · Envases Ribera, S.A.', excerpt: 'Total 864,30 € · vence 22 oct 2026' }),
+        h(E.SourceCard, { n: 2, icon: 'receipt-text-outline', title: 'Factura 2026/0388 · Transportes Hermanos Gil', excerpt: 'Total 412,00 € · vence 30 oct 2026' })),
+      h(E.Chips, null, h(E.Chip, { selected: true, icon: 'thumb-up-outline' }, 'Útil'), h(E.Chip, { icon: 'thumb-down-outline' }, 'No útil'))),
+    h(E.ChatBubble, { key: 3, role: 'user', pending: true }, '¿Y cuál está vencida?'),
+    h(E.Thinking, { key: 4 })], '');
+
+  var err = chatPhone('Errores en el hilo', [
+    h(E.ChatBubble, { key: 1, role: 'user' }, '¿Cuánto cobra el gerente?'),
+    h(E.Banner, { key: 2, tone: 'warning', icon: 'lock-outline' }, 'El asistente no puede responder a esta pregunta.'),
+    h(E.ChatBubble, { key: 3, role: 'user' }, 'Resume el acta de junio'),
+    h(E.Banner, { key: 4, tone: 'danger', icon: 'clock-outline' }, 'Has alcanzado el límite de mensajes por hora…'),
+    h(E.Banner, { key: 5, tone: 'danger', icon: 'cloud-off-outline', action: h(E.Button, { mode: 'text', icon: 'refresh' }, 'Reintentar') }, 'El asistente no está disponible ahora mismo.')], 'Resume el acta de junio');
+
+  var hist = ph({ label: 'Historial', title: 'Historial' },
+    h(E.Button, { block: true, icon: 'square-edit-outline' }, 'Nueva conversación'),
+    h(E.AiNotice, { kind: 'privacy' }, 'Solo tú ves tus conversaciones. Puedes eliminarlas cuando quieras.'),
+    h(E.Group, null,
+      h(E.ListItem, { icon: 'chat-processing-outline', title: 'Facturas que vencen esta semana', meta: '22 oct 2026, 16:40', right: h(E.HeaderAction, { icon: 'delete-outline', label: 'Eliminar conversación' }) }),
+      h(E.ListItem, { icon: 'chat-processing-outline', title: 'Quórum para modificar estatutos', meta: '20 oct 2026, 10:12', right: h(E.HeaderAction, { icon: 'delete-outline', label: 'Eliminar conversación' }) }),
+      h(E.ListItem, { icon: 'chat-processing-outline', title: 'Próxima asamblea', meta: '14 oct 2026, 19:05', right: h(E.HeaderAction, { icon: 'delete-outline', label: 'Eliminar conversación' }) })),
+    h('p', { className: 'mc-fine' }, 'Confirmación nativa al eliminar: «¿Eliminar la conversación?»'),
+    h(E.EmptyState, { icon: 'history', message: 'Todavía no tienes conversaciones. Tus preguntas al asistente aparecerán aquí.' }));
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(E.Frames, null, empty, conv, err, hist));
+
+</script>
+</body>
+</html>

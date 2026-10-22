@@ -1,0 +1,19 @@
+<!-- @dsCard group="Lists" height=608 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ListRow — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h(E.ListRow, { unread: true, title: 'Convocatoria de la asamblea general ordinaria', badges: [h(E.Badge, { key: 1, tone: 'info', icon: 'pin-outline' }, 'Fijado')], meta: '22 oct 2026 · Junta rectora · 2 adjuntos' }),
+h(E.ListRow, { title: 'Cambio de horario de la báscula', badges: [h(E.Badge, { key: 1, tone: 'warning' }, 'Borrador')], meta: '20 oct 2026 · Lucía Martín' }),
+cap('Factura: una insignia, la más urgente; el resto en silencio'),
+h(E.ListRow, { title: 'Fertilizantes del Tajo, S.L.', amount: 1250, status: h(E.Badge, { tone: 'danger' }, 'Vencida'), meta: 'Factura F-2026-014 · vence 15 oct 2026', alert: { tone: 'danger', text: 'Vencida hace 7 días' }, badges: [h(E.Badge, { key: 1, quiet: true, tone: 'neutral', icon: 'alert-outline' }, 'Con discrepancia')] }),
+h(E.ListRow, { title: 'Envases Ribera, S.A.', amount: 864.3, status: h(E.Badge, { tone: 'info' }, 'Pendiente'), meta: 'Factura F-2026-021 · vence 30 oct 2026', alert: { tone: 'warning', text: 'Vence en 8 días' } })));
+</script>
+</body>
+</html>

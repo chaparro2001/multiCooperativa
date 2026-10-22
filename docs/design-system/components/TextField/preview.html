@@ -1,0 +1,19 @@
+<!-- @dsCard group="Inputs" height=452 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>TextField — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h(E.TextField, { label: 'Email', value: 'lucia.martin@sanisidro.coop', onChange: function () {} }),
+h(E.TextField, { label: 'Contraseña', secure: true, value: 'secreto123', focused: true, onChange: function () {} }),
+h(E.TextField, { label: 'Título', maxLength: 120, value: 'Convocatoria de la asamblea general ordinaria', onChange: function () {} }),
+h(E.TextField, { label: 'Email', value: 'lucia@', error: 'Escribe un email válido, por ejemplo nombre@dominio.es.', onChange: function () {} }),
+h(E.TextField, { label: 'NIF', value: 'F28123456', disabled: true, help: 'El NIF no se puede cambiar.' })));
+</script>
+</body>
+</html>

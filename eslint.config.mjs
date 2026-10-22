@@ -34,6 +34,8 @@ export default tseslint.config(
       '**/.expo/**',
       '**/generated/**',
       '.claude/**',
+      // Design-tool export, kept verbatim so a re-export diffs cleanly
+      'docs/design-system/**',
     ],
   },
   js.configs.recommended,

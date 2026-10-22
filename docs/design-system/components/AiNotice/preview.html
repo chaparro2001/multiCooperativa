@@ -1,0 +1,17 @@
+<!-- @dsCard group="Status" height=366 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>AiNotice — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h(E.AiNotice, { kind: 'privacy' }, 'El documento se envía a un modelo de IA de Google (Gemini) para leerlo. No se guarda nada hasta que lo confirmes.'),
+h(E.AiNotice, { kind: 'proposal' }, 'El detalle numérico es el que manda; la explicación es orientativa.'),
+h(E.AiNotice, { kind: 'info', title: 'Modelo local del servidor' }, 'La primera respuesta puede tardar un poco mientras se carga el modelo.')));
+</script>
+</body>
+</html>

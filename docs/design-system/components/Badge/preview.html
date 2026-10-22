@@ -1,0 +1,17 @@
+<!-- @dsCard group="Status" height=274 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Badge — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+cap('Tonos'), row(h(E.Badge, { tone: 'neutral' }, 'Celebrada'), h(E.Badge, { tone: 'info' }, 'Convocada'), h(E.Badge, { tone: 'warning' }, 'Borrador'), h(E.Badge, { tone: 'danger' }, 'Cancelada')),
+cap('Entidades'), row(h(E.Badge, { tone: 'info', icon: 'pin-outline' }, 'Fijado'), h(E.Badge, { tone: 'warning' }, '2 votaciones abiertas'), h(E.Badge, { tone: 'danger' }, 'Vencida'), h(E.Badge, { tone: 'info' }, 'Conciliada'), h(E.Badge, { tone: 'warning' }, 'Con discrepancia')),
+cap('Silenciosa (estado secundario en filas)'), row(h(E.Badge, { tone: 'neutral', quiet: true, icon: 'check-circle-outline' }, 'Conciliada'), h(E.Badge, { tone: 'info', quiet: true, icon: 'check-circle-outline' }, 'Pagada'))));
+</script>
+</body>
+</html>

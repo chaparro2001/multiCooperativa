@@ -1,0 +1,98 @@
+<!-- @dsCard group="Screens" height=1284 width=1296 page subtitle="Registrar factura · propuesta de la IA, secciones y barra fija · 390" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Registrar — pantallas</title>
+<style>
+  .frames { display:flex; gap:32px; padding:24px; align-items:flex-start; width:max-content; }
+  .frame-wrap { display:flex; flex-direction:column; gap:8px; }
+  .frame-label { font-size:13px; line-height:18px; color:var(--muted); font-weight:500; }
+  .phone { width:390px; height:1200px; border:1px solid var(--border); border-radius:32px; overflow:hidden; background:var(--background); color:var(--text); display:flex; flex-direction:column; position:relative; }
+  .status { height:44px; flex:none; }
+  .body { flex:1; overflow:hidden; padding:var(--space-2) var(--space-6) 168px; display:flex; flex-direction:column; gap:var(--space-4); }
+  .sticky { position:absolute; left:0; right:0; bottom:0; }
+  .sec { display:flex; flex-direction:column; gap:var(--space-4); }
+  .sec-head { display:flex; align-items:center; gap:8px; margin-top:var(--space-2); padding-bottom:6px; border-bottom:1px solid var(--border); }
+  .sec-num { width:24px; height:24px; border-radius:var(--radius-full); background:var(--primary-container); color:var(--on-primary-container); font-size:12px; line-height:24px; font-weight:600; text-align:center; }
+  .sec-title { font-size:16px; line-height:24px; font-weight:500; }
+  .sec-meta { margin-left:auto; font-size:12px; line-height:16px; color:var(--muted); }
+  .attach { display:flex; gap:8px; align-items:center; font-size:14px; line-height:20px; color:var(--muted); }
+  .attach .mc-icon { color:var(--secondary); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3); }
+  .three { display:grid; grid-template-columns:1fr 88px 1fr; gap:var(--space-3); }
+  .lowconf { color:var(--warning); display:flex; }
+  .line-card { display:flex; flex-direction:column; gap:var(--space-3); }
+  .line-head { display:flex; justify-content:space-between; align-items:center; font-size:14px; font-weight:500; }
+  .party { display:flex; flex-direction:column; gap:8px; }
+  .scrolled { margin-top:-12px; font-size:12px; line-height:16px; color:var(--muted); text-align:center; }
+</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  var noop = function () {};
+  function warn() { return h('span', { className: 'lowconf', title: 'Dato leído con poca confianza' }, h(E.Icon, { name: 'alert-outline', label: 'Revisar' })); }
+  function tf(o) { return h(E.TextField, Object.assign({ onChange: noop, showCount: false }, o)); }
+  function sec(n, title, meta) { return h('div', { className: 'sec-head' }, h('span', { className: 'sec-num' }, n), h('span', { className: 'sec-title' }, title), meta ? h('span', { className: 'sec-meta' }, meta) : null); }
+
+  function phone(label, body, bar) {
+    return h('div', { className: 'frame-wrap', key: label },
+      h('div', { className: 'frame-label' }, label),
+      h('div', { className: 'phone', 'data-theme': 'green' }, h('div', { className: 'status' }),
+        h(E.Header, { back: true, scrolled: true, title: 'Registrar factura' }),
+        h('div', { className: 'body' }, body),
+        h('div', { className: 'sticky' }, h(E.ActionBar, null, bar))));
+  }
+  var confirm = h(E.Button, { block: true, icon: 'check' }, 'Confirmar y guardar');
+
+  var formTop = phone('Propuesta de la IA · inicio del formulario', [
+    h(E.SegmentedButtons, { key: 's1', label: 'Documento', value: 'f', buttons: [{ value: 'f', label: 'Factura' }, { value: 'a', label: 'Albarán' }] }),
+    h(E.SegmentedButtons, { key: 's2', label: 'Tipo', value: 'c', buttons: [{ value: 'c', label: 'Compra' }, { value: 'v', label: 'Venta' }] }),
+    h('div', { className: 'attach', key: 'at' }, h(E.Icon, { name: 'paperclip', size: 18 }), 'Original adjunto: factura-fertilizantes-sep.pdf'),
+    h(E.Banner, { key: 'bn', tone: 'warning' }, 'Revisa los datos leídos. Los marcados con ⚠ se han leído con poca seguridad.'),
+    sec(1, 'Documento'),
+    h('div', { className: 'party', key: 'p' },
+      tf({ label: 'Tercero', value: 'Fertilizantes del Tajo', leftIcon: 'magnify' }),
+      h(E.Chips, { single: true, label: 'Coincidencias' }, h(E.Chip, { selected: true, icon: 'office-building-outline' }, 'Fertilizantes del Tajo, S.L. · B45123456'))),
+    tf({ key: 'n', label: 'Número', value: 'F-2026-014', maxLength: 50 }),
+    h('div', { className: 'two', key: 'd' },
+      h(E.DateField, { label: 'Fecha de emisión', mode: 'day', value: '15 sep 2026' }),
+      h(E.TextField, { label: 'Vencimiento', value: '15 oct 2026', showCount: false, right: warn(), onChange: noop })),
+    sec(2, 'Importes'),
+    h('div', { className: 'three', key: 'i' },
+      tf({ label: 'Base (€)', value: '1.033,06' }),
+      tf({ label: 'IVA (%)', value: '21', right: warn() }),
+      tf({ label: 'Total (€)', value: '1.250,00' }))
+  ], confirm);
+
+  var bottom = phone('Mismo formulario · desplazado hasta el final', [
+    h('p', { className: 'scrolled', key: 'sc' }, '— desplazado —'),
+    sec(3, 'Líneas', '2 de 100'),
+    h(E.Card, { key: 'l1' }, h('div', { className: 'line-card' },
+      h('div', { className: 'line-head' }, 'Línea 1', h(E.Button, { mode: 'text', icon: 'close' }, 'Quitar línea')),
+      tf({ label: 'Concepto', value: 'Abono NPK 15-15-15' }),
+      h('div', { className: 'two' }, tf({ label: 'Cantidad', value: '1.250,000', right: warn() }), tf({ label: 'Unidad', value: 'kg' })))),
+    h(E.Card, { key: 'l2' }, h('div', { className: 'line-card' },
+      h('div', { className: 'line-head' }, 'Línea 2', h(E.Button, { mode: 'text', icon: 'close' }, 'Quitar línea')),
+      tf({ label: 'Concepto', value: 'Portes' }),
+      h('div', { className: 'two' }, tf({ label: 'Cantidad', value: '1,000' }), tf({ label: 'Unidad', value: 'servicio' })))),
+    h(E.Button, { key: 'al', mode: 'secondary', icon: 'plus' }, 'Añadir línea'),
+    sec(4, 'Albaranes', '2 seleccionados'),
+    h(E.FieldGroup, { key: 'ag', label: 'Albaranes pendientes que agrupa' }, h(E.Chips, null,
+      h(E.Chip, { selected: true }, 'A-5521 · 12 sep'), h(E.Chip, { selected: true }, 'A-5534 · 14 sep'), h(E.Chip, null, 'A-5540 · 19 sep'))),
+    h(E.AiNotice, { key: 'ai', kind: 'proposal' }, 'Nada se guarda hasta que confirmes. Los datos leídos son solo una propuesta.')
+  ], confirm);
+
+  var error = phone('Error al confirmar · foco en el primer campo inválido', [
+    sec(1, 'Documento'),
+    tf({ key: 'n', label: 'Número', value: 'F-2026-014', focused: true, error: 'Ya existe un documento con este número.' }),
+    h(E.TextField, { key: 'v', label: 'Vencimiento', value: '10 sep 2026', showCount: false, onChange: noop, error: 'El vencimiento no puede ser anterior a la fecha de emisión.' }),
+    sec(2, 'Importes'),
+    h('div', { className: 'two', key: 'i' }, tf({ label: 'Base (€)', value: '1.033,06' }), tf({ label: 'IVA (%)', value: '21' })),
+    tf({ key: 't', label: 'Total (€)', value: '1.205,00', error: 'El total no coincide con la base más el IVA: debería ser 1.250,00 €.' }),
+    h('div', { key: 'ut' }, h(E.Button, { mode: 'secondary', icon: 'check' }, 'Usar el total calculado'))
+  ], [h(E.FormSummary, { key: 'fs' }), h(E.Button, { key: 'c', block: true, icon: 'check' }, 'Confirmar y guardar')]);
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'frames' }, formTop, bottom, error));
+</script>
+</body>
+</html>
