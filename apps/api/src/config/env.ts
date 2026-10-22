@@ -162,10 +162,9 @@ const envSchema = z
         message: 'required with EMBEDDINGS_PROVIDER=gemini',
       });
     }
+    // Only an explicit floor can conflict: the default one is capped at the vector threshold.
     const minScore = env.EMBEDDING_MIN_SCORE ?? DEFAULT_MIN_SCORE[env.EMBEDDINGS_PROVIDER];
-    const textMinScore =
-      env.EMBEDDING_TEXT_MIN_SCORE ?? DEFAULT_TEXT_MIN_SCORE[env.EMBEDDINGS_PROVIDER];
-    if (textMinScore > minScore) {
+    if (env.EMBEDDING_TEXT_MIN_SCORE !== undefined && env.EMBEDDING_TEXT_MIN_SCORE > minScore) {
       context.addIssue({
         code: 'custom',
         path: ['EMBEDDING_TEXT_MIN_SCORE'],
@@ -204,15 +203,17 @@ const envSchema = z
     // Outside production, anything missing falls back to the local docker-compose storage.
     // In production superRefine has already rejected the missing ones.
     const local = env.NODE_ENV === 'production' ? undefined : LOCAL_STORAGE;
+    const minScore = env.EMBEDDING_MIN_SCORE ?? DEFAULT_MIN_SCORE[env.EMBEDDINGS_PROVIDER];
     return {
       ...env,
       S3_ENDPOINT: env.S3_ENDPOINT ?? local?.S3_ENDPOINT,
       S3_BUCKET: env.S3_BUCKET ?? local?.S3_BUCKET ?? '',
       S3_ACCESS_KEY_ID: env.S3_ACCESS_KEY_ID ?? local?.S3_ACCESS_KEY_ID ?? '',
       S3_SECRET_ACCESS_KEY: env.S3_SECRET_ACCESS_KEY ?? local?.S3_SECRET_ACCESS_KEY ?? '',
-      EMBEDDING_MIN_SCORE: env.EMBEDDING_MIN_SCORE ?? DEFAULT_MIN_SCORE[env.EMBEDDINGS_PROVIDER],
+      EMBEDDING_MIN_SCORE: minScore,
       EMBEDDING_TEXT_MIN_SCORE:
-        env.EMBEDDING_TEXT_MIN_SCORE ?? DEFAULT_TEXT_MIN_SCORE[env.EMBEDDINGS_PROVIDER],
+        env.EMBEDDING_TEXT_MIN_SCORE ??
+        Math.min(DEFAULT_TEXT_MIN_SCORE[env.EMBEDDINGS_PROVIDER], minScore),
       OLLAMA_URL: env.OLLAMA_URL ?? (local ? LOCAL_OLLAMA_URL : ''),
       CORS_ORIGINS: env.CORS_ORIGINS.length > 0 || !local ? env.CORS_ORIGINS : LOCAL_CORS_ORIGINS,
     };

@@ -88,8 +88,14 @@ describe('loadEnv', () => {
     );
     for (const bad of ['-0.1', '1.1', 'abc', '0.5'])
       expect(() => loadEnv({ ...required, EMBEDDING_TEXT_MIN_SCORE: bad })).toThrow();
-    // Raising the vector threshold alone is fine; lowering it under the floor is not.
-    expect(() => loadEnv({ ...required, EMBEDDING_MIN_SCORE: '0.1' })).toThrow(/EMBEDDING_TEXT/);
+    // Lowering the vector threshold alone caps the default floor; an explicit higher floor fails.
+    expect(loadEnv({ ...required, EMBEDDING_MIN_SCORE: '0.1' })).toMatchObject({
+      EMBEDDING_MIN_SCORE: 0.1,
+      EMBEDDING_TEXT_MIN_SCORE: 0.1,
+    });
+    expect(() =>
+      loadEnv({ ...required, EMBEDDING_MIN_SCORE: '0.1', EMBEDDING_TEXT_MIN_SCORE: '0.2' }),
+    ).toThrow(/EMBEDDING_TEXT/);
     expect(
       loadEnv({ ...required, EMBEDDING_MIN_SCORE: '0.1', EMBEDDING_TEXT_MIN_SCORE: '0.05' }),
     ).toMatchObject({ EMBEDDING_MIN_SCORE: 0.1, EMBEDDING_TEXT_MIN_SCORE: 0.05 });
