@@ -3,6 +3,7 @@ import { StyleSheet, TextInput, View } from 'react-native';
 
 import type { ReactNode } from 'react';
 
+import { splitHighlight } from '@/features/shared/highlight';
 import type { IconName } from '@/ui/paper-settings';
 import { Icon, IconButton, Text, useTheme } from '@/ui/paper';
 import { PressableBox } from '@/ui/pressable-box';
@@ -74,12 +75,20 @@ export function SourceCard({
   excerpt,
   n,
   icon = 'file-document-outline',
+  excerptLines = 2,
+  highlight,
   onPress,
   testID,
+  accessibilityLabel,
 }: {
   title: string;
   excerpt?: string;
   n?: number;
+  accessibilityLabel?: string;
+  /** Lines of the excerpt before truncating (default 2; document search hits use 4). */
+  excerptLines?: number;
+  /** Search text: its words are set in bold inside the excerpt. */
+  highlight?: string;
   icon?: IconName;
   onPress?: () => void;
   testID?: string;
@@ -97,8 +106,22 @@ export function SourceCard({
       <View style={styles.sourceText}>
         <Text variant="labelLarge">{title}</Text>
         {excerpt ? (
-          <Text variant="bodyMedium" numberOfLines={2} style={{ color: colors.onSurfaceVariant }}>
-            {excerpt}
+          <Text
+            variant="bodyMedium"
+            numberOfLines={excerptLines}
+            style={{ color: colors.onSurfaceVariant }}
+          >
+            {highlight
+              ? splitHighlight(excerpt, highlight).map((part, index) =>
+                  part.match ? (
+                    <Text key={index} variant="bodyMedium" style={styles.match}>
+                      {part.text}
+                    </Text>
+                  ) : (
+                    part.text
+                  ),
+                )
+              : excerpt}
           </Text>
         ) : null}
       </View>
@@ -110,7 +133,13 @@ export function SourceCard({
     { backgroundColor: colors.surface, borderColor: colors.outlineVariant },
   ];
   return onPress ? (
-    <PressableBox style={frame} onPress={onPress} accessibilityRole="button" testID={testID}>
+    <PressableBox
+      style={frame}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      testID={testID}
+    >
       {body}
     </PressableBox>
   ) : (
@@ -122,7 +151,7 @@ export function SourceCard({
 
 /**
  * The assistant input bar: a multiline field that grows to 120 and a round 48 send button
- * labelled "Enviar". Disabled while the field is empty or `disabled` (a reply is pending). Sits
+ * labelled "Enviar". Read-only while `disabled` (a reply is pending); send also needs text. Sits
  * on `surface` with a top hairline; place it as the screen's last child.
  */
 export function Composer({
@@ -133,6 +162,7 @@ export function Composer({
   maxLength = 2000,
   placeholder,
   testID,
+  sendTestID,
 }: {
   value: string;
   onChangeText(value: string): void;
@@ -141,6 +171,8 @@ export function Composer({
   maxLength?: number;
   placeholder?: string;
   testID?: string;
+  /** testID of the send button; defaults to `<testID>-send`. */
+  sendTestID?: string;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -157,6 +189,7 @@ export function Composer({
           value={value}
           onChangeText={onChangeText}
           multiline
+          editable={!disabled}
           maxLength={maxLength}
           placeholder={placeholder ?? t('assistant.placeholder')}
           placeholderTextColor={colors.onSurfaceVariant}
@@ -174,7 +207,7 @@ export function Composer({
           onPress={onSend}
           accessibilityLabel={t('assistant.send')}
           style={styles.send}
-          testID={testID ? `${testID}-send` : undefined}
+          testID={sendTestID ?? (testID ? `${testID}-send` : undefined)}
         />
       </View>
     </View>
@@ -207,6 +240,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   sourceText: { flex: 1, gap: 2 },
+  match: { fontWeight: '700' },
   composer: {
     borderTopWidth: 1,
     boxShadow: shadow[2],

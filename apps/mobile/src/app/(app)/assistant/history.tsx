@@ -7,10 +7,14 @@ import { FlatList, type ListRenderItem, RefreshControl, StyleSheet, View } from 
 import { messageFor } from '@/api/api-error';
 import { useConversationList, useDeleteConversation } from '@/features/assistant/queries';
 import { formatDateTime } from '@/i18n/format';
+import { AiNotice } from '@/ui/ai-notice';
+import { Banner } from '@/ui/banner';
 import { Button } from '@/ui/button';
 import { confirmAction } from '@/ui/confirm';
-import { Card, IconButton, Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading } from '@/ui/screen';
+import { ListRow } from '@/ui/list-row';
+import { IconButton, useTheme } from '@/ui/paper';
+import { EmptyState, ErrorState, ListFooter, Skeleton } from '@/ui/states';
+import { space } from '@/ui/theme';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 
 /** US-AI-04: my conversations, newest first; tap to reopen, delete with confirmation. */
@@ -51,14 +55,9 @@ export default function AssistantHistoryScreen() {
     [confirmDelete, t],
   );
 
-  if (list.isPending) return <Loading />;
+  if (list.isPending) return <Skeleton variant="list" />;
   if (list.isError) {
-    return (
-      <View style={styles.center}>
-        <ErrorText>{messageFor(list.error)}</ErrorText>
-        <Button title={t('common.actions.retry')} onPress={() => list.refetch()} />
-      </View>
-    );
+    return <ErrorState message={messageFor(list.error)} onRetry={() => list.refetch()} />;
   }
 
   const items = list.data.pages.flatMap((page) => page.items);
@@ -73,25 +72,25 @@ export default function AssistantHistoryScreen() {
           }
           testID="history-new"
         />
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-          {t('assistant.history.privacy')}
-        </Text>
-        {error ? <ErrorText>{error}</ErrorText> : null}
+        <AiNotice kind="privacy">{t('assistant.history.privacy')}</AiNotice>
+        {error ? (
+          <Banner tone="danger" testID="error-message">
+            {error}
+          </Banner>
+        ) : null}
       </View>
       <FlatList
         testID="conversation-list"
         data={items}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={items.length === 0 ? styles.center : styles.list}
+        contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text variant="bodyLarge" style={[styles.empty, { color: colors.onSurfaceVariant }]}>
-            {t('assistant.history.empty')}
-          </Text>
+          <EmptyState icon="message-text-outline" message={t('assistant.history.empty')} />
         }
         renderItem={renderItem}
         onEndReachedThreshold={0.4}
         onEndReached={() => list.hasNextPage && !list.isFetchingNextPage && list.fetchNextPage()}
-        ListFooterComponent={list.isFetchingNextPage ? <Loading /> : null}
+        ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
     </View>
@@ -114,30 +113,23 @@ const ConversationRow = memo(function ConversationRow({
   deleteLabel: string;
 }) {
   const { colors } = useTheme();
+  const open = useCallback(() => onOpen(item.id), [onOpen, item.id]);
+  const remove = useCallback(() => onDelete(item), [onDelete, item]);
   return (
     <View style={styles.row}>
-      <Card
-        mode="contained"
-        accessibilityRole="button"
+      <ListRow
+        title={item.title ?? ''}
+        meta={formatDateTime(item.updatedAt)}
+        onPress={open}
         accessibilityLabel={item.title ?? ''}
-        onPress={() => onOpen(item.id)}
-        style={[styles.rowCard, { backgroundColor: colors.surfaceVariant }]}
         testID={`conversation-${item.title}`}
-      >
-        <Card.Title
-          title={item.title}
-          titleNumberOfLines={2}
-          subtitle={formatDateTime(item.updatedAt)}
-          // Leaves room for the delete button, which is a sibling of the card (no nested buttons).
-          style={styles.rowTitle}
-        />
-      </Card>
+      />
       {/* Sibling of the pressable card: a button inside another button is invalid on web. */}
       <IconButton
         icon="delete-outline"
         iconColor={colors.error}
         accessibilityLabel={deleteLabel}
-        onPress={() => onDelete(item)}
+        onPress={remove}
         style={styles.delete}
         testID={`delete-${item.title}`}
       />
@@ -147,12 +139,16 @@ const ConversationRow = memo(function ConversationRow({
 
 const styles = StyleSheet.create({
   row: { justifyContent: 'center' },
-  rowCard: { width: '100%' },
-  rowTitle: { paddingRight: 48, paddingVertical: 8 },
-  delete: { position: 'absolute', right: 4 },
+  delete: { position: 'absolute', right: space[1] },
   screen: { flex: 1 },
-  top: { padding: 16, gap: 8, width: '100%', maxWidth: 720, alignSelf: 'center' },
-  list: { padding: 16, paddingTop: 0, gap: 10, width: '100%', maxWidth: 720, alignSelf: 'center' },
-  center: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
-  empty: { textAlign: 'center' },
+  top: { padding: space[4], gap: space[3], width: '100%', maxWidth: 720, alignSelf: 'center' },
+  list: {
+    padding: space[4],
+    paddingTop: 0,
+    gap: space[3],
+    flexGrow: 1,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+  },
 });

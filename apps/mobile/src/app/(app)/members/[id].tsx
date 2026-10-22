@@ -13,8 +13,11 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { confirmAction } from '@/ui/confirm';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { Banner } from '@/ui/banner';
 import { Text, useTheme } from '@/ui/paper';
+import { Screen } from '@/ui/screen';
+import { ErrorState, Skeleton } from '@/ui/states';
+import { space } from '@/ui/theme';
 
 /** US-ACC-09 (profile), US-ACC-10 (suspend, reactivate), US-ACC-08 (resend). */
 export default function MemberScreen() {
@@ -31,12 +34,10 @@ export default function MemberScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [link, setLink] = useState<{ url: string; expiresAt: string } | null>(null);
 
-  if (memberQuery.isPending) return <Loading />;
+  if (memberQuery.isPending) return <Skeleton variant="detail" />;
   if (memberQuery.isError || !memberQuery.data) {
     return (
-      <Screen>
-        <ErrorText>{messageFor(memberQuery.error)}</ErrorText>
-      </Screen>
+      <ErrorState message={messageFor(memberQuery.error)} onRetry={() => memberQuery.refetch()} />
     );
   }
   const member = memberQuery.data;
@@ -94,8 +95,8 @@ export default function MemberScreen() {
           {member.email}
         </Text>
         <View style={styles.meta}>
-          <Badge label={member.profileName} />
-          {member.isPartner ? <Badge label={t('members.fields.isPartner')} /> : null}
+          <Badge label={member.profileName} quiet />
+          {member.isPartner ? <Badge label={t('members.fields.isPartner')} quiet /> : null}
           <Badge
             label={t(`enums.membershipStatus.${member.status}`)}
             tone={statusTone(member.status)}
@@ -170,28 +171,27 @@ export default function MemberScreen() {
         </View>
       )}
       {member.userId === me?.id && (
-        <Text variant="bodyLarge" style={muted}>
+        <Banner tone="info" icon="account-key-outline">
           {t('members.detail.ownMembership')}
-        </Text>
+        </Banner>
       )}
 
       {notice ? (
-        <Text
-          accessibilityRole="alert"
-          variant="bodyLarge"
-          style={{ color: colors.primary }}
-          testID="member-notice"
-        >
+        <Banner tone="info" icon="check-circle-outline" testID="member-notice">
           {notice}
-        </Text>
+        </Banner>
       ) : null}
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {error ? (
+        <Banner tone="danger" testID="error-message">
+          {error}
+        </Banner>
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { gap: 4 },
-  meta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
-  section: { gap: 12 },
+  header: { gap: space[1] },
+  meta: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2], marginTop: space[2] },
+  section: { gap: space[3] },
 });

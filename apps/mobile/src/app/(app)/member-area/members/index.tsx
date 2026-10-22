@@ -8,11 +8,12 @@ import { messageFor } from '@/api/api-error';
 import { filterPartners } from '@/features/member-area/capital';
 import { CapitalTotal } from '@/features/member-area/components';
 import { useMemberCapitals } from '@/features/member-area/queries';
-import { listStyles, useEuros } from '@/features/invoicing/components';
 import { Badge } from '@/ui/badge';
-import { Button } from '@/ui/button';
-import { Card, Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading, SCREEN_MAX_WIDTH } from '@/ui/screen';
+import { ListRow } from '@/ui/list-row';
+import { useTheme } from '@/ui/paper';
+import { SCREEN_MAX_WIDTH } from '@/ui/screen';
+import { EmptyState, ErrorState, Skeleton } from '@/ui/states';
+import { space } from '@/ui/theme';
 import { TextField } from '@/ui/text-field';
 import { usePullToRefresh } from '@/ui/use-pull-to-refresh';
 
@@ -28,15 +29,12 @@ export default function MemberCapitalsScreen() {
     [],
   );
 
-  if (capitals.isPending) return <Loading />;
+  if (capitals.isPending) return <Skeleton variant="list" />;
   if (capitals.isError) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background }]}>
         <View style={styles.column}>
-          <View style={styles.list}>
-            <ErrorText>{messageFor(capitals.error)}</ErrorText>
-            <Button title={t('common.actions.retry')} onPress={() => capitals.refetch()} />
-          </View>
+          <ErrorState message={messageFor(capitals.error)} onRetry={() => capitals.refetch()} />
         </View>
       </View>
     );
@@ -71,12 +69,7 @@ export default function MemberCapitalsScreen() {
             <RefreshControl refreshing={refresh.refreshing} onRefresh={refresh.onRefresh} />
           }
           ListEmptyComponent={
-            <Text
-              variant="bodyLarge"
-              style={[listStyles.empty, { color: colors.onSurfaceVariant }]}
-            >
-              {t('memberArea.members.empty')}
-            </Text>
+            <EmptyState icon="account-group-outline" message={t('memberArea.members.empty')} />
           }
           renderItem={renderItem}
         />
@@ -87,40 +80,33 @@ export default function MemberCapitalsScreen() {
 
 const PartnerRow = memo(function PartnerRow({ item }: { item: MemberCapital }) {
   const { t } = useTranslation();
-  const euros = useEuros();
-  const { colors } = useTheme();
   const { member } = item;
+  const open = useCallback(
+    () => router.push(`/member-area/members/${member.membershipId}`),
+    [member.membershipId],
+  );
   return (
-    <Card
-      mode="contained"
-      accessibilityRole="button"
-      onPress={() => router.push(`/member-area/members/${member.membershipId}`)}
+    <ListRow
+      title={member.name}
+      meta={t('memberArea.members.partnerNumber', { number: member.partnerNumber ?? '–' })}
+      amount={item.capital}
+      status={
+        member.status !== 'active' ? (
+          <Badge
+            label={t(`enums.membershipStatus.${member.status}`)}
+            tone={member.status === 'suspended' ? 'danger' : 'warning'}
+          />
+        ) : undefined
+      }
+      onPress={open}
       testID={`partner-${member.email}`}
-    >
-      <Card.Content style={styles.row}>
-        <View style={styles.rowText}>
-          <Text variant="titleMedium">{member.name}</Text>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-            {t('memberArea.members.partnerNumber', { number: member.partnerNumber ?? '–' })}
-          </Text>
-          {member.status !== 'active' ? (
-            <Badge
-              label={t(`enums.membershipStatus.${member.status}`)}
-              tone={member.status === 'suspended' ? 'danger' : 'warning'}
-            />
-          ) : null}
-        </View>
-        <Text variant="titleMedium">{euros(item.capital)}</Text>
-      </Card.Content>
-    </Card>
+    />
   );
 });
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   column: { flex: 1, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
-  header: { padding: 16, paddingBottom: 8, gap: 12 },
-  list: { padding: 16, paddingTop: 0, gap: 10 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  rowText: { flexShrink: 1, gap: 4 },
+  header: { padding: space[4], paddingBottom: space[2], gap: space[3] },
+  list: { padding: space[4], paddingTop: 0, gap: space[3] },
 });

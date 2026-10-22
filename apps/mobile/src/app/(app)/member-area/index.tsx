@@ -4,11 +4,10 @@ import { messageFor } from '@/api/api-error';
 import { useLoadMore } from '@/api/use-load-more';
 import { CapitalTotal, MovementsScreen, RecordCard } from '@/features/member-area/components';
 import { useMyMovements } from '@/features/member-area/queries';
-import {} from '@/features/invoicing/components';
 import { useModuleAccess } from '@/navigation/use-module-access';
-import { Button } from '@/ui/button';
-import { Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { Screen } from '@/ui/screen';
+import { SectionTitle } from '@/ui/section-title';
+import { EmptyState, ErrorState, Skeleton } from '@/ui/states';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 /** US-MEM-01 and US-MEM-02: my record, my capital and my movements. Read-only for the member. */
@@ -17,7 +16,6 @@ export default function MemberAreaScreen() {
   const { scope } = useModuleAccess('member-area');
   const mine = useMyMovements();
   const loadMore = useLoadMore(mine);
-  const { colors } = useTheme();
 
   return (
     <>
@@ -39,25 +37,22 @@ export default function MemberAreaScreen() {
         }}
       />
       {mine.isPending ? (
-        <Loading />
+        <Skeleton variant="detail" />
       ) : mine.isError ? (
-        <Screen>
-          <ErrorText>{messageFor(mine.error)}</ErrorText>
-          <Button title={t('common.actions.retry')} onPress={() => mine.refetch()} />
-        </Screen>
+        <ErrorState message={messageFor(mine.error)} onRetry={() => mine.refetch()} />
       ) : mine.data.pages[0]!.member.isPartner ? (
         <MovementsScreen
           testID="screen-member-area"
           header={
             <>
-              <Text variant="titleLarge">{t('memberArea.me.record')}</Text>
+              <SectionTitle>{t('memberArea.me.record')}</SectionTitle>
               <RecordCard member={mine.data.pages[0]!.member} />
-              <Text variant="titleLarge">{t('memberArea.me.capital')}</Text>
+              <SectionTitle>{t('memberArea.me.capital')}</SectionTitle>
               <CapitalTotal
                 label={t('memberArea.me.capitalTotal')}
                 amount={mine.data.pages[0]!.capital}
               />
-              <Text variant="titleLarge">{t('memberArea.me.movements')}</Text>
+              <SectionTitle>{t('memberArea.me.movements')}</SectionTitle>
             </>
           }
           movements={mine.data.pages.flatMap((page) => page.movements)}
@@ -66,12 +61,14 @@ export default function MemberAreaScreen() {
         />
       ) : (
         <Screen testID="screen-member-area">
-          <Text variant="titleLarge">{t('memberArea.me.record')}</Text>
+          <SectionTitle>{t('memberArea.me.record')}</SectionTitle>
           <RecordCard member={mine.data.pages[0]!.member} />
-          <Text variant="titleLarge">{t('memberArea.me.capital')}</Text>
-          <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }} testID="not-partner">
-            {t('memberArea.me.notPartner')}
-          </Text>
+          <SectionTitle>{t('memberArea.me.capital')}</SectionTitle>
+          <EmptyState
+            icon="account-cash-outline"
+            message={t('memberArea.me.notPartner')}
+            testID="not-partner"
+          />
         </Screen>
       )}
     </>

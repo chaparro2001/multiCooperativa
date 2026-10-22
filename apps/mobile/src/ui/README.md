@@ -52,7 +52,7 @@ Compose screens from these; do not import `react-native-paper` in screens (ADR-0
 
 ## Assistant (`@/features/assistant/components`)
 
-`ChatBubble` (`role`, `pending?`, `children`), `Thinking`, `SourceCard` (`title`, `excerpt?`, `n?`, `icon?`, `onPress?`), `Composer` (`value`, `onChangeText`, `onSend`, `disabled?`, `maxLength?`).
+`ChatBubble` (`role`, `pending?`, `children`), `Thinking`, `SourceCard` (`title`, `excerpt?`, `n?`, `icon?`, `onPress?`, `excerptLines?`, `highlight?`, `accessibilityLabel?`), `Composer` (`value`, `onChangeText`, `onSend`, `disabled?` — read-only while a reply is pending, `maxLength?`, `sendTestID?`).
 
 ## Conventions
 

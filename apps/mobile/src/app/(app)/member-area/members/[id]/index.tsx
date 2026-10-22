@@ -6,8 +6,8 @@ import { CapitalTotal, MovementsScreen, RecordCard } from '@/features/member-are
 import { useMemberMovements } from '@/features/member-area/queries';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Button } from '@/ui/button';
-import { Text } from '@/ui/paper';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { SectionTitle } from '@/ui/section-title';
+import { ErrorState, Skeleton } from '@/ui/states';
 
 /** US-MEM-04: one partner's record and movements; with manage level, a way to register one (US-MEM-03). */
 export default function PartnerStatementScreen() {
@@ -17,13 +17,9 @@ export default function PartnerStatementScreen() {
   const statement = useMemberMovements(id);
   const loadMore = useLoadMore(statement);
 
-  if (statement.isPending) return <Loading />;
+  if (statement.isPending) return <Skeleton variant="detail" />;
   if (statement.isError) {
-    return (
-      <Screen>
-        <ErrorText>{messageFor(statement.error)}</ErrorText>
-      </Screen>
-    );
+    return <ErrorState message={messageFor(statement.error)} onRetry={() => statement.refetch()} />;
   }
   const { member, capital } = statement.data.pages[0]!;
   return (
@@ -42,7 +38,7 @@ export default function PartnerStatementScreen() {
                 testID="register-movement"
               />
             ) : null}
-            <Text variant="titleLarge">{t('memberArea.me.movements')}</Text>
+            <SectionTitle>{t('memberArea.me.movements')}</SectionTitle>
           </>
         }
         movements={statement.data.pages.flatMap((page) => page.movements)}

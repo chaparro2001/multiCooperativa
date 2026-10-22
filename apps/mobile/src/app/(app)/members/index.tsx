@@ -11,10 +11,12 @@ import { STATUS_FILTERS, type StatusFilter, statusTone } from '@/features/member
 import { useMembers } from '@/features/members/queries';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
-import { Button } from '@/ui/button';
-import { Card, Chip, Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading } from '@/ui/screen';
+import { Chip } from '@/ui/chip';
+import { ListRow } from '@/ui/list-row';
+import { useTheme } from '@/ui/paper';
 import { SCREEN_MAX_WIDTH } from '@/ui/screen';
+import { EmptyState, ErrorState, ListFooter, Skeleton } from '@/ui/states';
+import { space } from '@/ui/theme';
 import { TextField } from '@/ui/text-field';
 import { useDebouncedValue } from '@/ui/use-debounced-value';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
@@ -76,12 +78,9 @@ export default function MembersScreen() {
           </View>
         </View>
         {members.isPending ? (
-          <Loading />
+          <Skeleton variant="list" />
         ) : members.isError ? (
-          <View style={styles.list}>
-            <ErrorText>{messageFor(members.error)}</ErrorText>
-            <Button title={t('common.actions.retry')} onPress={() => members.refetch()} />
-          </View>
+          <ErrorState message={messageFor(members.error)} onRetry={() => members.refetch()} />
         ) : (
           <FlatList
             testID="member-list"
@@ -89,12 +88,10 @@ export default function MembersScreen() {
             keyExtractor={keyOf}
             onEndReachedThreshold={0.4}
             onEndReached={loadMore}
-            ListFooterComponent={members.isFetchingNextPage ? <Loading /> : null}
+            ListFooterComponent={<ListFooter loading={members.isFetchingNextPage} />}
             contentContainerStyle={styles.list}
             ListEmptyComponent={
-              <Text variant="bodyLarge" style={[styles.empty, { color: colors.onSurfaceVariant }]}>
-                {t('members.list.empty')}
-              </Text>
+              <EmptyState icon="account-group-outline" message={t('members.list.empty')} />
             }
             renderItem={renderItem}
           />
@@ -108,29 +105,29 @@ const keyOf = (member: Member) => member.membershipId;
 
 const MemberRow = memo(function MemberRow({ member }: { member: Member }) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
+  const open = useCallback(
+    () => router.push(`/members/${member.membershipId}`),
+    [member.membershipId],
+  );
   return (
-    <Card
-      mode="contained"
-      accessibilityRole="button"
-      onPress={() => router.push(`/members/${member.membershipId}`)}
+    <ListRow
+      title={member.name}
+      meta={member.email}
+      status={
+        <Badge
+          label={t(`enums.membershipStatus.${member.status}`)}
+          tone={statusTone(member.status)}
+        />
+      }
+      badges={
+        <>
+          <Badge label={member.profileName} quiet />
+          {member.isPartner ? <Badge label={t('members.fields.isPartner')} quiet /> : null}
+        </>
+      }
+      onPress={open}
       testID={`member-${member.email}`}
-    >
-      <Card.Content style={styles.rowContent}>
-        <Text variant="titleMedium">{member.name}</Text>
-        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
-          {member.email}
-        </Text>
-        <View style={styles.meta}>
-          <Badge label={member.profileName} />
-          {member.isPartner ? <Badge label={t('members.fields.isPartner')} /> : null}
-          <Badge
-            label={t(`enums.membershipStatus.${member.status}`)}
-            tone={statusTone(member.status)}
-          />
-        </View>
-      </Card.Content>
-    </Card>
+    />
   );
 });
 
@@ -138,10 +135,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   // Same readable column as the Screen component on wide windows.
   column: { flex: 1, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
-  search: { padding: 16, paddingBottom: 8, gap: 10 },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  list: { padding: 16, paddingTop: 0, gap: 10 },
-  empty: { padding: 16, textAlign: 'center' },
-  rowContent: { gap: 4 },
-  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 4 },
+  search: { padding: space[4], paddingBottom: space[2], gap: space[3] },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  list: { padding: space[4], paddingTop: 0, gap: space[3] },
 });
