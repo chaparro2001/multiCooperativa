@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadEnv } from './env';
+import { DEFAULT_MIN_SCORE, DEFAULT_TEXT_MIN_SCORE, loadEnv } from './env';
 
 const DATABASE_URL = 'postgresql://user:pass@localhost:5432/db';
 const JWT_SECRET = 'x'.repeat(32);
@@ -36,6 +36,8 @@ describe('loadEnv', () => {
       GEMINI_EMBEDDING_MODEL: 'gemini-embedding-2',
       OLLAMA_URL: 'http://localhost:11434',
       EMBEDDING_MODEL: 'bge-m3',
+      EMBEDDING_MIN_SCORE: DEFAULT_MIN_SCORE.ollama,
+      EMBEDDING_TEXT_MIN_SCORE: DEFAULT_TEXT_MIN_SCORE.ollama,
       EMBEDDING_TIMEOUT_MS: 120_000,
       GEMINI_MODEL: 'gemini-3.8-flash',
       GEMINI_FALLBACK_MODELS: [
@@ -51,6 +53,52 @@ describe('loadEnv', () => {
       CORS_ORIGINS: ['http://localhost:8081'],
       INVITATION_DELIVERY: 'console',
     });
+  });
+
+  it('ADR-022: the minimum similarity defaults per embeddings provider and is overridable within 0..1', () => {
+    expect(loadEnv(required).EMBEDDING_MIN_SCORE).toBe(DEFAULT_MIN_SCORE.ollama);
+    expect(
+      loadEnv({ ...required, EMBEDDINGS_PROVIDER: 'gemini', GEMINI_API_KEY: 'k' })
+        .EMBEDDING_MIN_SCORE,
+    ).toBe(DEFAULT_MIN_SCORE.gemini);
+    expect(loadEnv({ ...required, EMBEDDING_MIN_SCORE: '0.45' }).EMBEDDING_MIN_SCORE).toBe(0.45);
+    expect(
+      loadEnv({ ...required, EMBEDDING_MIN_SCORE: '0', EMBEDDING_TEXT_MIN_SCORE: '0' })
+        .EMBEDDING_MIN_SCORE,
+    ).toBe(0);
+    // docker compose passes an unset variable as an empty string.
+    expect(loadEnv({ ...required, EMBEDDING_MIN_SCORE: '' }).EMBEDDING_MIN_SCORE).toBe(
+      DEFAULT_MIN_SCORE.ollama,
+    );
+    for (const bad of ['-0.1', '1.1', 'abc'])
+      expect(() => loadEnv({ ...required, EMBEDDING_MIN_SCORE: bad })).toThrow();
+  });
+
+  it('ADR-022: the text-search floor defaults per provider, is overridable and never exceeds the vector threshold', () => {
+    expect(loadEnv(required).EMBEDDING_TEXT_MIN_SCORE).toBe(DEFAULT_TEXT_MIN_SCORE.ollama);
+    expect(
+      loadEnv({ ...required, EMBEDDINGS_PROVIDER: 'gemini', GEMINI_API_KEY: 'k' })
+        .EMBEDDING_TEXT_MIN_SCORE,
+    ).toBe(DEFAULT_TEXT_MIN_SCORE.gemini);
+    expect(loadEnv({ ...required, EMBEDDING_TEXT_MIN_SCORE: '0.2' }).EMBEDDING_TEXT_MIN_SCORE).toBe(
+      0.2,
+    );
+    expect(loadEnv({ ...required, EMBEDDING_TEXT_MIN_SCORE: '' }).EMBEDDING_TEXT_MIN_SCORE).toBe(
+      DEFAULT_TEXT_MIN_SCORE.ollama,
+    );
+    for (const bad of ['-0.1', '1.1', 'abc', '0.5'])
+      expect(() => loadEnv({ ...required, EMBEDDING_TEXT_MIN_SCORE: bad })).toThrow();
+    // Lowering the vector threshold alone caps the default floor; an explicit higher floor fails.
+    expect(loadEnv({ ...required, EMBEDDING_MIN_SCORE: '0.1' })).toMatchObject({
+      EMBEDDING_MIN_SCORE: 0.1,
+      EMBEDDING_TEXT_MIN_SCORE: 0.1,
+    });
+    expect(() =>
+      loadEnv({ ...required, EMBEDDING_MIN_SCORE: '0.1', EMBEDDING_TEXT_MIN_SCORE: '0.2' }),
+    ).toThrow(/EMBEDDING_TEXT/);
+    expect(
+      loadEnv({ ...required, EMBEDDING_MIN_SCORE: '0.1', EMBEDDING_TEXT_MIN_SCORE: '0.05' }),
+    ).toMatchObject({ EMBEDDING_MIN_SCORE: 0.1, EMBEDDING_TEXT_MIN_SCORE: 0.05 });
   });
 
   it('NFR-AI-03: the Gemini key is optional and the assistant limit and model are configurable', () => {

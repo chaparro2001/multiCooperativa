@@ -9,6 +9,7 @@ import {
   addVersion,
   type DocumentDeps,
   reindexDocument,
+  SEARCH_RESULTS,
   searchDocuments,
   uploadDocument,
   withdrawDocument,
@@ -255,5 +256,41 @@ describe('content search (US-DOC-07)', () => {
     await withdrawDocument(deps, context('manage'), document.id);
 
     expect(await search('assembly june')).toEqual([]);
+  });
+
+  it('US-DOC-07: returns at most SEARCH_RESULTS fragments, the same number the assistant gives the model', async () => {
+    await upload(
+      pdfWith(...Array.from({ length: SEARCH_RESULTS + 3 }, (_, i) => `Irrigation turn ${i}.`)),
+    );
+    await indexer.idle();
+
+    expect(await search('irrigation turn')).toHaveLength(SEARCH_RESULTS);
+  });
+
+  it('US-DOC-07: an exact term is found by the text arm even when similarity is below the threshold', async () => {
+    const strict = new InMemoryIndexing(store, 0.99);
+    await strict.replaceDocument(COOP, 'd', 'v', [
+      { page: 1, position: 0, content: 'Cuota extraordinaria 2026.', embedding: [1, 0] },
+    ]);
+    store.rows.push({ id: 'd', cooperativeId: COOP, status: 'published', title: 'Fees' } as never);
+
+    const hits = await strict.search(COOP, { text: 'cuota', embedding: [0, 1] }, 5);
+    const none = await strict.search(COOP, { text: 'paella', embedding: [0, 1] }, 5);
+
+    expect(hits).toHaveLength(1);
+    expect(none).toEqual([]);
+  });
+
+  it('US-DOC-07: the text arm needs enough distinct query terms and a minimum similarity', async () => {
+    const fake = new InMemoryIndexing(store, 0.99, 0.5);
+    await fake.replaceDocument(COOP, 'd', 'v', [
+      { page: 1, position: 0, content: 'Cuota anual del socio.', embedding: [1, 0] },
+    ]);
+    store.rows.push({ id: 'd', cooperativeId: COOP, status: 'published', title: 'Fees' } as never);
+    const find = (text: string, embedding: number[]) => fake.search(COOP, { text, embedding }, 5);
+
+    expect(await find('cuota socio inversion', [0.6, 0.8])).toHaveLength(1); // 2 of 3
+    expect(await find('edad minima socio', [0.6, 0.8])).toEqual([]); // 1 of 3
+    expect(await find('cuota socio', [0, 1])).toEqual([]); // below the floor
   });
 });

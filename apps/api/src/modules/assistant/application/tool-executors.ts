@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
-import type {
-  AnnouncementReads,
-  AssemblyReads,
-  CooperativeContext,
-  FragmentHit,
-  InvoicingReads,
-  MemberAreaReads,
+import {
+  DOCUMENT_SEARCH_RESULTS,
+  type AnnouncementReads,
+  type AssemblyReads,
+  type CooperativeContext,
+  type FragmentHit,
+  type InvoicingReads,
+  type MemberAreaReads,
 } from './data-sources';
 import type { Source } from '../domain/citations';
 import type { ToolName } from '../domain/tool-catalog';
@@ -37,8 +38,6 @@ export interface DataSources {
   memberArea: MemberAreaReads;
 }
 
-/** Fragments given to the model per search. */
-export const DOCUMENT_HITS = 5;
 const EXCERPT = 300;
 
 const day = z.iso.date().optional();
@@ -103,7 +102,7 @@ export function createToolExecutors(src: DataSources): Record<ToolName, ToolExec
       const { query } = parse('search_documents', raw);
       const hits = await src.documents.search(context, query);
       return {
-        items: hits.slice(0, DOCUMENT_HITS).map((hit) => ({
+        items: hits.slice(0, DOCUMENT_SEARCH_RESULTS).map((hit) => ({
           data: { document: hit.title, category: hit.category, page: hit.page, text: hit.content },
           source: {
             kind: 'document',

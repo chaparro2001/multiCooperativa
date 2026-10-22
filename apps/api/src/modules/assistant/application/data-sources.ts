@@ -2,6 +2,6 @@
 export type { CooperativeContext } from '../../access';
 export type { AnnouncementReads, LatestAnnouncement } from '../../announcements';
 export type { AssemblyReads } from '../../assemblies';
-export type { FragmentHit } from '../../documents';
+export { DOCUMENT_SEARCH_RESULTS, type FragmentHit } from '../../documents';
 export type { InvoicingReads } from '../../invoicing';
 export type { MemberAreaReads } from '../../members';

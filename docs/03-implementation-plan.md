@@ -47,6 +47,7 @@ Specifications: [02-announcements](requirements/02-announcements.md) · [03-docu
 - [x] Documents: domain, versions, API.
 - [x] Republish a withdrawn document (US-DOC-08).
 - [x] Indexing: text extraction, chunking, embeddings, pgvector with `cooperativeId`.
+- [x] Hybrid retrieval (vector + Spanish full-text, RRF) and minimum similarity threshold (ADR-022).
 - [x] App: announcements list and detail; documents list and viewer; editor for managers.
 
 ## Milestone 3 · Assemblies (12–14 Oct)
