@@ -11,12 +11,13 @@ import {
 import { useAssembly, useRescheduleAssembly } from '@/features/assemblies/queries';
 import { formatDateTime } from '@/i18n/format';
 import { Button } from '@/ui/button';
-import { Checkbox } from '@/ui/checkbox';
 import { confirmAction } from '@/ui/confirm';
 import { DateField } from '@/ui/date-field';
 import { FormSummary } from '@/ui/field';
 import { Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { ErrorText, Screen } from '@/ui/screen';
+import { ErrorState, Skeleton } from '@/ui/states';
+import { SwitchRow } from '@/ui/switch-row';
 import { TextField } from '@/ui/text-field';
 
 const HALF_AN_HOUR = 30 * 60 * 1000;
@@ -52,11 +53,9 @@ export default function RescheduleAssemblyScreen() {
 
   if (!loaded) {
     return assembly.isError ? (
-      <Screen>
-        <ErrorText>{t('errors.generic')}</ErrorText>
-      </Screen>
+      <ErrorState message={t('errors.generic')} onRetry={() => assembly.refetch()} />
     ) : (
-      <Loading />
+      <Skeleton variant="detail" />
     );
   }
   const current = assembly.data!;
@@ -152,10 +151,10 @@ export default function RescheduleAssemblyScreen() {
         multiline
         testID="reason-field"
       />
-      <Checkbox
+      <SwitchRow
         label={t('assemblies.reschedule.notifyMembers')}
-        checked={notifyMembers}
-        onChange={setNotifyMembers}
+        value={notifyMembers}
+        onValueChange={setNotifyMembers}
         testID="notify-members"
       />
 

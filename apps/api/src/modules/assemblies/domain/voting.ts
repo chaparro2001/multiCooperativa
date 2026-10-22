@@ -6,7 +6,7 @@ import {
   type VoteChoice,
   VotingClosedError,
 } from './errors';
-import type { Tally } from './voting-result';
+import type { Call, Tally, VotingPolicy } from './voting-result';
 
 export type VotingStatus = 'pending' | 'open' | 'closed';
 export const VOTE_CHOICES: readonly VoteChoice[] = ['in_favor', 'against', 'abstention'];
@@ -52,4 +52,19 @@ export function assertCanVote(input: {
 /** BR-ASM-11: while open, how people voted is visible only with "manage". */
 export function visibleTally(status: VotingStatus, canManage: boolean, tally: Tally): Tally | null {
   return status === 'closed' || canManage ? tally : null;
+}
+
+/**
+ * BR-ASM-05: share of the census (0..1) that must take part for the voting to
+ * count. While open the first call is the one in force; once closed, the call
+ * that was applied. Null when no quorum applies (threshold 0, or no census yet).
+ */
+export function quorumRequired(input: {
+  policy: VotingPolicy;
+  censusSize: number | null;
+  appliedCall: Call | null;
+}): number | null {
+  if (!input.censusSize) return null;
+  const percent = input.policy.quorumPercent[input.appliedCall ?? 'first'];
+  return percent > 0 ? percent / 100 : null;
 }

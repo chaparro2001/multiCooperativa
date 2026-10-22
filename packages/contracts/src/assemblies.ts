@@ -64,6 +64,8 @@ export const votingViewSchema = z.object({
   /** Partners in the census, fixed on opening; null while pending. */
   censusSize: z.number().int().nullable(),
   votesCast: z.number().int(),
+  /** Required participation as a fraction of the census (0..1); null when no quorum applies (BR-ASM-05). */
+  quorumRequired: z.number().min(0).max(1).nullable(),
   /** Null while open and without manage access (BR-ASM-11). */
   tally: tallySchema.nullable(),
   result: tallySchema

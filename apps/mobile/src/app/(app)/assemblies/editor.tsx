@@ -23,8 +23,13 @@ import { useAssembly, useSaveAssembly } from '@/features/assemblies/queries';
 import { Button } from '@/ui/button';
 import { DateField } from '@/ui/date-field';
 import { FieldGroup, FormSummary } from '@/ui/field';
-import { Card, Chip, IconButton, Switch, Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { Card } from '@/ui/card';
+import { Chip, IconButton, Text, useTheme } from '@/ui/paper';
+import { SectionTitle } from '@/ui/section-title';
+import { SwitchRow } from '@/ui/switch-row';
+import { space } from '@/ui/theme';
+import { ErrorText, Screen } from '@/ui/screen';
+import { Skeleton } from '@/ui/states';
 import { TextField } from '@/ui/text-field';
 
 /** 20 days ahead at 19:00: past the default minimum notice of 15 days (BR-ASM-09). */
@@ -75,7 +80,7 @@ export default function AssemblyEditorScreen() {
     setLoaded(true);
   }
 
-  if (!loaded) return <Loading />;
+  if (!loaded) return <Skeleton variant="detail" />;
 
   const update = (key: string, changes: Partial<EditablePoint>) =>
     setPoints((current) => current.map((p) => (p.key === key ? { ...p, ...changes } : p)));
@@ -105,13 +110,13 @@ export default function AssemblyEditorScreen() {
           title: params.id ? t('assemblies.editor.editTitle') : t('assemblies.editor.newTitle'),
         }}
       />
-      <View style={styles.chips}>
+      <FieldGroup label={t('assemblies.editor.type')} style={styles.chips}>
         {ASSEMBLY_TYPES.map((value) => (
           <Chip key={value} selected={type === value} onPress={() => setType(value)}>
             {t(`enums.assemblyType.${value}`)}
           </Chip>
         ))}
-      </View>
+      </FieldGroup>
       <DateField
         label={t('assemblies.editor.firstCall')}
         mode="datetime"
@@ -142,12 +147,10 @@ export default function AssemblyEditorScreen() {
         testID="place-field"
       />
 
-      <Text variant="titleSmall" style={styles.section}>
-        {t('assemblies.agenda')}
-      </Text>
+      <SectionTitle>{t('assemblies.agenda')}</SectionTitle>
       {points.map((point, index) => (
-        <Card key={point.key} mode="contained" testID={`editor-point-${index + 1}`}>
-          <Card.Content style={styles.pointContent}>
+        <Card key={point.key} testID={`editor-point-${index + 1}`}>
+          <View style={styles.pointContent}>
             <View style={styles.pointHeader}>
               <Text variant="titleSmall">
                 {t('assemblies.editor.pointNumber', { number: index + 1 })}
@@ -189,20 +192,22 @@ export default function AssemblyEditorScreen() {
               onChangeText={(description) => update(point.key, { description })}
               multiline
             />
-            <View style={styles.switchRow}>
-              <Text variant="bodyMedium">{t('assemblies.editor.votable')}</Text>
-              <Switch
-                value={point.votable}
-                onValueChange={(votable) =>
-                  update(point.key, {
-                    votable,
-                    majority: votable ? (point.majority ?? 'simple') : null,
-                  })
-                }
-              />
-            </View>
+            <SwitchRow
+              label={t('assemblies.editor.votable')}
+              value={point.votable}
+              onValueChange={(votable) =>
+                update(point.key, {
+                  votable,
+                  majority: votable ? (point.majority ?? 'simple') : null,
+                })
+              }
+            />
             {point.votable ? (
-              <FieldGroup name={`points.${index}.majority`} style={styles.chips}>
+              <FieldGroup
+                label={t('assemblies.editor.majority')}
+                name={`points.${index}.majority`}
+                style={styles.chips}
+              >
                 {MAJORITIES.map((value) => (
                   <Chip
                     key={value}
@@ -214,7 +219,7 @@ export default function AssemblyEditorScreen() {
                 ))}
               </FieldGroup>
             ) : null}
-          </Card.Content>
+          </View>
         </Card>
       ))}
       <Button
@@ -239,10 +244,8 @@ export default function AssemblyEditorScreen() {
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: 8 },
-  pointContent: { gap: 10 },
+  pointContent: { gap: space[3] },
   pointHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   pointTools: { flexDirection: 'row' },
-  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
 });

@@ -1,6 +1,6 @@
 import type { AssemblyDetail, VotingView } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -18,8 +18,16 @@ import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
-import { Card, Divider, List, Text, useTheme } from '@/ui/paper';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { Banner } from '@/ui/banner';
+import { Card } from '@/ui/card';
+import { MapCard } from '@/ui/map-card';
+import { List, Text, useTheme } from '@/ui/paper';
+import { ProgressBar } from '@/ui/progress-bar';
+import { ErrorText, Screen } from '@/ui/screen';
+import { SectionTitle } from '@/ui/section-title';
+import { ErrorState, Skeleton } from '@/ui/states';
+import { space } from '@/ui/theme';
+import { VoteTally } from '@/ui/vote-tally';
 import { openUrl } from '@/ui/open-url';
 import { confirmAction } from '@/ui/confirm';
 
@@ -35,13 +43,9 @@ export default function AssemblyScreen() {
   const action = useAssemblyAction();
   const [error, setError] = useState<string | null>(null);
 
-  if (assembly.isPending) return <Loading />;
+  if (assembly.isPending) return <Skeleton variant="detail" />;
   if (assembly.isError) {
-    return (
-      <Screen>
-        <ErrorText>{messageFor(assembly.error)}</ErrorText>
-      </Screen>
-    );
+    return <ErrorState message={messageFor(assembly.error)} onRetry={() => assembly.refetch()} />;
   }
   const data = assembly.data;
   const canReschedule =
@@ -102,35 +106,27 @@ export default function AssemblyScreen() {
           {t('assemblies.detail.secondCall', { date: formatDateTime(data.secondCallAt) })}
         </Text>
       ) : null}
-      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-        {data.place}
-      </Text>
+      {data.place.trim() ? <MapCard place={data.place} testID="assembly-map" /> : null}
       {moved ? (
-        <Card mode="contained" testID="rescheduled-note">
-          <Card.Content style={styles.noteContent}>
-            <Text variant="titleSmall">
-              {t('assemblies.detail.rescheduledNote', {
-                at: formatDateTime(moved.at),
-                date: formatDateTime(moved.firstCallAt),
-              })}
-            </Text>
-            {moved.place !== data.place ? (
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-                {t('assemblies.detail.rescheduledPlace', { place: moved.place })}
-              </Text>
-            ) : null}
-            {moved.reason ? (
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-                {t('assemblies.detail.rescheduledReason', { reason: moved.reason })}
-              </Text>
-            ) : null}
-          </Card.Content>
-        </Card>
+        <Banner tone="info" testID="rescheduled-note">
+          {[
+            t('assemblies.detail.rescheduledNote', {
+              at: formatDateTime(moved.at),
+              date: formatDateTime(moved.firstCallAt),
+            }),
+            moved.place !== data.place
+              ? t('assemblies.detail.rescheduledPlace', { place: moved.place })
+              : null,
+            moved.reason
+              ? t('assemblies.detail.rescheduledReason', { reason: moved.reason })
+              : null,
+          ]
+            .filter(Boolean)
+            .join('\n')}
+        </Banner>
       ) : null}
 
-      <Text variant="titleSmall" style={styles.section}>
-        {t('assemblies.agenda')}
-      </Text>
+      <SectionTitle>{t('assemblies.agenda')}</SectionTitle>
       {data.points.map((point) => (
         <PointCard
           key={point.id}
@@ -236,8 +232,8 @@ function PointCard({
   }
 
   return (
-    <Card mode="contained" testID={`point-${point.position}`}>
-      <Card.Content style={styles.pointContent}>
+    <Card testID={`point-${point.position}`}>
+      <View style={styles.pointContent}>
         <Text variant="titleMedium">
           {point.position}. {point.title}
         </Text>
@@ -280,55 +276,83 @@ function PointCard({
           />
         ) : null}
 
-        {point.voting ? <VotingBlock pointId={point.id} voting={point.voting} /> : null}
-
-        {canManage && point.voting && assemblyStatus === 'convened' ? (
-          <>
-            {point.voting.status === 'pending' && (
-              <Button
-                title={t('assemblies.detail.openVoting')}
-                loading={control.isPending}
-                onPress={() =>
-                  run(() => control.mutateAsync({ pointId: point.id, action: 'open' }))
-                }
-                testID={`open-voting-${point.position}`}
-              />
-            )}
-            {point.voting.status === 'open' && (
-              <Button
-                title={t('assemblies.detail.closeVoting')}
-                variant="secondary"
-                loading={control.isPending}
-                onPress={() =>
-                  confirmAction({
-                    title: t('assemblies.detail.closeVotingTitle'),
-                    message: t('assemblies.detail.closeVotingMessage'),
-                    confirmLabel: t('common.actions.close'),
-                    cancelLabel: t('common.actions.cancel'),
-                    destructive: true,
-                    onConfirm: () =>
-                      run(() => control.mutateAsync({ pointId: point.id, action: 'close' })),
-                  })
-                }
-                testID={`close-voting-${point.position}`}
-              />
-            )}
-          </>
+        {point.voting ? (
+          <VotingBlock
+            pointId={point.id}
+            voting={point.voting}
+            controls={
+              canManage && assemblyStatus === 'convened' ? (
+                <>
+                  {point.voting.status === 'pending' && (
+                    <Button
+                      title={t('assemblies.detail.openVoting')}
+                      loading={control.isPending}
+                      onPress={() =>
+                        run(() => control.mutateAsync({ pointId: point.id, action: 'open' }))
+                      }
+                      testID={`open-voting-${point.position}`}
+                    />
+                  )}
+                  {point.voting.status === 'open' && (
+                    <Button
+                      title={t('assemblies.detail.closeVoting')}
+                      variant="secondary"
+                      loading={control.isPending}
+                      onPress={() =>
+                        confirmAction({
+                          title: t('assemblies.detail.closeVotingTitle'),
+                          message: t('assemblies.detail.closeVotingMessage'),
+                          confirmLabel: t('common.actions.close'),
+                          cancelLabel: t('common.actions.cancel'),
+                          destructive: true,
+                          onConfirm: () =>
+                            run(() => control.mutateAsync({ pointId: point.id, action: 'close' })),
+                        })
+                      }
+                      testID={`close-voting-${point.position}`}
+                    />
+                  )}
+                </>
+              ) : null
+            }
+          />
         ) : null}
-      </Card.Content>
+      </View>
     </Card>
   );
 }
 
-function VotingBlock({ pointId, voting }: { pointId: string; voting: VotingView }) {
+/** Fixed order (screens.md): badges, participation, tally, quorum, my vote / vote, manager controls. */
+function VotingBlock({
+  pointId,
+  voting,
+  controls,
+}: {
+  pointId: string;
+  voting: VotingView;
+  controls: ReactNode;
+}) {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const goToVote = useCallback(
+    () => router.push({ pathname: '/assemblies/vote', params: { pointId } }),
+    [pointId],
+  );
   if (voting.status === 'pending') {
-    return <Badge label={t('enums.votingStatus.pending')} />;
+    return (
+      <View style={styles.voting}>
+        <View style={styles.row}>
+          <Badge label={t('enums.votingStatus.pending')} />
+        </View>
+        {controls}
+      </View>
+    );
   }
+  const census = voting.censusSize ?? 0;
+  const quorumPercent =
+    voting.quorumRequired === null ? null : Math.round(voting.quorumRequired * 100);
   return (
     <View style={styles.voting}>
-      <Divider />
       <View style={styles.row}>
         <Badge
           label={t(`enums.votingStatus.${voting.status}`)}
@@ -341,20 +365,23 @@ function VotingBlock({ pointId, voting }: { pointId: string; voting: VotingView 
           />
         ) : null}
       </View>
-      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-        {t('assemblies.detail.participation', {
+      <ProgressBar
+        label={t('assemblies.detail.participation', {
           value: participation(voting.votesCast, voting.censusSize),
         })}
-      </Text>
+        value={voting.votesCast}
+        total={census}
+        mark={voting.quorumRequired}
+        testID="participation"
+      />
       {/* BR-ASM-11: the server hides the tally while open without the manage level. */}
       {voting.tally ? (
-        <Text variant="bodyMedium" testID="tally">
-          {t('assemblies.detail.tally', {
-            inFavor: voting.tally.inFavor,
-            against: voting.tally.against,
-            abstentions: voting.tally.abstentions,
-          })}
-        </Text>
+        <VoteTally
+          favor={voting.tally.inFavor}
+          against={voting.tally.against}
+          abstentions={voting.tally.abstentions}
+          testID="tally"
+        />
       ) : null}
       {voting.result ? (
         <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
@@ -365,6 +392,10 @@ function VotingBlock({ pointId, voting }: { pointId: string; voting: VotingView 
             { call: t(`enums.call.${voting.result.call}`) },
           )}
         </Text>
+      ) : quorumPercent !== null ? (
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          {t('assemblies.detail.quorumRequired', { percent: quorumPercent })}
+        </Text>
       ) : null}
       {voting.myVote ? (
         <Text variant="titleSmall" style={{ color: colors.primary }}>
@@ -372,22 +403,17 @@ function VotingBlock({ pointId, voting }: { pointId: string; voting: VotingView 
         </Text>
       ) : null}
       {voting.canVote ? (
-        <Button
-          title={t('assemblies.detail.vote')}
-          onPress={() => router.push({ pathname: '/assemblies/vote', params: { pointId } })}
-          testID="go-to-vote"
-        />
+        <Button title={t('assemblies.detail.vote')} onPress={goToVote} testID="go-to-vote" />
       ) : null}
+      {controls}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: 8 },
-  pointContent: { gap: 8 },
+  pointContent: { gap: space[2] },
   attachment: { borderRadius: 8 },
-  voting: { gap: 6, paddingTop: 6 },
-  row: { flexDirection: 'row', gap: 6 },
-  actions: { gap: 10, marginTop: 8 },
-  noteContent: { gap: 4 },
+  voting: { gap: space[3], paddingTop: space[2] },
+  row: { flexDirection: 'row', gap: space[2] },
+  actions: { gap: space[3], marginTop: space[2] },
 });

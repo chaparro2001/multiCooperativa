@@ -6,7 +6,13 @@ import {
   NotInCensusError,
   VotingClosedError,
 } from './errors';
-import { assertCanClose, assertCanOpen, assertCanVote, visibleTally } from './voting';
+import {
+  assertCanClose,
+  assertCanOpen,
+  assertCanVote,
+  quorumRequired,
+  visibleTally,
+} from './voting';
 
 const open = {
   assemblyStatus: 'convened',
@@ -83,5 +89,28 @@ describe('what is visible of the tally (BR-ASM-11)', () => {
   it('open with manage access, or closed for everyone: visible', () => {
     expect(visibleTally('open', true, tally)).toEqual(tally);
     expect(visibleTally('closed', false, tally)).toEqual(tally);
+  });
+});
+
+describe('quorum threshold exposed to the member (BR-ASM-05)', () => {
+  const policy = {
+    quorumPercent: { first: 50, second: 0 },
+    reinforced: { numerator: 2, denominator: 3 },
+  };
+
+  it('Given an open voting, when asked, then the first-call threshold as a fraction', () => {
+    expect(quorumRequired({ policy, censusSize: 10, appliedCall: null })).toBe(0.5);
+  });
+
+  it('Given a closed voting resolved on second call without minimum, then no quorum applies', () => {
+    expect(quorumRequired({ policy, censusSize: 10, appliedCall: 'second' })).toBeNull();
+  });
+
+  it('Given a closed voting resolved on first call, then the first-call threshold', () => {
+    expect(quorumRequired({ policy, censusSize: 10, appliedCall: 'first' })).toBe(0.5);
+  });
+
+  it('Given a pending voting (no census), then null', () => {
+    expect(quorumRequired({ policy, censusSize: null, appliedCall: null })).toBeNull();
   });
 });

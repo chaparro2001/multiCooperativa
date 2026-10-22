@@ -24,6 +24,7 @@ import {
   assertCanClose,
   assertCanOpen,
   assertCanVote,
+  quorumRequired,
   visibleTally,
   type VotingStatus,
 } from '../domain/voting';
@@ -90,6 +91,8 @@ export interface VotingView {
   status: VotingStatus;
   censusSize: number | null;
   votesCast: number;
+  /** BR-ASM-05: required participation as a fraction 0..1; null when no quorum applies. */
+  quorumRequired: number | null;
   tally: Tally | null;
   result: VotingResult | null;
   myVote: VoteChoice | null;
@@ -102,6 +105,7 @@ function toView(voting: MemberVotingView | undefined, manager: boolean): VotingV
       status: 'pending',
       censusSize: null,
       votesCast: 0,
+      quorumRequired: null,
       tally: null,
       result: null,
       myVote: null,
@@ -113,6 +117,11 @@ function toView(voting: MemberVotingView | undefined, manager: boolean): VotingV
     status: voting.status,
     censusSize: voting.censusSize,
     votesCast: inFavor + against + abstentions,
+    quorumRequired: quorumRequired({
+      policy: voting.policy,
+      censusSize: voting.censusSize,
+      appliedCall: voting.result?.call ?? null,
+    }),
     tally: visibleTally(voting.status, manager, voting.tally),
     result: voting.result,
     myVote: voting.myVote,
