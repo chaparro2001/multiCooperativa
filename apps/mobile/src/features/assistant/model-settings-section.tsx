@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { messageFor } from '@/api/api-error';
 import { routeServerError } from '@/forms/server-errors';
 import { FormScope, useForm } from '@/forms/use-form';
+import { AiNotice } from '@/ui/ai-notice';
 import { Button } from '@/ui/button';
 import { FieldGroup, FormSummary } from '@/ui/field';
 import { ActivityIndicator, Chip, Icon, List, Text, useTheme } from '@/ui/paper';
@@ -68,16 +69,8 @@ export function AssistantModelSection() {
   // With Gemini and no external provider there is nothing to choose: say so instead of a dead control.
   if (!isOllama && !settings.hostedAvailable) {
     return (
-      <View
-        style={[styles.section, { borderBottomColor: colors.outlineVariant }]}
-        testID="assistant-model-section"
-      >
-        <Text variant="labelMedium" style={[styles.label, muted]}>
-          {t('settings.assistantModel.title')}
-        </Text>
-        <Text variant="bodyMedium" style={muted}>
-          {t('settings.assistantModel.notLocal')}
-        </Text>
+      <View style={styles.section} testID="assistant-model-section">
+        <AiNotice kind="info">{t('settings.assistantModel.notLocal')}</AiNotice>
       </View>
     );
   }
@@ -110,13 +103,7 @@ export function AssistantModelSection() {
 
   return (
     <FormScope form={form}>
-      <View
-        style={[styles.section, { borderBottomColor: colors.outlineVariant }]}
-        testID="assistant-model-section"
-      >
-        <Text variant="labelMedium" style={[styles.label, muted]}>
-          {t('settings.assistantModel.title')}
-        </Text>
+      <View style={styles.section} testID="assistant-model-section">
         <Text variant="bodyMedium" style={muted}>
           {t('settings.assistantModel.description')}
         </Text>
@@ -218,9 +205,9 @@ export function AssistantModelSection() {
                 {t('settings.assistantModel.hosted.keepKey')}
               </Text>
             )}
-            <Text variant="bodyMedium" style={muted} testID="assistant-hosted-privacy">
+            <AiNotice kind="privacy" testID="assistant-hosted-privacy">
               {t('settings.assistantModel.hosted.privacy')}
-            </Text>
+            </AiNotice>
             <Text variant="bodyMedium" style={muted}>
               {t('settings.assistantModel.hosted.fallback')}
             </Text>
@@ -333,8 +320,7 @@ function OptionRow({
 }
 
 const styles = StyleSheet.create({
-  section: { gap: 8, paddingBottom: 16, borderBottomWidth: 1 },
-  label: { textTransform: 'uppercase' },
+  section: { gap: 8 },
   options: { gap: 8 },
   hosted: { gap: 12 },
   option: { borderWidth: 1, borderRadius: 8, paddingVertical: 4 },

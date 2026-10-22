@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { BrandProvider, useBrand } from '@/branding/brand';
@@ -61,6 +61,13 @@ function CooperativeNavigator() {
         // US-ACC-14: back arrow and header links follow the cooperative's colour; titles stay neutral.
         headerTintColor: brand.primaryColor,
         headerTitleStyle: { color: colors.onSurface },
+        // Design header: flat, one hairline instead of a shadow.
+        headerShadowVisible: false,
+        headerStyle: {
+          backgroundColor: colors.background,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.outlineVariant,
+        },
         // Without history (reload, deep link) the default arrow is dead: go to the logical parent.
         ...(navigation.canGoBack() ? {} : { headerLeft: () => <HeaderBack /> }),
       })}
@@ -74,7 +81,19 @@ function CooperativeNavigator() {
             headerLeft: () => <View style={{ width: 4 }} />,
           }}
         />
-        <Stack.Screen name="settings" options={{ title: t('settings.title') }} />
+        <Stack.Screen name="settings/index" options={{ title: t('settings.title') }} />
+        <Stack.Screen
+          name="settings/appearance"
+          options={{ title: t('settings.appearance.title') }}
+        />
+        <Stack.Screen
+          name="settings/invoicing"
+          options={{ title: t('settings.invoicing.title') }}
+        />
+        <Stack.Screen
+          name="settings/assistant"
+          options={{ title: t('settings.assistantModel.title') }}
+        />
         <Stack.Protected guard={canAccess(allowed, 'announcements')}>
           <Stack.Screen
             name="announcements/index"

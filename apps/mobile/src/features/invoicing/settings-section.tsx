@@ -7,11 +7,12 @@ import { messageFor } from '@/api/api-error';
 import { routeServerError } from '@/forms/server-errors';
 import { FormScope, useForm } from '@/forms/use-form';
 import { Button } from '@/ui/button';
+import { Card } from '@/ui/card';
 import { Checkbox } from '@/ui/checkbox';
 import { FormSummary } from '@/ui/field';
 import { ErrorText } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
-import { Card, Divider, Text, useTheme } from '@/ui/paper';
+import { Text, useTheme } from '@/ui/paper';
 
 import { useInvoicingSettings, useUpdateInvoicingSettings } from './queries';
 import {
@@ -79,9 +80,6 @@ export function InvoicingSettingsSection() {
   return (
     <FormScope form={form}>
       <View style={styles.section} testID="invoicing-settings-section">
-        <Text variant="labelLarge" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
-          {t('settings.invoicing.title')}
-        </Text>
         <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
           {t('settings.invoicing.description')}
         </Text>
@@ -110,7 +108,6 @@ export function InvoicingSettingsSection() {
           onPress={save}
           testID="invoicing-save"
         />
-        <Divider />
       </View>
     </FormScope>
   );
@@ -137,8 +134,8 @@ function AlertBlock({
   const inactive = !enabled || deadlineOff;
   const muted = { color: theme.colors.onSurfaceVariant };
   return (
-    <Card mode="outlined" testID={`${block}-block`}>
-      <Card.Content style={styles.block}>
+    <Card testID={`${block}-block`}>
+      <View style={styles.block}>
         <Text variant="titleSmall">{t(`settings.invoicing.${block}.title`)}</Text>
         <Checkbox
           label={t('settings.invoicing.enabled')}
@@ -172,14 +169,13 @@ function AlertBlock({
             {t('settings.invoicing.noteNotice.deadlineOff')}
           </Text>
         )}
-      </Card.Content>
+      </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
   section: { gap: 12 },
-  label: { textTransform: 'uppercase' },
   block: { gap: 8 },
   inactive: { opacity: 0.5 },
 });
