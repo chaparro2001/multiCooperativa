@@ -93,6 +93,11 @@ Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assis
 - [ ] Sentry in app and backend.
 - [ ] Free hosted demo: API and its services in Docker on a home server exposed with Cloudflare Tunnel, and the web export on GitHub Pages ([04-deployment.md](04-deployment.md), ADR-012; Render/Neon/Supabase remain an optional alternative, ADR-010); native binaries with EAS Build are optional.
 
+## Performance after the freeze (22 Oct)
+
+- [x] Keyset pagination (`{ items, nextCursor }`, `limit` and `before`, like the assistant history) of delivery notes, invoices, documents, members and a member's capital movements, with composite indexes starting with `cooperativeId`; totals, summaries and badges stay computed by the server. The mobile lists are `FlatList`/`SectionList` with `useInfiniteQuery`. No new dependency.
+- [x] Document search debounced 300 ms (`useDebouncedValue`) with `keepPreviousData`, so the lists do not flash while typing.
+
 ## Milestone 7 · Quality and delivery (23–25 Oct)
 
 - [ ] E2E with Maestro: login, cooperative switch, vote, scan and register an invoice, ask the assistant.

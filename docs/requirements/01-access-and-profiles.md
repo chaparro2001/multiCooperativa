@@ -330,6 +330,7 @@ Within a cooperative:
 | GET    | `/cooperatives/{cooperativeId}/me/permissions`                | Effective permissions and member status | Active membership           |
 | GET    | `/cooperatives/{cooperativeId}/profiles`                      | List profiles                           | Users and profiles · manage |
 | GET    | `/cooperatives/{cooperativeId}/members`                       | List members (memberships)              | Users and profiles · manage |
+| GET    | `/cooperatives/{cooperativeId}/members/{memberId}`            | One member that has not left            | Users and profiles · manage |
 | POST   | `/cooperatives/{cooperativeId}/members`                       | Invite                                  | Users and profiles · manage |
 | PATCH  | `/cooperatives/{cooperativeId}/members/{memberId}`            | Change profile, suspend or reactivate   | Users and profiles · manage |
 | POST   | `/cooperatives/{cooperativeId}/members/{memberId}/removal`    | Remove (permanent)                      | Users and profiles · manage |
@@ -353,6 +354,8 @@ Response of `/cooperatives/{cooperativeId}/me/permissions`, with which the app b
 ```
 
 JSON keys are in English, like the rest of the identifiers; the values (modules, levels, scopes) are the domain ones: modules `announcements`, `assemblies`, `documents`, `invoicing`, `member_area`, `assistant`, `users`; levels `read` and `manage`; scopes `own` and `all`. Schemas in `packages/contracts/src/access.ts`; `GET /me` returns `id`, `email`, `name` and `memberships` (only the active ones, with `cooperativeId`, `cooperativeName`, `profileName` and `isPartner`).
+
+`GET /members` is keyset-paginated (docs/02-stack-and-architecture.md, principle 8): `?limit=` (30 by default, 100 at most), `?before=<nextCursor>`, `?q=` (name or email, ignoring case and accents) and `?status=` (`invited`, `active` or `suspended`); it answers `{ items, nextCursor }` ordered by name and then id, never including removed members (US-ACC-10). The app searches on the server once the user stops typing; the detail screen reads `GET /members/{memberId}` (404 for a removed one or another cooperative's).
 
 Context of each request:
 
