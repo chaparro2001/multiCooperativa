@@ -15,9 +15,13 @@ import { formatDay } from '@/i18n/format';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { Card } from '@/ui/card';
+import { ErrorState, Skeleton } from '@/ui/states';
+import { ErrorText, Screen } from '@/ui/screen';
+import { SectionTitle } from '@/ui/section-title';
 import { openUrl } from '@/ui/open-url';
 import { Text, useTheme } from '@/ui/paper';
+import { space } from '@/ui/theme';
 
 /** US-INV-06: delivery note with its lines, status, invoice and original. */
 export default function DeliveryNoteScreen() {
@@ -31,11 +35,17 @@ export default function DeliveryNoteScreen() {
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
 
-  if (note.isPending) return <Loading />;
+  if (note.isPending) {
+    return (
+      <Screen>
+        <Skeleton variant="detail" />
+      </Screen>
+    );
+  }
   if (note.isError) {
     return (
       <Screen>
-        <ErrorText>{messageFor(note.error)}</ErrorText>
+        <ErrorState message={messageFor(note.error)} onRetry={() => note.refetch()} />
       </Screen>
     );
   }
@@ -52,7 +62,7 @@ export default function DeliveryNoteScreen() {
 
   return (
     <Screen testID="delivery-note-screen">
-      <Text variant="titleLarge">{data.thirdParty.name}</Text>
+      <Text variant="headlineSmall">{data.thirdParty.name}</Text>
       <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
         {t('invoicing.detail.noteTitle', { number: data.number })} ·{' '}
         {t(`enums.operation.${data.operation}`)}
@@ -61,19 +71,14 @@ export default function DeliveryNoteScreen() {
         label={t(`enums.deliveryNoteStatus.${data.status}`)}
         tone={data.status === 'pending_invoicing' ? 'warning' : 'neutral'}
       />
-      <View style={styles.block}>
+      <Card style={styles.block}>
         <Fact label={t('invoicing.detail.noteDate')}>{formatDay(data.date)}</Fact>
-      </View>
+      </Card>
 
       <View style={styles.block}>
-        <Text
-          variant="labelLarge"
-          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-        >
-          {t('invoicing.detail.lines')}
-        </Text>
+        <SectionTitle>{t('invoicing.detail.lines')}</SectionTitle>
         {data.lines.map((line, index) => (
-          <Text key={index} variant="bodyMedium">
+          <Text key={index} variant="bodyLarge">
             {line.concept} · {line.quantity} {line.unit}
           </Text>
         ))}
@@ -131,6 +136,5 @@ export default function DeliveryNoteScreen() {
 }
 
 const styles = StyleSheet.create({
-  block: { gap: 8 },
-  sectionTitle: { textTransform: 'uppercase' },
+  block: { gap: space[2] },
 });

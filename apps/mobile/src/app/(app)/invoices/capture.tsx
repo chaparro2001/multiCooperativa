@@ -1,12 +1,13 @@
 import type { Operation } from '@multicooperativa/contracts';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { draftFromExtraction, setPendingDraft } from '@/features/invoicing/draft';
 import { useExtractDocument } from '@/features/invoicing/queries';
+import { READING_STEPS, readingProgress } from '@/features/invoicing/reading-progress';
 import {
   cameraAvailable,
   choosePdfScan,
@@ -14,16 +15,22 @@ import {
   type PickResult,
   takePhoto,
 } from '@/features/shared/scan-file';
+import { AiNotice } from '@/ui/ai-notice';
+import { Badge } from '@/ui/badge';
+import { Banner } from '@/ui/banner';
 import { Button } from '@/ui/button';
-import { ErrorText, Screen } from '@/ui/screen';
-import { Text, useTheme } from '@/ui/paper';
+import { Card } from '@/ui/card';
+import type { IconName } from '@/ui/paper-settings';
+import { Icon, Text, useTheme } from '@/ui/paper';
+import { ProgressBar } from '@/ui/progress-bar';
+import { Screen } from '@/ui/screen';
+import { size, space } from '@/ui/theme';
 
 /**
  * US-INV-05: photograph (devices), choose from the gallery / files (web too) or pick a PDF.
  * The backend reads it and returns a proposal; nothing is saved until it is confirmed in the form (BR-INV-11).
  */
 export default function CaptureScreen() {
-  const { colors } = useTheme();
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ operation?: Operation; kind?: string }>();
   const fallbackOperation: Operation = params.operation === 'sale' ? 'sale' : 'purchase';
@@ -63,60 +70,119 @@ export default function CaptureScreen() {
     });
   }
 
-  const busy = extract.isPending;
+  if (extract.isPending) {
+    return (
+      <Screen testID="capture-screen">
+        <Reading />
+      </Screen>
+    );
+  }
+
   return (
     <Screen testID="capture-screen">
       <Text variant="bodyLarge">{t('invoicing.capture.intro')}</Text>
+      {denied && (
+        <Banner icon="camera-outline" testID="camera-denied">
+          {t('invoicing.capture.cameraDenied')}
+        </Banner>
+      )}
+      {error ? <Banner tone="danger">{error}</Banner> : null}
       {cameraAvailable && (
-        <Button
+        <Choice
+          icon="camera-outline"
           title={t('invoicing.capture.takePhoto')}
           onPress={() => handle(takePhoto)}
-          disabled={busy}
           testID="take-photo"
         />
       )}
-      <Button
+      <Choice
+        icon="image-outline"
         title={
           cameraAvailable ? t('invoicing.capture.gallery') : t('invoicing.capture.chooseImage')
         }
-        variant={cameraAvailable ? 'secondary' : 'primary'}
         onPress={() => handle(chooseImage)}
-        disabled={busy}
         testID="choose-image"
       />
-      <Button
+      <Choice
+        icon="file-pdf-box"
         title={t('invoicing.capture.choosePdf')}
-        variant="secondary"
         onPress={() => handle(choosePdfScan)}
-        disabled={busy}
         testID="choose-pdf-scan"
       />
-      {busy && (
-        <Text
-          variant="bodyLarge"
-          style={[styles.status, { color: colors.primary }]}
-          accessibilityLiveRegion="polite"
-          testID="extracting"
-        >
-          {t('invoicing.capture.reading')}
-        </Text>
-      )}
-      {denied && <ErrorText>{t('invoicing.capture.cameraDenied')}</ErrorText>}
-      {error ? <ErrorText>{error}</ErrorText> : null}
-      <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
-        {t('invoicing.capture.privacy')}
-      </Text>
-      <Button
-        title={t('invoicing.capture.manually')}
-        variant="secondary"
-        onPress={manually}
-        disabled={busy}
-        testID="fill-manually"
-      />
+      <View style={styles.manual}>
+        <Button
+          title={t('invoicing.capture.manually')}
+          variant="text"
+          onPress={manually}
+          testID="fill-manually"
+        />
+      </View>
+      <AiNotice kind="privacy">{t('invoicing.capture.privacy')}</AiNotice>
     </Screen>
   );
 }
 
+/** One of the three large outlined options to bring the document in. */
+function Choice({
+  icon,
+  title,
+  onPress,
+  testID,
+}: {
+  icon: IconName;
+  title: string;
+  onPress: () => void;
+  testID: string;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Card onPress={onPress} testID={testID} accessibilityLabel={title} style={styles.choice}>
+      <Icon source={icon} size={size.iconTile} color={colors.primary} />
+      <Text variant="titleMedium" style={styles.choiceTitle}>
+        {title}
+      </Text>
+    </Card>
+  );
+}
+
+/** The wait while the model reads: indicative bar and steps (they illustrate, nothing is measured). */
+function Reading() {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setSeconds((value) => value + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const { percent, current } = readingProgress(seconds);
+  return (
+    <View style={styles.reading} accessibilityLiveRegion="polite">
+      <Icon source="text-box-search-outline" size={64} color={colors.primary} />
+      <ProgressBar
+        label={t('invoicing.capture.reading')}
+        value={percent}
+        total={100}
+        testID="extracting"
+      />
+      <View style={styles.steps}>
+        {READING_STEPS.map((step, index) => (
+          <Badge
+            key={step}
+            quiet
+            tone={index < current ? 'info' : 'neutral'}
+            icon={index < current ? 'check' : 'progress-clock'}
+            label={t(`invoicing.capture.steps.${step}`)}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  status: { fontWeight: '500' },
+  choice: { flexDirection: 'row', alignItems: 'center', gap: space[4], minHeight: 88 },
+  choiceTitle: { flex: 1 },
+  manual: { alignItems: 'flex-start' },
+  reading: { alignItems: 'center', gap: space[6], paddingVertical: space[8] },
+  steps: { alignSelf: 'stretch', gap: space[2], alignItems: 'flex-start' },
 });

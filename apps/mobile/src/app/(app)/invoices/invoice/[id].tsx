@@ -10,7 +10,7 @@ import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
 import { subtractAmounts } from '@/features/invoicing/amounts';
 import { ConfirmButton } from '@/features/invoicing/confirm-button';
-import { Fact, PaymentBadge, ReconciliationBadge, useEuros } from '@/features/invoicing/components';
+import { Fact, PaymentBadge } from '@/features/invoicing/components';
 import {
   useExplainDiscrepancies,
   useFreshInvoiceUrl,
@@ -20,18 +20,23 @@ import {
 } from '@/features/invoicing/queries';
 import { formatDay, today } from '@/i18n/format';
 import { useModuleAccess } from '@/navigation/use-module-access';
+import { AiNotice } from '@/ui/ai-notice';
+import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
+import { Card } from '@/ui/card';
 import { DayField } from '@/ui/date-field';
-import { ErrorText, Loading, Screen } from '@/ui/screen';
+import { Money } from '@/ui/money';
+import { ErrorState, Skeleton } from '@/ui/states';
+import { ErrorText, Screen } from '@/ui/screen';
+import { SectionTitle } from '@/ui/section-title';
 import { openUrl } from '@/ui/open-url';
-import { Card, Text, useTheme } from '@/ui/paper';
-import { colors } from '@/ui/theme';
+import { Text, useTheme } from '@/ui/paper';
+import { space } from '@/ui/theme';
 
 /** US-INV-06 (detail), US-INV-04 (reconciliation) and US-INV-07 (settle). */
 export default function InvoiceScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
-  const euros = useEuros();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { canManage } = useModuleAccess('invoicing');
   const invoice = useInvoice(id);
@@ -47,11 +52,17 @@ export default function InvoiceScreen() {
     validate: (values) => collect({ settleDate: dayMessage(values.settleDate) }),
   });
 
-  if (invoice.isPending) return <Loading />;
+  if (invoice.isPending) {
+    return (
+      <Screen>
+        <Skeleton variant="detail" />
+      </Screen>
+    );
+  }
   if (invoice.isError) {
     return (
       <Screen>
-        <ErrorText>{messageFor(invoice.error)}</ErrorText>
+        <ErrorState message={messageFor(invoice.error)} onRetry={() => invoice.refetch()} />
       </Screen>
     );
   }
@@ -86,30 +97,41 @@ export default function InvoiceScreen() {
 
   return (
     <Screen testID="invoice-screen" form={form}>
-      <Text variant="titleLarge">{data.thirdParty.name}</Text>
+      <Text variant="headlineSmall">{data.thirdParty.name}</Text>
       <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
         {t('invoicing.detail.invoiceTitle', { number: data.number })} ·{' '}
         {t(`enums.operation.${data.operation}`)}
       </Text>
       <View style={styles.badges}>
         <PaymentBadge status={data.paymentStatus} operation={data.operation} />
-        <ReconciliationBadge status={data.reconciliationStatus} />
+        {data.reconciliationStatus === 'with_discrepancy' ? (
+          <Badge
+            label={t('enums.reconciliationStatus.with_discrepancy')}
+            tone="warning"
+            icon="alert-outline"
+            quiet
+          />
+        ) : null}
       </View>
 
-      <View style={styles.block}>
+      <Card style={styles.block}>
         <Fact label={t('invoicing.detail.issueDate')}>{formatDay(data.issueDate)}</Fact>
         <Fact label={t('invoicing.detail.dueDate')}>{formatDay(data.dueDate)}</Fact>
-        <Fact label={t('invoicing.detail.base')}>{euros(data.base)}</Fact>
-        <Fact label={t('invoicing.detail.vat', { rate: data.vatRate })}>
-          {euros(subtractAmounts(data.total, data.base))}
+        <Fact label={t('invoicing.detail.base')}>
+          <Money amount={data.base} variant="bodyMedium" />
         </Fact>
-        <Fact label={t('invoicing.detail.total')}>{euros(data.total)}</Fact>
+        <Fact label={t('invoicing.detail.vat', { rate: data.vatRate })}>
+          <Money amount={subtractAmounts(data.total, data.base)} variant="bodyMedium" />
+        </Fact>
+        <Fact label={t('invoicing.detail.total')}>
+          <Money amount={data.total} variant="titleMedium" />
+        </Fact>
         {data.settledAt ? (
           <Fact label={t(`invoicing.detail.settledOn.${data.operation}`)}>
             {formatDay(data.settledAt)}
           </Fact>
         ) : null}
-      </View>
+      </Card>
 
       {data.fileUrl ? (
         <Button
@@ -134,29 +156,18 @@ export default function InvoiceScreen() {
 
       {data.reconciliationStatus === 'with_discrepancy' && (
         <View style={styles.block} testID="discrepancies">
-          <Text
-            variant="labelLarge"
-            style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-          >
-            {t('invoicing.detail.discrepancies')}
-          </Text>
+          <SectionTitle>{t('invoicing.detail.discrepancies')}</SectionTitle>
           {data.discrepancies.map((item) => (
-            <Card key={item.id} mode="contained" style={styles.discrepancy}>
-              <Card.Content style={styles.discrepancyContent}>
-                <Text variant="titleSmall">{item.concept}</Text>
-                <Text variant="bodyMedium">
-                  {t('invoicing.detail.deliveredVsInvoiced', {
-                    delivered: item.deliveredQuantity,
-                    invoiced: item.invoicedQuantity,
-                    unit: item.unit,
-                  })}
-                </Text>
-                {item.explanation ? (
-                  <Text variant="bodyMedium" style={styles.explanation}>
-                    {item.explanation}
-                  </Text>
-                ) : null}
-              </Card.Content>
+            <Card key={item.id} style={styles.discrepancy}>
+              <Text variant="titleSmall">{item.concept}</Text>
+              <Text variant="bodyMedium">
+                {t('invoicing.detail.deliveredVsInvoiced', {
+                  delivered: item.deliveredQuantity,
+                  invoiced: item.invoicedQuantity,
+                  unit: item.unit,
+                })}
+              </Text>
+              {item.explanation ? <AiNotice kind="proposal">{item.explanation}</AiNotice> : null}
             </Card>
           ))}
           {data.discrepancies.some((item) => !item.explanation) && (
@@ -176,14 +187,9 @@ export default function InvoiceScreen() {
 
       {data.lines.length > 0 && (
         <View style={styles.block}>
-          <Text
-            variant="labelLarge"
-            style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-          >
-            {t('invoicing.detail.lines')}
-          </Text>
+          <SectionTitle>{t('invoicing.detail.lines')}</SectionTitle>
           {data.lines.map((line, index) => (
-            <Text key={index} variant="bodyMedium">
+            <Text key={index} variant="bodyLarge">
               {line.concept} · {line.quantity} {line.unit}
             </Text>
           ))}
@@ -191,14 +197,9 @@ export default function InvoiceScreen() {
       )}
 
       <View style={styles.block}>
-        <Text
-          variant="labelLarge"
-          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-        >
-          {t('invoicing.detail.deliveryNotes')}
-        </Text>
+        <SectionTitle>{t('invoicing.detail.deliveryNotes')}</SectionTitle>
         {data.deliveryNotes.length === 0 ? (
-          <Text variant="bodyMedium">{t('invoicing.detail.noDeliveryNotes')}</Text>
+          <Text variant="bodyLarge">{t('invoicing.detail.noDeliveryNotes')}</Text>
         ) : (
           data.deliveryNotes.map((note) => (
             <Pressable
@@ -259,10 +260,7 @@ export default function InvoiceScreen() {
 }
 
 const styles = StyleSheet.create({
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  block: { gap: 8 },
-  sectionTitle: { textTransform: 'uppercase' },
-  discrepancy: { backgroundColor: colors.warningContainer },
-  discrepancyContent: { gap: 4 },
-  explanation: { fontStyle: 'italic' },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[2] },
+  block: { gap: space[2] },
+  discrepancy: { gap: space[2] },
 });
