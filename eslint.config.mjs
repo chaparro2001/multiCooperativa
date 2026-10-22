@@ -5,6 +5,25 @@ import tseslint from 'typescript-eslint';
 
 import moduleBoundaries from './tools/eslint/module-boundaries.js';
 
+/** Packages a pure layer must not import: the ORM, the HTTP framework and every external SDK. */
+const SDK_PACKAGES = [
+  '@prisma/*',
+  'prisma',
+  'express',
+  'express/*',
+  'express-rate-limit',
+  '@anthropic-ai/*',
+  '@sentry/*',
+  '@aws-sdk/*',
+  '@google/genai',
+  'jose',
+  'multer',
+  'pg',
+  '@node-rs/argon2',
+  'pdf-lib',
+  'unpdf',
+];
+
 export default tseslint.config(
   {
     ignores: [
@@ -35,7 +54,7 @@ export default tseslint.config(
     rules: { 'local/module-boundaries': 'error' },
   },
   {
-    // Dominio puro: sin Prisma, framework HTTP, SDK externos ni capas exteriores.
+    // Pure domain: no Prisma, HTTP framework, external SDKs or outer layers.
     files: ['apps/api/src/modules/*/domain/**/*.ts'],
     rules: {
       'no-restricted-imports': [
@@ -43,19 +62,36 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: [
-                '@prisma/*',
-                'prisma',
-                'express',
-                'express/*',
-                '@anthropic-ai/*',
-                '@sentry/*',
-              ],
+              group: SDK_PACKAGES,
               message: 'The domain does not import Prisma, the HTTP framework or external SDKs.',
             },
             {
               group: ['**/application/**', '**/infrastructure/**'],
               message: 'The domain does not depend on the application or infrastructure layers.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Application layer: use cases talk to ports, never to the framework, SDKs or adapters.
+    // The only shared infrastructure it may use is the stdlib-only structured logger.
+    files: ['apps/api/src/modules/*/application/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: SDK_PACKAGES,
+              message:
+                'The application layer does not import Prisma, the HTTP framework or external SDKs: use a port.',
+            },
+            {
+              group: ['**/infrastructure/**', '!**/shared/infrastructure/log'],
+              message: 'The application layer does not depend on infrastructure: define a port.',
             },
           ],
         },
