@@ -22,7 +22,7 @@ If the code and the documentation do not match, stop and ask. If a decision chan
 - Backend: Node + TypeScript, modular monolith with Clean Architecture.
 - Data: PostgreSQL, Prisma, pgvector.
 - Contracts: Zod schemas in `packages/contracts`, used by app and backend.
-- Tests: Vitest, React Native Testing Library, Maestro.
+- Tests: Vitest (unit and integration); React Native Testing Library and Maestro planned, not delivered.
 - Delivery: GitHub Actions, free hosted demo (home server with Docker and Cloudflare Tunnel, GitHub Pages; `docs/04-deployment.md`, ADR-012), EAS Build, Sentry.
 
 ## Structure
