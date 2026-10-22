@@ -14,16 +14,20 @@ const SCROLL_MARGIN = space[6];
 
 /**
  * Scrollable screen body that keeps inputs above the keyboard. With `form`, its fields (those
- * with a `name`) show the form's errors and the screen scrolls to the first invalid one.
+ * with a `name`) show the form's errors and the screen scrolls to the first invalid one. With
+ * `footer`, that content stays pinned below the scroll view (sticky `ActionBar`).
  */
 export function Screen({
   children,
   testID,
   form,
+  footer,
 }: {
   children: ReactNode;
   testID?: string;
   form?: FormApi;
+  /** Rendered below the scroll view and always visible, e.g. an `ActionBar`. */
+  footer?: ReactNode;
 }) {
   const { colors } = useTheme();
   const scroll = useRef<ScrollView>(null);
@@ -48,7 +52,7 @@ export function Screen({
     >
       <ScrollView
         ref={scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, footer ? styles.withFooter : null]}
         keyboardShouldPersistTaps="handled"
         onScroll={(event) => {
           offset.current = event.nativeEvent.contentOffset.y;
@@ -58,6 +62,7 @@ export function Screen({
       >
         {form ? <FormScope form={form}>{children}</FormScope> : children}
       </ScrollView>
+      {footer}
     </KeyboardAvoidingView>
   );
   return <ScrollerProvider value={scrollTo}>{body}</ScrollerProvider>;
@@ -96,5 +101,7 @@ const styles = StyleSheet.create({
     maxWidth: SCREEN_MAX_WIDTH,
     alignSelf: 'center',
   },
+  // Room for the last field above a sticky footer.
+  withFooter: { paddingBottom: space[12] },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });
