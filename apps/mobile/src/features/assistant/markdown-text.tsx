@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useMemo } from 'react';
 import { Platform, StyleSheet, type TextStyle, View } from 'react-native';
 
 import { Text } from '@/ui/paper';
@@ -7,7 +7,7 @@ import { type Inline, parseMarkdown } from './markdown';
 
 /** Renders an assistant answer: the Markdown subset of `markdown.ts`, selectable. */
 export function MarkdownText({ source, style }: { source: string; style?: TextStyle }) {
-  const blocks = parseMarkdown(source);
+  const blocks = useMemo(() => parseMarkdown(source), [source]);
   return (
     <View style={styles.blocks}>
       {blocks.map((block, index) => {

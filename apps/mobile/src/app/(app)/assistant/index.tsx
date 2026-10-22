@@ -1,7 +1,14 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  type ListRenderItem,
+  Platform,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
@@ -37,7 +44,6 @@ function Chat() {
   const rateMessage = useRateMessage();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
   const list = useRef<FlatList<ChatMessage>>(null);
   const busy = createConversation.isPending || sendMessage.isPending;
@@ -89,11 +95,11 @@ function Chat() {
     }, [conversationId]),
   );
 
-  async function send(text: string) {
+  /** Resolves to false when the send failed, so the composer can give the text back. */
+  async function send(text: string): Promise<boolean> {
     const content = text.trim();
-    if (!content || busy) return;
+    if (!content || busy) return false;
     setError(null);
-    setDraft('');
     const pending: ChatMessage = {
       id: `pending-${Date.now()}`,
       role: 'user',
@@ -115,23 +121,32 @@ function Chat() {
         userMessage,
         answer,
       ]);
+      return true;
     } catch (failure) {
       setMessages((current) => current.filter((message) => message.id !== pending.id));
-      setDraft(content);
       setError(messageFor(failure));
+      return false;
     }
   }
 
-  async function rate(messageId: string, rating: 'helpful' | 'not_helpful') {
-    setMessages((current) =>
-      current.map((message) => (message.id === messageId ? { ...message, rating } : message)),
-    );
-    try {
-      await rateMessage.mutateAsync({ messageId, rating });
-    } catch (failure) {
-      setError(messageFor(failure));
-    }
-  }
+  const { mutateAsync: rateAsync } = rateMessage;
+  const rate = useCallback(
+    async (messageId: string, rating: 'helpful' | 'not_helpful') => {
+      setMessages((current) =>
+        current.map((message) => (message.id === messageId ? { ...message, rating } : message)),
+      );
+      try {
+        await rateAsync({ messageId, rating });
+      } catch (failure) {
+        setError(messageFor(failure));
+      }
+    },
+    [rateAsync],
+  );
+  const renderItem = useCallback<ListRenderItem<ChatMessage>>(
+    ({ item }) => <MessageBubble message={item} onRate={rate} />,
+    [rate],
+  );
 
   const suggestions = suggestedQuestions(permissions?.permissions);
 
@@ -192,9 +207,7 @@ function Chat() {
             ))}
           </View>
         }
-        renderItem={({ item }) => (
-          <MessageBubble message={item} onRate={(rating) => rate(item.id, rating)} />
-        )}
+        renderItem={renderItem}
         ListFooterComponent={
           busy ? (
             <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
@@ -208,38 +221,56 @@ function Chat() {
           <ErrorText>{error}</ErrorText>
         </View>
       ) : null}
-      <View style={[styles.composer, { borderTopColor: colors.outlineVariant }]}>
-        <TextInput
-          mode="outlined"
-          dense
-          style={styles.input}
-          value={draft}
-          onChangeText={setDraft}
-          placeholder={t('assistant.placeholder')}
-          accessibilityLabel={t('assistant.placeholder')}
-          multiline
-          maxLength={2000}
-          editable={!busy}
-          testID="assistant-input"
-        />
-        <Button
-          title={t('assistant.send')}
-          onPress={() => send(draft)}
-          disabled={!draft.trim()}
-          loading={busy}
-          testID="assistant-send"
-        />
-      </View>
+      <Composer busy={busy} onSend={send} />
     </KeyboardAvoidingView>
   );
 }
 
-function MessageBubble({
+/** Owns the draft, so typing re-renders only the composer and not the message list. */
+function Composer({ busy, onSend }: { busy: boolean; onSend(text: string): Promise<boolean> }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const [draft, setDraft] = useState('');
+
+  async function submit() {
+    const text = draft;
+    if (!text.trim() || busy) return;
+    setDraft('');
+    if (!(await onSend(text))) setDraft(text);
+  }
+
+  return (
+    <View style={[styles.composer, { borderTopColor: colors.outlineVariant }]}>
+      <TextInput
+        mode="outlined"
+        dense
+        style={styles.input}
+        value={draft}
+        onChangeText={setDraft}
+        placeholder={t('assistant.placeholder')}
+        accessibilityLabel={t('assistant.placeholder')}
+        multiline
+        maxLength={2000}
+        editable={!busy}
+        testID="assistant-input"
+      />
+      <Button
+        title={t('assistant.send')}
+        onPress={submit}
+        disabled={!draft.trim()}
+        loading={busy}
+        testID="assistant-send"
+      />
+    </View>
+  );
+}
+
+const MessageBubble = memo(function MessageBubble({
   message,
   onRate,
 }: {
   message: ChatMessage;
-  onRate(rating: 'helpful' | 'not_helpful'): void;
+  onRate(messageId: string, rating: 'helpful' | 'not_helpful'): void;
 }) {
   const { t } = useTranslation();
   const mine = message.role === 'user';
@@ -303,7 +334,7 @@ function MessageBubble({
               key={rating}
               compact
               selected={message.rating === rating}
-              onPress={() => onRate(rating)}
+              onPress={() => onRate(message.id, rating)}
               testID={`rate-${rating}`}
             >
               {t(`assistant.rating.${rating}`)}
@@ -313,7 +344,7 @@ function MessageBubble({
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
