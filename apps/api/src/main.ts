@@ -23,7 +23,7 @@ const gemini = env.GEMINI_API_KEY ? createGeminiClient(env.GEMINI_API_KEY) : und
 
 const prisma = createPrismaClient(env.DATABASE_URL);
 
-const { app, indexing, runDueDates } = createApi({
+const { app, indexing, runDueDates, purgeAuthRecords } = createApi({
   prisma,
   jwtSecret: env.JWT_SECRET,
   files,
@@ -98,6 +98,19 @@ void dueDates();
 const dueDatesTimer = setInterval(dueDates, HOUR);
 dueDatesTimer.unref();
 
+// Housekeeping of expired sessions and old failed logins, with the same cadence (the external cron
+// also calls POST /jobs/purge-auth-records).
+const purgeAuth = () =>
+  purgeAuthRecords()
+    .then(({ sessions, failedAttempts }) => {
+      if (sessions + failedAttempts > 0)
+        log.info('auth_records_purged', { sessions, failedAttempts });
+    })
+    .catch((error) => log.error('auth_records_purge_failed', { error: describeError(error) }));
+void purgeAuth();
+const purgeAuthTimer = setInterval(purgeAuth, HOUR);
+purgeAuthTimer.unref();
+
 // Graceful shutdown (docker stop / Render deploy send SIGTERM): stop accepting connections, let
 // the in-flight requests finish, close the database pool and leave; a hard timeout bounds it.
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -111,6 +124,7 @@ function shutdown(signal: string): void {
     process.exit(1);
   }, SHUTDOWN_TIMEOUT_MS).unref();
   clearInterval(dueDatesTimer);
+  clearInterval(purgeAuthTimer);
   server.close(async (closeError) => {
     if (closeError) log.error('api_close_failed', { error: describeError(closeError) });
     try {

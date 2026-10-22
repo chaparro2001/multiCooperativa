@@ -63,3 +63,39 @@ describe('POST /jobs/due-dates (US-INV-07, NFR-INV-04)', () => {
     expect(tokensMatch('abc', 'abc')).toBe(true);
   });
 });
+
+describe('POST /jobs/purge-auth-records (NFR-ACC-02, BR-ACC-11)', () => {
+  it('runs the housekeeping with the right token and rejects a wrong one', async () => {
+    const purgeAuthRecords = vi.fn(async () => ({ sessions: 4, failedAttempts: 9 }));
+    const app = createApp({
+      routers: [
+        createJobsRouter({
+          token: TOKEN,
+          dueDates: async () => ({ overdue: 0, dueSoon: 0 }),
+          purgeAuthRecords,
+        }),
+      ],
+    });
+
+    const denied = await request(app)
+      .post('/jobs/purge-auth-records')
+      .set('Authorization', 'Bearer nope');
+    const ok = await request(app)
+      .post('/jobs/purge-auth-records')
+      .set('Authorization', `Bearer ${TOKEN}`);
+
+    expect(denied.status).toBe(401);
+    expect(ok.body).toEqual({ sessions: 4, failedAttempts: 9 });
+    expect(purgeAuthRecords).toHaveBeenCalledOnce();
+  });
+
+  it('is not mounted when no purge is given', async () => {
+    const { app } = setup();
+
+    const response = await request(app)
+      .post('/jobs/purge-auth-records')
+      .set('Authorization', `Bearer ${TOKEN}`);
+
+    expect(response.status).toBe(404);
+  });
+});

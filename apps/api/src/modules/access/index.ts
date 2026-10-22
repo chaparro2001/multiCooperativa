@@ -18,6 +18,7 @@ import {
   provisionCooperative,
   type ProvisionCooperativeInput,
 } from './application/provision-cooperative';
+import { purgeExpiredAuthRecords } from './application/purge-expired-auth-records';
 import { refreshSession } from './application/refresh-session';
 import {
   authenticateRequest,
@@ -40,6 +41,7 @@ import { createMeRouter } from './infrastructure/http/me-router';
 import { createMembersRouter } from './infrastructure/http/members-router';
 import { JoseAccessTokens } from './infrastructure/jose-access-tokens';
 import { PrismaAccessContextStore } from './infrastructure/prisma-access-context-store';
+import { PrismaAuthRecordsStore } from './infrastructure/prisma-auth-records-store';
 import { PrismaCooperativeProvisioningStore } from './infrastructure/prisma-cooperative-provisioning-store';
 import { PrismaInvitationStore } from './infrastructure/prisma-invitation-store';
 import { PrismaLoginStore } from './infrastructure/prisma-login-store';
@@ -154,7 +156,12 @@ export function createAccessModule(deps: AccessModuleDeps) {
     ),
   );
 
+  const authRecords = new PrismaAuthRecordsStore(deps.prisma);
+
   return {
+    /** Hourly housekeeping: expired or revoked sessions and old failed logins. Idempotent. */
+    purgeExpiredAuthRecords: () =>
+      purgeExpiredAuthRecords({ records: authRecords, now: sessionDeps.now }),
     provisionCooperative: (input: ProvisionCooperativeInput) =>
       provisionCooperative({ store: provisioningStore, hasher }, input),
     requireSession,

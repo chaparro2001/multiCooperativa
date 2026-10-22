@@ -16,7 +16,7 @@ flowchart LR
     api --> ollama["Ollama<br/>bge-m3 + qwen3:4b-instruct (qwen3:8b selectable)"]
   end
   api -- "vision and explanations" --> gemini["Gemini API"]
-  cron["GitHub Actions cron<br/>hourly"] -- "POST /jobs/due-dates" --> cf
+  cron["GitHub Actions cron<br/>hourly"] -- "POST /jobs/due-dates, /jobs/purge-auth-records" --> cf
 ```
 
 | Piece          | Service                                                            | Notes                                                                                                                                                                 |
@@ -32,6 +32,8 @@ flowchart LR
 | Scheduled job  | GitHub Actions cron, plus the API's own hourly timer               | `.github/workflows/cron.yml` calls `/jobs/due-dates`; the timer also runs because the server does not sleep                                                           |
 
 The native apps are not part of this demo (no EAS build); the web export is the same code. The stack is defined in [`deploy/home-server/compose.yaml`](../deploy/home-server/compose.yaml); its variables are in [`deploy/home-server/env.server.example`](../deploy/home-server/env.server.example).
+
+**Housekeeping of authentication records.** The same hourly schedule (the API's timer and `cron.yml`, which calls `POST /jobs/purge-auth-records` with the same `JOBS_TOKEN`) runs the access use case `purgeExpiredAuthRecords`. It deletes sessions whose expiry or revocation is more than 7 days old (a revoked refresh token then answers 401 as an unknown one) and failed login attempts older than 1 hour, twice the span in which a failure can still count towards a lock (15 minutes window plus 15 minutes lock, BR-ACC-11). It is idempotent and never touches live sessions or attempts that still matter.
 
 ## Step by step (Windows)
 
