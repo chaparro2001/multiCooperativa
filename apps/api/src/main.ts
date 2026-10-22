@@ -21,9 +21,14 @@ if (!production) await files.ensureBucket();
 
 const gemini = env.GEMINI_API_KEY ? createGeminiClient(env.GEMINI_API_KEY) : undefined;
 
-const prisma = createPrismaClient(env.DATABASE_URL);
+const prisma = createPrismaClient(env.DATABASE_URL, {
+  max: env.DB_POOL_MAX,
+  connectionTimeoutMs: env.DB_POOL_CONNECTION_TIMEOUT_MS,
+  idleTimeoutMs: env.DB_POOL_IDLE_TIMEOUT_MS,
+  statementTimeoutMs: env.DB_STATEMENT_TIMEOUT_MS,
+});
 
-const { app, indexing, runDueDates } = createApi({
+const { app, indexing, runDueDates, purgeAuthRecords } = createApi({
   prisma,
   jwtSecret: env.JWT_SECRET,
   files,
@@ -32,7 +37,11 @@ const { app, indexing, runDueDates } = createApi({
   embedder:
     env.EMBEDDINGS_PROVIDER === 'gemini' && gemini
       ? new GeminiEmbedder(gemini, env.GEMINI_EMBEDDING_MODEL)
-      : new OllamaEmbedder({ url: env.OLLAMA_URL, model: env.EMBEDDING_MODEL }),
+      : new OllamaEmbedder({
+          url: env.OLLAMA_URL,
+          model: env.EMBEDDING_MODEL,
+          timeoutMs: env.EMBEDDING_TIMEOUT_MS,
+        }),
   // Scanned documents are read by Gemini (ADR-009); without a key, extraction answers 503.
   documentExtractor:
     gemini && new GeminiDocumentExtractor(gemini, env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODELS),
@@ -77,6 +86,14 @@ const { app, indexing, runDueDates } = createApi({
 const server = app.listen(env.PORT, () => {
   log.info('api_listening', { port: env.PORT, env: env.NODE_ENV });
 });
+// Explicit HTTP limits. Uploads are capped at 20 MB (documents; 10 MB elsewhere, multer), so 10
+// minutes to receive a whole request is generous even on a slow mobile link (20 MB at 0.5 Mbit/s
+// takes 320 s) while a stalled client cannot hold a socket forever. Keep-alive is longer than the 90 s idle time of the
+// Cloudflare Tunnel (and of Render's proxy at 60 s) so the proxy, not the API, closes idle
+// connections; headersTimeout must stay above keepAliveTimeout.
+server.requestTimeout = 600_000;
+server.keepAliveTimeout = 95_000;
+server.headersTimeout = 100_000;
 
 // Whatever a restart left half-done is re-indexed in the background (ADR-006).
 indexing
@@ -98,6 +115,19 @@ void dueDates();
 const dueDatesTimer = setInterval(dueDates, HOUR);
 dueDatesTimer.unref();
 
+// Housekeeping of expired sessions and old failed logins, with the same cadence (the external cron
+// also calls POST /jobs/purge-auth-records).
+const purgeAuth = () =>
+  purgeAuthRecords()
+    .then(({ sessions, failedAttempts }) => {
+      if (sessions + failedAttempts > 0)
+        log.info('auth_records_purged', { sessions, failedAttempts });
+    })
+    .catch((error) => log.error('auth_records_purge_failed', { error: describeError(error) }));
+void purgeAuth();
+const purgeAuthTimer = setInterval(purgeAuth, HOUR);
+purgeAuthTimer.unref();
+
 // Graceful shutdown (docker stop / Render deploy send SIGTERM): stop accepting connections, let
 // the in-flight requests finish, close the database pool and leave; a hard timeout bounds it.
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -111,6 +141,7 @@ function shutdown(signal: string): void {
     process.exit(1);
   }, SHUTDOWN_TIMEOUT_MS).unref();
   clearInterval(dueDatesTimer);
+  clearInterval(purgeAuthTimer);
   server.close(async (closeError) => {
     if (closeError) log.error('api_close_failed', { error: describeError(closeError) });
     try {

@@ -68,4 +68,14 @@ describe('OllamaEmbedder (ADR-006)', () => {
       new OllamaEmbedder({ url: 'http://o', model: 'm' }, notFound).embed(['x']),
     ).rejects.toThrow(/Is the model m downloaded/);
   });
+
+  it('NFR-DOC-03 gives up with EmbeddingUnavailableError when Ollama does not answer in time', async () => {
+    const hangs = ((_url: string, init: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+      })) as unknown as typeof fetch;
+    const embedder = new OllamaEmbedder({ url: 'http://o', model: 'm', timeoutMs: 20 }, hangs);
+
+    await expect(embedder.embed(['uno'])).rejects.toBeInstanceOf(EmbeddingUnavailableError);
+  });
 });

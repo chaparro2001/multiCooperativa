@@ -24,6 +24,17 @@ export function lockedUntil(failedAttempts: readonly Date[], now: Date): Date | 
   return null;
 }
 
+/** Sessions expired or revoked this long ago are deleted (they only clutter the table). */
+export const SESSION_RETENTION_DAYS = 7;
+
+/**
+ * Housekeeping: failures older than this cannot affect any lock (twice the span in which a
+ * failure still counts, `relevantAttemptsSince`), so they can be deleted.
+ */
+export function failedAttemptsRetentionCutoff(now: Date): Date {
+  return new Date(now.getTime() - 2 * (now.getTime() - relevantAttemptsSince(now).getTime()));
+}
+
 /** Older failures can no longer contribute to a lock that is still active at `now`. */
 export function relevantAttemptsSince(now: Date): Date {
   return new Date(now.getTime() - (ATTEMPT_WINDOW_MINUTES + LOCKOUT_MINUTES) * MINUTE_IN_MS);

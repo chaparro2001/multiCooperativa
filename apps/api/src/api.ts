@@ -66,6 +66,7 @@ export interface Api {
   indexing: { resumePending(): Promise<number>; idle(): Promise<void> };
   /** Daily due dates of invoices, on this API's event bus (US-INV-07). */
   runDueDates(): Promise<{ overdue: number; dueSoon: number }>;
+  purgeAuthRecords(): Promise<{ sessions: number; failedAttempts: number }>;
 }
 
 /**
@@ -153,11 +154,12 @@ export function createApi(deps: ApiDeps): Api {
   });
 
   const runDueDates = () => runDueDatesJob({ prisma: deps.prisma, events });
+  const purgeAuthRecords = () => access.purgeExpiredAuthRecords();
 
   const app = createApp({
     routers: [
       ...(deps.jobsToken
-        ? [createJobsRouter({ token: deps.jobsToken, dueDates: runDueDates })]
+        ? [createJobsRouter({ token: deps.jobsToken, dueDates: runDueDates, purgeAuthRecords })]
         : []),
       access.router,
       announcements.router,
@@ -186,5 +188,6 @@ export function createApi(deps: ApiDeps): Api {
     app,
     indexing: documents.indexing,
     runDueDates,
+    purgeAuthRecords,
   };
 }

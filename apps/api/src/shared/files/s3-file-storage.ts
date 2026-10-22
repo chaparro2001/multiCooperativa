@@ -17,6 +17,14 @@ import {
   SIGNED_URL_TTL_SECONDS,
 } from './file-storage';
 
+/**
+ * Network limits of the storage calls: fail a dead endpoint fast, but give a large upload or
+ * download (files are capped at a few MB) time. `maxAttempts` counts the first try.
+ */
+export const S3_CONNECTION_TIMEOUT_MS = 5_000;
+export const S3_REQUEST_TIMEOUT_MS = 60_000;
+export const S3_MAX_ATTEMPTS = 3;
+
 export interface S3Settings {
   endpoint?: string;
   /** Browser-reachable endpoint used only to presign download URLs (ADR-012); defaults to `endpoint`. */
@@ -42,6 +50,11 @@ export class S3FileStorage implements FileStorage {
         endpoint,
         region: settings.region,
         forcePathStyle: settings.forcePathStyle,
+        requestHandler: {
+          connectionTimeout: S3_CONNECTION_TIMEOUT_MS,
+          requestTimeout: S3_REQUEST_TIMEOUT_MS,
+        },
+        maxAttempts: S3_MAX_ATTEMPTS,
         credentials: {
           accessKeyId: settings.accessKeyId,
           secretAccessKey: settings.secretAccessKey,

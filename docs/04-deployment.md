@@ -16,7 +16,7 @@ flowchart LR
     api --> ollama["Ollama<br/>bge-m3 + qwen3:4b-instruct (qwen3:8b selectable)"]
   end
   api -- "vision and explanations" --> gemini["Gemini API"]
-  cron["GitHub Actions cron<br/>hourly"] -- "POST /jobs/due-dates" --> cf
+  cron["GitHub Actions cron<br/>hourly"] -- "POST /jobs/due-dates, /jobs/purge-auth-records" --> cf
 ```
 
 | Piece          | Service                                                            | Notes                                                                                                                                                                 |
@@ -32,6 +32,12 @@ flowchart LR
 | Scheduled job  | GitHub Actions cron, plus the API's own hourly timer               | `.github/workflows/cron.yml` calls `/jobs/due-dates`; the timer also runs because the server does not sleep                                                           |
 
 The native apps are not part of this demo (no EAS build); the web export is the same code. The stack is defined in [`deploy/home-server/compose.yaml`](../deploy/home-server/compose.yaml); its variables are in [`deploy/home-server/env.server.example`](../deploy/home-server/env.server.example).
+
+**Housekeeping of authentication records.** The same hourly schedule (the API's timer and `cron.yml`, which calls `POST /jobs/purge-auth-records` with the same `JOBS_TOKEN`) runs the access use case `purgeExpiredAuthRecords`. It deletes sessions whose expiry or revocation is more than 7 days old (a revoked refresh token then answers 401 as an unknown one) and failed login attempts older than 1 hour, twice the span in which a failure can still count towards a lock (15 minutes window plus 15 minutes lock, BR-ACC-11). It is idempotent and never touches live sessions or attempts that still matter.
+
+**Database connections and timeouts.** The API opens a bounded `pg` pool and gives up fast instead of queueing forever. Variables (all optional, in `.env.server` or the environment): `DB_POOL_MAX` (10), `DB_POOL_CONNECTION_TIMEOUT_MS` (5000, wait for a free connection), `DB_POOL_IDLE_TIMEOUT_MS` (30000) and `DB_STATEMENT_TIMEOUT_MS` (30000, `0` disables). The statement timeout is sent by the API's own connections only (the `statement_timeout` startup parameter), not set in PostgreSQL with `-c statement_timeout=…` or `ALTER ROLE`: `prisma migrate deploy` (index creation, `ALTER TABLE` with checks) and the maintenance scripts connect on their own and keep no limit, and the indexer's batched inserts stay far below 30 s. PostgreSQL 17 already defaults `shared_buffers` to 128 MB, which fits the 512 MB container (about a quarter of it), so no `command` flags are added to the `postgres` service. `render.yaml` sets `DB_STATEMENT_TIMEOUT_MS=0` because Neon's pooler may refuse that startup parameter.
+
+**Other timeouts.** Storage (S3) calls use a 5 s connection timeout, a 60 s request timeout and at most 3 attempts. The Ollama embeddings call (one batch of fragments) is cut after `EMBEDDING_TIMEOUT_MS` (default 120000; a failure leaves the document in `failed` indexing, to be retried). The HTTP server receives a whole request within 10 minutes (`requestTimeout`; uploads are capped at 20 MB for documents and 10 MB elsewhere, which a 0.5 Mbit/s link needs 320 s to send), keeps idle connections 95 s (`keepAliveTimeout`, above the tunnel's 90 s, so the proxy closes them first) and waits 100 s for headers (`headersTimeout`, which must exceed the keep-alive). The assistant's calls have their own limits (`ASSISTANT_OLLAMA_TIMEOUT_MS`).
 
 ## Step by step (Windows)
 

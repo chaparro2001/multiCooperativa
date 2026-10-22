@@ -116,6 +116,7 @@ model Membership {
   // removed ones are kept and do not prevent a new membership.
   @@unique([userId, cooperativeId], where: raw("status <> 'removed'"))
   @@index([cooperativeId, status])
+  @@index([profileId])
 }
 
 model Invitation {
@@ -167,6 +168,8 @@ model AuditEvent {
   target      User        @relation("auditTarget", fields: [targetUserId], references: [id])
 
   @@index([cooperativeId, createdAt])
+  @@index([actorUserId])
+  @@index([targetUserId])
 }
 
 // ───────────── Member area (requirements/06) ─────────────
@@ -619,6 +622,8 @@ model Invoice {
   @@unique([thirdPartyId, number], map: "Invoice_received_number_key", where: raw("operation = 'purchase'"))
   @@unique([cooperativeId, number], map: "Invoice_issued_number_key", where: raw("operation = 'sale'"))
   @@index([cooperativeId, operation, paymentStatus, dueDate])
+  /// Due-dates job (BR-INV-15): scans pending invoices of all cooperatives by due date.
+  @@index([dueDate], where: raw("\"paymentStatus\" = 'pending'"))
 }
 
 model InvoiceLine {

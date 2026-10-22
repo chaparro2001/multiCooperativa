@@ -24,6 +24,12 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+    /** Connection pool of the API: maximum connections, wait for a free one, idle lifetime. */
+    DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    DB_POOL_CONNECTION_TIMEOUT_MS: z.coerce.number().int().min(100).max(120_000).default(5_000),
+    DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(30_000),
+    /** Per-statement limit on the API's connections only (migrations are not affected). 0 disables it. */
+    DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(0).max(600_000).default(30_000),
     /** Signing secret of the access JWTs (HS256): at least 256 bits. */
     JWT_SECRET: z.string().min(32),
     /** Empty for AWS S3; the service URL for any other compatible one. */
@@ -46,6 +52,8 @@ const envSchema = z
     /** Ollama service that computes the embeddings (ADR-006). */
     OLLAMA_URL: z.url({ protocol: /^https?$/ }).optional(),
     EMBEDDING_MODEL: z.string().min(1).default('bge-m3'),
+    /** Time limit of one Ollama embeddings call (a batch of fragments), sized for a CPU-only host. */
+    EMBEDDING_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(120_000),
     /** Gemini API key (ADR-009), shared by the AI assistant and document extraction. Without it both answer 503; the rest works. */
     GEMINI_API_KEY: z.string().min(1).optional(),
     /** Gemini model shared by the assistant and document extraction: Flash class, free tier. */

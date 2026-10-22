@@ -36,3 +36,10 @@ jobs:
           curl --silent --show-error --fail-with-body --max-time 120 --retry 3 --retry-delay 15 \
             --retry-all-errors -X POST -H "Authorization: Bearer $JOBS_TOKEN" "$API_URL/jobs/due-dates"
           echo
+
+      # Housekeeping, same cadence: expired or revoked sessions and old failed logins (docs/04-deployment.md).
+      - name: Purge expired sessions and old failed logins
+        run: |
+          curl --silent --show-error --fail-with-body --max-time 120 --retry 3 --retry-delay 15 \
+            --retry-all-errors -X POST -H "Authorization: Bearer $JOBS_TOKEN" "$API_URL/jobs/purge-auth-records"
+          echo
