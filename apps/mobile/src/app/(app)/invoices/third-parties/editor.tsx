@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native';
 
@@ -88,7 +88,13 @@ function Form({
     validate: (values) => validateThirdParty(values, !existing),
   });
 
-  useEffect(() => setError(null), [nif, name, isSupplier, isCustomer]);
+  // Editing any of these clears the last error (adjusting state during render, not in an effect).
+  const errorScope = JSON.stringify([nif, name, isSupplier, isCustomer]);
+  const [shownScope, setShownScope] = useState(errorScope);
+  if (shownScope !== errorScope) {
+    setShownScope(errorScope);
+    setError(null);
+  }
 
   async function submit() {
     setError(null);

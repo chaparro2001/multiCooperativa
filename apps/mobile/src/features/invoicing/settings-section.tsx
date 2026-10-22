@@ -1,5 +1,5 @@
 import type { InvoicingSettings } from '@multicooperativa/contracts';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -47,9 +47,12 @@ export function InvoicingSettingsSection() {
     validate: (values) => (draft ? validateInvoicingSettings(values) : {}),
   });
 
-  useEffect(() => {
+  // The draft follows the stored settings (adjusting state during render, not in an effect).
+  const [seenData, setSeenData] = useState<typeof settings.data>();
+  if (settings.data !== seenData) {
+    setSeenData(settings.data);
     if (settings.data) setDraft(draftFrom(settings.data));
-  }, [settings.data]);
+  }
 
   function change(changes: Partial<InvoicingSettingsDraft>) {
     setDraft((current) => (current ? { ...current, ...changes } : current));

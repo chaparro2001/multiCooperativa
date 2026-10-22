@@ -1,6 +1,6 @@
 import type { AssemblyType } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -55,9 +55,9 @@ export default function AssemblyEditorScreen() {
     validate: validateAssembly,
   });
 
-  useEffect(() => {
-    const data = existing.data;
-    if (loaded || !data) return;
+  // Seeds the form from the server once (adjusting state during render, not in an effect).
+  const data = existing.data;
+  if (!loaded && data) {
     setType(data.type);
     setFirstCall(new Date(data.firstCallAt));
     setSecondCall(data.secondCallAt ? new Date(data.secondCallAt) : null);
@@ -73,7 +73,7 @@ export default function AssemblyEditorScreen() {
       })),
     );
     setLoaded(true);
-  }, [existing.data, loaded]);
+  }
 
   if (!loaded) return <Loading />;
 

@@ -62,7 +62,7 @@ Third-party skills live in `.agents/skills/` (linked from `.claude/skills/`, pin
 
 - `nodejs-backend-patterns`, `architecture-patterns`: ignore their folder layouts (`controllers/`, `services/`, `use_cases/`, `adapters/`); modules keep `domain/`, `application/`, `infrastructure/` and `index.ts`.
 - `supabase-postgres-best-practices`: isolation per cooperative is enforced in the repositories with `cooperativeId` (ADR-003), not with RLS policies. Supabase-specific notes do not apply.
-- `vercel-react-native-skills`: do not add FlashList, `expo-image`, Galeria or Nativewind without an ADR; layout styling uses `StyleSheet.create`, and UI components come from `react-native-paper` (ADR-020) through `src/ui` (colours with `useTheme()`, icons are `MaterialCommunityIcons`).
+- `vercel-react-native-skills`: do not add FlashList, `expo-image`, Galeria or Nativewind without an ADR; layout styling uses `StyleSheet.create`, and UI components come from `react-native-paper` (ADR-020) through `src/ui` (colours with `useTheme()`, icons are `MaterialCommunityIcons`); `eslint-plugin-react-hooks` (incl. the React Compiler rules) is enforced on `apps/mobile` by `pnpm lint`: no setState in effects to seed state from props or server data (adjust during render), no refs written in render.
 - `prisma-client-api`: the client is generated in `apps/api/src/generated/prisma`; amounts keep using `Decimal`.
 - No skill justifies adding a dependency: a new dependency needs a reason in the plan or an ADR.
 

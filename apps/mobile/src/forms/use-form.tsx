@@ -66,10 +66,16 @@ export function useForm<V extends object>({
   const [serverErrors, setServerErrorsState] = useState<FieldErrors>({});
   const fields = useRef(new Map<string, FieldHandle>());
   const scroller = useRef<((view: View) => void) | null>(null);
+  // The latest `validate`, read only from event handlers (`validateAll`), never during render.
+  const latestValidate = useRef(validate);
+  useEffect(() => {
+    latestValidate.current = validate;
+  });
 
   const clientErrors = useMemo(
     () => (submitted ? validate(values, mode) : {}),
     // `validate` is a pure function of the values; callers do not need to memoize it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- callers pass an inline `validate`; listing it would recompute on every render
     [submitted, values, mode],
   );
   const errors = useMemo(
@@ -128,7 +134,7 @@ export function useForm<V extends object>({
         setSubmitted(true);
         if (next !== undefined) setMode(next);
         setServerErrorsState({});
-        const found = validate(values, next ?? mode);
+        const found = latestValidate.current(values, next ?? mode);
         if (!hasErrors(found)) return true;
         scrollToFirst(Object.keys(found));
         return false;
@@ -148,8 +154,7 @@ export function useForm<V extends object>({
         scroller.current = next;
       },
     }),
-    // validate/values are read fresh through the closure of the latest render.
-    [errors, values, scrollToFirst],
+    [errors, values, mode, scrollToFirst],
   );
   return api;
 }
@@ -172,6 +177,7 @@ export function FormScope({ form, children }: { form: FormApi; children: ReactNo
     form.attachScroller(scroller);
     return () => form.attachScroller(null);
     // The form object changes on every render; its scroller slot is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the scroller matters, see above
   }, [scroller]);
   return <FormProvider value={form}>{children}</FormProvider>;
 }

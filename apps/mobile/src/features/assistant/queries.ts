@@ -9,6 +9,7 @@ import {
   sendMessageResponseSchema,
 } from '@multicooperativa/contracts';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 
 import { useServices } from '@/app-services';
 import { ApiError } from '@/api/api-error';
@@ -61,15 +62,18 @@ export function useConversation(id: string | undefined) {
 export function useConversationExists() {
   const { api } = useServices();
   const { base } = useHistoryScope();
-  return async (id: string) => {
-    try {
-      await api.request(`${base}/${id}`, { schema: conversationDetailSchema });
-      return true;
-    } catch (failure) {
-      if (failure instanceof ApiError && failure.status === 404) return false;
-      return true;
-    }
-  };
+  return useCallback(
+    async (id: string) => {
+      try {
+        await api.request(`${base}/${id}`, { schema: conversationDetailSchema });
+        return true;
+      } catch (failure) {
+        if (failure instanceof ApiError && failure.status === 404) return false;
+        return true;
+      }
+    },
+    [api, base],
+  );
 }
 
 /** US-AI-04, privacy: erases the conversation with its messages. */

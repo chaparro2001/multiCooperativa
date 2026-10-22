@@ -48,6 +48,7 @@ export function ActiveCooperativeProvider({ children }: { children: ReactNode })
   });
   const me = meQuery.data;
 
+  /* eslint-disable react-hooks/set-state-in-effect -- the active cooperative is derived from server data (`me`) and the device store, both external */
   useEffect(() => {
     if (!me) return;
     const activeIds = me.memberships.map((membership) => membership.cooperativeId);
@@ -61,6 +62,7 @@ export function ActiveCooperativeProvider({ children }: { children: ReactNode })
       setCooperativeId(initialCooperative(activeIds, null));
     }
   }, [me, cooperativeId, deviceStore]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const permissionsQuery = useQuery({
     queryKey: [...cooperativeKey(cooperativeId ?? ''), 'permissions'],
@@ -78,6 +80,7 @@ export function ActiveCooperativeProvider({ children }: { children: ReactNode })
     if (error instanceof ApiError && error.status === 404) {
       // No longer an active member there.
       queryClient.invalidateQueries({ queryKey: ['me'] });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reacts to a failed server query (no onError in TanStack Query v5)
       setCooperativeId(null);
     }
   }, [permissionsQuery.error, queryClient]);

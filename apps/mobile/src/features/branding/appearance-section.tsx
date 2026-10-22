@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -31,9 +31,12 @@ export function AppearanceSection() {
     validate: (values) => validateBrandColor(values, i18n.language),
   });
 
-  useEffect(() => {
+  // The field follows the stored colour (adjusting state during render, not in an effect).
+  const [seenColor, setSeenColor] = useState(brand.primaryColor);
+  if (seenColor !== brand.primaryColor) {
+    setSeenColor(brand.primaryColor);
     setText(brand.primaryColor);
-  }, [brand.primaryColor]);
+  }
 
   const candidate = parseHexColor(text);
   const ratio = candidate ? contrastWithWhite(candidate) : null;
