@@ -5,7 +5,7 @@ import type { FileStorage } from '../../shared/files/file-storage';
 import { log } from '../../shared/infrastructure/log';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
 import type { CooperativeContext } from '../access';
-import { SEARCH_RESULTS, searchDocuments } from './application/documents';
+import { SEARCH_RESULTS, searchDocumentsWithContext } from './application/documents';
 import type { DocumentEvent } from './application/events';
 import { createIndexer } from './application/indexing';
 import type { Embedder } from './application/ports/embedder';
@@ -100,6 +100,6 @@ export function createDocumentsModule(deps: {
     indexing: { resumePending: indexer.resumePending, idle: indexer.idle },
     /** For the assistant's RAG (requirements/07), with the caller's permissions. */
     search: (context: CooperativeContext, query: string) =>
-      searchDocuments({ embedder: deps.embedder, index }, context, query),
+      searchDocumentsWithContext({ embedder: deps.embedder, index }, context, query),
   };
 }

@@ -134,3 +134,27 @@ describe('US-AI-02 · my_contributions (US-MEM-02)', () => {
     expect(availableTools(can).map((tool) => tool.name)).toEqual(['my_contributions']);
   });
 });
+
+describe('US-AI-02 · search_documents with neighbour context (ADR-023)', () => {
+  it('gives the model the expanded context but cites the fragment itself', async () => {
+    const hit = {
+      documentId: 'd1',
+      versionId: 'v1',
+      title: 'Bylaws',
+      category: 'bylaws',
+      page: 3,
+      position: 4,
+      content: 'Artículo 5. Corto.',
+      context: 'Artículo 5. Corto.\n\nArtículo 6. Sigue.',
+      score: 0.7,
+    };
+    const executors = createToolExecutors({
+      documents: { search: async () => [hit] },
+    } as unknown as DataSources);
+
+    const { items } = await executors.search_documents(context, { query: 'artículo cinco' });
+
+    expect(items[0]?.data.text).toBe(hit.context);
+    expect(items[0]?.source).toMatchObject({ page: 3, excerpt: 'Artículo 5. Corto.' });
+  });
+});

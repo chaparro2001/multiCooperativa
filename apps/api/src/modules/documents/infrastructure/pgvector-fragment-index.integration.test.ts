@@ -167,6 +167,34 @@ describe('PgVectorFragmentIndex hybrid search (US-DOC-07, US-AI-02)', () => {
     }
   });
 
+  it('ADR-023 diversity: a second document takes a place from a third fragment of the first', async () => {
+    await addDocument(coop, 'Long bylaws', [
+      'cuota anual socio uno',
+      'cuota anual socio dos',
+      'cuota anual socio tres',
+    ]);
+    await addDocument(coop, 'Regulation', ['cuota anual socio cuatro']);
+
+    const hits = await search('cuota anual socio', { limit: 3 });
+
+    expect(hits.map((hit) => hit.title).sort()).toEqual([
+      'Long bylaws',
+      'Long bylaws',
+      'Regulation',
+    ]);
+  });
+
+  it('ADR-023 neighbours: returns the fragments right before and after, of the same cooperative only', async () => {
+    const document = await addDocument(coop, 'Bylaws', ['uno', 'dos', 'tres', 'cuatro']);
+    await addDocument(sea, 'Other', ['uno', 'dos', 'tres']);
+    const index = new PgVectorFragmentIndex(prisma, { minVectorScore: 0, minTextScore: 0 });
+
+    const found = await index.neighbours(coop, [{ documentId: document.id, position: 1 }]);
+
+    expect(found.map((n) => n.content).sort()).toEqual(['tres', 'uno']);
+    expect(await index.neighbours(coop, [])).toEqual([]);
+  });
+
   it('term coverage: a single-term query still finds the fragment, and two distinct terms are needed from 2 up', async () => {
     await addDocument(coop, 'Bylaws', ['El quorum de la asamblea es la mitad mas uno.']);
 

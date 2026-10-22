@@ -4,8 +4,10 @@ import type {
   FragmentHit,
   FragmentIndex,
   IndexedFragment,
+  NeighbourFragment,
   SearchQuery,
 } from '../application/ports/fragment-index';
+import { diversify } from '../domain/diversity';
 import { fuseRankings } from '../domain/rank-fusion';
 
 /** pgvector literal: '[0.1,0.2,…]'. Numbers only, so it cannot carry SQL. */
@@ -68,6 +70,23 @@ export class PgVectorFragmentIndex implements FragmentIndex {
     await this.prisma.documentChunk.deleteMany({ where: { cooperativeId, documentId } });
   }
 
+  async neighbours(
+    cooperativeId: string,
+    of: { documentId: string; position: number }[],
+  ): Promise<NeighbourFragment[]> {
+    if (of.length === 0) return [];
+    return this.prisma.documentChunk.findMany({
+      where: {
+        cooperativeId,
+        OR: of.map(({ documentId, position }) => ({
+          documentId,
+          position: { in: [position - 1, position + 1] },
+        })),
+      },
+      select: { documentId: true, position: true, page: true, content: true },
+    });
+  }
+
   async search(cooperativeId: string, query: SearchQuery, limit: number): Promise<FragmentHit[]> {
     // Exact vector search on purpose (BR-AI-04): the WHERE on cooperativeId narrows the scan to
     // one cooperative's chunks first, and the order is exact cosine distance. An HNSW index would
@@ -92,6 +111,7 @@ export class PgVectorFragmentIndex implements FragmentIndex {
         title: string;
         category: DocumentCategory;
         page: number;
+        position: number;
         content: string;
         score: number;
         vectorRank: number | null;
@@ -143,7 +163,7 @@ export class PgVectorFragmentIndex implements FragmentIndex {
         ORDER BY cand.rank DESC, cand.title, cand.position, cand.id
         LIMIT ${ARM_POOL}
       )
-      SELECT c."documentId", c."versionId", d.title, d.category::text AS category, c.page, c.content,
+      SELECT c."documentId", c."versionId", d.title, d.category::text AS category, c.page, c.position, c.content,
              1 - (c.embedding <=> ${vector}::vector) AS score,
              vec.rank AS "vectorRank", txt.rank AS "textRank"
       FROM (SELECT id FROM vec UNION SELECT id FROM txt) hit
@@ -156,7 +176,7 @@ export class PgVectorFragmentIndex implements FragmentIndex {
     const arm = query.arm ?? 'hybrid';
     const ranked =
       arm === 'hybrid'
-        ? fuseRankings(rows, limit)
+        ? diversify(fuseRankings(rows, rows.length), limit)
         : rows
             .filter((row) => (arm === 'vector' ? row.vectorRank : row.textRank) !== null)
             .sort((a, b) =>

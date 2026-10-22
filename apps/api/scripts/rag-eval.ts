@@ -134,7 +134,11 @@ await embedder.embed(
 );
 
 const bestScores = new Map<string, number>();
-async function run(arm: BenchmarkArm, minVector: number, minText: number): Promise<CaseResult[]> {
+async function run(
+  arm: BenchmarkArm,
+  minVector: number,
+  minText: number,
+): Promise<(CaseResult & { contextChars: number })[]> {
   const results = await searchBenchmarkCases(
     { prisma, cooperativeId, embedder },
     { arm, minVector, minText },
@@ -152,6 +156,16 @@ const meanChars = (results: CaseResult[]) =>
     results.reduce((sum, r) => sum + r.fragments.reduce((s, f) => s + f.content.length, 0), 0) /
       results.length,
   );
+/** Average number of distinct documents among the returned fragments of answerable questions. */
+const meanDocuments = (results: CaseResult[]) => {
+  const answered = results.filter((r) => r.testCase.expected.length > 0 && r.fragments.length > 0);
+  return (
+    answered.reduce((sum, r) => sum + new Set(r.fragments.map((f) => f.title)).size, 0) /
+    Math.max(1, answered.length)
+  );
+};
+const meanContextChars = (results: { contextChars: number }[]) =>
+  Math.round(results.reduce((sum, r) => sum + r.contextChars, 0) / results.length);
 
 console.log(
   `\nRAG retrieval benchmark [${label}] provider=${env.EMBEDDINGS_PROVIDER} model=${model}\n` +
@@ -159,7 +173,9 @@ console.log(
     `(thresholds vector=${env.EMBEDDING_MIN_SCORE} text=${env.EMBEDDING_TEXT_MIN_SCORE}); ` +
     `indexing ${(indexingMs / 1000).toFixed(1)}s, ${embedder.fresh} texts embedded fresh\n`,
 );
-console.log('arm          hit@1   hit@5     MRR  no-answer  answered  ctx chars');
+console.log(
+  'arm          hit@1   hit@5     MRR  no-answer  answered  ctx chars  model ctx  docs@5',
+);
 const byArm: Record<string, { metrics: RetrievalMetrics; contextChars: number }> = {};
 let hybrid: CaseResult[] = [];
 for (const arm of ['vector', 'text', 'hybrid'] as const) {
@@ -167,7 +183,9 @@ for (const arm of ['vector', 'text', 'hybrid'] as const) {
   if (arm === 'hybrid') hybrid = results;
   const metrics = computeMetrics(results);
   byArm[arm] = { metrics, contextChars: meanChars(results) };
-  console.log(row(arm, metrics, meanChars(results)));
+  console.log(
+    `${row(arm, metrics, meanChars(results))} ${String(meanContextChars(results)).padStart(10)} ${meanDocuments(results).toFixed(2).padStart(7)}`,
+  );
 }
 
 console.log('\nHybrid misses (rank of the expected fragment, or the unwanted results):');

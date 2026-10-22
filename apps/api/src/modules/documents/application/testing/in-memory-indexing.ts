@@ -5,6 +5,7 @@ import type {
   FragmentHit,
   FragmentIndex,
   IndexedFragment,
+  NeighbourFragment,
   SearchQuery,
 } from '../ports/fragment-index';
 import type { IndexingStore, PendingVersion, VersionToIndex } from '../ports/indexing-store';
@@ -98,6 +99,24 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
     }
   }
 
+  async neighbours(
+    cooperativeId: string,
+    of: { documentId: string; position: number }[],
+  ): Promise<NeighbourFragment[]> {
+    return this.fragments
+      .filter(
+        (f) =>
+          f.cooperativeId === cooperativeId &&
+          of.some((o) => o.documentId === f.documentId && Math.abs(o.position - f.position) === 1),
+      )
+      .map((f) => ({
+        documentId: f.documentId,
+        position: f.position,
+        page: f.page,
+        content: f.content,
+      }));
+  }
+
   /** Same shape as the SQL: a vector arm above the threshold, a text arm on shared terms, RRF. */
   async search(cooperativeId: string, query: SearchQuery, limit: number): Promise<FragmentHit[]> {
     const pool = 20;
@@ -116,6 +135,7 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
             title: row.title,
             category: row.category,
             page: f.page,
+            position: f.position,
             content: f.content,
             score: cosine(f.embedding, query.embedding),
             shared,

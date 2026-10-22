@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { FileStorage } from '../../../shared/files/file-storage';
 import type { PrismaClient } from '../../../shared/infrastructure/prisma';
-import { retrieveFragments } from '../application/documents';
+import { retrieveFragments, withNeighbourContext } from '../application/documents';
 import { indexVersion } from '../application/indexing';
 import type { Embedder } from '../application/ports/embedder';
 import { PgVectorFragmentIndex } from '../infrastructure/pgvector-fragment-index';
@@ -76,21 +76,24 @@ export async function indexBenchmarkCorpus(
 export async function searchBenchmarkCases(
   deps: BenchmarkDeps,
   options: { arm: BenchmarkArm; minVector: number; minText: number },
-): Promise<(CaseResult & { scores: number[] })[]> {
+): Promise<(CaseResult & { scores: number[]; contextChars: number })[]> {
   const index = new PgVectorFragmentIndex(deps.prisma, {
     minVectorScore: options.minVector,
     minTextScore: options.minText,
   });
-  const results: (CaseResult & { scores: number[] })[] = [];
+  const results: (CaseResult & { scores: number[]; contextChars: number })[] = [];
   for (const testCase of RETRIEVAL_CASES) {
-    const hits = await retrieveFragments(
+    const found = await retrieveFragments(
       { embedder: deps.embedder, index },
       deps.cooperativeId,
       testCase.question,
       options.arm,
     );
+    // What the assistant's tool hands the model: each fragment with its adjacent text.
+    const hits = await withNeighbourContext(index, deps.cooperativeId, found);
     results.push({
       testCase,
+      contextChars: hits.reduce((sum, hit) => sum + (hit.context ?? hit.content).length, 0),
       fragments: hits.map((hit) => ({ title: hit.title, page: hit.page, content: hit.content })),
       scores: hits.map((hit) => hit.score),
     });
