@@ -132,6 +132,7 @@ export function createAssistantModule(deps: {
     now,
     today: () => todayInSpain(now()),
     messageLimitPerHour: deps.messageLimitPerHour ?? MESSAGE_LIMIT_PER_HOUR,
+    logger: log,
     onMetrics: deps.onMetrics ?? logMetrics,
   };
   return {

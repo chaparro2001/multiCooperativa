@@ -21,6 +21,7 @@ import {
 } from './errors';
 import type { ToolResult } from './ports/language-model';
 import type { ToolExecutor, ToolOutput } from './tool-executors';
+import { CapturingLogger } from './testing/capturing-logger';
 import { InMemoryConversationStore } from './testing/in-memory-conversation-store';
 import {
   callTools,
@@ -84,6 +85,7 @@ function build(
     now: () => new Date('2026-10-20T10:00:00Z'),
     today: () => '2026-10-20',
     messageLimitPerHour: 30,
+    logger: new CapturingLogger(),
     ...overrides,
   };
   return { deps, conversations };
@@ -466,7 +468,6 @@ describe('model failures (NFR-AI-02)', () => {
   });
 
   it('a provider failure is unavailable and stores nothing', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
     const model = new ScriptedLanguageModel(() => {
       throw new Error('network down');
     });

@@ -12,6 +12,7 @@ import {
 import { LocalModelNotInUseError, ModelNotAvailableError } from './errors';
 import type { LanguageModel } from './ports/language-model';
 import type { AssistantSettingStore, LocalModelRuntime } from './ports/local-models';
+import { CapturingLogger } from './testing/capturing-logger';
 import { InMemoryConversationStore } from './testing/in-memory-conversation-store';
 import { say, ScriptedLanguageModel } from './testing/scripted-language-model';
 
@@ -204,6 +205,7 @@ describe('the assistant uses the cooperative model (BR-AI-09)', () => {
       now: () => new Date('2026-10-21T10:00:00Z'),
       today: () => '2026-10-21',
       messageLimitPerHour: 30,
+      logger: new CapturingLogger(),
     };
   }
 

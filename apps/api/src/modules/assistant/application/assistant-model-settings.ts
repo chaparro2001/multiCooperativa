@@ -21,7 +21,7 @@ import {
   ProviderKeyInvalidError,
   ProviderUnreachableError,
 } from './errors';
-import { log } from '../../../shared/infrastructure/log';
+import type { Logger } from '../../../shared/logger';
 import { describeFallback, FallbackLanguageModel } from './fallback-language-model';
 import {
   type HostedProviderGateway,
@@ -261,6 +261,7 @@ export async function resolveCooperativeLanguageModel(
   deps: ModelSettingsDeps | undefined,
   defaultModel: LanguageModel | null,
   cooperativeId: string,
+  logger: Logger,
 ): Promise<LanguageModel | null> {
   const server = () => resolveServerModel(deps, defaultModel, cooperativeId);
   const hosted = deps ? hostedOf(deps) : null;
@@ -271,12 +272,12 @@ export async function resolveCooperativeLanguageModel(
   try {
     apiKey = hosted.cipher.decrypt(saved.key);
   } catch {
-    log.warn('assistant_hosted_key_unreadable', { cooperativeId });
+    logger.warn('assistant_hosted_key_unreadable', { cooperativeId });
     return server();
   }
   return new FallbackLanguageModel(
     hosted.gateway.createModel(saved.provider, saved.model, apiKey),
     server,
-    (error) => log.warn('assistant_hosted_fallback', describeFallback(cooperativeId, error)),
+    (error) => logger.warn('assistant_hosted_fallback', describeFallback(cooperativeId, error)),
   );
 }

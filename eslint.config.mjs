@@ -76,7 +76,6 @@ export default tseslint.config(
   },
   {
     // Application layer: use cases talk to ports, never to the framework, SDKs or adapters.
-    // The only shared infrastructure it may use is the stdlib-only structured logger.
     files: ['apps/api/src/modules/*/application/**/*.ts'],
     ignores: ['**/*.test.ts'],
     rules: {
@@ -90,7 +89,7 @@ export default tseslint.config(
                 'The application layer does not import Prisma, the HTTP framework or external SDKs: use a port.',
             },
             {
-              group: ['**/infrastructure/**', '!**/shared/infrastructure/log'],
+              group: ['**/infrastructure/**'],
               message: 'The application layer does not depend on infrastructure: define a port.',
             },
           ],

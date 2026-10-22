@@ -1,3 +1,4 @@
+import { log } from '../../../shared/infrastructure/log';
 import type { CooperativeContext } from '../application/data-sources';
 import { createConversation, sendMessage, type RequestMetrics } from '../application/assistant';
 import type { LanguageModel } from '../application/ports/language-model';
@@ -117,6 +118,7 @@ export async function runEvaluation(options: {
     today: () => '2026-10-20',
     // Each case has its own conversation; the limit must not get in the way of 20 questions.
     messageLimitPerHour: 1000,
+    logger: log,
     onMetrics: (metrics: RequestMetrics) => (captured.metrics = metrics),
   };
   const captured: { metrics?: RequestMetrics } = {};
