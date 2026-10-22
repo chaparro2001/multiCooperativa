@@ -104,6 +104,7 @@ Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assis
 - [ ] Security review with the master's OWASP Top 10.
 - [ ] Coverage and complexity report.
   - [x] `@vitest/coverage-v8` (dev dependency, same version as Vitest): `pnpm test:coverage` prints a text summary and writes an HTML report to `coverage/` (ignored by Git); CI shows the summary in the unit-test step. Reason: measurable quality evidence for the thesis report; no thresholds. Unit tests only: 45% statements overall (api 59%, mobile 26%, contracts 99%).
+  - [x] `eslint-plugin-react-hooks` (root dev dependency, v7 flat `recommended`, scoped to `apps/mobile`): Rules of Hooks, `exhaustive-deps` and the React Compiler rules (`set-state-in-effect`, `refs`, `purity`). Reason: `app.json` enables `reactCompiler`, which silently skips code it cannot optimise; the lint makes that visible. Existing findings fixed (server data seeded into forms by adjusting state during render, latest-value refs written in effects); the few intentional effects carry a targeted `eslint-disable` with the reason.
 - [ ] Thesis report.
 - [ ] Demo video.
 

@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -96,6 +97,12 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // Rules of Hooks + React Compiler rules (app.json enables `reactCompiler`): code the compiler
+    // cannot optimise safely is flagged here instead of silently skipped.
+    ...reactHooks.configs.flat.recommended,
+    files: ['apps/mobile/**/*.{ts,tsx}'],
   },
   prettier,
 );
