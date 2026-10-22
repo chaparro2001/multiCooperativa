@@ -110,8 +110,8 @@ export class PgVectorFragmentIndex implements FragmentIndex {
         LIMIT ${ARM_POOL}
       ),
       tsq AS (
-        SELECT replace(plainto_tsquery('spanish', ${query.text})::text, '&', '|')::tsquery AS q,
-               tsvector_to_array(to_tsvector('spanish', ${query.text})) AS lexemes
+        SELECT replace(plainto_tsquery('spanish_unaccent', ${query.text})::text, '&', '|')::tsquery AS q,
+               tsvector_to_array(to_tsvector('spanish_unaccent', ${query.text})) AS lexemes
       ),
       need AS (
         -- Mirrors requiredTermMatches (domain/term-coverage.ts).

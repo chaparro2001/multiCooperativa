@@ -144,6 +144,27 @@ describe('PgVectorFragmentIndex hybrid search (US-DOC-07, US-AI-02)', () => {
     expect(vector).toHaveLength(2);
   });
 
+  it('ADR-023 accent-insensitive text arm: accents on either side match the same lexemes', async () => {
+    await addDocument(coop, 'Bylaws', [
+      'El quórum de la asamblea extraordinaria es de dos tercios.',
+      'Articulo 9. Cuota de ingreso de los socios.',
+      'Otros asuntos generales sin relacion alguna con lo anterior.',
+    ]);
+
+    for (const [text, page] of [
+      ['quorum', 1],
+      ['quórum', 1],
+      ['asamblea extraordinária', 1],
+      ['artículo 9', 2],
+    ] as const) {
+      const hits = await search(text, { minVectorScore: 0.99 });
+      expect(
+        hits.map((hit) => hit.page),
+        text,
+      ).toEqual([page]);
+    }
+  });
+
   it('term coverage: a single-term query still finds the fragment, and two distinct terms are needed from 2 up', async () => {
     await addDocument(coop, 'Bylaws', ['El quorum de la asamblea es la mitad mas uno.']);
 
