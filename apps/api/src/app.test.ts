@@ -23,6 +23,53 @@ describe('ruta inexistente', () => {
   });
 });
 
+describe('GET /ready', () => {
+  it('answers 200 when the dependency probe succeeds', async () => {
+    const response = await request(createApp({ readiness: async () => 1 })).get('/ready');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'ok' });
+  });
+
+  it('answers 503 when the probe fails, while /health stays up', async () => {
+    const app = createApp({
+      readiness: async () => {
+        throw new Error('db down');
+      },
+    });
+
+    const ready = await request(app).get('/ready');
+
+    expect(ready.status).toBe(503);
+    expect(ready.body).toEqual({ status: 'unavailable' });
+    expect((await request(app).get('/health')).status).toBe(200);
+  });
+
+  it('answers 503 when the probe hangs past the timeout', async () => {
+    const app = createApp({ readiness: () => new Promise(() => {}) });
+
+    const response = await request(app).get('/ready');
+
+    expect(response.status).toBe(503);
+  }, 5000);
+});
+
+describe('X-Request-Id', () => {
+  it('echoes a sane incoming id', async () => {
+    const response = await request(createApp()).get('/health').set('X-Request-Id', 'abc-12345');
+
+    expect(response.headers['x-request-id']).toBe('abc-12345');
+  });
+
+  it('generates one when the incoming id is missing or unsafe', async () => {
+    const missing = await request(createApp()).get('/health');
+    const unsafe = await request(createApp()).get('/health').set('X-Request-Id', 'a b<script>');
+
+    expect(missing.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+    expect(unsafe.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+  });
+});
+
 describe('hardening', () => {
   it('sets the security headers on every response', async () => {
     const response = await request(createApp()).get('/health');

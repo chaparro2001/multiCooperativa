@@ -182,6 +182,7 @@ export function createApi(deps: ApiDeps): Api {
     ],
     trustProxy: deps.trustProxy,
     corsOrigins: deps.corsOrigins,
+    readiness: () => deps.prisma.$queryRaw`SELECT 1`,
   });
   return {
     app,

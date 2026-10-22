@@ -34,6 +34,7 @@ const key = (route: RegisteredRoute) => `${route.method.toUpperCase()} ${route.p
 /** Endpoints that work without a session. Anything else must answer 401 without one. */
 const PUBLIC = new Set([
   'GET /health',
+  'GET /ready',
   'POST /auth/login',
   'POST /auth/refresh',
   'POST /auth/logout',
