@@ -53,6 +53,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Informative only: the known advisories are documented in docs/04-deployment.md.
+      - name: Dependency audit (non-blocking)
+        run: pnpm audit --prod --audit-level high || true
+
       - name: Format
         run: pnpm format:check
 

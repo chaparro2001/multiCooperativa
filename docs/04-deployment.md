@@ -218,6 +218,18 @@ Always from `deploy\home-server`, with `--env-file .env.server`:
 - Cloudflare terminates TLS, so it can see the traffic. Use only sample data.
 - The cloud-hosted Gemini API receives the scanned documents and the discrepancy data it is asked to read or explain; its free tier may use content to improve Google's products. Do not upload real third-party documents. Embeddings and the assistant's questions and answers stay on the server (ADR-013).
 
+### Dependency audit
+
+`pnpm audit --prod` (22 October 2026) reports 7 advisories (4 high, 3 moderate). None is reachable at runtime in the deployed API:
+
+| Package (advisory)                                          | Pulled in by                      | Why it is not reachable                                                                                                               |
+| ----------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `deepmerge-ts` (stack exhaustion, high)                     | `prisma` → `@prisma/config`       | Prisma CLI, used only by `prisma migrate deploy` at start-up on our own config; the API never imports it.                             |
+| `mysql2` (auth plugin downgrade, high; zlib bomb, moderate) | `prisma` CLI                      | Needed by the CLI for MySQL support. We use PostgreSQL and never open a MySQL connection.                                             |
+| `uuid`, `node-forge`, `braces`, `decode-uri-component`      | `apps/mobile` (Expo, expo-router) | Expo build and bundling tooling (config plugins, code signing, Metro). They run on the developer machine or CI, not in the API image. |
+
+Accepted risk: low, because the vulnerable code is never fed untrusted input in production. Two of the paths have no patched version yet (`node-forge`, `braces`). Re-check before the final delivery and after every dependency update (CI prints `pnpm audit --prod --audit-level high` as a non-blocking step); drop an entry when its upstream releases a fix.
+
 ## Limitations
 
 - **Availability** depends on the home machine: power, internet, Windows restarts and someone signed in for Docker Desktop. There is no cold start.
