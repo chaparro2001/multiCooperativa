@@ -4,11 +4,13 @@ import { ActivityIndicator, Text, useTheme } from 'react-native-paper';
 
 import { type FormApi, FormScope, ScrollerProvider } from '@/forms/use-form';
 
-export const SCREEN_PADDING = 24;
-export const SCREEN_MAX_WIDTH = 960;
+import { layout, space } from './theme';
+
+export const SCREEN_PADDING = space[6];
+export const SCREEN_MAX_WIDTH = layout.maxWidth;
 
 /** Distance kept above the invalid field the screen scrolls to. */
-const SCROLL_MARGIN = 24;
+const SCROLL_MARGIN = space[6];
 
 /**
  * Scrollable screen body that keeps inputs above the keyboard. With `form`, its fields (those
@@ -89,7 +91,7 @@ const styles = StyleSheet.create({
   // Capped and centred so wide browser windows (web build) keep a readable column; no effect on phones.
   content: {
     padding: SCREEN_PADDING,
-    gap: 16,
+    gap: space[4],
     width: '100%',
     maxWidth: SCREEN_MAX_WIDTH,
     alignSelf: 'center',
