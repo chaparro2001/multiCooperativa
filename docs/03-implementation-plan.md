@@ -100,7 +100,7 @@ Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assis
 
 ## Milestone 7 · Quality and delivery (23–25 Oct)
 
-- [ ] E2E with Maestro: login, cooperative switch, vote, scan and register an invoice, ask the assistant.
+- [x] E2E with Maestro (`apps/mobile/.maestro`, `pnpm e2e`, local only): login and home tiles, cooperative switch, vote in an open assembly, invoices summary and purchase/sale switch. Scanning an invoice and the assistant are not covered (they need the camera and an LLM). Reason for the dependency changes: Maestro is an external CLI (not an npm dependency); `pnpm-workspace.yaml` overrides `expo-modules-jsi` to 57.1.3 because 57.1.1 does not compile with Xcode 26 (Swift 6.2), which blocks any iOS development build.
 - [ ] Security review with the master's OWASP Top 10.
 - [ ] Coverage and complexity report.
   - [x] `@vitest/coverage-v8` (dev dependency, same version as Vitest): `pnpm test:coverage` prints a text summary and writes an HTML report to `coverage/` (ignored by Git); CI shows the summary in the unit-test step. Reason: measurable quality evidence for the thesis report; no thresholds. Unit tests only: 45% statements overall (api 59%, mobile 26%, contracts 99%).

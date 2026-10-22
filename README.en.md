@@ -78,7 +78,7 @@ Permissions are defined by module, level and scope (ADR-004). The backend decide
 | Language model   | Assistant: local Ollama model on the home server, `qwen3:4b-instruct` by default and `qwen3:8b` selectable (ADR-013, ADR-015); vision and explanations: Gemini (ADR-009); behind ports |
 | Embeddings       | Local `bge-m3` with Ollama (ADR-006); Gemini embeddings in the hosted demo (ADR-010)                                                                                                   |
 | Files            | S3-compatible storage with expiring signed URLs (ADR-005); RustFS locally                                                                                                              |
-| Tests            | Vitest (unit and integration); React Native Testing Library and Maestro planned, not delivered                                                                                         |
+| Tests            | Vitest (unit and integration); Maestro E2E flows on the iOS simulator (local only); React Native Testing Library planned, not delivered                                                |
 | Quality          | ESLint, Prettier, Husky (pre-commit), custom module-boundaries rule                                                                                                                    |
 | Delivery         | GitHub Actions; demo with the API on a home server (Cloudflare Tunnel) and GitHub Pages (web)                                                                                          |
 
@@ -186,7 +186,6 @@ The following is **not implemented** in the delivery:
 
 - **Push notifications** (notifications module, device tokens, navigation from the notification).
 - **Sentry** in app and backend.
-- **E2E tests with Maestro**.
 - **Invoice claims**.
 - **Native binaries with EAS Build**: the demo is the web export; the native app runs with Expo locally.
 - Email invitations: there is no email provider, `POST .../members` answers 503 in production.
