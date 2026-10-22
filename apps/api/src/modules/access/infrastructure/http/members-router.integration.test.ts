@@ -240,6 +240,38 @@ describe('rules and errors', () => {
     expect(response.body.error).toBe('profile_not_found');
   });
 
+  it('BR-ACC-13: Given an administrator, when they try to edit or delete a predefined profile, then no route exists and the profiles stay as provisioned', async () => {
+    const before = await prisma.profile.findMany({
+      where: { cooperativeId: fieldCoop },
+      orderBy: { name: 'asc' },
+      include: { permissions: true },
+    });
+    expect(before).toHaveLength(4);
+    expect(before.every((profile) => profile.predefined)).toBe(true);
+    const gestor = before.find((profile) => profile.name === 'Gestor')!;
+    const profiles = `/cooperatives/${fieldCoop}/profiles`;
+
+    const attempts = [
+      request(app).patch(`${profiles}/${gestor.id}`).set(as(adminToken)).send({ name: 'Otro' }),
+      request(app).put(`${profiles}/${gestor.id}`).set(as(adminToken)).send({ name: 'Otro' }),
+      request(app).delete(`${profiles}/${gestor.id}`).set(as(adminToken)),
+      request(app).post(profiles).set(as(adminToken)).send({ name: 'Nuevo' }),
+    ];
+    const statuses = (await Promise.all(attempts)).map((response) => response.status);
+
+    expect(statuses).toEqual([404, 404, 404, 404]);
+    const after = await prisma.profile.findMany({
+      where: { cooperativeId: fieldCoop },
+      orderBy: { name: 'asc' },
+      include: { permissions: true },
+    });
+    expect(after).toEqual(before);
+    const listed = listProfilesResponseSchema.parse(
+      (await request(app).get(profiles).set(as(adminToken))).body,
+    );
+    expect(listed.profiles.every((profile) => profile.predefined)).toBe(true);
+  });
+
   it('an invalid body answers 400', async () => {
     const response = await request(app)
       .patch(`/cooperatives/${fieldCoop}/members/00000000-0000-4000-8000-000000000000`)
