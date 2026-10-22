@@ -2,7 +2,8 @@
 #   docker build -f apps/api/Dockerfile -t multicooperativa-api .
 # There is no compile step: the API runs TypeScript through tsx, so the image only needs the
 # production dependencies, the sources and the generated Prisma client.
-FROM node:24-slim
+# node:24-slim, pinned by digest for reproducible builds (refresh deliberately: docker pull node:24-slim).
+FROM node:24-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205
 
 ENV NODE_ENV=production \
     PNPM_HOME=/pnpm \
@@ -47,6 +48,11 @@ COPY --chown=node:node apps/api/scripts apps/api/scripts
 
 WORKDIR /app/apps/api
 EXPOSE 3000
+
+# Liveness only (/health does not touch the database); compose overrides this with /ready.
+# node-slim has no curl, so the probe is a one-line fetch.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # Migrations use DIRECT_URL (non-pooled) when set; the API uses DATABASE_URL (pooled).
 # `exec` replaces the shell with node, so node is PID 1 and receives SIGTERM (graceful shutdown);

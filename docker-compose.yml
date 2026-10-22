@@ -1,7 +1,7 @@
 # Local development infrastructure. The credentials are for the local environment only.
 services:
   postgres:
-    image: pgvector/pgvector:pg17
+    image: pgvector/pgvector:0.8.7-pg17
     environment:
       POSTGRES_USER: multicooperativa
       POSTGRES_PASSWORD: multicooperativa

@@ -15,7 +15,7 @@ x-api-build: &api-build
 
 services:
   postgres:
-    image: pgvector/pgvector:pg17
+    image: pgvector/pgvector:0.8.7-pg17
     restart: unless-stopped
     environment:
       POSTGRES_USER: multicooperativa
