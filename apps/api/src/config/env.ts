@@ -19,6 +19,16 @@ const DEFAULT_FALLBACK_MODELS = 'gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3
 
 const REQUIRED_IN_PRODUCTION = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'] as const;
 
+/**
+ * Default minimum cosine similarity per embeddings provider (ADR-022): scores of different models
+ * are not comparable.
+ * - ollama (bge-m3): calibrated on the sample documents (ADR-022): relevant questions reached 0.48-0.66
+ *   with their best fragment, off-topic ones 0.24-0.42; 0.40 drops most of the noise.
+ * - gemini (gemini-embedding-2): NOT calibrated (no paid calls); a conservative low value that
+ *   filters little. Raise it with EMBEDDING_MIN_SCORE after measuring.
+ */
+export const DEFAULT_MIN_SCORE = { ollama: 0.4, gemini: 0.3 } as const;
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -52,6 +62,15 @@ const envSchema = z
     /** Ollama service that computes the embeddings (ADR-006). */
     OLLAMA_URL: z.url({ protocol: /^https?$/ }).optional(),
     EMBEDDING_MODEL: z.string().min(1).default('bge-m3'),
+    /** Minimum cosine similarity (0..1) for a vector-search hit; text matches are kept regardless (ADR-022). Scores depend on the model, so unset uses the default of EMBEDDINGS_PROVIDER (DEFAULT_MIN_SCORE). Empty counts as unset. */
+    EMBEDDING_MIN_SCORE: z
+      .string()
+      .transform((value) => (value.trim() === '' ? undefined : Number(value)))
+      .refine(
+        (value) => value === undefined || (Number.isFinite(value) && value >= 0 && value <= 1),
+        'must be a number between 0 and 1',
+      )
+      .optional(),
     /** Time limit of one Ollama embeddings call (a batch of fragments), sized for a CPU-only host. */
     EMBEDDING_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(120_000),
     /** Gemini API key (ADR-009), shared by the AI assistant and document extraction. Without it both answer 503; the rest works. */
@@ -168,6 +187,7 @@ const envSchema = z
       S3_BUCKET: env.S3_BUCKET ?? local?.S3_BUCKET ?? '',
       S3_ACCESS_KEY_ID: env.S3_ACCESS_KEY_ID ?? local?.S3_ACCESS_KEY_ID ?? '',
       S3_SECRET_ACCESS_KEY: env.S3_SECRET_ACCESS_KEY ?? local?.S3_SECRET_ACCESS_KEY ?? '',
+      EMBEDDING_MIN_SCORE: env.EMBEDDING_MIN_SCORE ?? DEFAULT_MIN_SCORE[env.EMBEDDINGS_PROVIDER],
       OLLAMA_URL: env.OLLAMA_URL ?? (local ? LOCAL_OLLAMA_URL : ''),
       CORS_ORIGINS: env.CORS_ORIGINS.length > 0 || !local ? env.CORS_ORIGINS : LOCAL_CORS_ORIGINS,
     };

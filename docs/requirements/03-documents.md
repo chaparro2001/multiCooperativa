@@ -113,12 +113,12 @@ Indexing is asynchronous with respect to upload: the document can be read immedi
 
 ## 5. Non-functional requirements
 
-| Id         | Requirement                                                                            |
-| ---------- | -------------------------------------------------------------------------------------- |
-| NFR-DOC-01 | A 50-page document is indexed in under 60 seconds.                                     |
-| NFR-DOC-02 | Files are served with signed URLs that expire after 5 minutes.                         |
-| NFR-DOC-03 | Search over the index always filters by `cooperativeId` before ordering by similarity. |
-| NFR-DOC-04 | Files are stored outside the database, with unguessable keys.                          |
+| Id         | Requirement                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| NFR-DOC-01 | A 50-page document is indexed in under 60 seconds.                                                                                   |
+| NFR-DOC-02 | Files are served with signed URLs that expire after 5 minutes.                                                                       |
+| NFR-DOC-03 | Search over the index always filters by `cooperativeId` (and published documents) before ranking, in both arms of the hybrid search. |
+| NFR-DOC-04 | Files are stored outside the database, with unguessable keys.                                                                        |
 
 ## 6. Model
 
@@ -188,7 +188,7 @@ Contract (schemas in `packages/contracts/src/documents.ts`):
 - Errors: `400 invalid_document`, `400 file_rejected` with `details.reason` (`not_pdf`, `too_large`, `empty`), `404 not_found` and `409 invalid_document_transition`.
 - Events: `DocumentPublished` (`cooperativeId`, `documentId`, `versionId`) and `DocumentWithdrawn` (`cooperativeId`, `documentId`), emitted after saving. The module itself consumes them to index.
 - Indexing (ADR-006): in-process queue, one version at a time; the upload does not wait for it. On startup, the API re-enqueues pending versions. Chunks of up to 800 characters plus 150 of overlap, without mixing pages. Embeddings with `bge-m3` (1024 dimensions) on Ollama. Measured: 50 pages in 16 s locally.
-- `GET /documents/search?q=` (3 to 300 characters) returns up to 10 chunks with `documentId`, `title`, `category`, `page`, `excerpt` and `score`. It searches only published documents of the cooperative and filters before ordering. If the embeddings service does not respond: `503 search_unavailable`.
+- `GET /documents/search?q=` (3 to 300 characters) returns up to 5 chunks (the same number the assistant gives the model) with `documentId`, `title`, `category`, `page`, `excerpt` and `score`. It searches only published documents of the cooperative and filters before ranking. The search is hybrid ([ADR-022](../adr/ADR-022-hybrid-retrieval-and-similarity-threshold.md)): exact cosine similarity over the embeddings (dropping fragments below a minimum similarity per embeddings provider, `EMBEDDING_MIN_SCORE`) plus Spanish full-text search on any of the query terms, fused with Reciprocal Rank Fusion; `score` is always the cosine similarity. If the embeddings service does not respond: `503 search_unavailable`.
 - `POST /documents/{documentId}/republish` responds `204`, sets the current version to pending and emits `DocumentPublished`; `409` if the document is not withdrawn. A withdrawn document reports `indexingStatus: null`.
 - `POST /documents/{documentId}/reindex` responds `202` and leaves the current version as pending.
 

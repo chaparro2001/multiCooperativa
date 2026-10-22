@@ -1,7 +1,22 @@
 import type { IndexingStatus } from '../../domain/document';
-import type { FragmentHit, FragmentIndex, IndexedFragment } from '../ports/fragment-index';
+import { fuseRankings } from '../../domain/rank-fusion';
+import type {
+  FragmentHit,
+  FragmentIndex,
+  IndexedFragment,
+  SearchQuery,
+} from '../ports/fragment-index';
 import type { IndexingStore, PendingVersion, VersionToIndex } from '../ports/indexing-store';
 import type { InMemoryDocumentStore } from './in-memory-document-store';
+
+const terms = (text: string) =>
+  new Set(
+    text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .match(/\p{L}{3,}/gu) ?? [],
+  );
 
 const cosine = (a: number[], b: number[]) => a.reduce((sum, value, i) => sum + value * b[i]!, 0);
 
@@ -13,7 +28,11 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
     versionId: string;
   })[] = [];
 
-  constructor(private readonly documents: InMemoryDocumentStore) {}
+  constructor(
+    private readonly documents: InMemoryDocumentStore,
+    /** Mirrors the vector-arm threshold of the real index. */
+    private readonly minVectorScore = 0,
+  ) {}
 
   private version(versionId: string) {
     for (const row of this.documents.rows) {
@@ -74,12 +93,16 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
     }
   }
 
-  async search(cooperativeId: string, embedding: number[], limit: number): Promise<FragmentHit[]> {
-    return this.fragments
+  /** Same shape as the SQL: a vector arm above the threshold, a text arm on shared terms, RRF. */
+  async search(cooperativeId: string, query: SearchQuery, limit: number): Promise<FragmentHit[]> {
+    const pool = 20;
+    const queryTerms = terms(query.text);
+    const candidates = this.fragments
       .filter((f) => f.cooperativeId === cooperativeId)
       .flatMap((f) => {
         const row = this.documents.rows.find((r) => r.id === f.documentId);
         if (!row || row.status !== 'published') return [];
+        const shared = [...terms(f.content)].filter((term) => queryTerms.has(term)).length;
         return [
           {
             documentId: f.documentId,
@@ -88,11 +111,26 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
             category: row.category,
             page: f.page,
             content: f.content,
-            score: cosine(f.embedding, embedding),
+            score: cosine(f.embedding, query.embedding),
+            shared,
+            vectorRank: null as number | null,
+            textRank: null as number | null,
           },
         ];
-      })
+      });
+    candidates
+      .filter((c) => c.score >= this.minVectorScore)
       .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
+      .slice(0, pool)
+      .forEach((c, i) => (c.vectorRank = i + 1));
+    candidates
+      .filter((c) => c.shared > 0)
+      .sort((a, b) => b.shared - a.shared)
+      .slice(0, pool)
+      .forEach((c, i) => (c.textRank = i + 1));
+    return fuseRankings(
+      candidates.filter((c) => c.vectorRank !== null || c.textRank !== null),
+      limit,
+    ).map(({ shared: _s, vectorRank: _v, textRank: _t, ...hit }) => hit);
   }
 }

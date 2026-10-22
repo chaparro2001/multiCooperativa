@@ -36,6 +36,8 @@ export interface ApiDeps {
   files: FileStorage;
   /** Embeddings for document indexing and search (ADR-006). */
   embedder: Embedder;
+  /** Minimum cosine similarity of a vector-search hit; depends on the embedding model (ADR-022). Default: no threshold. */
+  embeddingMinScore?: number;
   /** Reads scanned invoices and delivery notes (ADR-009); without it, extraction answers 503. */
   documentExtractor?: DocumentExtractor;
   /** Drafts explanations of invoice discrepancies (ADR-009); without it they stay empty. */
@@ -102,6 +104,7 @@ export function createApi(deps: ApiDeps): Api {
     members: access.directory,
     requireCooperative: access.requireCooperative,
     embedder: deps.embedder,
+    minVectorScore: deps.embeddingMinScore,
   });
 
   const assemblies = createAssembliesModule({

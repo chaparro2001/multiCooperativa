@@ -276,7 +276,8 @@ export async function reindexDocument(
   });
 }
 
-export const SEARCH_RESULTS = 10;
+/** Fragments returned per search: what the assistant gives the model (single source of truth). */
+export const SEARCH_RESULTS = 5;
 
 /** US-DOC-07: the most relevant fragments of this cooperative's published documents. */
 export async function searchDocuments(
@@ -285,6 +286,7 @@ export async function searchDocuments(
   query: string,
 ): Promise<FragmentHit[]> {
   requireAccess(context.permissions, 'documents', 'read');
-  const [embedding] = await deps.embedder.embed([query.trim()], 'query');
-  return deps.index.search(context.cooperativeId, embedding!, SEARCH_RESULTS);
+  const text = query.trim();
+  const [embedding] = await deps.embedder.embed([text], 'query');
+  return deps.index.search(context.cooperativeId, { text, embedding: embedding! }, SEARCH_RESULTS);
 }

@@ -5,7 +5,7 @@ import type { FileStorage } from '../../shared/files/file-storage';
 import { log } from '../../shared/infrastructure/log';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
 import type { CooperativeContext } from '../access';
-import { searchDocuments } from './application/documents';
+import { SEARCH_RESULTS, searchDocuments } from './application/documents';
 import type { DocumentEvent } from './application/events';
 import { createIndexer } from './application/indexing';
 import type { Embedder } from './application/ports/embedder';
@@ -20,6 +20,8 @@ import { UnpdfTextExtractor } from './infrastructure/unpdf-text-extractor';
 
 export type { DocumentEvent, DocumentPublished, DocumentWithdrawn } from './application/events';
 export type { Embedder, EmbeddingKind } from './application/ports/embedder';
+/** Fragments a search returns; the assistant never needs more. */
+export { SEARCH_RESULTS as DOCUMENT_SEARCH_RESULTS };
 export type { FragmentHit } from './application/ports/fragment-index';
 export { EMBEDDING_DIMENSIONS } from './application/ports/embedder';
 export { GeminiEmbedder, type GeminiEmbeddingClient } from './infrastructure/gemini-embedder';
@@ -36,10 +38,14 @@ export function createDocumentsModule(deps: {
   members: MemberDirectory;
   requireCooperative: RequestHandler;
   embedder: Embedder;
+  /** Minimum cosine similarity for a vector-arm hit; depends on the embedding model (ADR-022). 0 keeps all. */
+  minVectorScore?: number;
   extractor?: PdfTextExtractor;
   now?: () => Date;
 }) {
-  const index = new PgVectorFragmentIndex(deps.prisma);
+  const index = new PgVectorFragmentIndex(deps.prisma, {
+    minVectorScore: deps.minVectorScore ?? 0,
+  });
   const indexingStore = new PrismaIndexingStore(deps.prisma);
   const indexer = createIndexer({
     store: indexingStore,
