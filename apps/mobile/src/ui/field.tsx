@@ -25,7 +25,9 @@ export function useField({
   const message = error ?? (name ? form?.error(name) : undefined);
   const view = useRef<View>(null);
   const focusRef = useRef(focus);
-  focusRef.current = focus;
+  useEffect(() => {
+    focusRef.current = focus;
+  });
   const id = useId();
   const errorId = `field-error-${id.replace(/:/g, '')}`;
 
@@ -33,6 +35,7 @@ export function useField({
     if (!form || !name) return;
     return form.register(name, { view: view.current, focus: () => focusRef.current?.() });
     // `form` changes identity on every render; the registration only depends on the name.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above; `!!form` is deliberate
   }, [name, !!form]);
 
   const accessibility = message

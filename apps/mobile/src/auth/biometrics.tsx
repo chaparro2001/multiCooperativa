@@ -98,9 +98,8 @@ export function BiometricsProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, [lockIfNeeded]);
 
-  useEffect(() => {
-    if (status !== 'signedIn') setLocked(false);
-  }, [status]);
+  // Signing out drops the lock (adjusting state during render, not in an effect).
+  if (status !== 'signedIn' && locked) setLocked(false);
 
   const setEnabled = useCallback(
     async (value: boolean) => {
@@ -151,6 +150,7 @@ function LockScreen({
   }, [onUnlock, t]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- prompts the OS once on mount; state is set after the async result
     tryUnlock();
   }, [tryUnlock]);
 
