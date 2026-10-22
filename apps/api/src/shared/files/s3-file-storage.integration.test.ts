@@ -59,7 +59,9 @@ describe('S3 storage (ADR-005)', () => {
     }
   });
 
-  it('the signed URL expires', async () => {
+  // The expiry is judged by the storage server's own clock, so it cannot be faked: this test really
+  // waits (1 s validity + margin). The explicit timeout keeps it from flaking on a loaded machine.
+  it('the signed URL expires', { timeout: 15_000 }, async () => {
     const key = await stored();
     const url = await storage.signedDownloadUrl(key, {
       fileName: 'a.pdf',

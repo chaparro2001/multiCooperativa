@@ -53,13 +53,18 @@ describe('InProcessEventBus', () => {
   it('waits for async handlers before resolving', async () => {
     const { bus } = createBus();
     const order: string[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
     bus.subscribe('AnnouncementPublished', async () => {
-      await new Promise((resolve) => setTimeout(resolve, 5));
+      await gate;
       order.push('handler');
     });
 
-    await bus.publish(announcementPublished);
-    order.push('published');
+    const published = bus.publish(announcementPublished).then(() => order.push('published'));
+    await Promise.resolve();
+    expect(order).toEqual([]);
+    release();
+    await published;
 
     expect(order).toEqual(['handler', 'published']);
   });
