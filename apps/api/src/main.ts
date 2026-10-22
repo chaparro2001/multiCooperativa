@@ -9,6 +9,7 @@ import {
   createGeminiClient,
 } from './modules/invoicing';
 import { S3FileStorage, s3SettingsFromEnv } from './shared/files/s3-file-storage';
+import { describeError, log } from './shared/infrastructure/log';
 import { createPrismaClient } from './shared/infrastructure/prisma';
 
 const env = loadEnv(process.env);
@@ -72,14 +73,14 @@ const { app, indexing, runDueDates } = createApi({
 });
 
 app.listen(env.PORT, () => {
-  console.log(`API listening on port ${env.PORT} (${env.NODE_ENV})`);
+  log.info('api_listening', { port: env.PORT, env: env.NODE_ENV });
 });
 
 // Whatever a restart left half-done is re-indexed in the background (ADR-006).
 indexing
   .resumePending()
-  .then((count) => count > 0 && console.log(`Indexing: ${count} pending versions queued`))
-  .catch((error) => console.error('Could not resume the pending indexing jobs:', error));
+  .then((count) => count > 0 && log.info('indexing_resumed', { count }))
+  .catch((error) => log.error('indexing_resume_failed', { error: describeError(error) }));
 
 // Invoice due dates (US-INV-07): on startup and every hour. A free host sleeps when idle, so an
 // external cron also calls POST /jobs/due-dates. It works by dates and is
@@ -88,8 +89,8 @@ const HOUR = 60 * 60 * 1000;
 const dueDates = () =>
   runDueDates()
     .then(({ overdue, dueSoon }) => {
-      if (overdue + dueSoon > 0) console.log(`Due dates: ${overdue} overdue, ${dueSoon} notices`);
+      if (overdue + dueSoon > 0) log.info('due_dates_processed', { overdue, dueSoon });
     })
-    .catch((error) => console.error('Due-dates process failed:', error));
+    .catch((error) => log.error('due_dates_failed', { error: describeError(error) }));
 void dueDates();
 setInterval(dueDates, HOUR).unref();

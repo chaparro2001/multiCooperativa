@@ -58,13 +58,8 @@ export class FallbackLanguageModel implements LanguageModel {
   }
 }
 
-/** A warning line for the operator: what failed and where, never the key. */
-export function describeFallback(cooperativeId: string, error: HostedProviderError): string {
+/** Log fields for the operator: what failed and where, never the key. */
+export function describeFallback(cooperativeId: string, error: HostedProviderError) {
   const reason = error instanceof HostedProviderKeyInvalidError ? 'key_invalid' : 'provider_error';
-  return JSON.stringify({
-    event: 'assistant_hosted_fallback',
-    cooperativeId,
-    reason,
-    status: error.status ?? null,
-  });
+  return { cooperativeId, reason, status: error.status ?? null };
 }

@@ -21,6 +21,7 @@ import {
   ProviderKeyInvalidError,
   ProviderUnreachableError,
 } from './errors';
+import { log } from '../../../shared/infrastructure/log';
 import { describeFallback, FallbackLanguageModel } from './fallback-language-model';
 import {
   type HostedProviderGateway,
@@ -270,12 +271,12 @@ export async function resolveCooperativeLanguageModel(
   try {
     apiKey = hosted.cipher.decrypt(saved.key);
   } catch {
-    console.warn(JSON.stringify({ event: 'assistant_hosted_key_unreadable', cooperativeId }));
+    log.warn('assistant_hosted_key_unreadable', { cooperativeId });
     return server();
   }
   return new FallbackLanguageModel(
     hosted.gateway.createModel(saved.provider, saved.model, apiKey),
     server,
-    (error) => console.warn(describeFallback(cooperativeId, error)),
+    (error) => log.warn('assistant_hosted_fallback', describeFallback(cooperativeId, error)),
   );
 }

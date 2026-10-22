@@ -2,6 +2,7 @@ import type { ApiError } from '@multicooperativa/contracts';
 import type { ErrorRequestHandler } from 'express';
 import { MulterError } from 'multer';
 
+import { log } from '../../../../shared/infrastructure/log';
 import { DocumentApplicationError } from '../../application/errors';
 import { EmbeddingUnavailableError } from '../../application/ports/embedder';
 import { DocumentDomainError, DocumentFileRejectedError } from '../../domain/errors';
@@ -20,7 +21,7 @@ export const documentErrorHandler: ErrorRequestHandler = (error, _req, res, next
   }
   if (error instanceof EmbeddingUnavailableError) {
     // Search depends on the embeddings service (ADR-006); everything else keeps working.
-    console.error(error.message);
+    log.error('embeddings_unavailable', { error: error.message });
     res.status(503).json({
       error: 'search_unavailable',
       message: 'Content search is not available at the moment.',

@@ -12,6 +12,7 @@ import { MulterError } from 'multer';
 import { ZodError } from 'zod';
 
 import { corsMiddleware } from './shared/infrastructure/http/cors';
+import { describeError, log } from './shared/infrastructure/log';
 import { InvalidRequestError } from './shared/infrastructure/http/validation';
 
 /** Last resort: never leaks internals to the client (NFR-ACC-08 keeps tokens out of logs too). */
@@ -40,8 +41,10 @@ const unhandledErrors: ErrorRequestHandler = (error, _req, res, _next) => {
     res.status(413).json({ error: 'payload_too_large' } satisfies ApiError);
     return;
   }
-  const requestId = res.getHeader('X-Request-Id');
-  console.error(`[${String(requestId)}]`, error instanceof Error ? error.stack : error);
+  log.error('unhandled_error', {
+    requestId: res.getHeader('X-Request-Id'),
+    error: describeError(error),
+  });
   res.status(500).json({ error: 'internal_error' } satisfies ApiError);
 };
 

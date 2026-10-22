@@ -1,3 +1,4 @@
+import { log } from '../../../shared/infrastructure/log';
 import { hasAccess, ModuleAccessDeniedError, requireAccess } from '../../access';
 import { extractCitations, type Source } from '../domain/citations';
 import { buildSystemPrompt } from '../domain/system-prompt';
@@ -201,10 +202,10 @@ async function runTool(
     }
     if (error instanceof InvalidToolInputError) return fail(call, error.message);
     // The model never sees internals; the operator does.
-    console.error(
-      `Assistant tool ${call.name} failed:`,
-      error instanceof Error ? error.message : error,
-    );
+    log.error('assistant_tool_failed', {
+      tool: call.name,
+      error: error instanceof Error ? error.message : error,
+    });
     return fail(call, 'The information is temporarily unavailable.');
   }
 }
@@ -274,7 +275,9 @@ export async function sendMessage(
         })),
       });
     } catch (error) {
-      console.error('Assistant model call failed:', error instanceof Error ? error.message : error);
+      log.error('assistant_model_call_failed', {
+        error: error instanceof Error ? error.message : error,
+      });
       throw error instanceof AssistantRefusedError || error instanceof AssistantUnavailableError
         ? error
         : new AssistantUnavailableError();

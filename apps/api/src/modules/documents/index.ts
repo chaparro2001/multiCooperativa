@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 
 import type { EventPublisher, EventSubscriber } from '../../shared/events';
 import type { FileStorage } from '../../shared/files/file-storage';
+import { log } from '../../shared/infrastructure/log';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
 import type { CooperativeContext } from '../access';
 import { searchDocuments } from './application/documents';
@@ -47,10 +48,10 @@ export function createDocumentsModule(deps: {
     extractor: deps.extractor ?? new UnpdfTextExtractor(),
     embedder: deps.embedder,
     onError: (error, job) =>
-      console.error(
-        `Failed to index version ${job.versionId}:`,
-        error instanceof Error ? error.message : error,
-      ),
+      log.error('document_indexing_failed', {
+        versionId: job.versionId,
+        error: error instanceof Error ? error.message : error,
+      }),
   });
 
   deps.events.subscribe('DocumentPublished', (event) => indexer.enqueue(event.payload));
