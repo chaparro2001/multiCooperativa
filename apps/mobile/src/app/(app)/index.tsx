@@ -1,19 +1,34 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { useBrand } from '@/branding/brand';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
+import { useAssemblyList } from '@/features/assemblies/queries';
+import { useUnreadAnnouncements } from '@/features/announcements/queries';
+import { useInvoicingAttention } from '@/features/invoicing/queries';
+import { type AttentionItemData, attentionItems } from '@/features/home/attention';
 import { tileBadge } from '@/features/home/tile-badges';
 import { useTileBadgeCounts } from '@/features/home/use-tile-badges';
-import { type VisibleModule, visibleModules } from '@/navigation/modules';
-import { CountBadge } from '@/ui/count-badge';
-import { Loading, Screen, SCREEN_MAX_WIDTH, SCREEN_PADDING } from '@/ui/screen';
+import { formatDateTime } from '@/i18n/format';
+import { canAccess, type VisibleModule, visibleModules } from '@/navigation/modules';
+import { AttentionItem } from '@/ui/attention-item';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
-import { Card, Chip, Text, useTheme } from '@/ui/paper';
+import { HomeTile } from '@/ui/home-tile';
+import type { IconName } from '@/ui/paper-settings';
+import { Text, useTheme } from '@/ui/paper';
+import { Screen, SCREEN_MAX_WIDTH, SCREEN_PADDING } from '@/ui/screen';
+import { SectionTitle } from '@/ui/section-title';
+import { Skeleton } from '@/ui/states';
+import { space } from '@/ui/theme';
 
-const GAP = 12;
+const GAP = space[3];
+
+const ATTENTION_ICONS = {
+  votes: 'vote-outline',
+  invoices: 'receipt-text-outline',
+  assembly: 'hand-back-left-outline',
+  announcements: 'bullhorn-outline',
+} as const satisfies Record<AttentionItemData['kind'], IconName>;
 
 /** Two columns on phones; three or four on wider windows (tablets, web build). */
 function columnsFor(width: number): number {
@@ -22,22 +37,63 @@ function columnsFor(width: number): number {
   return 2;
 }
 
-/** Cooperative home: one cell per module of the profile (US-ACC-06). */
+/** Cooperative home: attention strip plus one tile per module of the profile (US-ACC-06). */
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { cooperative, permissions } = useActiveCooperative();
   const { width } = useWindowDimensions();
-  const brand = useBrand();
   const { colors } = useTheme();
   // Count badges (unread announcements, invoices and delivery notes needing attention).
   const badgeCounts = useTileBadgeCounts();
+  const list = permissions?.permissions;
+  // Same queries as the badges and the module screens: shared cache, no extra API calls.
+  const assemblies = useAssemblyList(canAccess(list, 'assemblies'));
+  const unread = useUnreadAnnouncements(canAccess(list, 'announcements'));
+  const attention = useInvoicingAttention(canAccess(list, 'invoicing'));
+  const pending = attentionItems({
+    assemblies: assemblies.data?.items,
+    unreadAnnouncements: unread.data?.unread,
+    invoicesNeedingAttention: attention.data?.invoices,
+    now: new Date(),
+  });
 
-  if (!permissions) return <Loading />;
+  if (!permissions) {
+    return (
+      <Screen>
+        <Skeleton variant="list" />
+      </Screen>
+    );
+  }
   const modules = visibleModules(permissions.permissions);
   const columns = columnsFor(width);
   const contentWidth = Math.min(width, SCREEN_MAX_WIDTH) - 2 * SCREEN_PADDING;
   const cellWidth = (contentWidth - GAP * (columns - 1)) / columns;
   const title = (entry: VisibleModule) => t(entry.titleKey ?? `enums.module.${entry.module}`);
+  const attentionTitle = (item: AttentionItemData): string => {
+    const count = item.count ?? 0;
+    switch (item.kind) {
+      case 'votes':
+        return t('home.attention.votes', { count });
+      case 'invoices':
+        return t('home.attention.invoices', { count });
+      case 'announcements':
+        return t('home.attention.announcements', { count });
+      default:
+        return t('home.attention.assembly');
+    }
+  };
+  const attentionMeta = (item: AttentionItemData): string => {
+    switch (item.kind) {
+      case 'votes':
+        return t('home.attention.votesMeta');
+      case 'invoices':
+        return t('home.attention.invoicesMeta');
+      case 'announcements':
+        return t('home.attention.announcementsMeta');
+      default:
+        return item.at ? formatDateTime(item.at) : '';
+    }
+  };
   return (
     <Screen testID="home-screen">
       <Stack.Screen
@@ -54,50 +110,43 @@ export default function HomeScreen() {
           ),
         }}
       />
-      <View style={styles.identity}>
-        <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
-          {cooperative?.profileName}
-          {/* "Socio · Socio" when the profile is already called like that. */}
-          {permissions.isPartner && cooperative?.profileName !== t('common.partner')
-            ? ` · ${t('common.partner')}`
-            : ''}
-        </Text>
-      </View>
+      <Text variant="bodyMedium" style={{ color: colors.secondary }}>
+        {cooperative?.profileName}
+        {/* "Socio · Socio" when the profile is already called like that. */}
+        {permissions.isPartner && cooperative?.profileName !== t('common.partner')
+          ? ` · ${t('common.partner')}`
+          : ''}
+      </Text>
+      {pending.length > 0 ? (
+        <View style={styles.attention} testID="home-attention">
+          <SectionTitle>{t('home.attention.title')}</SectionTitle>
+          {pending.map((item) => (
+            <AttentionItem
+              key={item.kind}
+              icon={ATTENTION_ICONS[item.kind]}
+              title={attentionTitle(item)}
+              meta={attentionMeta(item)}
+              onPress={() => router.push(item.route as Href)}
+              testID={`attention-${item.kind}`}
+            />
+          ))}
+        </View>
+      ) : null}
       <View style={styles.grid}>
         {modules.map((entry) => {
           const badge = tileBadge(entry.id, badgeCounts);
           return (
-            <Card
+            <HomeTile
               key={entry.id}
-              mode="contained"
-              accessibilityRole="button"
-              accessibilityLabel={
-                badge
-                  ? `${title(entry)}, ${t(badge.labelKey, { count: badge.count })}`
-                  : title(entry)
-              }
+              icon={entry.icon}
+              title={title(entry)}
+              count={badge?.count ?? 0}
+              countLabel={badge ? t(badge.labelKey, { count: badge.count }) : undefined}
               onPress={() => router.push(entry.route as Href)}
               style={{ width: cellWidth }}
-              contentStyle={styles.cell}
               testID={`module-${entry.id}`}
-            >
-              <View accessibilityElementsHidden importantForAccessibility="no">
-                <MaterialCommunityIcons name={entry.icon} size={40} color={brand.primaryColor} />
-              </View>
-              <Text variant="titleSmall" style={styles.cellTitle} numberOfLines={2}>
-                {title(entry)}
-              </Text>
-              {/* The accent only shows once the cooperative picked its own colour. */}
-              {brand.configuredColor ? (
-                <View style={[styles.accent, { backgroundColor: brand.primaryColor }]} />
-              ) : null}
-              {entry.comingSoon && (
-                <Chip compact mode="outlined" testID={`coming-soon-${entry.id}`}>
-                  {t('modulePlaceholder.badge')}
-                </Chip>
-              )}
-              <CountBadge count={badge?.count ?? 0} testID={`count-badge-${entry.id}`} />
-            </Card>
+              countTestID={`count-badge-${entry.id}`}
+            />
           );
         })}
       </View>
@@ -106,21 +155,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  identity: { gap: 2 },
+  attention: { gap: space[2] },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
-  cell: {
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    padding: 12,
-  },
-  accent: { width: 28, height: 4, borderRadius: 2 },
-  cellTitle: {
-    lineHeight: 20,
-    // Always two lines tall, so icons line up across a row even when a title wraps.
-    minHeight: 40,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-  },
 });
