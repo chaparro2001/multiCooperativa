@@ -48,6 +48,11 @@ export class PgVectorFragmentIndex implements FragmentIndex {
   }
 
   async search(cooperativeId: string, embedding: number[], limit: number): Promise<FragmentHit[]> {
+    // Exact search on purpose (BR-AI-04): the WHERE on cooperativeId narrows the scan to one
+    // cooperative's chunks first, and the order is exact cosine distance. An HNSW index would be
+    // applied before that filter (post-filtering), so it could return fewer than `limit` rows.
+    // If a single cooperative grows past roughly 100k chunks (an order-of-magnitude estimate, not
+    // measured), consider HNSW with `vector_cosine_ops` (matches `<=>`) and a higher `hnsw.ef_search`.
     const vector = toVector(embedding);
     const rows = await this.prisma.$queryRaw<
       {
