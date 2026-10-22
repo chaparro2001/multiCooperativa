@@ -276,6 +276,77 @@ describe('voting (US-ASM-04, US-ASM-05, US-ASM-06)', () => {
     );
   });
 
+  it('BR-ASM-01, BR-MEM-05: Given two partners with very different capital, when both vote, then each counts as exactly one vote and capital does not change the census', async () => {
+    const assembly = await convenedAssembly();
+    const pointId = assembly.points[0]!.id;
+    const wealthy = await member('Socio', true);
+    const modest = await member('Socio', true);
+    const contribution = (membershipId: string, amount: string) =>
+      prisma.capitalMovement.create({
+        data: {
+          cooperativeId,
+          membershipId,
+          date: new Date('2026-01-15'),
+          type: 'mandatory_contribution',
+          concept: 'Aportación',
+          amount,
+          recordedByMembershipId: manager.membershipId,
+        },
+      });
+    await contribution(wealthy.membershipId, '250000.00');
+    await contribution(modest.membershipId, '1.00');
+    // The board member who convenes has no capital at all and is still part of the census.
+    const opened = await assemblies.openVoting(deps, manager, pointId);
+    expect(opened.censusSize).toBe(3);
+
+    await assemblies.castVote(deps, wealthy, pointId, 'against');
+    await assemblies.castVote(deps, modest, pointId, 'in_favor');
+
+    const closed = await assemblies.closeVoting(deps, manager, pointId);
+    expect(closed.result).toMatchObject({
+      census: 3,
+      inFavor: 1,
+      against: 1,
+      votesCast: 2,
+    });
+    // Two ballots in the table, one per member, whatever their contributions.
+    expect(await prisma.vote.count()).toBe(2);
+  });
+
+  it('BR-ACC-15: Given a removed membership, when a voting opens, then it is not in the census and cannot vote', async () => {
+    const assembly = await convenedAssembly();
+    const pointId = assembly.points[0]!.id;
+    const leaver = await member('Socio', true);
+    const stayer = await member('Socio', true);
+    await prisma.membership.update({
+      where: { id: leaver.membershipId },
+      data: { status: 'removed' },
+    });
+
+    expect(await access.directory.listVoters(cooperativeId)).not.toContain(leaver.membershipId);
+    const opened = await assemblies.openVoting(deps, manager, pointId);
+    expect(opened.censusSize).toBe(2);
+
+    await expect(assemblies.castVote(deps, leaver, pointId, 'in_favor')).rejects.toThrow(
+      NotInCensusError,
+    );
+    await expect(assemblies.castVote(deps, stayer, pointId, 'in_favor')).resolves.toMatchObject({
+      myVote: 'in_favor',
+    });
+  });
+
+  it('BR-ACC-15: Given a removed membership, when members are counted as the audience of announcements, then it is not included', async () => {
+    const leaver = await member('Socio', false);
+    const before = await access.directory.countActiveMembers(cooperativeId);
+
+    await prisma.membership.update({
+      where: { id: leaver.membershipId },
+      data: { status: 'removed' },
+    });
+
+    expect(await access.directory.countActiveMembers(cooperativeId)).toBe(before - 1);
+  });
+
   it('the database rejects a vote from someone outside the census even if the code failed', async () => {
     const assembly = await convenedAssembly();
     const pointId = assembly.points[0]!.id;
