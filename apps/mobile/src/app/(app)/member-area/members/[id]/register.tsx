@@ -51,7 +51,7 @@ export default function RegisterMovementScreen() {
       </Screen>
     );
   }
-  const { member, capital } = statement.data;
+  const { member, capital } = statement.data.pages[0]!;
   const hint = { color: colors.onSurfaceVariant };
 
   async function submit() {

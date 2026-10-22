@@ -15,6 +15,7 @@ import {
 } from './errors';
 import {
   changeMember,
+  getMember,
   inviteMember,
   listMembers,
   type MemberDeps,
@@ -26,6 +27,7 @@ import type { MemberRecord } from './ports/member-store';
 import type { CooperativeContext } from './request-context';
 import { FakeClock, InMemoryMemberStore } from './testing/fakes';
 
+const PAGE = { limit: 30 };
 const COOP = '40000000-0000-4000-8000-000000000001';
 const UNKNOWN = '20000000-0000-4000-8000-999999999999';
 
@@ -78,7 +80,7 @@ describe('member management permissions (US-ACC-07)', () => {
   it('without "Users and profiles · manage" it is denied before reading anything', async () => {
     const gestor = contextFor(store.addMember('manager@campo.es', 'Gestor'));
 
-    await expect(listMembers(deps, gestor)).rejects.toThrow(ModuleAccessDeniedError);
+    await expect(listMembers(deps, gestor, {}, PAGE)).rejects.toThrow(ModuleAccessDeniedError);
     await expect(
       inviteMember(deps, gestor, {
         email: 'x@campo.es',
@@ -88,6 +90,34 @@ describe('member management permissions (US-ACC-07)', () => {
       }),
     ).rejects.toThrow(ModuleAccessDeniedError);
     expect(store.audit).toEqual([]);
+  });
+});
+
+describe('list members (US-ACC-10)', () => {
+  it('pages by name with a cursor, filters by search and status, and never lists removed members', async () => {
+    store.addMember('b@campo.es', 'Socio');
+    store.addMember('c@campo.es', 'Socio', 'suspended');
+    store.addMember('d@campo.es', 'Socio', 'removed');
+
+    const first = await listMembers(deps, ctx, {}, { limit: 2 });
+    const second = await listMembers(deps, ctx, {}, { limit: 2, before: first.nextCursor! });
+
+    expect(first.items.map((m) => m.email)).toEqual(['admin@campo.es', 'b@campo.es']);
+    expect(second.items.map((m) => m.email)).toEqual(['c@campo.es']);
+    expect(second.nextCursor).toBeNull();
+
+    const suspended = await listMembers(deps, ctx, { status: 'suspended' }, PAGE);
+    expect(suspended.items.map((m) => m.email)).toEqual(['c@campo.es']);
+    const found = await listMembers(deps, ctx, { search: 'ADMIN' }, PAGE);
+    expect(found.items.map((m) => m.email)).toEqual(['admin@campo.es']);
+  });
+
+  it('a member that has left, an unknown id or a malformed one do not exist', async () => {
+    const gone = store.addMember('gone@campo.es', 'Socio', 'removed');
+    await expect(getMember(deps, ctx, gone.membershipId)).rejects.toThrow(MemberNotFoundError);
+    await expect(getMember(deps, ctx, UNKNOWN)).rejects.toThrow(MemberNotFoundError);
+    await expect(getMember(deps, ctx, 'nope')).rejects.toThrow(MemberNotFoundError);
+    expect((await getMember(deps, ctx, admin.membershipId)).email).toBe('admin@campo.es');
   });
 });
 
@@ -292,7 +322,7 @@ describe('suspend, reactivate and remove (US-ACC-10)', () => {
     await removeMember(deps, ctx, active.membershipId);
     await removeMember(deps, ctx, suspended.membershipId);
 
-    const listed = (await listMembers(deps, ctx)).map((m) => m.email);
+    const listed = (await listMembers(deps, ctx, {}, PAGE)).items.map((m) => m.email);
     expect(listed).toEqual(['admin@campo.es']);
     expect(store.audit.map((a) => a.action)).toEqual(['member.removed', 'member.removed']);
   });

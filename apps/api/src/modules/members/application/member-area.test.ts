@@ -98,12 +98,29 @@ const NEW = {
   amount: '50.00',
 };
 
+const PAGE = { limit: 50 };
+
+describe('US-MEM-02: movements are paginated, the capital is not', () => {
+  it('BR-MEM-04: the capital is the sum of every movement, whatever the page', async () => {
+    const { deps } = setup();
+
+    const first = await listMyMovements(deps, asMember, { limit: 1 });
+    const second = await listMyMovements(deps, asMember, { limit: 1, before: first.nextCursor! });
+
+    expect(first.movements.map((m) => m.date)).toEqual(['2026-02-10']);
+    expect(second.movements.map((m) => m.date)).toEqual(['2026-01-10']);
+    expect(second.nextCursor).toBeNull();
+    expect(first.balanceCents).toBe(50000n);
+    expect(second.balanceCents).toBe(50000n);
+  });
+});
+
 describe('US-MEM-01 / US-MEM-02: my record and capital', () => {
   it('US-MEM-02: a member sees their record with the capital and the movements newest first', async () => {
     const { deps } = setup();
 
     const mine = await getMyRecord(deps, asMember);
-    const list = await listMyMovements(deps, asMember);
+    const list = await listMyMovements(deps, asMember, PAGE);
 
     expect(mine.member.partnerNumber).toBe('001');
     expect(mine.balanceCents).toBe(50000n);
@@ -115,7 +132,7 @@ describe('US-MEM-01 / US-MEM-02: my record and capital', () => {
     const { deps } = setup();
 
     const mine = await getMyRecord(deps, contextOf(BOARD, { level: 'read', scope: 'all' }));
-    const list = await listMyMovements(deps, asBoard);
+    const list = await listMyMovements(deps, asBoard, PAGE);
 
     expect(mine.balanceCents).toBe(0n);
     expect(list.movements).toEqual([]);
@@ -132,9 +149,9 @@ describe('US-MEM-01 / US-MEM-02: my record and capital', () => {
     const { deps } = setup();
     const none = contextOf(ANA, null);
     await expect(getMyRecord(deps, none)).rejects.toMatchObject({ code: 'forbidden' });
-    await expect(listMyMovements(deps, none)).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(listMyMovements(deps, none, PAGE)).rejects.toMatchObject({ code: 'forbidden' });
     await expect(listMembers(deps, none)).rejects.toMatchObject({ code: 'forbidden' });
-    await expect(listMemberMovements(deps, none, ANA.membershipId)).rejects.toMatchObject({
+    await expect(listMemberMovements(deps, none, ANA.membershipId, PAGE)).rejects.toMatchObject({
       code: 'forbidden',
     });
     await expect(registerMovement(deps, none, BEN.membershipId, NEW)).rejects.toMatchObject({
@@ -146,36 +163,36 @@ describe('US-MEM-01 / US-MEM-02: my record and capital', () => {
 describe('double isolation: by cooperative and by member', () => {
   it('US-MEM-01: with "own" scope another member of my cooperative is a 404, not a 403', async () => {
     const { deps } = setup();
-    await expect(listMemberMovements(deps, asMember, BEN.membershipId)).rejects.toBeInstanceOf(
-      MemberNotFoundError,
-    );
+    await expect(
+      listMemberMovements(deps, asMember, BEN.membershipId, PAGE),
+    ).rejects.toBeInstanceOf(MemberNotFoundError);
   });
 
   it('with "own" scope the member can read their own movements through the member route', async () => {
     const { deps } = setup();
-    const result = await listMemberMovements(deps, asMember, ANA.membershipId);
+    const result = await listMemberMovements(deps, asMember, ANA.membershipId, PAGE);
     expect(result.balanceCents).toBe(50000n);
   });
 
   it('ADR-003: a member of another cooperative is a 404 even with "all" scope', async () => {
     const { deps } = setup();
-    await expect(listMemberMovements(deps, asBoard, FOREIGN.membershipId)).rejects.toBeInstanceOf(
-      MemberNotFoundError,
-    );
+    await expect(
+      listMemberMovements(deps, asBoard, FOREIGN.membershipId, PAGE),
+    ).rejects.toBeInstanceOf(MemberNotFoundError);
   });
 
   it('ADR-003: the same user in the other cooperative never sees this one', async () => {
     const { deps } = setup();
     const elsewhere = contextOf(BOARD, { level: 'read', scope: 'all' }, OTHER_COOP);
-    await expect(listMemberMovements(deps, elsewhere, BEN.membershipId)).rejects.toBeInstanceOf(
-      MemberNotFoundError,
-    );
+    await expect(
+      listMemberMovements(deps, elsewhere, BEN.membershipId, PAGE),
+    ).rejects.toBeInstanceOf(MemberNotFoundError);
   });
 
   it('ADR-003: ids that are not UUIDs, non-partners and removed partners are a 404', async () => {
     const { deps } = setup();
     for (const target of ['not-a-uuid', MANAGER.membershipId, GONE.membershipId]) {
-      await expect(listMemberMovements(deps, asBoard, target)).rejects.toBeInstanceOf(
+      await expect(listMemberMovements(deps, asBoard, target, PAGE)).rejects.toBeInstanceOf(
         MemberNotFoundError,
       );
     }
@@ -209,7 +226,7 @@ describe('US-MEM-04: the capital of all members', () => {
 
   it('US-MEM-04: the board reads any member movements', async () => {
     const { deps } = setup();
-    const result = await listMemberMovements(deps, asBoard, BEN.membershipId);
+    const result = await listMemberMovements(deps, asBoard, BEN.membershipId, PAGE);
     expect(result.balanceCents).toBe(30000n);
     expect(result.member.name).toBe('Member 2');
   });
@@ -223,7 +240,9 @@ describe('US-MEM-03: registering movements', () => {
 
     expect(result.balanceCents).toBe(35000n);
     expect(result.movement.recordedByMembershipId).toBe(MANAGER.membershipId);
-    expect((await listMemberMovements(deps, asBoard, BEN.membershipId)).balanceCents).toBe(35000n);
+    expect((await listMemberMovements(deps, asBoard, BEN.membershipId, PAGE)).balanceCents).toBe(
+      35000n,
+    );
   });
 
   it('US-MEM-03: the governing board reads but does not register (403)', async () => {

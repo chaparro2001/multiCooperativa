@@ -1,3 +1,4 @@
+import type { PageRequest } from '../../../../shared/pagination';
 import type { MembershipStatus } from '../../domain/membership';
 
 export interface MemberRecord {
@@ -55,10 +56,25 @@ export interface MemberSnapshot {
   activeAdminCount: number;
 }
 
+export interface MemberFilter {
+  search?: string;
+  status?: Exclude<MembershipStatus, 'removed'>;
+}
+
 /** Every method is scoped to one cooperative (ADR-003). */
 export interface MemberStore {
-  /** Members that are not "removed" (US-ACC-10). */
-  listMembers(cooperativeId: string): Promise<MemberRecord[]>;
+  /**
+   * Members that are not "removed" (US-ACC-10), by name and then membership id. `search`
+   * matches name or email, case-insensitive. A keyset page: the cursor is [name, membershipId]
+   * of the last row seen and `page.limit` rows are returned at most.
+   */
+  listMembers(
+    cooperativeId: string,
+    filter: MemberFilter,
+    page: PageRequest,
+  ): Promise<MemberRecord[]>;
+  /** One member that is not "removed"; null if it does not exist in this cooperative. */
+  findMember(cooperativeId: string, membershipId: string): Promise<MemberRecord | null>;
   listProfiles(cooperativeId: string): Promise<ProfileRecord[]>;
   findProfile(cooperativeId: string, profileId: string): Promise<ProfileRecord | null>;
   /**

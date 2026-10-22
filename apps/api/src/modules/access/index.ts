@@ -6,6 +6,7 @@ import { login } from './application/login';
 import {
   changeMember,
   inviteMember,
+  getMember,
   listAudit,
   listMembers,
   listProfiles,
@@ -142,7 +143,8 @@ export function createAccessModule(deps: AccessModuleDeps) {
   router.use(
     createMembersRouter(
       {
-        listMembers: (context) => listMembers(memberDeps, context),
+        listMembers: (context, filter, page) => listMembers(memberDeps, context, filter, page),
+        getMember: (context, id) => getMember(memberDeps, context, id),
         listProfiles: (context) => listProfiles(memberDeps, context),
         inviteMember: (context, input) => inviteMember(memberDeps, context, input),
         changeMember: (context, id, change) => changeMember(memberDeps, context, id, change),

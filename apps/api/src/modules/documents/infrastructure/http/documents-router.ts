@@ -74,12 +74,15 @@ export function createDocumentsRouter(
     const query = listDocumentsQuerySchema.safeParse(req.query);
     if (!query.success) throw new InvalidRequestError(toValidationIssues(query.error));
     const context = getCooperativeContext(res);
-    const documents = await useCases.listDocuments(deps, context, {
-      category: query.data.category,
-      search: query.data.q,
-    });
+    const page = await useCases.listDocuments(
+      deps,
+      context,
+      { category: query.data.category, search: query.data.q },
+      { limit: query.data.limit, before: query.data.before },
+    );
     res.json({
-      items: documents.map((document) => toSummary(document, context)),
+      items: page.items.map((document) => toSummary(document, context)),
+      nextCursor: page.nextCursor,
     } satisfies ListDocumentsResponse);
   });
 

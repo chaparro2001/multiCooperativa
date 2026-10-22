@@ -1,5 +1,12 @@
 import { type CooperativeContext, ModuleAccessDeniedError, requireAccess } from '../../access';
-import { balanceOf, createMovement, type NewMovementInput } from '../domain/capital';
+import { createMovement, type NewMovementInput } from '../domain/capital';
+import {
+  DAY_CURSOR,
+  pageRequest,
+  TEXT_CURSOR,
+  toPage,
+  UUID_CURSOR,
+} from '../../../shared/pagination';
 import { MemberNotFoundError } from './errors';
 import type { CapitalStore, MovementRecord } from './ports/capital-store';
 import type { MemberDirectory, MemberRecord } from './ports/member-directory';
@@ -17,9 +24,19 @@ export interface MemberCapital {
 }
 
 export interface MemberStatement extends MemberCapital {
-  /** Newest first. */
+  /** Newest first, one page. */
   movements: MovementRecord[];
+  /** For the next page; null on the last one. */
+  nextCursor: string | null;
 }
+
+export interface MovementsPage {
+  limit: number;
+  /** `nextCursor` of the previous page. */
+  before?: string;
+}
+
+const MOVEMENT_CURSOR = [DAY_CURSOR, TEXT_CURSOR, UUID_CURSOR];
 
 /** Reads need the module; "all" scope also reads other members (ADR-004, requirements/06 section 4). */
 function readScope(context: CooperativeContext) {
@@ -38,13 +55,31 @@ async function myMember(deps: MemberAreaDeps, context: CooperativeContext) {
   return member;
 }
 
+/** The capital is summed by the store over every movement (BR-MEM-04), never from the page. */
 async function statement(
   deps: MemberAreaDeps,
   cooperativeId: string,
   member: MemberRecord,
+  page: MovementsPage,
 ): Promise<MemberStatement> {
-  const movements = await deps.capital.listMovements(cooperativeId, member.membershipId);
-  return { member, balanceCents: balanceOf(movements), movements };
+  const [rows, balances] = await Promise.all([
+    deps.capital.listMovements(cooperativeId, member.membershipId, {
+      ...pageRequest(page, MOVEMENT_CURSOR),
+      limit: page.limit + 1,
+    }),
+    deps.capital.balances(cooperativeId, [member.membershipId]),
+  ]);
+  const { items, nextCursor } = toPage(rows, page.limit, (movement) => [
+    movement.date,
+    movement.recordedAt.toISOString(),
+    movement.id,
+  ]);
+  return {
+    member,
+    balanceCents: balances.get(member.membershipId) ?? 0n,
+    movements: items,
+    nextCursor,
+  };
 }
 
 /** US-MEM-01, US-MEM-02: my record and capital. */
@@ -62,9 +97,10 @@ export async function getMyRecord(
 export async function listMyMovements(
   deps: MemberAreaDeps,
   context: CooperativeContext,
+  page: MovementsPage,
 ): Promise<MemberStatement> {
   readScope(context);
-  return statement(deps, context.cooperativeId, await myMember(deps, context));
+  return statement(deps, context.cooperativeId, await myMember(deps, context), page);
 }
 
 export interface MemberList {
@@ -118,10 +154,11 @@ export async function listMemberMovements(
   deps: MemberAreaDeps,
   context: CooperativeContext,
   membershipId: string,
+  page: MovementsPage,
 ): Promise<MemberStatement> {
   const scope = readScope(context);
   const member = await findVisiblePartner(deps, context, scope, membershipId);
-  return statement(deps, context.cooperativeId, member);
+  return statement(deps, context.cooperativeId, member, page);
 }
 
 /** US-MEM-03: management registers a contribution, refund or correction. */

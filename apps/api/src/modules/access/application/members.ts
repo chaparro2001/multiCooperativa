@@ -1,3 +1,10 @@
+import {
+  type Page,
+  pageRequest,
+  TEXT_CURSOR,
+  toPage,
+  UUID_CURSOR,
+} from '../../../shared/pagination';
 import { assertKeepsAnAdmin, assertNotSelf } from '../domain/administration';
 import { normalizeEmail } from '../domain/email';
 import { InvalidMembershipTransitionError } from '../domain/errors';
@@ -13,6 +20,7 @@ import {
 import type { InvitationSender } from './ports/invitation-sender';
 import type {
   AuditRecord,
+  MemberFilter,
   MemberRecord,
   MemberSnapshot,
   MemberStore,
@@ -72,12 +80,35 @@ async function updateOrFail(
   return updated;
 }
 
+const MEMBER_CURSOR = [TEXT_CURSOR, UUID_CURSOR];
+
+/** US-ACC-10: a page of members, by name; `before` is the previous `nextCursor`. */
 export async function listMembers(
   deps: Pick<MemberDeps, 'members'>,
   context: CooperativeContext,
-): Promise<MemberRecord[]> {
+  filter: MemberFilter,
+  page: { limit: number; before?: string },
+): Promise<Page<MemberRecord>> {
   requireUserManagement(context);
-  return deps.members.listMembers(context.cooperativeId);
+  const rows = await deps.members.listMembers(context.cooperativeId, filter, {
+    ...pageRequest(page, MEMBER_CURSOR),
+    limit: page.limit + 1,
+  });
+  return toPage(rows, page.limit, (member) => [member.name, member.membershipId]);
+}
+
+/** US-ACC-10: one member that has not left, for its detail screen. */
+export async function getMember(
+  deps: Pick<MemberDeps, 'members'>,
+  context: CooperativeContext,
+  membershipId: string,
+): Promise<MemberRecord> {
+  requireUserManagement(context);
+  const member = isUuid(membershipId)
+    ? await deps.members.findMember(context.cooperativeId, membershipId)
+    : null;
+  if (!member) throw new MemberNotFoundError();
+  return member;
 }
 
 export async function listProfiles(

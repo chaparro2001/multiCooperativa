@@ -1,12 +1,14 @@
-import type { Operation } from '@multicooperativa/contracts';
+import type { DeliveryNote, Invoice, Operation } from '@multicooperativa/contracts';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { allItems } from '@/api/paged';
+import { useLoadMore } from '@/api/use-load-more';
 import { InvoiceRow, listStyles, NoteRow, useEuros } from '@/features/invoicing/components';
-import { invoiceAttention, noteAttention, todayInSpain } from '@/features/invoicing/attention';
+import { todayInSpain } from '@/features/invoicing/attention';
 import {
   useDeliveryNotes,
   useInvoices,
@@ -48,45 +50,35 @@ export default function InvoicingHomeScreen() {
   const alertSettings = attention.data?.settings;
   const today = todayInSpain();
   const kind: Kind = fixed ?? (section === 'notes' ? 'delivery_note' : 'invoice');
-  const refresh = usePullToRefresh(async () => {
-    await Promise.all([
-      summary.refetch(),
-      invoices.refetch(),
-      notes.refetch(),
-      attention.refetch(),
-    ]);
-  });
+  const { refetch: refetchSummary } = summary;
+  const { refetch: refetchInvoices } = invoices;
+  const { refetch: refetchNotes } = notes;
+  const { refetch: refetchAttention } = attention;
+  const refresh = usePullToRefresh(
+    useCallback(async () => {
+      await Promise.all([refetchSummary(), refetchInvoices(), refetchNotes(), refetchAttention()]);
+    }, [refetchSummary, refetchInvoices, refetchNotes, refetchAttention]),
+  );
 
-  return (
-    <ScrollView
-      style={[styles.screen, { backgroundColor: theme.background }]}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl {...refresh} />}
-      testID="invoicing-screen"
-    >
-      <Stack.Screen
-        options={{
-          ...(fixed && {
-            title: t(fixed === 'invoice' ? 'invoicing.home.invoices' : 'invoicing.home.notes'),
-          }),
-          headerRight: () => (
-            <HeaderActions>
-              <HeaderAction
-                href="/invoices/third-parties?type=supplier"
-                icon={moduleIcon('suppliers')}
-                label={t('invoicing.thirdParties.filter.supplier')}
-                testID="suppliers-link"
-              />
-              <HeaderAction
-                href="/invoices/third-parties?type=customer"
-                icon={moduleIcon('customers')}
-                label={t('invoicing.thirdParties.filter.customer')}
-                testID="customers-link"
-              />
-            </HeaderActions>
-          ),
-        }}
-      />
+  // One list for the section on screen; the rows are memoized and receive primitives.
+  const query = section === 'invoices' ? invoices : notes;
+  const items: (Invoice | DeliveryNote)[] = useMemo(
+    () => allItems<Invoice | DeliveryNote>(query.data),
+    [query.data],
+  );
+  const loadMore = useLoadMore(query);
+  const renderItem = useCallback(
+    ({ item }: { item: Invoice | DeliveryNote }) =>
+      section === 'invoices' ? (
+        <InvoiceRow invoice={item as Invoice} settings={alertSettings} today={today} />
+      ) : (
+        <NoteRow note={item as DeliveryNote} settings={alertSettings} today={today} />
+      ),
+    [section, alertSettings, today],
+  );
+
+  const header = (
+    <View style={styles.header}>
       <SummaryCards kind={fixed} />
 
       {canManage && (
@@ -137,56 +129,65 @@ export default function InvoicingHomeScreen() {
           testIDPrefix="section"
         />
       )}
+    </View>
+  );
 
-      {section === 'invoices' ? (
-        <List query={invoices} empty={t('invoicing.home.noInvoices')}>
-          {(items) =>
-            items.map((invoice) => (
-              <InvoiceRow
-                key={invoice.id}
-                invoice={invoice}
-                attention={alertSettings ? invoiceAttention(invoice, today, alertSettings) : null}
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          ...(fixed && {
+            title: t(fixed === 'invoice' ? 'invoicing.home.invoices' : 'invoicing.home.notes'),
+          }),
+          headerRight: () => (
+            <HeaderActions>
+              <HeaderAction
+                href="/invoices/third-parties?type=supplier"
+                icon={moduleIcon('suppliers')}
+                label={t('invoicing.thirdParties.filter.supplier')}
+                testID="suppliers-link"
               />
-            ))
-          }
-        </List>
-      ) : (
-        <List query={notes} empty={t('invoicing.home.noNotes')}>
-          {(items) =>
-            items.map((note) => (
-              <NoteRow
-                key={note.id}
-                note={note}
-                attention={alertSettings ? noteAttention(note, today, alertSettings) : null}
+              <HeaderAction
+                href="/invoices/third-parties?type=customer"
+                icon={moduleIcon('customers')}
+                label={t('invoicing.thirdParties.filter.customer')}
+                testID="customers-link"
               />
-            ))
-          }
-        </List>
-      )}
-    </ScrollView>
+            </HeaderActions>
+          ),
+        }}
+      />
+      <FlatList
+        style={[styles.screen, { backgroundColor: theme.background }]}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl {...refresh} />}
+        testID="invoicing-screen"
+        data={query.isPending || query.isError ? [] : items}
+        keyExtractor={keyOf}
+        renderItem={renderItem}
+        ItemSeparatorComponent={Separator}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          query.isPending ? (
+            <Loading />
+          ) : query.isError ? (
+            <ErrorText>{messageFor(query.error)}</ErrorText>
+          ) : (
+            <Text variant="bodyLarge" style={listStyles.empty}>
+              {t(section === 'invoices' ? 'invoicing.home.noInvoices' : 'invoicing.home.noNotes')}
+            </Text>
+          )
+        }
+        ListFooterComponent={query.isFetchingNextPage ? <Loading /> : null}
+        onEndReachedThreshold={0.4}
+        onEndReached={loadMore}
+      />
+    </>
   );
 }
 
-function List<T>({
-  query,
-  empty,
-  children,
-}: {
-  query: { isPending: boolean; isError: boolean; error: unknown; data?: { items: T[] } };
-  empty: string;
-  children(items: T[]): React.ReactNode;
-}) {
-  if (query.isPending) return <Loading />;
-  if (query.isError) return <ErrorText>{messageFor(query.error)}</ErrorText>;
-  if (!query.data || query.data.items.length === 0) {
-    return (
-      <Text variant="bodyLarge" style={listStyles.empty}>
-        {empty}
-      </Text>
-    );
-  }
-  return <View style={styles.list}>{children(query.data.items)}</View>;
-}
+const keyOf = (item: Invoice | DeliveryNote) => item.id;
+const Separator = () => <View style={styles.separator} />;
 
 /** US-INV-07: pending and overdue to pay and to collect, plus open discrepancies (US-INV-04) and old delivery notes (US-INV-09). */
 function SummaryCards({ kind }: { kind: Kind | null }) {
@@ -255,7 +256,7 @@ function SummaryCards({ kind }: { kind: Kind | null }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: 16, gap: 14 },
+  content: { padding: 16 },
   summary: { gap: 8 },
   cards: { flexDirection: 'row', gap: 10 },
   card: { flex: 1 },
@@ -270,5 +271,6 @@ const styles = StyleSheet.create({
   },
   actions: { flexDirection: 'row', gap: 10 },
   action: { flex: 1 },
-  list: { gap: 10 },
+  header: { gap: 14, marginBottom: 14 },
+  separator: { height: 10 },
 });

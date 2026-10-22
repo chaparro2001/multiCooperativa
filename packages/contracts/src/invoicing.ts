@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { pageQuerySchema, pageResponseSchema } from './pagination';
+
 /** Amounts in euros as a string with at most 2 decimals: never a number (BR-INV-13). */
 export const moneySchema = z.string().regex(/^-?\d+(\.\d{1,2})?$/, 'Amount with up to 2 decimals');
 /** Quantities with up to 3 decimals, as a string. */
@@ -160,17 +162,20 @@ export const documentFilterQuerySchema = z.object({
   to: day.optional(),
 });
 
-export const listDeliveryNotesQuerySchema = documentFilterQuerySchema.extend({
-  status: deliveryNoteStatusSchema.optional(),
-});
+export const listDeliveryNotesQuerySchema = documentFilterQuerySchema
+  .extend({ status: deliveryNoteStatusSchema.optional() })
+  .extend(pageQuerySchema.shape);
 
-export const listInvoicesQuerySchema = documentFilterQuerySchema.extend({
-  status: paymentStatusSchema.optional(),
-  reconciliation: reconciliationStatusSchema.optional(),
-});
+export const listInvoicesQuerySchema = documentFilterQuerySchema
+  .extend({
+    status: paymentStatusSchema.optional(),
+    reconciliation: reconciliationStatusSchema.optional(),
+  })
+  .extend(pageQuerySchema.shape);
 
-export const listDeliveryNotesResponseSchema = z.object({ items: z.array(deliveryNoteSchema) });
-export const listInvoicesResponseSchema = z.object({ items: z.array(invoiceSchema) });
+/** Keyset pages, newest first by (date, number, id). */
+export const listDeliveryNotesResponseSchema = pageResponseSchema(deliveryNoteSchema);
+export const listInvoicesResponseSchema = pageResponseSchema(invoiceSchema);
 
 /** "Pending" includes what is overdue: everything still to be paid or collected. */
 export const amountsSchema = z.object({

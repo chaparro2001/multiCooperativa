@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { allItems } from '@/api/paged';
 import { routeServerError } from '@/forms/server-errors';
 import { useForm } from '@/forms/use-form';
 import { computeTotal } from '@/features/invoicing/amounts';
@@ -434,7 +435,7 @@ function NotesToGroup({
 }) {
   const { t } = useTranslation();
   const notes = useDeliveryNotes(operation, { pendingFor: thirdPartyId });
-  const items = notes.data?.items ?? [];
+  const items = allItems(notes.data);
   if (items.length === 0) return null;
   return (
     <FieldGroup name="deliveryNoteIds" style={styles.group} testID="notes-to-group">

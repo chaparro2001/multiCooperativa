@@ -1,7 +1,9 @@
 import type { PrismaClient } from '../../../shared/infrastructure/prisma';
+import type { PageRequest } from '../../../shared/pagination';
 import type {
   AuditInput,
   AuditRecord,
+  MemberFilter,
   MemberRecord,
   MemberSnapshot,
   MemberStore,
@@ -54,6 +56,17 @@ function toMember(row: MemberRow): MemberRecord {
   };
 }
 
+const ACCENTED = 'áàäâãéèëêíìïîóòöôõúùüûñç';
+const PLAIN = 'aaaaaeeeeiiiiooooouuuunc';
+
+/** Lower case without diacritics: the text the search compares (the SQL side translates the same letters). */
+const foldAccents = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim();
+
 /** Thrown inside a transaction to roll it back without it being a failure. */
 class AlreadyMember extends Error {}
 
@@ -64,13 +77,58 @@ function isUniqueViolation(error: unknown): boolean {
 export class PrismaMemberStore implements MemberStore {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async listMembers(cooperativeId: string): Promise<MemberRecord[]> {
+  async listMembers(
+    cooperativeId: string,
+    filter: MemberFilter,
+    page: PageRequest,
+  ): Promise<MemberRecord[]> {
+    const matching = filter.search?.trim()
+      ? await this.searchIds(cooperativeId, filter.search)
+      : null;
+    const [name, id] = page.cursor ?? [];
     const rows = await this.prisma.membership.findMany({
-      where: { cooperativeId, status: { not: 'removed' } },
-      orderBy: { user: { name: 'asc' } },
+      where: {
+        cooperativeId,
+        status: filter.status ?? { not: 'removed' },
+        ...(matching && { id: { in: matching } }),
+        // After the cursor [name, id] of (name asc, id asc). The user's name is not unique.
+        ...(name !== undefined &&
+          id !== undefined && {
+            AND: [
+              {
+                OR: [{ user: { name: { gt: name } } }, { user: { name }, id: { gt: id } }],
+              },
+            ],
+          }),
+      },
+      orderBy: [{ user: { name: 'asc' } }, { id: 'asc' }],
+      take: page.limit,
       select: memberSelect,
     });
     return rows.map(toMember);
+  }
+
+  /**
+   * Memberships of the cooperative whose name or email contains the text, ignoring case and
+   * accents ("jose" finds "José"): the same search the app did on the whole list. Prisma cannot
+   * fold accents, so a bounded raw query (one cooperative's memberships) picks the ids.
+   */
+  private async searchIds(cooperativeId: string, text: string): Promise<string[]> {
+    const pattern = `%${foldAccents(text).replace(/[\\%_]/g, '\\$&')}%`;
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT m.id FROM "Membership" m JOIN "User" u ON u.id = m."userId"
+      WHERE m."cooperativeId" = ${cooperativeId}::uuid AND m.status <> 'removed'
+        AND (translate(lower(u.name), ${ACCENTED}, ${PLAIN}) LIKE ${pattern}
+          OR translate(lower(u.email), ${ACCENTED}, ${PLAIN}) LIKE ${pattern})`;
+    return rows.map((row) => row.id);
+  }
+
+  async findMember(cooperativeId: string, membershipId: string): Promise<MemberRecord | null> {
+    const row = await this.prisma.membership.findFirst({
+      where: { id: membershipId, cooperativeId, status: { not: 'removed' } },
+      select: memberSelect,
+    });
+    return row && toMember(row);
   }
 
   async listProfiles(cooperativeId: string): Promise<ProfileRecord[]> {

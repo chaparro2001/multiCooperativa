@@ -1,3 +1,4 @@
+import type { PageRequest } from '../../../../shared/pagination';
 import type { DocumentCategory, DocumentState, IndexingStatus } from '../../domain/document';
 
 export interface DocumentRecord extends DocumentState {
@@ -32,10 +33,15 @@ export interface NewVersion {
 
 /** Every method is scoped to one cooperative (ADR-003). */
 export interface DocumentStore {
-  /** Newest document date first (US-DOC-02); `search` matches the title, case-insensitive. */
+  /**
+   * Newest document date first, then title, then id (US-DOC-02); `search` matches the title,
+   * case-insensitive. A keyset page: the cursor is [documentDate, title, id] of the last row
+   * seen and `page.limit` rows are returned at most.
+   */
   list(
     cooperativeId: string,
     query: { onlyPublished: boolean; category?: DocumentCategory; search?: string },
+    page: PageRequest,
   ): Promise<DocumentWithCurrent[]>;
   find(cooperativeId: string, id: string): Promise<DocumentWithCurrent | null>;
   create(

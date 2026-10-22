@@ -25,11 +25,12 @@ export function createMemberAreaReads(deps: MemberAreaDeps): MemberAreaReads {
   return {
     async myContributions(context, count) {
       const { member, balanceCents } = await getMyRecord(deps, context);
-      const { movements } = await listMyMovements(deps, context);
+      // Only the latest few are read: one small page, the capital comes from the record.
+      const { movements } = await listMyMovements(deps, context, { limit: count });
       return {
         partnerNumber: member.partnerNumber,
         capital: formatMoney(balanceCents),
-        latestMovements: movements.slice(0, count).map((movement) => ({
+        latestMovements: movements.map((movement) => ({
           date: movement.date,
           type: movement.type,
           concept: movement.concept,

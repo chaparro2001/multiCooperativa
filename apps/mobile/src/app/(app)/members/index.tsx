@@ -5,12 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
-import {
-  filterMembers,
-  STATUS_FILTERS,
-  type StatusFilter,
-  statusTone,
-} from '@/features/members/members';
+import { allItems } from '@/api/paged';
+import { useLoadMore } from '@/api/use-load-more';
+import { STATUS_FILTERS, type StatusFilter, statusTone } from '@/features/members/members';
 import { useMembers } from '@/features/members/queries';
 import { useModuleAccess } from '@/navigation/use-module-access';
 import { Badge } from '@/ui/badge';
@@ -19,17 +16,20 @@ import { Card, Chip, Text, useTheme } from '@/ui/paper';
 import { ErrorText, Loading } from '@/ui/screen';
 import { SCREEN_MAX_WIDTH } from '@/ui/screen';
 import { TextField } from '@/ui/text-field';
+import { useDebouncedValue } from '@/ui/use-debounced-value';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 
 /** US-ACC-10: members of the cooperative with their profile and status; invite with manage level. */
 export default function MembersScreen() {
   const { t } = useTranslation();
   const { canManage } = useModuleAccess('users');
-  const members = useMembers();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
+  // The server filters and pages: the search is sent once the user stops typing.
+  const members = useMembers({ search: useDebouncedValue(search), status });
   const { colors } = useTheme();
   const renderItem = useCallback(({ item }: { item: Member }) => <MemberRow member={item} />, []);
+  const loadMore = useLoadMore(members);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -85,8 +85,11 @@ export default function MembersScreen() {
         ) : (
           <FlatList
             testID="member-list"
-            data={filterMembers(members.data, search, status)}
-            keyExtractor={(member) => member.membershipId}
+            data={allItems(members.data)}
+            keyExtractor={keyOf}
+            onEndReachedThreshold={0.4}
+            onEndReached={loadMore}
+            ListFooterComponent={members.isFetchingNextPage ? <Loading /> : null}
             contentContainerStyle={styles.list}
             ListEmptyComponent={
               <Text variant="bodyLarge" style={[styles.empty, { color: colors.onSurfaceVariant }]}>
@@ -100,6 +103,8 @@ export default function MembersScreen() {
     </View>
   );
 }
+
+const keyOf = (member: Member) => member.membershipId;
 
 const MemberRow = memo(function MemberRow({ member }: { member: Member }) {
   const { t } = useTranslation();

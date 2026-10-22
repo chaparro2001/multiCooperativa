@@ -1,5 +1,6 @@
 import {
   inviteMemberRequestSchema,
+  listMembersQuerySchema,
   type InviteMemberResponse,
   type ListAuditResponse,
   type ListMembersResponse,
@@ -11,9 +12,11 @@ import {
 import { type RequestHandler, Router } from 'express';
 
 import { parseBody } from '../../../../shared/infrastructure/http/validation';
+import type { Page } from '../../../../shared/pagination';
 import type { InvitationIssued, InviteMemberInput, MemberChange } from '../../application/members';
 import type {
   AuditRecord,
+  MemberFilter,
   MemberRecord,
   ProfileRecord,
 } from '../../application/ports/member-store';
@@ -21,7 +24,12 @@ import type { CooperativeContext } from '../../application/request-context';
 import { getCooperativeContext, requirePermission } from './access-middleware';
 
 export interface MemberUseCases {
-  listMembers(context: CooperativeContext): Promise<MemberRecord[]>;
+  listMembers(
+    context: CooperativeContext,
+    filter: MemberFilter,
+    page: { limit: number; before?: string },
+  ): Promise<Page<MemberRecord>>;
+  getMember(context: CooperativeContext, membershipId: string): Promise<MemberRecord>;
   listProfiles(context: CooperativeContext): Promise<ProfileRecord[]>;
   inviteMember(
     context: CooperativeContext,
@@ -73,9 +81,25 @@ export function createMembersRouter(
     } satisfies ListProfilesResponse);
   });
 
-  router.get(`${base}/members`, ...guard, async (_req, res) => {
-    const members = await useCases.listMembers(getCooperativeContext(res));
-    res.json({ members: members.map(toMember) } satisfies ListMembersResponse);
+  router.get(`${base}/members`, ...guard, async (req, res) => {
+    const q = parseBody(listMembersQuerySchema, req.query);
+    const page = await useCases.listMembers(
+      getCooperativeContext(res),
+      { search: q.q || undefined, status: q.status },
+      { limit: q.limit, before: q.before },
+    );
+    res.json({
+      items: page.items.map(toMember),
+      nextCursor: page.nextCursor,
+    } satisfies ListMembersResponse);
+  });
+
+  router.get(`${base}/members/:memberId`, ...guard, async (req, res) => {
+    const member = await useCases.getMember(
+      getCooperativeContext(res),
+      String(req.params.memberId),
+    );
+    res.json(toMember(member));
   });
 
   router.post(`${base}/members`, ...guard, async (req, res) => {

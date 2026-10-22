@@ -83,7 +83,7 @@ const base = `/cooperatives/${membership.cooperativeId}`;
 
 const existingDocuments = await call(
   z.object({ items: z.array(documentSummarySchema) }),
-  `${base}/documents`,
+  `${base}/documents?limit=100`,
   {},
   accessToken,
 );
@@ -164,7 +164,7 @@ const multipart = (record: object) => {
 };
 const existingNotes = await call(
   listDeliveryNotesResponseSchema,
-  `${base}/delivery-notes`,
+  `${base}/delivery-notes?limit=100`,
   {},
   accessToken,
 );
@@ -181,7 +181,7 @@ if (existingNotes.items.some((note) => note.number === invoicing.note.number)) {
 }
 const existingInvoices = await call(
   listInvoicesResponseSchema,
-  `${base}/invoices`,
+  `${base}/invoices?limit=100`,
   {},
   accessToken,
 );

@@ -6,6 +6,7 @@ import type {
   Operation,
   PaymentStatus,
 } from '../../domain/documents';
+import type { PageRequest } from '../../../../shared/pagination';
 import type { InvoicingNoticeSettings } from '../../domain/invoicing-settings';
 import type {
   Discrepancy,
@@ -71,6 +72,15 @@ export interface DeliveryNoteStore {
     cooperativeId: string,
     filter: DocumentFilter & { status?: DeliveryNoteStatus },
   ): Promise<DeliveryNoteRecord[]>;
+  /**
+   * One keyset page, newest first by (date, number, id), with `page.limit` + 1 rows at most to
+   * tell whether there is a next one. The cursor is [date, number, id] of the last row seen.
+   */
+  listPage(
+    cooperativeId: string,
+    filter: DocumentFilter & { status?: DeliveryNoteStatus },
+    page: PageRequest,
+  ): Promise<DeliveryNoteRecord[]>;
   find(cooperativeId: string, id: string): Promise<DeliveryNoteRecord | null>;
   /** 'duplicate' when the party already has a note with that number (BR-INV-04). */
   create(
@@ -98,6 +108,18 @@ export interface InvoiceStore {
       paymentStatus?: PaymentStatus;
       reconciliationStatus?: ReconciliationStatus;
     },
+  ): Promise<InvoiceRecord[]>;
+  /**
+   * One keyset page, newest first by (issueDate, number, id), with `page.limit` + 1 rows at most
+   * to tell whether there is a next one. The cursor is [issueDate, number, id] of the last row seen.
+   */
+  listPage(
+    cooperativeId: string,
+    filter: DocumentFilter & {
+      paymentStatus?: PaymentStatus;
+      reconciliationStatus?: ReconciliationStatus;
+    },
+    page: PageRequest,
   ): Promise<InvoiceRecord[]>;
   find(cooperativeId: string, id: string): Promise<InvoiceRecord | null>;
   /**

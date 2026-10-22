@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { moneySchema } from './invoicing';
+import { pageQuerySchema } from './pagination';
 
 /** BR-MEM-02. */
 export const capitalMovementTypeSchema = z.enum([
@@ -47,11 +48,19 @@ export const myMemberAreaResponseSchema = z.object({
   capital: moneySchema,
 });
 
-/** GET .../member-area/me/movements and .../members/{membershipId}/movements: newest first. */
+/** GET .../member-area/me/movements and .../members/{membershipId}/movements: `limit` and `before` (keyset pages). */
+export const listMovementsQuerySchema = pageQuerySchema;
+
+/**
+ * Newest first, a page at a time. `capital` is the member's whole capital, summed on the server:
+ * it does not depend on the page.
+ */
 export const memberMovementsResponseSchema = z.object({
   member: memberRecordSchema,
   capital: moneySchema,
   movements: z.array(capitalMovementSchema),
+  /** Pass it as `before` for the next page; null on the last one. */
+  nextCursor: z.string().nullable(),
 });
 
 /** GET .../member-area/members (US-MEM-04). */

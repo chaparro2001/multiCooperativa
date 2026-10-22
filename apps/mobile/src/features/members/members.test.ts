@@ -1,7 +1,7 @@
 import type { Member } from '@multicooperativa/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { filterMembers, memberActions, statusTone } from './members';
+import { memberActions, statusTone } from './members';
 
 const base: Member = {
   membershipId: '00000000-0000-4000-8000-000000000001',
@@ -17,27 +17,6 @@ const base: Member = {
 const member = (patch: Partial<Member>): Member => ({ ...base, ...patch });
 
 describe('member list (US-ACC-10)', () => {
-  const people = [
-    member({ name: 'Zoe', email: 'zoe@example.test', status: 'suspended' }),
-    base,
-    member({ name: 'Ana', email: 'ana@example.test', status: 'invited' }),
-  ];
-
-  it('sorts by name and searches by name or email without accents', () => {
-    expect(filterMembers(people, '', 'all').map((m) => m.name)).toEqual([
-      'Ana',
-      'José Pérez',
-      'Zoe',
-    ]);
-    expect(filterMembers(people, 'jose', 'all').map((m) => m.name)).toEqual(['José Pérez']);
-    expect(filterMembers(people, 'ZOE@', 'all').map((m) => m.name)).toEqual(['Zoe']);
-  });
-
-  it('filters by status', () => {
-    expect(filterMembers(people, '', 'invited').map((m) => m.name)).toEqual(['Ana']);
-    expect(filterMembers(people, 'ana', 'active')).toEqual([]);
-  });
-
   it('colours each status', () => {
     expect(statusTone('active')).toBe('info');
     expect(statusTone('invited')).toBe('warning');
