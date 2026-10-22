@@ -240,7 +240,7 @@ describe('voting (US-ASM-04, US-ASM-05, US-ASM-06)', () => {
     expect(await prisma.vote.count()).toBe(1);
   });
 
-  it('Dado que ya he votado, cuando vuelvo a votar, entonces se rechaza indicando mi voto', async () => {
+  it('Given I have already voted, when I vote again, then it is rejected and my vote is reported (BR-ASM-03)', async () => {
     const assembly = await convenedAssembly();
     const pointId = assembly.points[0]!.id;
     const voter = await member('Socio', true);

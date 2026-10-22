@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { computeResult, DEFAULT_POLICY, resolveResult } from './voting-result';
 
-describe('result of a voting: table of section 9 (NFR-ASM-02)', () => {
+describe('result of a voting: table of section 9 (NFR-ASM-02, BR-ASM-05)', () => {
   it.each([
     {
       census: 10,
@@ -134,7 +134,7 @@ describe('result detail (US-ASM-06)', () => {
     expect(result.outcome).toBe('approved');
   });
 
-  it('quorum is computed with exact arithmetic: 1 of 3 does not reach 33.34 %', () => {
+  it('quorum is computed with exact arithmetic: 1 of 3 does not reach 33.34 % (BR-ASM-05)', () => {
     const policy = { ...DEFAULT_POLICY, quorumPercent: { first: 34, second: 0 } };
     const result = computeResult({
       census: 3,

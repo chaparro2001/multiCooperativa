@@ -238,7 +238,7 @@ describe('documents over HTTP (US-DOC-01..05)', () => {
 });
 
 describe('republishing a withdrawn document (US-DOC-08)', () => {
-  it('republish: 403 with read access, 409 if published, 404 if unknown; 204 restores visibility and re-indexes', async () => {
+  it('republish: 403 with read access, 409 if published, 404 if unknown; 204 restores visibility and re-indexes (BR-DOC-08)', async () => {
     const document = documentSummarySchema.parse(
       (
         await upload(
@@ -319,7 +319,7 @@ describe('indexing and search (requirements/03, section 4; US-DOC-06, US-DOC-07)
     expect(results.items[0]?.excerpt).toContain('is held in June');
   });
 
-  it('search never returns fragments of another cooperative, even if the text matches exactly', async () => {
+  it('search never returns fragments of another cooperative, even if the text matches exactly (BR-AI-04)', async () => {
     await upload('Sea bylaws', 'bylaws', '2026-01-01', await bylawsPdf(), seaAdmin, sea);
     await indexing.idle();
 

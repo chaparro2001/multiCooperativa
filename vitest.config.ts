@@ -6,7 +6,14 @@ export default defineConfig({
       'apps/api',
       'apps/mobile',
       'packages/contracts',
-      { test: { name: 'tools', include: ['tools/**/*.test.js'] } },
+      {
+        test: {
+          name: 'tools',
+          include: ['tools/**/*.test.js'],
+          restoreMocks: true,
+          fsModuleCache: true,
+        },
+      },
     ],
   },
 });

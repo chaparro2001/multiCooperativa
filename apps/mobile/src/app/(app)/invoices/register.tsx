@@ -208,7 +208,7 @@ export default function RegisterScreen() {
         required={!isInvoice || draft.deliveryNoteIds.length > 0}
       />
 
-      {isInvoice && draft.thirdPartyId && (
+      {isInvoice && !!draft.thirdPartyId && (
         <NotesToGroup
           operation={draft.operation}
           thirdPartyId={draft.thirdPartyId}

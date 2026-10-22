@@ -7,8 +7,10 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   test: {
+    restoreMocks: true,
+    fsModuleCache: true,
     name: 'mobile',
-    // Pure logic. Component tests (*.test.tsx) will use React Native Testing Library.
+    // Pure logic only (*.test.ts). There are no component tests yet; React Native Testing Library is planned, not delivered.
     include: ['src/**/*.test.ts'],
   },
 });

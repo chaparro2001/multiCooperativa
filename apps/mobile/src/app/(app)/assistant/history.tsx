@@ -1,8 +1,8 @@
 import type { AssistantConversation } from '@multicooperativa/contracts';
 import { router } from 'expo-router';
-import { memo, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, type ListRenderItem, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
 import { useConversationList, useDeleteConversation } from '@/features/assistant/queries';
@@ -22,6 +22,35 @@ export default function AssistantHistoryScreen() {
   const { refreshing, onRefresh } = usePullToRefresh(list.refetch);
   const [error, setError] = useState<string | null>(null);
 
+  const { mutate: removeConversation } = remove;
+  const confirmDelete = useCallback(
+    (item: AssistantConversation) => {
+      confirmAction({
+        title: t('assistant.history.deleteTitle'),
+        message: t('assistant.history.deleteMessage'),
+        confirmLabel: t('common.actions.delete'),
+        cancelLabel: t('common.actions.cancel'),
+        destructive: true,
+        onConfirm: () => {
+          setError(null);
+          removeConversation(item.id, { onError: (failure) => setError(messageFor(failure)) });
+        },
+      });
+    },
+    [t, removeConversation],
+  );
+  const renderItem = useCallback<ListRenderItem<AssistantConversation>>(
+    ({ item }) => (
+      <ConversationRow
+        item={item}
+        onOpen={openConversation}
+        onDelete={confirmDelete}
+        deleteLabel={t('assistant.history.delete')}
+      />
+    ),
+    [confirmDelete, t],
+  );
+
   if (list.isPending) return <Loading />;
   if (list.isError) {
     return (
@@ -33,24 +62,6 @@ export default function AssistantHistoryScreen() {
   }
 
   const items = list.data.pages.flatMap((page) => page.items);
-
-  function openConversation(id: string) {
-    router.dismissTo({ pathname: '/assistant', params: { conversation: id } });
-  }
-
-  function confirmDelete(item: AssistantConversation) {
-    confirmAction({
-      title: t('assistant.history.deleteTitle'),
-      message: t('assistant.history.deleteMessage'),
-      confirmLabel: t('common.actions.delete'),
-      cancelLabel: t('common.actions.cancel'),
-      destructive: true,
-      onConfirm: () => {
-        setError(null);
-        remove.mutate(item.id, { onError: (failure) => setError(messageFor(failure)) });
-      },
-    });
-  }
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -77,14 +88,7 @@ export default function AssistantHistoryScreen() {
             {t('assistant.history.empty')}
           </Text>
         }
-        renderItem={({ item }) => (
-          <ConversationRow
-            item={item}
-            onOpen={openConversation}
-            onDelete={confirmDelete}
-            deleteLabel={t('assistant.history.delete')}
-          />
-        )}
+        renderItem={renderItem}
         onEndReachedThreshold={0.4}
         onEndReached={() => list.hasNextPage && !list.isFetchingNextPage && list.fetchNextPage()}
         ListFooterComponent={list.isFetchingNextPage ? <Loading /> : null}
@@ -92,6 +96,10 @@ export default function AssistantHistoryScreen() {
       />
     </View>
   );
+}
+
+function openConversation(id: string) {
+  router.dismissTo({ pathname: '/assistant', params: { conversation: id } });
 }
 
 const ConversationRow = memo(function ConversationRow({

@@ -72,7 +72,7 @@ describe('S3 storage (ADR-005)', () => {
     expect((await fetch(url)).status).toBe(403);
   });
 
-  it('borrar es definitivo e idempotente', async () => {
+  it('deleting is permanent and idempotent', async () => {
     const key = await stored();
 
     await storage.delete(key);
