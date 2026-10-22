@@ -14,6 +14,7 @@
     "db:deploy": "prisma migrate deploy",
     "cooperative:create": "tsx --env-file-if-exists=.env scripts/create-cooperative.ts",
     "db:seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
+    "rag:eval": "tsx --env-file-if-exists=.env scripts/rag-eval.ts",
     "ai:eval": "tsx --env-file-if-exists=.env scripts/assistant-eval.ts",
     "jobs:due-dates": "tsx --env-file-if-exists=.env scripts/due-dates.ts",
     "start:prod": "prisma migrate deploy && node --import tsx src/main.ts",

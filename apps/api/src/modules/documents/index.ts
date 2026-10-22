@@ -5,7 +5,7 @@ import type { FileStorage } from '../../shared/files/file-storage';
 import { log } from '../../shared/infrastructure/log';
 import type { PrismaClient } from '../../shared/infrastructure/prisma';
 import type { CooperativeContext } from '../access';
-import { SEARCH_RESULTS, searchDocuments } from './application/documents';
+import { SEARCH_RESULTS, searchDocumentsWithContext } from './application/documents';
 import type { DocumentEvent } from './application/events';
 import { createIndexer } from './application/indexing';
 import type { Embedder } from './application/ports/embedder';
@@ -26,6 +26,20 @@ export type { FragmentHit } from './application/ports/fragment-index';
 export { EMBEDDING_DIMENSIONS } from './application/ports/embedder';
 export { GeminiEmbedder, type GeminiEmbeddingClient } from './infrastructure/gemini-embedder';
 export { OllamaEmbedder } from './infrastructure/ollama-embedder';
+/** Retrieval benchmark (NFR-DOC-05): golden set, corpus, metrics and the real-pipeline runner. */
+export { RETRIEVAL_CASES } from './evaluation/retrieval-cases';
+export { RETRIEVAL_CORPUS } from './evaluation/retrieval-corpus';
+export {
+  computeMetrics,
+  firstHitRank,
+  type CaseResult,
+  type RetrievalMetrics,
+} from './evaluation/retrieval-metrics';
+export {
+  indexBenchmarkCorpus,
+  searchBenchmarkCases,
+  type BenchmarkArm,
+} from './evaluation/run-retrieval-benchmark';
 /** Deterministic embedder for tests and CI, where there is no Ollama (ADR-006). */
 export { HashingEmbedder } from './application/testing/hashing-embedder';
 
@@ -86,6 +100,6 @@ export function createDocumentsModule(deps: {
     indexing: { resumePending: indexer.resumePending, idle: indexer.idle },
     /** For the assistant's RAG (requirements/07), with the caller's permissions. */
     search: (context: CooperativeContext, query: string) =>
-      searchDocuments({ embedder: deps.embedder, index }, context, query),
+      searchDocumentsWithContext({ embedder: deps.embedder, index }, context, query),
   };
 }

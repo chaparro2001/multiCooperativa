@@ -62,6 +62,8 @@ async function addDocument(
       page: position + 1,
       position,
       content,
+      section: null,
+      contextHeader: '',
       embedding: embeddings[position]!,
     })),
   );
@@ -126,6 +128,71 @@ describe('PgVectorFragmentIndex hybrid search (US-DOC-07, US-AI-02)', () => {
     ]) {
       expect(await search(text, { minVectorScore: 0.99 })).toEqual([]);
     }
+  });
+
+  it('NFR-DOC-05 benchmark arms: the text arm alone drops what only the vector arm finds, and vice versa', async () => {
+    await addDocument(coop, 'Minutes', [
+      'Se aprobo el presupuesto de la campana de aceituna.',
+      'Otros asuntos generales sin relacion alguna con lo anterior.',
+    ]);
+    const index = new PgVectorFragmentIndex(prisma, { minVectorScore: 0, minTextScore: 0 });
+    const [embedding] = await embedder.embed(['presupuesto campana'], 'query');
+    const base = { text: 'presupuesto campana', embedding: embedding! };
+
+    const text = await index.search(coop, { ...base, arm: 'text' }, 5);
+    const vector = await index.search(coop, { ...base, arm: 'vector' }, 5);
+
+    expect(text.map((hit) => hit.page)).toEqual([1]);
+    expect(vector).toHaveLength(2);
+  });
+
+  it('ADR-023 accent-insensitive text arm: accents on either side match the same lexemes', async () => {
+    await addDocument(coop, 'Bylaws', [
+      'El quórum de la asamblea extraordinaria es de dos tercios.',
+      'Articulo 9. Cuota de ingreso de los socios.',
+      'Otros asuntos generales sin relacion alguna con lo anterior.',
+    ]);
+
+    for (const [text, page] of [
+      ['quorum', 1],
+      ['quórum', 1],
+      ['asamblea extraordinária', 1],
+      ['artículo 9', 2],
+    ] as const) {
+      const hits = await search(text, { minVectorScore: 0.99 });
+      expect(
+        hits.map((hit) => hit.page),
+        text,
+      ).toEqual([page]);
+    }
+  });
+
+  it('ADR-023 diversity: a second document takes a place from a third fragment of the first', async () => {
+    await addDocument(coop, 'Long bylaws', [
+      'cuota anual socio uno',
+      'cuota anual socio dos',
+      'cuota anual socio tres',
+    ]);
+    await addDocument(coop, 'Regulation', ['cuota anual socio cuatro']);
+
+    const hits = await search('cuota anual socio', { limit: 3 });
+
+    expect(hits.map((hit) => hit.title).sort()).toEqual([
+      'Long bylaws',
+      'Long bylaws',
+      'Regulation',
+    ]);
+  });
+
+  it('ADR-023 neighbours: returns the fragments right before and after, of the same cooperative only', async () => {
+    const document = await addDocument(coop, 'Bylaws', ['uno', 'dos', 'tres', 'cuatro']);
+    await addDocument(sea, 'Other', ['uno', 'dos', 'tres']);
+    const index = new PgVectorFragmentIndex(prisma, { minVectorScore: 0, minTextScore: 0 });
+
+    const found = await index.neighbours(coop, [{ documentId: document.id, position: 1 }]);
+
+    expect(found.map((n) => n.content).sort()).toEqual(['tres', 'uno']);
+    expect(await index.neighbours(coop, [])).toEqual([]);
   });
 
   it('term coverage: a single-term query still finds the fragment, and two distinct terms are needed from 2 up', async () => {
@@ -236,7 +303,14 @@ describe('PgVectorFragmentIndex hybrid search (US-DOC-07, US-AI-02)', () => {
     const index = new PgVectorFragmentIndex(prisma, { minVectorScore: 0, minTextScore: 0 });
     const [embedding] = await embedder.embed(['gamma'], 'document');
     await index.replaceDocument(coop, document.id, randomUUID(), [
-      { page: 1, position: 0, content: 'gamma', embedding: embedding! },
+      {
+        page: 1,
+        position: 0,
+        content: 'gamma',
+        section: null,
+        contextHeader: '',
+        embedding: embedding!,
+      },
     ]);
     expect(await search('beta', { minVectorScore: 0.99 })).toEqual([]);
   });

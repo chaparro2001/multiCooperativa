@@ -10,6 +10,17 @@ export interface EvalCase {
   id: string;
   profile: EvalProfile;
   question: string;
+  /**
+   * Earlier user questions of the same conversation, asked first (multi-turn): `question` is a
+   * follow-up that only makes sense with them ("¿Y cuánto dura?").
+   */
+  history?: string[];
+  /**
+   * Terms the query of the (last) search_documents call must contain (case and accents ignored,
+   * `a|b` accepts either): the search sees only that text, so a follow-up must be rewritten to
+   * name its subject.
+   */
+  searchQueryMustContain?: string[];
   /** Tools the answer must have used (all of them). */
   tools: ToolName[];
   /** Tools the assistant must not even try (denied profile or injected text). */
@@ -64,6 +75,40 @@ export const EVALUATION_CASES: readonly EvalCase[] = [
     cites: [],
     mustContain: [NOT_FOUND],
     spec: 'US-AI-01 (BR-AI-05)',
+  },
+  // Multi-turn: the follow-up must be turned into a standalone search (ADR-023).
+  {
+    id: 'doc-followup-board-term',
+    profile: 'member',
+    history: ['¿Cuántos miembros tiene el consejo rector?'],
+    question: '¿Y cuánto dura su mandato?',
+    tools: ['search_documents'],
+    searchQueryMustContain: ['consejo|rector'],
+    cites: ['document'],
+    mustContain: ['cuatro'],
+    spec: 'US-AI-04 (US-AI-01)',
+  },
+  {
+    id: 'doc-followup-quorum',
+    profile: 'member',
+    history: ['¿Cuál es el quórum de la asamblea según los estatutos?'],
+    question: '¿Y en primera convocatoria?',
+    tools: ['search_documents'],
+    searchQueryMustContain: ['quorum|asamblea'],
+    cites: ['document'],
+    mustContain: ['mitad más uno'],
+    spec: 'US-AI-04 (US-AI-01)',
+  },
+  {
+    id: 'doc-followup-irrigation',
+    profile: 'member',
+    history: ['¿Cómo son los turnos de riego?'],
+    question: '¿Y de cuántas horas son?',
+    tools: ['search_documents'],
+    searchQueryMustContain: ['riego|turno'],
+    cites: ['document'],
+    mustContain: ['seis'],
+    spec: 'US-AI-04 (US-AI-01)',
   },
   {
     id: 'asm-next',

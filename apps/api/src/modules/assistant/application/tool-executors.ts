@@ -103,7 +103,12 @@ export function createToolExecutors(src: DataSources): Record<ToolName, ToolExec
       const hits = await src.documents.search(context, query);
       return {
         items: hits.slice(0, DOCUMENT_SEARCH_RESULTS).map((hit) => ({
-          data: { document: hit.title, category: hit.category, page: hit.page, text: hit.content },
+          data: {
+            document: hit.title,
+            category: hit.category,
+            page: hit.page,
+            text: hit.context ?? hit.content,
+          },
           source: {
             kind: 'document',
             resourceId: hit.documentId,

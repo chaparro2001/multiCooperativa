@@ -69,11 +69,26 @@ export class RuleBasedLanguageModel implements LanguageModel {
     if (last?.role === 'tool_results') {
       return this.answer(last.results.map((result) => result.content));
     }
-    const question = [...request.messages].reverse().find((m) => m.role === 'user');
+    const userMessages = request.messages.flatMap((m) => (m.role === 'user' ? [m.content] : []));
+    const question = userMessages.at(-1) ?? '';
     const offered = new Set(request.tools.map((tool) => tool.name));
-    const calls = plan(question?.role === 'user' ? question.content : '').filter((call) =>
-      offered.has(call.name),
-    );
+    let planned = plan(question);
+    // A follow-up with no subject of its own: like a good model, search for the earlier
+    // question plus the follow-up, so the query stands alone.
+    if (planned.length === 0 && userMessages.length > 1) {
+      const subject = userMessages
+        .slice(0, -1)
+        .reverse()
+        .find((earlier) => plan(earlier).length > 0);
+      if (subject) {
+        planned = plan(subject).map((call) =>
+          call.name === 'search_documents'
+            ? { ...call, input: { query: `${subject} ${question}` } }
+            : call,
+        );
+      }
+    }
+    const calls = planned.filter((call) => offered.has(call.name));
     if (calls.length === 0) return this.say('No tengo acceso a esa información.');
     return {
       text: '',

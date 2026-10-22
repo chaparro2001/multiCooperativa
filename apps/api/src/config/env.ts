@@ -24,10 +24,12 @@ const REQUIRED_IN_PRODUCTION = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCE
  * are not comparable.
  * - ollama (bge-m3): calibrated on the sample documents (ADR-022): relevant questions reached 0.48-0.66
  *   with their best fragment, off-topic ones 0.24-0.42; 0.40 drops most of the noise.
- * - gemini (gemini-embedding-2): NOT calibrated (no paid calls); a conservative low value that
- *   filters little. Raise it with EMBEDDING_MIN_SCORE after measuring.
+ * - gemini (gemini-embedding-2): 0.60, from the retrieval benchmark (`rag:eval --sweep`, ADR-023):
+ *   its cosines are compressed (answerable questions reached 0.64-0.80 with their best fragment,
+ *   unanswerable ones 0.54-0.74); 0.60 kept every answerable case and dropped the results of
+ *   4 of 6 unanswerable ones, where the old 0.30 dropped none.
  */
-export const DEFAULT_MIN_SCORE = { ollama: 0.4, gemini: 0.3 } as const;
+export const DEFAULT_MIN_SCORE = { ollama: 0.4, gemini: 0.6 } as const;
 
 /**
  * Default cosine floor for text-search hits per provider (ADR-022); never above the vector threshold.

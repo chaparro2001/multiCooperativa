@@ -20,6 +20,7 @@ import {
   withdraw,
 } from '../domain/document';
 import { InvalidDocumentTransitionError } from '../domain/errors';
+import { expandContext } from '../domain/neighbours';
 import { DocumentNotFoundError } from './errors';
 import type { Indexer } from './indexing';
 import type { Embedder } from './ports/embedder';
@@ -286,7 +287,50 @@ export async function searchDocuments(
   query: string,
 ): Promise<FragmentHit[]> {
   requireAccess(context.permissions, 'documents', 'read');
+  return retrieveFragments(deps, context.cooperativeId, query);
+}
+
+/** The search itself, with no permission check: the caller has already authorized it. */
+export async function retrieveFragments(
+  deps: { embedder: Embedder; index: FragmentIndex },
+  cooperativeId: string,
+  query: string,
+  arm?: 'hybrid' | 'vector' | 'text',
+): Promise<FragmentHit[]> {
   const text = query.trim();
   const [embedding] = await deps.embedder.embed([text], 'query');
-  return deps.index.search(context.cooperativeId, { text, embedding: embedding! }, SEARCH_RESULTS);
+  return deps.index.search(cooperativeId, { text, embedding: embedding!, arm }, SEARCH_RESULTS);
+}
+
+/**
+ * Search for the assistant (ADR-023): the same fragments, each with `context`, its own text plus
+ * the adjacent fragment when it is short or cut mid-sentence (bounded). Citations keep using
+ * the fragment's own `content` and page.
+ */
+export async function searchDocumentsWithContext(
+  deps: { embedder: Embedder; index: FragmentIndex },
+  context: CooperativeContext,
+  query: string,
+): Promise<FragmentHit[]> {
+  requireAccess(context.permissions, 'documents', 'read');
+  return withNeighbourContext(
+    deps.index,
+    context.cooperativeId,
+    await retrieveFragments(deps, context.cooperativeId, query),
+  );
+}
+
+/** Adds `context` to each hit from the neighbouring fragments of the same document and page. */
+export async function withNeighbourContext(
+  index: FragmentIndex,
+  cooperativeId: string,
+  hits: FragmentHit[],
+): Promise<FragmentHit[]> {
+  const neighbours = await index.neighbours(cooperativeId, hits);
+  const at = (hit: FragmentHit, offset: number) =>
+    neighbours.find((n) => n.documentId === hit.documentId && n.position === hit.position + offset);
+  return hits.map((hit) => ({
+    ...hit,
+    context: expandContext(hit, { previous: at(hit, -1), next: at(hit, 1) }),
+  }));
 }

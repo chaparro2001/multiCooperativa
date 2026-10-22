@@ -12,3 +12,4 @@ generated/
 # Local Claude Code state (agent worktrees); project skills are versioned
 .claude/*
 !.claude/skills/
+rag-eval-results/

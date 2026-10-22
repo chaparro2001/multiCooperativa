@@ -88,6 +88,7 @@ function search(context: CooperativeContext, query: string) {
       title: chunk.title,
       category: chunk.category,
       page: chunk.page,
+      position: 0,
       content: chunk.content,
       score,
     }));

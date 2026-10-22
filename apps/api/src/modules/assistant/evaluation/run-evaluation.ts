@@ -69,7 +69,7 @@ export interface EvalResult {
 /** What a case demands of an answer that was produced (or why none was). */
 export function check(
   evalCase: EvalCase,
-  outcome: { text: string; tools: string[]; citationKinds: string[] },
+  outcome: { text: string; tools: string[]; citationKinds: string[]; searchQueries?: string[] },
 ): string[] {
   const failures: string[] = [];
   const text = plain(outcome.text);
@@ -92,6 +92,14 @@ export function check(
       failures.push(`answer lacks "${fact}"`);
     }
   }
+  if (evalCase.searchQueryMustContain) {
+    const query = plain(outcome.searchQueries?.at(-1) ?? '');
+    for (const term of evalCase.searchQueryMustContain) {
+      if (!term.split('|').some((alternative) => query.includes(plain(alternative)))) {
+        failures.push(`search query lacks "${term}" (not standalone): "${query}"`);
+      }
+    }
+  }
   for (const leak of evalCase.mustNotContain ?? []) {
     if (text.includes(plain(leak))) failures.push(`answer contains "${leak}"`);
   }
@@ -110,10 +118,20 @@ export async function runEvaluation(options: {
   pauseMs?: number;
 }): Promise<EvalResult[]> {
   const conversations = new InMemoryConversationStore();
+  // What the model asked the document search for, to check that follow-ups were rewritten.
+  const searchQueries: string[] = [];
+  const executors = createToolExecutors(createCannedSources());
+  const recordingExecutors = {
+    ...executors,
+    search_documents: (context: CooperativeContext, input: unknown) => {
+      searchQueries.push(String((input as { query?: unknown } | null)?.query ?? ''));
+      return executors.search_documents(context, input);
+    },
+  };
   const deps = {
     conversations,
     model: options.model,
-    executors: createToolExecutors(createCannedSources()),
+    executors: recordingExecutors,
     now: () => new Date('2026-10-20T10:00:00Z'),
     today: () => '2026-10-20',
     // Each case has its own conversation; the limit must not get in the way of 20 questions.
@@ -129,12 +147,18 @@ export async function runEvaluation(options: {
     const started = Date.now();
     captured.metrics = undefined;
     try {
+      searchQueries.length = 0;
       const conversation = await createConversation(deps, context);
+      for (const earlier of evalCase.history ?? []) {
+        await sendMessage(deps, context, conversation.id, earlier);
+        searchQueries.length = 0; // only what the follow-up itself searched counts
+      }
       const { answer } = await sendMessage(deps, context, conversation.id, evalCase.question);
       const failures = check(evalCase, {
         text: answer.content,
         tools: answer.tools,
         citationKinds: answer.citations.map((citation) => citation.kind),
+        searchQueries: [...searchQueries],
       });
       results.push({
         id: evalCase.id,

@@ -1,9 +1,12 @@
-import type { IndexingStatus } from '../../domain/document';
+import type { DocumentCategory, IndexingStatus } from '../../domain/document';
 
 export interface VersionToIndex {
   fileKey: string;
   /** Only the current version of a published document is indexed (BR-DOC-04). */
   indexable: boolean;
+  /** Of the document: they go into the contextual header of every fragment (ADR-023). */
+  title: string;
+  category: DocumentCategory;
 }
 
 export interface PendingVersion {
