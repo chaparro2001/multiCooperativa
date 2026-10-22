@@ -195,6 +195,8 @@ model CapitalMovement {
 
   // Statement of a member, and the cooperative's totals.
   @@index([cooperativeId, membershipId, date])
+  /// Keyset statement of a member: newest first by (date, recordedAt, id).
+  @@index([cooperativeId, membershipId, date(sort: Desc), recordedAt(sort: Desc), id(sort: Desc)], map: "CapitalMovement_statement_idx")
 }
 
 // ───────────── Announcements (requirements/02) ─────────────
@@ -287,6 +289,8 @@ model Document {
   chunks   DocumentChunk[]
 
   @@index([cooperativeId, status, category, documentDate])
+  /// Keyset list: newest date first, then title, then id (the cursor of GET /documents).
+  @@index([cooperativeId, documentDate(sort: Desc), title, id], map: "Document_list_idx")
 }
 
 model DocumentVersion {
@@ -576,6 +580,8 @@ model DeliveryNote {
   @@unique([thirdPartyId, number])
   @@index([cooperativeId, operation, status])
   @@index([invoiceId])
+  /// Keyset list: newest first by (date, number, id), always inside one cooperative and operation.
+  @@index([cooperativeId, operation, date(sort: Desc), number(sort: Desc), id(sort: Desc)], map: "DeliveryNote_list_idx")
 }
 
 model DeliveryNoteLine {
@@ -619,6 +625,8 @@ model Invoice {
   @@unique([thirdPartyId, number], map: "Invoice_received_number_key", where: raw("operation = 'purchase'"))
   @@unique([cooperativeId, number], map: "Invoice_issued_number_key", where: raw("operation = 'sale'"))
   @@index([cooperativeId, operation, paymentStatus, dueDate])
+  /// Keyset list: newest first by (issueDate, number, id), always inside one cooperative and operation.
+  @@index([cooperativeId, operation, issueDate(sort: Desc), number(sort: Desc), id(sort: Desc)], map: "Invoice_list_idx")
 }
 
 model InvoiceLine {
