@@ -1,0 +1,18 @@
+<!-- @dsCard group="Status" height=340 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Banner — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h(E.Banner, { tone: 'warning', action: h(E.Button, { mode: 'text' }, 'Ver facturas') }, '3 facturas con discrepancia sin resolver.'),
+h(E.Banner, { tone: 'warning' }, '2 albaranes han superado el plazo para facturarse.'),
+h(E.Banner, { tone: 'danger' }, 'No se puede conectar con el servidor.'),
+h(E.Banner, { tone: 'info' }, 'Fecha cambiada el 20 oct 2026 (antes: 5 nov 2026, 18:00).')));
+</script>
+</body>
+</html>

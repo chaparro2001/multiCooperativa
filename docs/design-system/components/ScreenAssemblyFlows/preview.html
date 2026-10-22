@@ -1,0 +1,63 @@
+<!-- @dsCard group="Screens" height=1074 width=2134 page subtitle="Asambleas · listado, votar, voto registrado, editor y cambio de fecha" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ScreenAssemblyFlows</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement, noop = function () {};
+  function tf(o) { return h(E.TextField, Object.assign({ onChange: noop }, o)); }
+  function ph(o) { var kids = [].slice.call(arguments, 1); return h.apply(null, [E.Phone, o].concat(kids)); }
+  function row() { return h.apply(null, ['div', { className: 'mc-row', style: { gap: 8 } }].concat([].slice.call(arguments))); }
+  function left(el) { return h('div', { style: { display: 'flex' } }, el); }
+
+  var list = ph({ label: 'Listado · consejo rector', title: 'Asambleas', actions: [{ icon: 'plus', label: 'Nueva asamblea' }], list: true },
+    h(E.ListRow, { title: 'Asamblea ordinaria', status: h(E.Badge, { tone: 'info' }, 'Convocada'), badges: [h(E.Badge, { key: 1, tone: 'warning' }, '1 votación abierta')], meta: '12 nov 2026, 18:30 · Salón de actos · 4 puntos' }),
+    h(E.ListRow, { title: 'Asamblea extraordinaria', status: h(E.Badge, { tone: 'warning' }, 'Borrador'), meta: '15 ene 2027, 18:00 · Salón de actos · 2 puntos' }),
+    h(E.ListRow, { title: 'Asamblea ordinaria', status: h(E.Badge, { tone: 'neutral' }, 'Celebrada'), meta: '20 jun 2026, 18:30 · Salón de actos · 5 puntos' }),
+    h(E.ListRow, { title: 'Asamblea extraordinaria', status: h(E.Badge, { tone: 'danger' }, 'Cancelada'), meta: '3 mar 2026, 19:00 · Nave 2 · 1 punto' }));
+
+  var vote = ph({ label: 'Votar · opción elegida', title: 'Votar', bar: [h(E.Button, { key: 1, block: true }, 'Emitir voto')] },
+    h('p', { className: 'mc-meta' }, 'Asamblea ordinaria · 12 nov 2026'),
+    h('h1', { className: 'mc-title' }, '2. Aprobación de las cuentas anuales 2025'),
+    h('p', { className: 'mc-meta' }, 'Se vota por mayoría simple'),
+    h('div', { className: 'mc-col', role: 'radiogroup' }, h(E.VoteOption, { selected: true }, 'A favor'), h(E.VoteOption, null, 'En contra'), h(E.VoteOption, null, 'Abstención')),
+    h(E.AiNotice, { kind: 'info', title: 'Confirmación nativa' }, 'Vas a votar «A favor». El voto no se puede cambiar. — Votar / Revisar'),
+    h('p', { className: 'mc-fine' }, 'La votación es consultiva y de apoyo a la asamblea presencial.'));
+
+  var done = ph({ label: 'Voto registrado', title: 'Votar', bodyStyle: { justifyContent: 'center' } },
+    h('div', { className: 'mc-center' },
+      h(E.Icon, { name: 'check-circle-outline', size: 64, color: 'var(--primary)' }),
+      h('h1', { className: 'mc-title-lg' }, 'Voto registrado'),
+      h('div', { className: 'mc-row', style: { justifyContent: 'center' } }, h(E.Badge, { tone: 'info', icon: 'check' }, 'Tu voto: A favor')),
+      h(E.Button, { block: true }, 'Volver a la asamblea'),
+      h('p', { className: 'mc-fine' }, 'La votación es consultiva y de apoyo a la asamblea presencial.')),
+    h(E.Banner, { tone: 'danger' }, 'No estás en el censo de esta votación…'),
+    h('p', { className: 'mc-fine', style: { textAlign: 'center' } }, 'Arriba, el error alternativo.'));
+
+  var editor = ph({ label: 'Editor de convocatoria · gestor', title: 'Nueva asamblea', bar: [h(E.Button, { key: 1, block: true, mode: 'secondary' }, 'Guardar borrador')] },
+    h(E.DateField, { label: 'Primera convocatoria', value: '12 nov 2026, 18:30', help: 'Al menos 15 días de antelación.' }),
+    h(E.DateField, { label: 'Segunda convocatoria', value: '12 nov 2026, 18:00', optional: true, error: 'La segunda convocatoria debe ser posterior a la primera.' }),
+    tf({ label: 'Lugar', maxLength: 200, value: 'Salón de actos de la cooperativa' }),
+    h('h2', { className: 'mc-h2' }, 'Orden del día'),
+    h(E.Card, null,
+      h('div', { className: 'mc-row', style: { justifyContent: 'space-between' } }, h('span', { className: 'mc-row-title', style: { flex: 'none' } }, 'Punto 2'),
+        h('div', { className: 'mc-row', style: { gap: 0 } }, h(E.HeaderAction, { icon: 'chevron-right', label: 'Subir' }), h(E.HeaderAction, { icon: 'delete-outline', label: 'Quitar punto' }))),
+      tf({ label: 'Título', maxLength: 200, value: 'Aprobación de las cuentas anuales 2025' }),
+      h(E.Switch, { label: 'Se somete a votación', value: true }),
+      h(E.FieldGroup, { label: 'Mayoría' }, h(E.Chips, { single: true }, h(E.Chip, { selected: true }, 'Simple'), h(E.Chip, null, 'Reforzada (2/3)')))),
+    left(h(E.Button, { mode: 'secondary', icon: 'plus' }, 'Añadir punto')));
+
+  var resched = ph({ label: 'Cambiar fecha · gestor', title: 'Cambiar fecha', bar: [h(E.Button, { key: 1, block: true }, 'Guardar')] },
+    h(E.Banner, { tone: 'info', icon: 'calendar-outline' }, 'Ahora: 12 nov 2026, 18:30 · Salón de actos de la cooperativa'),
+    h(E.DateField, { label: 'Primera convocatoria', value: '10 oct 2026, 18:30', error: 'La fecha debe ser futura.' }),
+    h(E.DateField, { label: 'Segunda convocatoria', value: '19 nov 2026, 19:00' }),
+    tf({ label: 'Lugar', maxLength: 200, value: 'Nave 2' }),
+    tf({ label: 'Motivo', maxLength: 500, multiline: true, value: 'Coincide con la recogida de aceituna.' }),
+    h(E.Checkbox, { checked: true, label: 'Avisar a los socios con un comunicado' }));
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(E.Frames, null, list, vote, done, editor, resched));
+
+</script>
+</body>
+</html>

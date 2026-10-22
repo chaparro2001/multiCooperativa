@@ -1,0 +1,18 @@
+<!-- @dsCard group="Home" height=326 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>AttentionItem — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h(E.SectionTitle, null, 'Pendiente para ti'),
+h(E.AttentionItem, { icon: 'hand-back-left-outline', title: 'Votación abierta', meta: 'Asamblea ordinaria · 12 nov 2026', badge: h(E.Badge, { tone: 'warning' }, 'Abierta') }),
+h(E.AttentionItem, { icon: 'bullhorn-outline', title: '3 comunicados sin leer', meta: 'El último, hoy' }),
+h(E.AttentionItem, { icon: 'receipt-text-outline', title: '3 facturas vencidas', meta: '1.250,00 € pendientes de pagar', badge: h(E.Badge, { tone: 'danger' }, 'Vencida') })));
+</script>
+</body>
+</html>

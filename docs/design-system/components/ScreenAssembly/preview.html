@@ -1,0 +1,88 @@
+<!-- @dsCard group="Screens" height=1425 width=1720 page subtitle="Detalle de asamblea · 4 estados del bloque de votación · 390" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Asamblea — pantallas</title>
+<style>
+  .frames { display:flex; gap:32px; padding:24px; align-items:flex-start; width:max-content; }
+  .frame-wrap { display:flex; flex-direction:column; gap:8px; }
+  .frame-label { font-size:13px; line-height:18px; color:var(--muted); font-weight:500; }
+  .phone { width:390px; min-height:1160px; border:1px solid var(--border); border-radius:32px; overflow:hidden; background:var(--background); color:var(--text); display:flex; flex-direction:column; }
+  .status { height:44px; flex:none; }
+  .body { flex:1; overflow:hidden; padding:var(--space-2) var(--space-6) var(--space-6); display:flex; flex-direction:column; gap:var(--space-4); }
+  .title { font-size:24px; line-height:32px; margin:0; font-weight:400; }
+  .facts { display:flex; flex-direction:column; gap:6px; font-size:14px; line-height:20px; }
+  .fact { display:flex; gap:8px; align-items:flex-start; }
+  .fact .mc-icon { color:var(--secondary); }
+  .fact b { font-weight:500; }
+  .h2 { font-size:16px; line-height:24px; font-weight:500; margin:var(--space-2) 0 0; }
+  .point-title { font-size:16px; line-height:24px; font-weight:500; margin:0; }
+  .point-desc { font-size:14px; line-height:20px; color:var(--muted); margin:0; }
+  .vote { border-top:1px solid var(--border); margin-top:var(--space-2); padding-top:var(--space-3); display:flex; flex-direction:column; gap:var(--space-3); }
+  .vote-head { display:flex; justify-content:space-between; align-items:center; }
+  .vote-kicker { font-size:12px; line-height:16px; font-weight:500; letter-spacing:.06em; text-transform:uppercase; color:var(--secondary); }
+  .myvote { display:flex; gap:8px; align-items:center; font-size:14px; line-height:20px; font-weight:500; padding:10px 12px; border-radius:var(--radius-sm); background:var(--primary-container); color:var(--on-primary-container); }
+  .quorum { font-size:14px; line-height:20px; color:var(--text); display:flex; gap:6px; align-items:center; }
+  .quorum .mc-icon { color:var(--primary); }
+  .manage { border-top:1px solid var(--border); padding-top:var(--space-4); display:flex; flex-direction:column; gap:var(--space-2); }
+  .manage-kicker { font-size:12px; line-height:16px; font-weight:500; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; }
+</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function fact(icon, label, text) { return h('div', { className: 'fact' }, h(E.Icon, { name: icon, size: 20 }), h('span', null, h('b', null, label), ' ', text)); }
+
+  function votingBlock(s) {
+    var open = s.state !== 'closed';
+    var badges = open
+      ? [h(E.Badge, { key: 'a', tone: 'warning' }, 'Abierta')]
+      : [h(E.Badge, { key: 'a', tone: 'neutral' }, 'Cerrada'), h(E.Badge, { key: 'b', tone: 'info', icon: 'check' }, 'Aprobado')];
+    var showTally = !open || s.manager;
+    return h('div', { className: 'vote' },
+      h('div', { className: 'vote-head' }, h('span', { className: 'vote-kicker' }, 'Votación'), h('div', { className: 'mc-row', style: { gap: 6 } }, badges)),
+      h(E.ProgressBar, { label: 'Participación', value: s.part, total: 120, quorum: 50 }),
+      showTally ? h(E.VoteTally, s.tally) : null,
+      showTally ? h('div', { className: 'quorum' }, h(E.Icon, { name: 'check-circle-outline', size: 18 }), 'Con quórum en primera convocatoria') : null,
+      s.myVote ? h('div', { className: 'myvote' }, h(E.Icon, { name: 'check', size: 18 }), 'Tu voto: ' + s.myVote) : null,
+      s.canVote ? h(E.Button, { block: true, icon: 'hand-back-left-outline' }, 'Votar') : null,
+      s.manager && open ? h(E.Button, { mode: 'secondary', block: true }, 'Cerrar votación') : null);
+  }
+
+  function screen(s) {
+    return h('div', { className: 'frame-wrap', key: s.label },
+      h('div', { className: 'frame-label' }, s.label),
+      h('div', { className: 'phone', 'data-theme': 'green' },
+        h('div', { className: 'status' }),
+        h(E.Header, { back: true, title: 'Asamblea' }),
+        h('div', { className: 'body' },
+          h('div', { className: 'mc-row', style: { gap: 6 } }, h(E.Badge, { tone: s.state === 'closed' ? 'neutral' : 'info' }, s.state === 'closed' ? 'Celebrada' : 'Convocada'),
+            s.state !== 'closed' ? h(E.Badge, { tone: 'warning' }, '1 votación abierta') : null),
+          h('h1', { className: 'title' }, 'Asamblea ordinaria'),
+          h('div', { className: 'facts' },
+            fact('calendar-outline', 'Primera convocatoria:', '12 nov 2026, 18:30'),
+            fact('clock-outline', 'Segunda convocatoria:', '12 nov 2026, 19:00'),
+            fact('office-building-outline', 'Lugar:', 'Salón de actos de la cooperativa')),
+          h(E.MapCard, { place: 'Salón de actos de la cooperativa', address: 'Calle Mayor 12, Ciempozuelos' }),
+          h('h2', { className: 'h2' }, 'Orden del día'),
+          h(E.Card, null,
+            h('p', { className: 'point-title' }, '1. Informe de la presidencia'),
+            h('p', { className: 'point-desc' }, 'Resumen de la actividad de la cooperativa durante la campaña 2025–2026.')),
+          h(E.Card, null,
+            h('p', { className: 'point-title' }, '2. Aprobación de las cuentas anuales 2025'),
+            h('p', { className: 'point-desc' }, 'Se vota por mayoría simple'),
+            h(E.Button, { mode: 'text', icon: 'file-pdf-box' }, 'Cuentas anuales 2025.pdf'),
+            votingBlock(s)),
+          s.manager ? h('div', { className: 'manage' }, h('span', { className: 'manage-kicker' }, 'Gestión de la asamblea'),
+            h(E.Button, { mode: 'secondary', block: true }, 'Cerrar asamblea (celebrada)'),
+            h(E.Button, { mode: 'danger', block: true }, 'Cancelar asamblea')) : null)));
+  }
+
+  var tally = { favor: 61, contra: 18, abst: 8 };
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'frames' },
+    screen({ label: 'Socio · antes de votar', state: 'open', part: 42, canVote: true }),
+    screen({ label: 'Socio · ya ha votado, votación abierta', state: 'open', part: 43, myVote: 'A favor' }),
+    screen({ label: 'Consejo rector · votación abierta (recuento visible)', state: 'open', part: 43, manager: true, tally: { favor: 30, contra: 9, abst: 4 } }),
+    screen({ label: 'Cerrada con resultado · todos', state: 'closed', part: 87, myVote: 'A favor', tally: tally })));
+</script>
+</body>
+</html>

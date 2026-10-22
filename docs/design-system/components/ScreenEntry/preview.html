@@ -1,0 +1,66 @@
+<!-- @dsCard group="Screens" height=926 width=2134 page subtitle="Acceso · login, invitación, bloqueo biométrico, selector de cooperativa" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ScreenEntry</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement, noop = function () {};
+  function tf(o) { return h(E.TextField, Object.assign({ onChange: noop }, o)); }
+  function ph(o) { var kids = [].slice.call(arguments, 1); return h.apply(null, [E.Phone, o].concat(kids)); }
+  function row() { return h.apply(null, ['div', { className: 'mc-row', style: { gap: 8 } }].concat([].slice.call(arguments))); }
+  function left(el) { return h('div', { style: { display: 'flex' } }, el); }
+
+  var login = ph({ label: 'Login · error de credenciales (siempre verde)', bodyStyle: { paddingTop: 72, gap: 24 } },
+    h(E.AppLogo),
+    h('p', { className: 'mc-text', style: { textAlign: 'center', color: 'var(--muted)' } }, 'Entra con el email y la contraseña de tu cooperativa.'),
+    h(E.Banner, { tone: 'danger' }, 'Email o contraseña incorrectos.'),
+    tf({ label: 'Email', value: 'lucia.martin@sanisidro.coop', showCount: false }),
+    tf({ label: 'Contraseña', secure: true, value: 'contraseña1', showCount: false }),
+    h(E.Button, { block: true }, 'Entrar'),
+    h('p', { className: 'mc-meta', style: { textAlign: 'center', marginTop: 8 } }, '¿Te han invitado? Abre desde este dispositivo el enlace que te ha enviado el administrador…'));
+
+  var invite = ph({ label: 'Invitación · error de campo', bodyStyle: { paddingTop: 48, gap: 20 } },
+    h(E.AppLogo),
+    h('h1', { className: 'mc-title-lg', style: { textAlign: 'center' } }, 'Activa tu acceso'),
+    h('p', { className: 'mc-meta', style: { textAlign: 'center' } }, 'Elige una contraseña para entrar en la app. Si ya tienes acceso a otra cooperativa, deja los campos vacíos.'),
+    tf({ label: 'Contraseña', secure: true, value: 'corta', showCount: false, error: 'La contraseña debe tener al menos 10 caracteres.' }),
+    tf({ label: 'Repite la contraseña', secure: true, value: 'corta', showCount: false }),
+    h(E.Button, { block: true }, 'Activar acceso'));
+
+  var invalid = ph({ label: 'Invitación · caducada o ya usada', bodyStyle: { paddingTop: 48 } },
+    h(E.AppLogo),
+    h(E.ErrorState, { icon: 'link-variant', message: 'La invitación ha caducado o ya se ha usado…', onRetry: false }),
+    h('div', { className: 'mc-center', style: { marginTop: 24 } },
+      h(E.Icon, { name: 'check-circle-outline', size: 48, color: 'var(--primary)' }),
+      h('h1', { className: 'mc-title' }, 'Acceso activado'),
+      h(E.Button, { block: true }, 'Iniciar sesión')),
+    h('p', { className: 'mc-fine', style: { textAlign: 'center' } }, 'Abajo: estado de éxito, en la misma pantalla.'));
+
+  var lock = h('div', { className: 'mc-frame' }, h('div', { className: 'mc-frame-label' }, 'Bloqueo biométrico · sobre la app'),
+    h('div', { className: 'mc-device', 'data-theme': 'blue', style: { background: 'var(--elevation-5)', justifyContent: 'center' } },
+      h('div', { className: 'mc-center', style: { padding: 32, gap: 24 } },
+        h(E.Icon, { name: 'fingerprint', size: 72, color: 'var(--primary)' }),
+        h('h1', { className: 'mc-title' }, 'Cooperativa Olivarera La Esperanza'),
+        h('p', { className: 'mc-meta' }, 'La app está bloqueada.'),
+        h('div', { className: 'mc-col', style: { width: '100%' } }, h(E.Button, { block: true, icon: 'fingerprint' }, 'Desbloquear'), h(E.Button, { block: true, mode: 'secondary' }, 'Entrar con contraseña')),
+        h(E.Banner, { tone: 'warning' }, 'Demasiados intentos. Entra con tu contraseña.'))));
+
+  function coop(name, profile, color, sel) {
+    return h(E.Card, { onPress: noop, selected: sel }, h('div', { className: 'mc-row', style: { gap: 12, flexWrap: 'nowrap' } },
+      h('span', { style: { width: 12, height: 12, borderRadius: 999, background: color, flex: 'none' } }),
+      h('div', { className: 'mc-col', style: { gap: 0, flex: 1 } }, h('span', { className: 'mc-row-title' }, name), h('span', { className: 'mc-row-meta' }, profile)),
+      h(E.Icon, { name: 'chevron-right', color: 'var(--muted)' })));
+  }
+  var select = ph({ label: 'Selector de cooperativa', bodyStyle: { paddingTop: 48 } },
+    h('h1', { className: 'mc-title' }, 'Hola, Lucía. ¿En qué cooperativa quieres trabajar?'),
+    coop('Cooperativa Agrícola San Isidro', 'Consejo rector · Socio', '#1f6f43', true),
+    coop('Cooperativa Olivarera La Esperanza', 'Socio · Socio', '#1e5aa8', false),
+    h('div', { style: { flex: 1 } }),
+    h(E.Button, { mode: 'text', icon: 'logout' }, 'Cerrar sesión'));
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(E.Frames, null, login, invite, invalid, lock, select));
+
+</script>
+</body>
+</html>

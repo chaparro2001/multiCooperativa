@@ -1,0 +1,55 @@
+<!-- @dsCard group="Screens" height=1072 width=1712 page subtitle="Documentos · búsqueda por título y por contenido, detalle, subida" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ScreenDocuments</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement, noop = function () {};
+  function tf(o) { return h(E.TextField, Object.assign({ onChange: noop }, o)); }
+  function ph(o) { var kids = [].slice.call(arguments, 1); return h.apply(null, [E.Phone, o].concat(kids)); }
+  function row() { return h.apply(null, ['div', { className: 'mc-row', style: { gap: 8 } }].concat([].slice.call(arguments))); }
+  function left(el) { return h('div', { style: { display: 'flex' } }, el); }
+
+  function search(mode, q) { return [tf({ key: 'q', label: 'Buscar', value: q, leftIcon: 'magnify', showCount: false }),
+    h(E.SegmentedButtons, { key: 's', label: 'Buscar en', value: mode, buttons: [{ value: 't', label: 'Título' }, { value: 'c', label: 'Contenido' }] })]; }
+  function doc(t, d, extra) { return h(E.ListRow, { title: t, meta: d, badges: extra }); }
+  var byTitle = h.apply(null, [E.Phone, { label: 'Título · agrupado por categoría (gestor)', title: 'Documentos', actions: [{ icon: 'plus', label: 'Subir documento' }], list: true }].concat(search('t', '')).concat([
+    h(E.SectionTitle, { key: 1 }, 'Estatutos'), doc('Estatutos sociales', '14 mar 2019'),
+    h(E.SectionTitle, { key: 2 }, 'Reglamento interno'), doc('Reglamento de régimen interno', '2 feb 2022', [h(E.Badge, { key: 1, tone: 'warning' }, 'Indexando')]),
+    h(E.SectionTitle, { key: 3 }, 'Actas'), doc('Acta asamblea ordinaria junio 2026', '20 jun 2026'), doc('Acta asamblea extraordinaria 2025', '11 nov 2025', [h(E.Badge, { key: 1, tone: 'danger' }, 'Retirado')]),
+    h(E.SectionTitle, { key: 4 }, 'Cuentas anuales'), doc('Cuentas anuales 2025', '30 abr 2026', [h(E.Badge, { key: 1, tone: 'warning' }, 'No disponible para el asistente')])]));
+
+  var byContent = h.apply(null, [E.Phone, { label: 'Contenido · búsqueda semántica', title: 'Documentos', list: true }].concat(search('c', 'quórum para modificar estatutos')).concat([
+    h(E.SourceCard, { key: 1, title: 'Estatutos sociales · pág. 12', excerpt: 'Artículo 28. Los acuerdos de modificación de estatutos requerirán el voto favorable de dos tercios de los votos presentes y representados, con un quórum de la mitad de los socios en primera convocatoria…' }),
+    h(E.SourceCard, { key: 2, title: 'Reglamento de régimen interno · pág. 4', excerpt: 'Artículo 7. Para la válida constitución de la asamblea se estará a lo dispuesto en los estatutos…' }),
+    h(E.SourceCard, { key: 3, title: 'Acta asamblea ordinaria junio 2026 · pág. 2', excerpt: 'Se constata la existencia de quórum en primera convocatoria con 64 socios presentes…' }),
+    h(E.EmptyState, { key: 4, icon: 'text-box-search-outline', message: 'No se ha encontrado nada parecido.' }),
+    h('p', { key: 5, className: 'mc-fine', style: { textAlign: 'center' } }, 'Debajo: estado vacío. Con menos de 3 caracteres: «Escribe al menos 3 caracteres…».')]));
+
+  var detail = ph({ label: 'Detalle · gestor', title: 'Documento' },
+    h('h1', { className: 'mc-title' }, 'Estatutos sociales'),
+    h('p', { className: 'mc-meta' }, '14 mar 2019 · 2,4 MB'),
+    h(E.Button, { block: true, icon: 'open-in-new' }, 'Abrir documento'),
+    h('div', { className: 'mc-col', style: { borderTop: '1px solid var(--border)', paddingTop: 16 } },
+      row(h(E.Badge, { tone: 'danger' }, 'Error al indexar')),
+      left(h(E.Button, { mode: 'secondary', icon: 'refresh' }, 'Reintentar indexación')),
+      left(h(E.Button, { mode: 'secondary', icon: 'file-upload-outline' }, 'Subir nueva versión'))),
+    h('h2', { className: 'mc-h2' }, 'Versiones'),
+    h(E.Group, null,
+      h(E.ListItem, { title: 'estatutos-2019-rev2.pdf · vigente', meta: '3 sep 2024, 10:12 · Lucía Martín · 2,4 MB', right: null }),
+      h(E.ListItem, { title: 'estatutos-2019.pdf', meta: '14 mar 2019, 09:00 · Gerencia · 2,1 MB', right: null })),
+    h(E.Button, { block: true, mode: 'danger' }, 'Retirar documento'));
+
+  var upload = ph({ label: 'Subir · con error', title: 'Subir documento', bar: [h(E.FormSummary, { key: 1 }), h(E.Button, { key: 2, block: true, icon: 'file-upload-outline' }, 'Subir y publicar')] },
+    h(E.FieldGroup, { label: 'Archivo', error: 'El documento puede ocupar como máximo 20 MB.' },
+      h('div', { className: 'mc-col', style: { gap: 8 } }, h('span', { className: 'mc-meta' }, 'cuentas-2025-anexos.pdf · 27,3 MB'), left(h(E.Button, { mode: 'secondary', icon: 'file-pdf-box' }, 'Cambiar PDF')))),
+    tf({ label: 'Título', maxLength: 150, value: 'Cuentas anuales 2025 anexos' }),
+    h(E.FieldGroup, { label: 'Categoría' }, h(E.Chips, { single: true }, h(E.Chip, null, 'Estatutos'), h(E.Chip, null, 'Reglamento interno'), h(E.Chip, null, 'Actas'), h(E.Chip, { selected: true }, 'Cuentas anuales'), h(E.Chip, null, 'Otros'))),
+    h(E.DateField, { label: 'Fecha del documento', mode: 'day', value: '22 oct 2026' }));
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(E.Frames, null, byTitle, byContent, detail, upload));
+
+</script>
+</body>
+</html>

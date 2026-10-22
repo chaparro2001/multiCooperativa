@@ -1,0 +1,67 @@
+<!-- @dsCard group="Screens" height=960 width=2556 page subtitle="Escanear · elegir origen, leyendo, permisos; albarán y terceros" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ScreenCapture</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement, noop = function () {};
+  function tf(o) { return h(E.TextField, Object.assign({ onChange: noop }, o)); }
+  function ph(o) { var kids = [].slice.call(arguments, 1); return h.apply(null, [E.Phone, o].concat(kids)); }
+  function row() { return h.apply(null, ['div', { className: 'mc-row', style: { gap: 8 } }].concat([].slice.call(arguments))); }
+  function left(el) { return h('div', { style: { display: 'flex' } }, el); }
+
+  function choice(icon, t) { return h(E.Card, { onPress: noop }, h('div', { className: 'mc-row', style: { flexWrap: 'nowrap', gap: 16 } }, h(E.Icon, { name: icon, size: 40, color: 'var(--primary)' }), h('span', { className: 'mc-row-title' }, t), h(E.Icon, { name: 'chevron-right', color: 'var(--muted)' }))); }
+  var cap = ph({ label: 'Escanear · elegir origen', title: 'Escanear' },
+    h('p', { className: 'mc-text' }, 'Haz una foto de un albarán o factura, elige una imagen o un PDF. Revisarás los datos leídos antes de guardar nada.'),
+    choice('camera-outline', 'Hacer una foto'), choice('image-outline', 'Elegir de la galería'), choice('file-pdf-box', 'Elegir un PDF'),
+    left(h(E.Button, { mode: 'text' }, 'Rellenar a mano')),
+    h(E.AiNotice, { kind: 'privacy' }, 'El documento se envía a un modelo de IA de Google (Gemini) para leerlo. No se guarda nada hasta que lo confirmes.'));
+
+  var reading = ph({ label: 'Leyendo el documento', title: 'Escanear', bodyStyle: { justifyContent: 'center' } },
+    h('div', { className: 'mc-center' },
+      h(E.Icon, { name: 'text-box-search-outline', size: 64, color: 'var(--primary)' }),
+      h('h1', { className: 'mc-title' }, 'Leyendo el documento…'),
+      h('div', { style: { width: '100%' } }, h('div', { className: 'mc-progress-track' }, h('div', { className: 'mc-progress-fill', style: { width: '62%' } }))),
+      h('div', { className: 'mc-col', style: { gap: 6, alignItems: 'flex-start', width: '100%' } },
+        h('span', { className: 'mc-badge mc-badge-quiet mc-badge-info' }, h(E.Icon, { name: 'check', size: 14 }), 'Imagen recibida'),
+        h('span', { className: 'mc-badge mc-badge-quiet mc-badge-info' }, h(E.Icon, { name: 'check', size: 14 }), 'Texto reconocido'),
+        h('span', { className: 'mc-badge mc-badge-quiet mc-badge-neutral' }, h(E.Spinner, { label: 'En curso' }), 'Extrayendo importes y líneas'))),
+    h('p', { className: 'mc-fine', style: { textAlign: 'center' } }, 'Pasos y barra orientativos: dan sensación de avance durante los segundos de espera.'));
+
+  var denied = ph({ label: 'Permiso de cámara denegado', title: 'Escanear' },
+    h(E.Banner, { tone: 'warning', icon: 'camera-outline' }, 'No hay permiso para usar la cámara. Puedes elegir una imagen en su lugar.'),
+    choice('image-outline', 'Elegir de la galería'), choice('file-pdf-box', 'Elegir un PDF'),
+    h(E.Banner, { tone: 'danger' }, 'La lectura automática no está disponible ahora mismo. Puedes rellenar los datos a mano.'),
+    left(h(E.Button, { mode: 'secondary' }, 'Rellenar a mano')));
+
+  var note = ph({ label: 'Albarán · detalle (gestor)', title: 'Albarán', actions: [{ icon: 'open-in-new', label: 'Ver original' }] },
+    row(h(E.Badge, { tone: 'warning' }, 'Pendiente de facturar')),
+    h('h1', { className: 'mc-title' }, 'A-5534'),
+    h('dl', { className: 'mc-kv' }, h('dt', null, 'Fecha'), h('dd', null, '14 sep 2026'), h('dt', null, 'Tercero'), h('dd', null, 'Fertilizantes del Tajo, S.L.')),
+    h('h2', { className: 'mc-h2' }, 'Líneas'),
+    h(E.Group, null, h(E.ListItem, { title: 'Abono NPK 15-15-15', meta: '600,000 kg', right: null }), h(E.ListItem, { title: 'Portes', meta: '1,000 servicio', right: null })),
+    h(E.Banner, { tone: 'info', icon: 'receipt-text-outline' }, 'Todavía no está incluido en ninguna factura.'),
+    h(E.Button, { block: true, mode: 'danger' }, 'Anular'));
+
+  var parties = ph({ label: 'Proveedores y clientes · listado', title: 'Proveedores y clientes', actions: [{ icon: 'plus', label: 'Nuevo proveedor' }], list: true },
+    tf({ label: 'Buscar por nombre o NIF', value: '', leftIcon: 'magnify', showCount: false }),
+    h(E.SegmentedButtons, { label: 'Rol', value: 'a', buttons: [{ value: 'a', label: 'Todos' }, { value: 'p', label: 'Proveedores' }, { value: 'c', label: 'Clientes' }] }),
+    h(E.ListRow, { title: 'Fertilizantes del Tajo, S.L.', meta: 'B45123456', badges: [h(E.Badge, { key: 1, tone: 'info' }, 'Proveedor')] }),
+    h(E.ListRow, { title: 'Hortícolas Vega Baja', meta: 'F03456789', badges: [h(E.Badge, { key: 1, tone: 'info' }, 'Proveedor'), h(E.Badge, { key: 2, tone: 'info' }, 'Cliente')] }),
+    h(E.ListRow, { title: 'Almazara Oleosur, S.C.A.', meta: 'F14567890', badges: [h(E.Badge, { key: 1, tone: 'info' }, 'Cliente')] }),
+    h(E.ListRow, { title: 'Gasóleos Norte, S.L.', meta: 'B28765432', badges: [h(E.Badge, { key: 1, tone: 'info' }, 'Proveedor'), h(E.Badge, { key: 2, tone: 'danger' }, 'Inactivo')] }));
+
+  var editor = ph({ label: 'Tercero · editor con errores', title: 'Nuevo proveedor', bar: [h(E.FormSummary, { key: 1 }), h(E.Button, { key: 2, block: true }, 'Guardar')] },
+    tf({ label: 'NIF', value: 'B4512345X', showCount: false, error: 'El NIF no es válido: revisa la letra o el dígito de control.' }),
+    tf({ label: 'Nombre', maxLength: 200, value: 'Fertilizantes del Tajo, S.L.' }),
+    h(E.FieldGroup, { label: 'Rol', error: 'Marca al menos un rol: proveedor, cliente o ambos.' }, h(E.Chips, null, h(E.Chip, null, 'Proveedor'), h(E.Chip, null, 'Cliente'))),
+    tf({ label: 'Email', value: 'pedidos@fertilizantestajo.es', showCount: false }),
+    tf({ label: 'Teléfono', value: '925 123 456', showCount: false }),
+    h(E.Banner, { tone: 'warning', action: h(E.Button, { mode: 'text' }, 'Abrir el existente') }, 'Ya existe un proveedor o cliente con este NIF.'));
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(E.Frames, null, cap, reading, denied, note, parties, editor));
+
+</script>
+</body>
+</html>

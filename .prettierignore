@@ -9,3 +9,5 @@ generated
 .claude
 .agents
 skills-lock.json
+# Design-tool export, kept verbatim so a re-export diffs cleanly
+docs/design-system

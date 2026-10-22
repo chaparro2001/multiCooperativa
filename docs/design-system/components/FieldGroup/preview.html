@@ -1,0 +1,16 @@
+<!-- @dsCard group="Inputs" height=268 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>FieldGroup — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h(E.FieldGroup, { label: 'Rol', error: 'Marca al menos un rol: proveedor, cliente o ambos.' }, h(E.Chips, null, h(E.Chip, null, 'Proveedor'), h(E.Chip, null, 'Cliente'))),
+h(E.FieldGroup, { label: 'Perfil' }, h(E.Chips, { single: true }, h(E.Chip, { selected: true }, 'Socio'), h(E.Chip, null, 'Consejo rector'), h(E.Chip, null, 'Gestor'), h(E.Chip, null, 'Administrador')))));
+</script>
+</body>
+</html>

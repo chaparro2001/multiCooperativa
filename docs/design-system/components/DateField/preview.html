@@ -1,0 +1,17 @@
+<!-- @dsCard group="Inputs" height=300 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>DateField — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h(E.DateField, { label: 'Primera convocatoria', value: '12 nov 2026, 18:30' }),
+h(E.DateField, { label: 'Segunda convocatoria', optional: true }),
+h(E.DateField, { label: 'Vencimiento', mode: 'day', value: '30 oct 2026', error: 'El vencimiento no puede ser anterior a la fecha de emisión.' })));
+</script>
+</body>
+</html>

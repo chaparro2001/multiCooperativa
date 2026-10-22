@@ -1,0 +1,19 @@
+<!-- @dsCard group="Assemblies" height=248 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>VoteTally — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h(E.Card, null,
+  row(h(E.Badge, { tone: 'neutral' }, 'Cerrada'), h(E.Badge, { tone: 'info', icon: 'check' }, 'Aprobado')),
+  h(E.ProgressBar, { label: 'Participación', value: 87, total: 120, quorum: 50 }),
+  h(E.VoteTally, { favor: 61, contra: 18, abst: 8 }),
+  h('p', { className: 'mc-row-meta' }, 'Con quórum en primera convocatoria · Tu voto: A favor'))));
+</script>
+</body>
+</html>

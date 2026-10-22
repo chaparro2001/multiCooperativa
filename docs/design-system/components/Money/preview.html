@@ -1,0 +1,15 @@
+<!-- @dsCard group="Lists" height=60 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Money — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+row(h(E.Money, { value: 1234.56 }), h(E.Money, { value: -350 }), h(E.Money, { value: 500, signed: true }), h(E.Money, { value: 0 }))));
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!-- @dsCard group="Status" height=205 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>CountBadge — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h('div', { className: 'mc-grid', style: { width: 342 } }, h(E.HomeTile, { icon: 'bullhorn-outline', title: 'Comunicados', count: 3, countLabel: 'comunicados sin leer' }), h(E.HomeTile, { icon: 'receipt-text-outline', title: 'Facturas', count: 12, countLabel: 'facturas que requieren atención' }))));
+</script>
+</body>
+</html>

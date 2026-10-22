@@ -1,0 +1,33 @@
+<!-- @dsCard group="Screens" height=909 width=1288 page subtitle="Home web · Administrador · 960 centrado · 4 columnas" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Home web — pantalla</title>
+<style>
+  .browser { width:1280px; height:900px; background:var(--background); color:var(--text); border-bottom:1px solid var(--border); overflow:hidden; }
+  .bar { border-bottom:1px solid var(--border); }
+  .bar-inner { max-width:var(--layout-max-width); margin:0 auto; }
+  .bar .mc-header-title { font-size:28px; line-height:36px; }
+  .content { max-width:var(--layout-max-width); margin:0 auto; padding:var(--space-6); box-sizing:border-box; display:flex; flex-direction:column; gap:var(--space-4); }
+  .identity { font-size:14px; line-height:20px; color:var(--secondary); margin:0; }
+  .attn { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:var(--space-3); }
+  .mc-tile { aspect-ratio:auto; height:160px; }
+</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  var T = [['bullhorn-outline','Comunicados',3,'comunicados sin leer'],['hand-back-left-outline','Asambleas'],['file-document-outline','Documentos'],['receipt-text-outline','Facturas',4,'facturas que requieren atención'],['package-variant-closed','Albaranes',2,'albaranes pendientes de facturar'],['office-building-outline','Proveedores'],['store-outline','Clientes'],['account-outline','Área del socio'],['chat-processing-outline','Asistente'],['account-group-outline','Miembros']];
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    h('div', { className: 'browser', 'data-theme': 'green' },
+      h('div', { className: 'bar' }, h('div', { className: 'bar-inner' }, h(E.Header, { title: 'Cooperativa Agrícola San Isidro', actions: [{ icon: 'cog-outline', label: 'Ajustes', showTooltip: false }] }))),
+      h('div', { className: 'content' },
+        h('p', { className: 'identity' }, 'Administrador · Socio'),
+        h(E.SectionTitle, null, 'Pendiente para ti'),
+        h('div', { className: 'attn' },
+          h(E.AttentionItem, { icon: 'hand-back-left-outline', title: 'Votación abierta', meta: 'Asamblea ordinaria · 12 nov 2026', badge: null }),
+          h(E.AttentionItem, { icon: 'receipt-text-outline', title: '3 facturas vencidas', meta: '1.250,00 € por pagar', badge: null }),
+          h(E.AttentionItem, { icon: 'package-variant-closed', title: '2 albaranes fuera de plazo', meta: 'Sin facturar más de 30 días' })),
+        h('div', { className: 'mc-grid cols-4' }, T.map(function (t) { return h(E.HomeTile, { key: t[1], icon: t[0], title: t[1], count: t[2], countLabel: t[3] }); })))));
+</script>
+</body>
+</html>

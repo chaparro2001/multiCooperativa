@@ -1,0 +1,18 @@
+<!-- @dsCard group="Actions" height=340 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Button — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+row(h(E.Button, null, 'Entrar'), h(E.Button, { mode: 'secondary' }, 'Guardar borrador'), h(E.Button, { mode: 'danger' }, 'Retirar')),
+row(h(E.Button, { pressed: true }, 'Emitir voto'), h(E.Button, { mode: 'secondary', pressed: true }, 'Revisar'), h(E.Button, { mode: 'danger', pressed: true }, 'Cerrar sesión')),
+row(h(E.Button, { loading: true }, 'Entrar'), h(E.Button, { disabled: true }, 'Emitir voto'), h(E.Button, { mode: 'secondary', disabled: true }, 'Publicar')),
+row(h(E.Button, { icon: 'camera-outline' }, 'Escanear'), h(E.Button, { mode: 'secondary', icon: 'plus' }, 'Añadir punto'), h(E.Button, { mode: 'text' }, 'Rellenar a mano'))));
+</script>
+</body>
+</html>

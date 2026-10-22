@@ -1,0 +1,52 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>multiCooperativa</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--background); color:var(--text); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; width:960px; height:288px; overflow:hidden; }
+  .band { position:absolute; top:24px; left:0; width:960px; height:112px; }
+  .band svg { display:block; width:960px; height:112px; }
+  .brand { fill:var(--primary); }
+  .tint { fill:var(--primary-container); }
+  .deep { fill:var(--on-primary-container); }
+  .count { fill:var(--danger); }
+  .ring { fill:var(--background); }
+  .tile { rx:var(--radius-md); }
+  .hero { rx:var(--radius-lg); }
+  .words { position:absolute; left:var(--space-6); right:var(--space-6); bottom:var(--space-6); max-width:912px; }
+  .name { margin:0; font-size:64px; line-height:.95; font-weight:600; letter-spacing:-.02em; color:var(--text); }
+  .name b { font-weight:600; color:var(--primary); }
+  .tag { margin:var(--space-2) 0 0 3px; font-size:14px; line-height:20px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="band" aria-hidden="true">
+<svg viewBox="0 0 960 112" width="960" height="112">
+<!--
+  blocks      primary 236×112 two-wide hero slab (radius-lg) + one 112 tile · primary-container ×3 tiles · on-primary-container 112 tile · danger 20 disc once (it only ever means a count) — ≈40% of 960×288
+  arrangement the home grid as one strip: tiles at a space-3 gutter from space-6 inset, bleeding off the right edge
+  pattern     tiles cut by radius tokens, one merged two-wide — "geometric, modular, dense UI": the product IS a grid of module tiles
+  scales      tile side 112; gutter space-3 (12); inset space-6 (24); corners radius-md (12), hero radius-lg (16), count disc radius-full
+-->
+<rect class="brand hero" x="24" y="0" width="236" height="112" rx="16"/>
+<rect class="tint tile" x="272" y="0" width="112" height="112" rx="12"/>
+<rect class="deep tile" x="396" y="0" width="112" height="112" rx="12"/>
+<rect class="tint tile" x="520" y="0" width="236" height="112" rx="12"/>
+<rect class="brand tile" x="768" y="0" width="112" height="112" rx="12"/>
+<rect class="tint tile" x="892" y="0" width="112" height="112" rx="12"/>
+<circle class="ring" cx="372" cy="12" r="12"/>
+<circle class="count" cx="372" cy="12" r="10"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">multi<b>Cooperativa</b></h1>
+<p class="tag">Una app tranquila y legible para cada cooperativa y sus socios.</p>
+</div>
+</div>
+</body>
+</html>

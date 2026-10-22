@@ -1,0 +1,22 @@
+<!-- @dsCard group="Assistant" height=537 -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ChatBubble — preview</title></head>
+<body>
+<div id="root" class="mc-pad mc-stack" style="max-width:420px"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement;
+  function row() { return h.apply(null, ['div', { className: 'mc-row' }].concat([].slice.call(arguments))); }
+  function cap(t) { return h('p', { className: 'mc-caption' }, t); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+h('div', { className: 'mc-chat' },
+  h(E.ChatBubble, { role: 'user' }, '¿Qué quórum hace falta para aprobar una modificación de estatutos?'),
+  h('div', { className: 'mc-answer' },
+    h(E.ChatBubble, null, h('p', null, 'Según los estatutos, una modificación necesita **mayoría reforzada**:'.replace(/\*\*/g, '')), h('ul', null, h('li', null, 'Dos tercios de los votos emitidos.'), h('li', null, 'Quórum de la mitad de los socios en primera convocatoria.'))),
+    h(E.Sources, null, h(E.SourceCard, { n: 1, title: 'Estatutos sociales · pág. 12', excerpt: 'Artículo 28. Los acuerdos de modificación de estatutos requerirán el voto favorable de dos tercios…' })),
+    h(E.Chips, null, h(E.Chip, { icon: 'thumb-up-outline' }, 'Útil'), h(E.Chip, { icon: 'thumb-down-outline' }, 'No útil'))),
+  h(E.ChatBubble, { role: 'user', pending: true }, '¿Y cuándo es la próxima asamblea?'),
+  h(E.Thinking))));
+</script>
+</body>
+</html>

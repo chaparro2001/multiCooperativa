@@ -1,0 +1,55 @@
+<!-- @dsCard group="Screens" height=1039 width=1712 page subtitle="Comunicados · listado, detalle socio y gestor, editor" -->
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>ScreenAnnouncements</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var E = window.MultiCooperativa, h = React.createElement, noop = function () {};
+  function tf(o) { return h(E.TextField, Object.assign({ onChange: noop }, o)); }
+  function ph(o) { var kids = [].slice.call(arguments, 1); return h.apply(null, [E.Phone, o].concat(kids)); }
+  function row() { return h.apply(null, ['div', { className: 'mc-row', style: { gap: 8 } }].concat([].slice.call(arguments))); }
+  function left(el) { return h('div', { style: { display: 'flex' } }, el); }
+
+  var list = ph({ label: 'Listado · gestor', title: 'Comunicados', actions: [{ icon: 'plus', label: 'Nuevo comunicado' }], list: true },
+    h(E.ListRow, { unread: true, title: 'Convocatoria de la asamblea general ordinaria', badges: [h(E.Badge, { key: 1, tone: 'info', icon: 'pin-outline' }, 'Fijado')], meta: '22 oct 2026 · Junta rectora · 2 adjuntos' }),
+    h(E.ListRow, { unread: true, title: 'Nuevo horario de la báscula durante la campaña', meta: '21 oct 2026 · Lucía Martín' }),
+    h(E.ListRow, { title: 'Cambio de proveedor de gasóleo', badges: [h(E.Badge, { key: 1, tone: 'warning' }, 'Borrador')], meta: '20 oct 2026 · Lucía Martín' }),
+    h(E.ListRow, { title: 'Recogida de envases vacíos', meta: '14 oct 2026 · Gerencia · 1 adjunto' }),
+    h(E.ListRow, { title: 'Aviso de corte de agua', badges: [h(E.Badge, { key: 1, tone: 'danger' }, 'Retirado')], meta: '2 oct 2026 · Gerencia' }),
+    h(E.ListFooter));
+
+  function body(manage) {
+    return [
+      row(h(E.Badge, { key: 1, tone: 'info', icon: 'pin-outline' }, 'Fijado')),
+      h('h1', { key: 't', className: 'mc-title' }, 'Convocatoria de la asamblea general ordinaria'),
+      h('p', { key: 'm', className: 'mc-meta' }, 'Junta rectora · 22 oct 2026, 09:15'),
+      h('p', { key: 'e', className: 'mc-fine' }, 'Editado el 22 oct 2026, 11:02'),
+      h('p', { key: 'b', className: 'mc-text' }, 'Se convoca a todos los socios a la asamblea general ordinaria que se celebrará el 12 de noviembre en el salón de actos.\n\nEn el orden del día figuran la aprobación de las cuentas anuales de 2025 y el informe de la presidencia. Podéis consultar la documentación adjunta.'),
+      h(E.SourceCard, { key: 'a1', icon: 'file-pdf-box', title: 'Convocatoria asamblea 2026.pdf', excerpt: '184 KB' }),
+      h(E.SourceCard, { key: 'a2', icon: 'file-pdf-box', title: 'Cuentas anuales 2025.pdf', excerpt: '1,2 MB' })
+    ].concat(manage ? [
+      h('div', { key: 'mg', className: 'mc-col', style: { borderTop: '1px solid var(--border)', paddingTop: 16, gap: 12 } },
+        h(E.ProgressBar, { label: 'Leído por', value: 74, total: 120 }),
+        h('p', { className: 'mc-meta' }, 'Leído por 74 de 120 miembros'),
+        h(E.Button, { block: true, mode: 'secondary', icon: 'pencil-outline' }, 'Editar'),
+        h(E.Button, { block: true, mode: 'secondary', icon: 'pin-outline' }, 'Quitar fijado'),
+        h(E.Button, { block: true, mode: 'danger' }, 'Retirar'))
+    ] : []);
+  }
+  var detM = h.apply(null, [E.Phone, { label: 'Detalle · socio (se marca como leído)', title: 'Comunicado' }].concat(body(false)));
+  var detG = h.apply(null, [E.Phone, { label: 'Detalle · gestor', title: 'Comunicado' }].concat(body(true)));
+
+  var editor = ph({ label: 'Editor · borrador, con error', title: 'Nuevo comunicado', bar: [h(E.FormSummary, { key: 1 }), h(E.Button, { key: 2, mode: 'secondary', block: true }, 'Guardar borrador'), h(E.Button, { key: 3, block: true }, 'Publicar')] },
+    tf({ label: 'Título', maxLength: 120, value: 'Cambio de proveedor de gasóleo' }),
+    tf({ label: 'Texto', maxLength: 5000, multiline: true, minHeight: 200, value: '', error: 'Este campo es obligatorio.' }),
+    h(E.FieldGroup, { label: 'Adjuntos (1/3)', error: 'Solo se admiten adjuntos en PDF.' },
+      h('div', { className: 'mc-col', style: { gap: 8 } },
+        h(E.Card, null, h('div', { className: 'mc-row', style: { flexWrap: 'nowrap' } }, h(E.Icon, { name: 'file-pdf-box', color: 'var(--secondary)' }), h('span', { style: { flex: 1, fontSize: 14 } }, 'Tarifas gasóleo 2027.pdf · 96 KB'), h(E.Icon, { name: 'close', label: 'Quitar adjunto', color: 'var(--muted)' }))),
+        left(h(E.Button, { mode: 'secondary', icon: 'paperclip' }, 'Añadir PDF')))));
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(E.Frames, null, list, detM, detG, editor));
+
+</script>
+</body>
+</html>
