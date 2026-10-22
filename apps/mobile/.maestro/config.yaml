@@ -1,0 +1,3 @@
+# Runs every top-level flow in this directory; subflows/ and scripts/ are helpers.
+flows:
+  - '*.yaml'

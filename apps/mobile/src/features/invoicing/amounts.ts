@@ -74,9 +74,20 @@ export function subtractAmounts(a: string, b: string): string {
 
 /** "1234.50" → "1.234,50 €" with the separators of the given locale. Display only. */
 export function formatEuros(amount: string, locale: string): string {
-  const parts = new Intl.NumberFormat(locale, { minimumFractionDigits: 1 }).formatToParts(1000.5);
-  const group = parts.find((part) => part.type === 'group')?.value ?? '.';
-  const decimal = parts.find((part) => part.type === 'decimal')?.value ?? ',';
+  const numberFormat = new Intl.NumberFormat(locale, { minimumFractionDigits: 1 });
+  const sample = numberFormat.format(1000.5);
+  let group = '.';
+  let decimal = ',';
+  if (typeof numberFormat.formatToParts === 'function') {
+    const parts = numberFormat.formatToParts(1000.5);
+    group = parts.find((part) => part.type === 'group')?.value ?? group;
+    decimal = parts.find((part) => part.type === 'decimal')?.value ?? decimal;
+  } else {
+    // Hermes on iOS has no `formatToParts`: read the separators off a formatted sample
+    // ("1.000,5" has a group separator, "1000,5" does not).
+    decimal = sample.charAt(sample.length - 2) || decimal;
+    if (sample.length === 7) group = sample.charAt(1);
+  }
   const negative = amount.startsWith('-');
   const [whole = '0', decimals = '00'] = amount.replace('-', '').split('.');
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, group);

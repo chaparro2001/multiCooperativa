@@ -22,7 +22,7 @@ If the code and the documentation do not match, stop and ask. If a decision chan
 - Backend: Node + TypeScript, modular monolith with Clean Architecture.
 - Data: PostgreSQL, Prisma, pgvector.
 - Contracts: Zod schemas in `packages/contracts`, used by app and backend.
-- Tests: Vitest (unit and integration); React Native Testing Library and Maestro planned, not delivered.
+- Tests: Vitest (unit and integration); Maestro E2E flows on the iOS simulator (`apps/mobile/.maestro`, local only; `docs/02-stack-and-architecture.md`); React Native Testing Library planned, not delivered.
 - Delivery: GitHub Actions, free hosted demo (home server with Docker and Cloudflare Tunnel, GitHub Pages; `docs/04-deployment.md`, ADR-012), EAS Build, Sentry.
 
 ## Structure
@@ -88,6 +88,7 @@ pnpm format                  # Prettier
 pnpm typecheck
 pnpm test                    # unit tests (no database) plus the type-level tests of packages/contracts (*.test-d.ts)
 pnpm test:coverage           # unit tests with a v8 coverage summary; HTML report in coverage/ (no thresholds)
+pnpm e2e                     # Maestro flows (iOS simulator; needs Maestro, JDK 17, the API and `npx expo run:ios`; see docs/02-stack-and-architecture.md)
 pnpm test:integration        # *.integration.test.ts tests against the multicooperativa_test DB and the multicooperativa-test bucket (need pnpm db:up; the Ollama ones are skipped if there is no model)
 ```
 

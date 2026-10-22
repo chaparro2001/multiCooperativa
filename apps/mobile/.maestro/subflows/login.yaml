@@ -1,0 +1,49 @@
+# Starts the app from scratch and signs in as ${EMAIL}. Caller sets EMAIL (and optionally PASSWORD).
+appId: com.anonymous.multicooperativa
+env:
+  PASSWORD: demo-cooperativa-2026
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+# The development build opens on the dev launcher: point it at Metro on this Mac.
+- openLink: multicooperativa://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+# iOS asks "Open in multiCooperativa?" (possibly more than once while the bundle loads).
+- repeat:
+    while:
+      notVisible:
+        id: login-screen
+    times: 40
+    commands:
+      - runFlow:
+          when:
+            visible: Abrir
+          commands:
+            - tapOn: Abrir
+      - extendedWaitUntil:
+          visible:
+            id: login-screen
+          timeout: 3000
+          optional: true
+- assertVisible:
+    id: login-screen
+- tapOn:
+    id: email-field
+- inputText: ${EMAIL}
+- tapOn:
+    id: password-field
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: login-button
+# iOS offers to save the password after a sign-in.
+- extendedWaitUntil:
+    visible: Ahora no
+    timeout: 8000
+    optional: true
+- runFlow:
+    when:
+      visible: Ahora no
+    commands:
+      - tapOn: Ahora no

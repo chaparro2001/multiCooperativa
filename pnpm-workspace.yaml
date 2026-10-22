@@ -7,3 +7,8 @@ allowBuilds:
   prisma: true
   '@google/genai': false
   protobufjs: false
+minimumReleaseAgeExclude:
+  - expo-modules-jsi@57.1.3
+overrides:
+  # Xcode 26 (Swift 6.2) fails to compile 57.1.1's RuntimeScheduler.h; fixed in 57.1.3. Drop once expo pins >= 57.1.3.
+  expo-modules-jsi: 57.1.3

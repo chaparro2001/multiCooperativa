@@ -1,0 +1,21 @@
+# Journey: a member signs in and lands on the home with the tiles their profile allows.
+appId: com.anonymous.multicooperativa
+---
+- runFlow:
+    file: subflows/login.yaml
+    env:
+      EMAIL: socio@sanisidro.test
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 30000
+- assertVisible:
+    id: module-announcements
+- assertVisible:
+    id: module-assemblies
+- assertVisible:
+    id: module-documents
+# A plain member has no invoicing module.
+- assertNotVisible:
+    id: module-invoices
+- takeScreenshot: 01-login-home
