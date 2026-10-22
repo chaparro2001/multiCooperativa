@@ -62,6 +62,8 @@ async function addDocument(
       page: position + 1,
       position,
       content,
+      section: null,
+      contextHeader: '',
       embedding: embeddings[position]!,
     })),
   );
@@ -273,7 +275,14 @@ describe('PgVectorFragmentIndex hybrid search (US-DOC-07, US-AI-02)', () => {
     const index = new PgVectorFragmentIndex(prisma, { minVectorScore: 0, minTextScore: 0 });
     const [embedding] = await embedder.embed(['gamma'], 'document');
     await index.replaceDocument(coop, document.id, randomUUID(), [
-      { page: 1, position: 0, content: 'gamma', embedding: embedding! },
+      {
+        page: 1,
+        position: 0,
+        content: 'gamma',
+        section: null,
+        contextHeader: '',
+        embedding: embedding!,
+      },
     ]);
     expect(await search('beta', { minVectorScore: 0.99 })).toEqual([]);
   });

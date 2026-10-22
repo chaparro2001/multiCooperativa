@@ -53,12 +53,12 @@ export class PgVectorFragmentIndex implements FragmentIndex {
         const rows = fragments.slice(start, start + INSERT_BATCH).map(
           (fragment) => Prisma.sql`(
             gen_random_uuid(), ${cooperativeId}::uuid, ${documentId}::uuid, ${versionId}::uuid,
-            ${fragment.page}, ${fragment.position}, ${fragment.content}, ${toVector(fragment.embedding)}::vector
+            ${fragment.page}, ${fragment.position}, ${fragment.content}, ${fragment.section}, ${fragment.contextHeader}, ${toVector(fragment.embedding)}::vector
           )`,
         );
         await tx.$executeRaw`
           INSERT INTO "DocumentChunk"
-            (id, "cooperativeId", "documentId", "versionId", page, position, content, embedding)
+            (id, "cooperativeId", "documentId", "versionId", page, position, content, section, "contextHeader", embedding)
           VALUES ${Prisma.join(rows)}`;
       }
     });

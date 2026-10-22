@@ -1,5 +1,6 @@
 import type { FileStorage } from '../../../shared/files/file-storage';
 import { chunkPages, hasExtractableText } from '../domain/chunking';
+import { contextHeader, embeddedText, INDEXED_HEADER_PARTS } from '../domain/context-header';
 import type { Embedder } from './ports/embedder';
 import type { FragmentIndex } from './ports/fragment-index';
 import type { IndexingStore, PendingVersion } from './ports/indexing-store';
@@ -44,7 +45,17 @@ export async function indexVersion(deps: IndexingDeps, job: PendingVersion): Pro
     }
 
     const chunks = chunkPages(pages);
-    const embeddings = await deps.embedder.embed(chunks.map((chunk) => chunk.content));
+    // ADR-023: what is embedded (and searched as text) carries the document and section;
+    // what is stored as `content` and cited stays the fragment's own text.
+    const headers = chunks.map((chunk) =>
+      contextHeader(
+        { title: version.title, category: version.category, section: chunk.section },
+        INDEXED_HEADER_PARTS,
+      ),
+    );
+    const embeddings = await deps.embedder.embed(
+      chunks.map((chunk, i) => embeddedText(headers[i]!, chunk.content)),
+    );
     await deps.index.replaceDocument(
       job.cooperativeId,
       job.documentId,
@@ -53,6 +64,8 @@ export async function indexVersion(deps: IndexingDeps, job: PendingVersion): Pro
         page: chunk.page,
         position: chunk.index,
         content: chunk.content,
+        section: chunk.section,
+        contextHeader: headers[i]!,
         embedding: embeddings[i]!,
       })),
     );

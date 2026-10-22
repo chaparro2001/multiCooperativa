@@ -227,6 +227,18 @@ describe('indexing (requirements/03, section 4)', () => {
   });
 });
 
+describe('contextual header (ADR-023)', () => {
+  it('stores the header with each fragment but keeps the cited content free of it', async () => {
+    await upload(pdfWith('Plain text of the article.'));
+    await indexer.idle();
+
+    const [fragment] = indexing.fragments;
+    expect(fragment?.contextHeader).toBe('Bylaws');
+    expect(fragment?.content).toBe('Plain text of the article.');
+    expect(fragment?.section).toBeNull();
+  });
+});
+
 describe('content search (US-DOC-07)', () => {
   it('returns the most relevant fragments with their page', async () => {
     const document = await upload(
@@ -270,7 +282,14 @@ describe('content search (US-DOC-07)', () => {
   it('US-DOC-07: an exact term is found by the text arm even when similarity is below the threshold', async () => {
     const strict = new InMemoryIndexing(store, 0.99);
     await strict.replaceDocument(COOP, 'd', 'v', [
-      { page: 1, position: 0, content: 'Cuota extraordinaria 2026.', embedding: [1, 0] },
+      {
+        page: 1,
+        position: 0,
+        content: 'Cuota extraordinaria 2026.',
+        section: null,
+        contextHeader: '',
+        embedding: [1, 0],
+      },
     ]);
     store.rows.push({ id: 'd', cooperativeId: COOP, status: 'published', title: 'Fees' } as never);
 
@@ -284,7 +303,14 @@ describe('content search (US-DOC-07)', () => {
   it('US-DOC-07: the text arm needs enough distinct query terms and a minimum similarity', async () => {
     const fake = new InMemoryIndexing(store, 0.99, 0.5);
     await fake.replaceDocument(COOP, 'd', 'v', [
-      { page: 1, position: 0, content: 'Cuota anual del socio.', embedding: [1, 0] },
+      {
+        page: 1,
+        position: 0,
+        content: 'Cuota anual del socio.',
+        section: null,
+        contextHeader: '',
+        embedding: [1, 0],
+      },
     ]);
     store.rows.push({ id: 'd', cooperativeId: COOP, status: 'published', title: 'Fees' } as never);
     const find = (text: string, embedding: number[]) => fake.search(COOP, { text, embedding }, 5);

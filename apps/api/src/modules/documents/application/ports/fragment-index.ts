@@ -3,13 +3,14 @@ import type { DocumentCategory } from '../../domain/document';
 export interface IndexedFragment {
   page: number;
   position: number;
+  /** The fragment's own text: what is shown and cited. */
   content: string;
+  /** Heading path of the fragment (ADR-023); null when there is none. */
+  section: string | null;
+  /** "<title> · <category> · <section>": indexed with the content, never shown. */
+  contextHeader: string;
+  /** Embedding of the header plus the content. */
   embedding: number[];
-  /**
-   * Benchmark only (NFR-DOC-05): restricts the search to one arm to measure it alone. Never set
-   * by the API or the assistant; default `hybrid`.
-   */
-  arm?: 'hybrid' | 'vector' | 'text';
 }
 
 export interface FragmentHit {

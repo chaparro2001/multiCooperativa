@@ -16,12 +16,18 @@ export class PrismaIndexingStore implements IndexingStore {
   ): Promise<VersionToIndex | null> {
     const version = await this.prisma.documentVersion.findFirst({
       where: { id: versionId, documentId, document: { cooperativeId } },
-      select: { fileKey: true, isCurrent: true, document: { select: { status: true } } },
+      select: {
+        fileKey: true,
+        isCurrent: true,
+        document: { select: { status: true, title: true, category: true } },
+      },
     });
     if (!version) return null;
     return {
       fileKey: version.fileKey,
       indexable: version.isCurrent && version.document.status === 'published',
+      title: version.document.title,
+      category: version.document.category,
     };
   }
 

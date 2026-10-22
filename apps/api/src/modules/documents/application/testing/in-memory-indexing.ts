@@ -56,6 +56,8 @@ export class InMemoryIndexing implements IndexingStore, FragmentIndex {
     return {
       fileKey: found.version.fileKey,
       indexable: found.version.isCurrent && found.row.status === 'published',
+      title: found.row.title,
+      category: found.row.category,
     };
   }
 
