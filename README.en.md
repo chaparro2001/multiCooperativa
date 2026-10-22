@@ -68,7 +68,7 @@ Permissions are defined by module, level and scope (ADR-004). The backend decide
 
 | Layer            | Choice                                                                                                                                                                                 |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mobile app       | Expo + React Native + TypeScript, Expo Router, react-native-paper (Material Design 3, ADR-020)                                                                                         |
+| Mobile app       | Expo + React Native + TypeScript, Expo Router, react-native-paper (Material Design 3, ADR-020) with the design-system kit in `src/ui` (ADR-024)                                        |
 | Client data      | TanStack Query; tokens in the device's secure storage                                                                                                                                  |
 | User-facing text | i18next + react-i18next + expo-localization; `es` default (ADR-008)                                                                                                                    |
 | Contracts        | Shared package with Zod schemas (validate on the server and type the app)                                                                                                              |
@@ -178,7 +178,8 @@ The status of each task is in [docs/03-implementation-plan.md](docs/03-implement
 - **Invoices and delivery notes**: third parties (suppliers and customers), purchase and sales delivery notes and invoices with exact decimal amounts, reconciliation with tolerance, statuses, payments and collections summary, idempotent due-dates process (hourly) with three per-cooperative alerts, each configurable and switchable off (notice before invoice due dates, deadline to invoice delivery notes and notice before that deadline) and attention badges on the home, camera capture and review, **AI extraction** (Gemini vision, validated with Zod and confirmed by a person) and **AI discrepancy explanation**.
 - **Member area**: my data (partner number, joining date, profile, contact), my capital and my movements, read-only for the member (US-MEM-01, US-MEM-02); the governing board, manager and administrator consult every partner's capital with the cooperative's total (US-MEM-04), and the manager and administrator register contributions, refunds and corrections (US-MEM-03). Exact decimal amounts, immutable movements, capital never negative and double isolation (by cooperative and, with own scope, by member).
 - **AI assistant**: chat with citations and links to resources, RAG over documents, read-only tools filtered by permissions (`search_documents`, `list_invoices`, `list_delivery_notes`, `payments_and_collections_summary`, `find_third_party`, `upcoming_assemblies`, `voting_result`, `latest_announcements`, `my_contributions`), conversations with history (reopen and delete, US-AI-04), hourly usage limit, an evaluation set of 26 questions and, for each cooperative's administrator, the choice of the local model in Settings (US-AI-07, ADR-014).
-- **Per-cooperative appearance**: in Settings the administrator picks the primary colour (refused if white text over it does not reach a WCAG AA contrast of 4.5:1); every member sees the app with that colour (US-ACC-14, ADR-018; the logo was removed in ADR-021).
+- **Per-cooperative appearance**: in Settings the administrator picks the primary colour (refused if white text over it does not reach a WCAG AA contrast of 4.5:1); every member sees the app with that colour (US-ACC-14, ADR-018; the logo was removed in ADR-021). It is a Settings sub-page, next to Billing and AI assistant (administrator only).
+- **Interface**: own design system (`docs/design-system/`, ADR-024) with tokens in `theme.ts` and a component kit in `apps/mobile/src/ui`; a home with the "Pendiente para ti" strip (open votes, invoices due or overdue, next assembly, unread announcements), loading, empty and error states, and dates such as "22 oct 2026".
 
 ## 6. Limitations and future work
 
@@ -312,16 +313,17 @@ ADRs are immutable: a decision that changes produces a new ADR.
 - [ADR-021](docs/adr/ADR-021-remove-cooperative-logo.md): the per-cooperative logo is removed (the primary colour stays).
 - [ADR-022](docs/adr/ADR-022-hybrid-retrieval-and-similarity-threshold.md): hybrid search (vector + Spanish full text with RRF) and minimum similarity threshold.
 - [ADR-023](docs/adr/ADR-023-rag-quality-benchmark-and-retrieval-improvements.md): RAG quality: retrieval benchmark, accent-insensitive full text, structure-aware chunking with contextual headers and neighbour expansion.
+- [ADR-024](docs/adr/ADR-024-adopt-the-design-system.md): adoption of the design system (`docs/design-system/`): tokens in `theme.ts`, complete kit in `src/ui` and the related behaviours ("Pendiente para ti" strip, "Cómo llegar", quorum mark, Settings sub-pages).
 
 ## 11. Quality
 
-- **Unit tests** (`pnpm test`): 1271 tests in 127 files (API 955, app 295, contracts 21), all green as of 2026-10-22.
-- **Integration tests** (`pnpm test:integration`): against real PostgreSQL and S3 storage, including the isolation test between cooperatives. 573 tests in 30 files, all green (2026-10-22).
+- **Unit tests** (`pnpm test`): 1338 tests in 133 files (API 942, app 363, contracts 24, ESLint rules 9), all green as of 2026-10-22.
+- **Integration tests** (`pnpm test:integration`): against real PostgreSQL and S3 storage, including the isolation test between cooperatives. 574 tests in 30 files, all green (2026-10-22).
 - **CI** (GitHub Actions, on every push and pull request): format check, lint, typecheck, tests, migrations on a Postgres with pgvector, and integration tests. There are also workflows for the GitHub Pages deploy and the due-dates cron.
 - **Local quality gate**: Husky runs lint, typecheck and tests on pre-commit.
 - **Module boundaries**: custom ESLint rule (`tools/eslint/module-boundaries.js`, with its own tests) that forbids importing a backend module through any path other than its `index.ts` (ADR-002).
 - **Security**: deny by default in every use case, 404 for resources of another cooperative and 403 for modules without permission, Argon2id for passwords, JWT with rotating refresh, lockout after failed attempts, parameterized profiles x modules matrix tests, isolation tests, environment-configurable CORS and secrets outside the repository (only `.env.example`).
-- **AI**: evaluation set of 23 questions for the assistant (`ai:eval`).
+- **AI**: evaluation set of 26 questions for the assistant (`ai:eval`).
 
 ## 12. AI-assisted development
 
@@ -338,7 +340,7 @@ The project was built with Spec Driven Development using Claude Code:
 | Master's topic                      | Evidence in the project                                                                                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Spec Driven Development             | `docs/requirements/`, plan by milestones with ticked tasks, specification IDs in tests and commits                                                           |
-| ADRs and Docs as Code               | `docs/adr/` (23 immutable ADRs), documentation versioned with the code, Mermaid diagrams                                                                     |
+| ADRs and Docs as Code               | `docs/adr/` (24 immutable ADRs), documentation versioned with the code, Mermaid diagrams                                                                     |
 | Clean Architecture with TypeScript  | `domain/application/infrastructure` layers per module, ports and adapters, ESLint module-boundaries rule                                                     |
 | Testing, TDD and quality gate       | Vitest, domain tests first, integration tests, Husky on pre-commit                                                                                           |
 | CI/CD with GitHub Actions           | `ci.yml` (format, lint, typecheck, tests, migrations, integration), Pages deploy and cron                                                                    |

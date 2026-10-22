@@ -1,6 +1,6 @@
 # 06 · Design system migration
 
-**Date**: 2026-10-22 · **Status**: Draft
+**Date**: 2026-10-22 · **Status**: Implemented (merged 2026-10-22, see [§9](#9-outcome))
 
 Gap analysis between the design system in [design-system/](design-system/README.md) (generated from [05-ui-design-brief.md](05-ui-design-brief.md)) and the current app in `apps/mobile`, and a phased plan to adopt it. The migration is **visual**: same screens, same data, same copy, same permissions. Anything in the design that needs new behaviour or new backend data is listed separately in [§5](#5-behaviour-items); the decision is to do all of it ([ADR-024](adr/ADR-024-adopt-the-design-system.md)).
 
@@ -191,29 +191,31 @@ Effort: **S** ≤ 2 h, **M** ≈ half a day, **L** ≥ 1 day. Every phase ends w
 
 ### Phase 0 · Tokens and theme (S, low risk)
 
-- [ ] Correct the 9 rounded values in `docs/design-system/tokens.json` and `tokens.css` ([§2.1](#21-colours-presets-against-mix)).
-- [ ] `ui/theme.ts`: add `space`, `radius`, `size`, `shadow`, `layout`; `backdrop`/`scrim`; `focusRing()` web helper; rename `colors.surface` → `colors.surfaceVariant`.
-- [ ] `ui/screen.tsx`: padding/gap/max width from the tokens.
-- [ ] `ui/theme.test.ts`: preset table and contrast tests ([§2.5](#25-themetestts)).
+- [x] Correct the 9 rounded values in `docs/design-system/tokens.json` and `tokens.css` ([§2.1](#21-colours-presets-against-mix)).
+- [x] `ui/theme.ts`: add `space`, `radius`, `size`, `shadow`, `layout`; `backdrop`/`scrim`; `focusRing()` web helper; rename `colors.surface` → `colors.surfaceVariant`.
+- [x] `ui/screen.tsx`: padding/gap/max width from the tokens.
+- [x] `ui/theme.test.ts`: preset table and contrast tests ([§2.5](#25-themetestts)).
 - Verify: unit tests; Expo web at 390 and 960 in green, blue and wine (Settings → Apariencia) shows no change yet.
 
 ### Phase 1 · Base kit (M, low–medium risk)
 
-- [ ] Restyle `Badge` (neutral ring, `quiet`, `icon`), `CountBadge` (20, ring), `FieldGroup` (2 px, label), `FormSummary` (icon), `Button` (`icon`, `text`, `block`).
-- [ ] New `ui/card.tsx` (outlined hairline, `selected`, pressed state), `ui/home-tile.tsx`, `ui/list-row.tsx`, `ui/banner.tsx`, `ui/ai-notice.tsx`, `ui/section-title.tsx`, `ui/money.tsx`, `ui/switch-row.tsx`; export from `ui/paper.ts` or their own modules.
-- [ ] Move `Segmented` and the invoicing `Chip` duplicate into `ui/chip.tsx`.
+- [x] Restyle `Badge` (neutral ring, `quiet`, `icon`), `CountBadge` (20, ring), `FieldGroup` (2 px, label), `FormSummary` (icon), `Button` (`icon`, `text`, `block`).
+- [x] New `ui/card.tsx` (outlined hairline, `selected`, pressed state), `ui/home-tile.tsx`, `ui/list-row.tsx`, `ui/banner.tsx`, `ui/ai-notice.tsx`, `ui/section-title.tsx`, `ui/money.tsx`, `ui/switch-row.tsx`; export from `ui/paper.ts` or their own modules.
+- [x] Move `Segmented` and the invoicing `Chip` duplicate into `ui/chip.tsx`.
 - Files: `apps/mobile/src/ui/*`, `features/invoicing/segmented.tsx`.
 - Verify: lint/typecheck/test; a temporary web check of each component in the three presets; no screen imports `react-native-paper` directly (ADR-020).
 
 ### Phase 2 · Shared patterns (M, medium risk)
 
-- [ ] `ui/states.tsx`: `EmptyState`, `ErrorState`, `Skeleton` (`list`, `detail`, reduced motion), `ListFooter`.
-- [ ] Replace full-screen `<Loading />` in list and detail screens with `Skeleton`; list footers with `ListFooter`; `ListEmptyComponent` with `EmptyState`; error branches with `ErrorState`.
-- [ ] List content style: padding 16, gap 12, newest first unchanged.
+- [x] `ui/states.tsx`: `EmptyState`, `ErrorState`, `Skeleton` (`list`, `detail`, reduced motion), `ListFooter`.
+- [x] Replace full-screen `<Loading />` in list and detail screens with `Skeleton`; list footers with `ListFooter`; `ListEmptyComponent` with `EmptyState`; error branches with `ErrorState`.
+- [x] List content style: padding 16, gap 12, newest first unchanged.
 - Files: the 9 `FlatList` screens and the 27 `Loading` call sites.
 - Risk: Maestro waits for `home-screen`, `assembly-<id>`, `summary` with `extendedWaitUntil`; skeletons must not carry those testIDs. Pure logic unaffected.
 
 ### Phase 3 · Screens, in priority order
+
+Done: all ten rows are implemented (commits in [§9](#9-outcome)).
 
 | #    | Module                                                  | Effort | Notes                                                                                                                          |
 | ---- | ------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -229,6 +231,8 @@ Effort: **S** ≤ 2 h, **M** ≈ half a day, **L** ≥ 1 day. Every phase ends w
 | 3.10 | Settings (grouped, swatches, live preview)              | S      | Keep `switch-cooperative`, `sign-out`.                                                                                         |
 
 ### Phase 4 · Behaviour items
+
+Done.
 
 Attention strip, "Cómo llegar" map card, cooperative colour dot, Settings sub-pages, sticky `ActionBar`, quorum mark ([§5](#5-behaviour-items)). The kit components (`AttentionItem`, `MapCard`, `ProgressBar` with `mark`, `ActionBar` and the `Screen` footer) are built in Phase 1; this phase wires them to the screens and, for the colour dot and the quorum threshold, adds the field to the contract and the API with its specification update. No ADR for a map library is needed: there is none.
 
@@ -256,3 +260,32 @@ If time runs short, the order to simplify is: Skeleton (keep the spinner), 3.4 i
 - **[ADR-024](adr/ADR-024-adopt-the-design-system.md) · Adopt the design system** (accepted): `docs/design-system/` is the visual reference for the app; tokens map onto `ui/theme.ts`, and the theme's `mix()` derivation is the authority for brand-derived values (the JSON documents it); the kit in `src/ui` grows with the components in [§3](#3-components); the behaviour items in [§5](#5-behaviour-items) are adopted. It extends ADR-018 and ADR-020 without changing them.
 - **Dependencies**: none. Skeleton shimmer uses React Native `Animated` (or the already installed `react-native-reanimated`) and `AccessibilityInfo`; shadows use the `boxShadow` style; icons stay `MaterialCommunityIcons`. The MapCard is a "Cómo llegar" card that opens the native maps search through `Linking`, so it needs no map library or geocoding source.
 - **Plan**: the "Design system migration" entry in [03-implementation-plan.md](03-implementation-plan.md) references this document.
+
+## 9. Outcome
+
+**Delivered** (branch merged as `e1f2bbe`, 2026-10-22; commits `cda78ab` to `e320efc`):
+
+- **Tokens** (`cda78ab`): `space`, `radius`, `size`, `shadow`, `layout`, `scrim` and `focusRing()` in `ui/theme.ts`, `colors.surface` renamed `surfaceVariant`, nine rounded preset values corrected in `docs/design-system/tokens.json` and `tokens.css`, theme tests.
+- **Kit** (`7d81302`, `be37041`): complete design-system kit in `apps/mobile/src/ui` (base components, cards and rows, banners, progress and votes, map card, assistant pieces, action bar, skeleton/empty/error states), documented in `apps/mobile/src/ui/README.md`.
+- **Screens** (`93212d2`, `27d13d6`, `5207744`, `c254d5c`, `5b485eb`, `3eebdf9`, `90f6694`): home, announcements, documents, assemblies, invoicing, entry, member area, members, assistant and settings, all on the kit; invoice rows show one status badge.
+- **Behaviour items** (§5): home "Pendiente para ti" strip (client-side, existing endpoints); `primaryColor` in the `/me` memberships (cooperative colour dot in the selector); `quorumRequired` in the voting view (BR-ASM-05b) drawn as a mark on the participation bar; `settings/` with the administrator sub-pages Apariencia, Facturación and Asistente IA; "Cómo llegar" map card (place text plus native maps, no map library); sticky `ActionBar` in the invoice register form and the third-party editor.
+- **Dates** (`e320efc`): short month everywhere ("22 oct 2026").
+
+**Deviations from the design and from this plan**:
+
+- Wide windows: home tiles have a fixed height of 160 px and the attention strip has three columns, as in `ScreenHomeWeb` (`b17e96b`).
+- Dates use the short month of the design system instead of the previous numeric format.
+- The assistant composer is read-only (not disabled) while an answer is pending.
+- The summary cards drop the "0 vencidas" line shown in the reference screens.
+- A member who already voted can still see open votes in the home strip, because `openVotings` is computed at assembly level, not per member.
+- No new dependency was needed, as planned.
+
+**Verified**:
+
+- `pnpm lint`, `pnpm typecheck` and `pnpm test` (1338 unit tests in 133 files).
+- Visual check on Expo web as administrator and as member at 390 and 960 wide, with no console errors.
+
+**Pending**:
+
+- Re-run the Maestro flows (`pnpm e2e`, local iOS simulator) after the migration; selectors were kept, but the flows have not been re-run.
+- Manual check of the assistant with the LLM on (not covered by Maestro) and screenshots for the thesis report and demo video.

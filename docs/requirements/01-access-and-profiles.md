@@ -98,6 +98,7 @@ As a user, I want the app to show me only the modules I have access to, so that 
 - **Given** my profile in the active cooperative, **when** the app loads, **then** the navigation includes only the modules with read or manage level.
 - **Given** a module with read level, **when** I enter it, **then** the create, edit or delete actions do not appear.
 - **Given** that my profile changes while I use the app, **when** I make the next request, **then** the navigation updates with the new permissions.
+- **Given** the home, **when** there is something that needs me (open votes, invoices overdue or about to be, the next convened assembly, unread announcements) and my profile can read that module, **then** a "Pendiente para ti" strip lists at most three of those items, most urgent first in that order, each one opening its screen; with nothing pending the strip does not appear. It is computed in the app from the existing endpoints (no API of its own); the open votes come from the assembly's `openVotings`, so a member who already voted may still see them until the votings close.
 
 #### US-ACC-07 · Deny by default on the server
 
@@ -155,7 +156,7 @@ As an administrator, I want to see who changed which access and when, so that I 
 
 As an administrator, I want to set my cooperative's primary colour, so that the app looks like my cooperative to all its members.
 
-- **Given** the Settings screen, **when** I am an administrator (Users and profiles · manage), **then** I see an "Appearance" section where I choose a colour (ready-made swatches or a `#RRGGBB` code, with a live preview of the buttons) or go back to the default colour.
+- **Given** the Settings screen, **when** I am an administrator (Users and profiles · manage), **then** I see an "Appearance" sub-page where I choose a colour (ready-made swatches or a `#RRGGBB` code, with a live preview of the buttons) or go back to the default colour.
 - **Given** a colour whose white text does not reach a 4.5:1 contrast, **when** I save it, **then** it is refused with the computed ratio and nothing changes (BR-ACC-16).
 - **Given** a saved colour, **when** any member of the cooperative opens the app, **then** buttons, links, header tint and selected states use the colour. Danger and warning colours do not change.
 - **Given** a cooperative that configured nothing, **when** its members open the app, **then** they see the default theme.
@@ -384,9 +385,9 @@ Branding (US-ACC-14, [ADR-018](../adr/ADR-018-per-cooperative-branding.md), logo
 1. Sign in.
 2. Activation from an invitation.
 3. Password recovery.
-4. Cooperative selector.
-5. Home, with permission-based navigation.
-6. Settings: biometrics, cooperative switch, appearance (administrator: colour, US-ACC-14), sign out.
+4. Cooperative selector (each cooperative with a dot in its primary colour, from `primaryColor` in `/me`).
+5. Home, with permission-based navigation and the "Pendiente para ti" strip (US-ACC-06).
+6. Settings: biometrics, cooperative switch, sign out and, for the administrator, sub-pages under `settings/`: Appearance (colour, US-ACC-14), Billing (05-invoices-and-delivery-notes.md) and AI assistant (US-AI-07).
 7. Members (administrator): list, invite, change profile, suspend, reactivate and remove with confirmation.
 
 ## 10. Test strategy
