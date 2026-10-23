@@ -109,16 +109,71 @@ export function resolvePeriod(period: Period, today: string): DateRange {
   }
 }
 
+const MONTHS: Record<string, number> = {
+  january: 1,
+  enero: 1,
+  february: 2,
+  febrero: 2,
+  march: 3,
+  marzo: 3,
+  april: 4,
+  abril: 4,
+  may: 5,
+  mayo: 5,
+  june: 6,
+  junio: 6,
+  july: 7,
+  julio: 7,
+  august: 8,
+  agosto: 8,
+  september: 9,
+  septiembre: 9,
+  setiembre: 9,
+  october: 10,
+  octubre: 10,
+  november: 11,
+  noviembre: 11,
+  december: 12,
+  diciembre: 12,
+};
+
+/** "This Week", "this-week" and "this_week" are the same period; accents are ignored. */
+const normalize = (text: string) =>
+  text
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\s-]+/g, '_');
+
+/**
+ * What the model may send as `period`: one of PERIODS, a month by name in English or Spanish
+ * ("september", "septiembre": that month of today's year), a month as YYYY-MM or a year as YYYY.
+ * Null when it is none of them. A named month spares the model the dates of "en septiembre".
+ */
+export function resolvePeriodText(text: string, today: string): DateRange | null {
+  const value = normalize(text);
+  if ((PERIODS as readonly string[]).includes(value)) return resolvePeriod(value as Period, today);
+  const named = MONTHS[value];
+  if (named) return monthRange(`${today.slice(0, 4)}-${String(named).padStart(2, '0')}-01`, 0);
+  const month = /^(\d{4})_(0[1-9]|1[0-2])$/.exec(value);
+  if (month) return monthRange(`${month[1]}-${month[2]}-01`, 0);
+  if (/^\d{4}$/.test(value)) return yearRange(`${value}-01-01`, 0);
+  return null;
+}
+
 /**
  * Explicit dates win over a period: if the model gave `from` or `to`, the period is ignored
- * (it is not an error, so a small model that sends both still gets an answer).
+ * (it is not an error, so a small model that sends both still gets an answer). The period must
+ * have been checked with `resolvePeriodText` (the tool input does).
  */
 export function rangeFor(
-  period: Period | undefined,
+  period: string | undefined,
   explicit: { from?: string; to?: string },
   today: string,
 ): { from?: string; to?: string; period?: DateRange } {
   if (!period || explicit.from || explicit.to) return { from: explicit.from, to: explicit.to };
-  const range = resolvePeriod(period, today);
+  const range = resolvePeriodText(period, today);
+  if (!range) throw new Error(`Unknown period: ${period}`);
   return { ...range, period: range };
 }

@@ -125,6 +125,7 @@ Twenty improvements so the assistant answers aggregates, rankings and member que
 - [x] 19. Citations for computed figures: up to 5 invoices, delivery notes or third parties per figure plus `moreSources`, shown as "Fuentes" (BR-AI-05); member tools cite nothing because the member record needs the `users` permission.
 - [x] 20. Evaluation set reviewed: 60 questions (was 46) with relative periods, cited figures and a positive and a denial case for every tool (checked by a test).
 - [x] Regression: lint, typecheck, 1479 unit tests, 611 integration tests, `ai:eval --offline` 60/60.
+- [x] Catalog compacted for the local 4B model (manager prompt ~6.0k -> ~3.6k tokens per call): `partners_summary` replaces `capital_summary` and `member_census`, `find_third_party` absorbs `third_party_summary`, one `date` selector replaces `due_*`/`settled_*`/`period_of`, `period` without enum (also month names, `YYYY-MM`, `YYYY`), system prompt built from the user's tools, ready-to-quote `text` in computed results.
 
 ## Design system migration (22–24 Oct)
 

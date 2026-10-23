@@ -486,7 +486,7 @@ describe('US-AI-08 · cash_forecast and top_items (integration)', () => {
   });
 });
 
-describe('US-AI-08 · third_party_summary and inactive third parties (integration)', () => {
+describe('US-AI-08 · third-party summary (find_third_party) and inactive third parties (integration)', () => {
   it('US-AI-08: summarizes balance, last documents and the year of one third party', async () => {
     await note('south', 'A-1', '2026-06-01', [{ concept: 'Abono', quantity: '1', unit: 'kg' }]);
 

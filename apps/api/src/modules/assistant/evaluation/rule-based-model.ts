@@ -42,9 +42,9 @@ function plan(question: string): { name: string; input: unknown }[] {
   if (aboutMembers && /proveedor|compramos|vendimos|clientes/.test(q)) {
     add('partner_trade', { period: when ?? 'this_year' });
   } else if (aboutMembers && /capital social|capital de la cooperativa|capital total/.test(q)) {
-    add('capital_summary', when ? { period: when } : {});
+    add('partners_summary', when ? { period: when } : {});
   } else if (aboutMembers && /cuantos socios|socios activos|altas|bajas|invitad/.test(q)) {
-    add('member_census', { period: when ?? 'this_year' });
+    add('partners_summary', { period: when ?? 'this_year' });
   } else if (aboutMembers && /capital|aportacion|numero de socio/.test(q)) {
     const named = question.match(/socio\s+(?:n[º°.]*\s*)?([^?¿]+?)\s*\??$/i)?.[1];
     add('member_detail', { query: (named ?? question).trim() });
@@ -52,7 +52,7 @@ function plan(question: string): { name: string; input: unknown }[] {
 
   const summaryOf = q.match(/como estamos con ([^?]+)/);
   if (summaryOf) {
-    add('third_party_summary', { text: question.match(/con ([^?]+)/i)?.[1]?.trim() });
+    add('find_third_party', { text: question.match(/con ([^?]+)/i)?.[1]?.trim() });
   } else if (q.includes('mayores proveedores')) {
     add('invoice_totals', {
       operation: 'purchase',
@@ -80,8 +80,8 @@ function plan(question: string): { name: string; input: unknown }[] {
     add(
       'list_invoices',
       when
-        ? { status: 'settled', period: when, period_of: 'settled' }
-        : { status: 'settled', settled_from: '2026-09-01', settled_to: '2026-09-30' },
+        ? { status: 'settled', period: when, date: 'settled' }
+        : { status: 'settled', from: '2026-09-01', to: '2026-09-30', date: 'settled' },
     );
   } else if (q.includes('busca el proveedor')) {
     add('find_third_party', { text: question.trim().split(/\s+/).at(-1) });
@@ -96,7 +96,7 @@ function plan(question: string): { name: string; input: unknown }[] {
   } else if (q.includes('factura') && q.includes('venta')) {
     add('list_invoices', { operation: 'sale', status: 'pending' });
   } else if (q.includes('factura') && q.includes('vencen')) {
-    add('list_invoices', { operation: 'purchase', period: when ?? 'this_week', period_of: 'due' });
+    add('list_invoices', { operation: 'purchase', period: when ?? 'this_week', date: 'due' });
   } else if (q.includes('factura')) {
     add('list_invoices');
   }

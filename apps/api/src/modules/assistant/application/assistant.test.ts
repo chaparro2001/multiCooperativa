@@ -20,7 +20,8 @@ import {
   UsageLimitExceededError,
 } from './errors';
 import type { ToolResult } from './ports/language-model';
-import type { ToolExecutor, ToolOutput } from './tool-executors';
+import type { DataSources, ToolExecutor, ToolOutput } from './tool-executors';
+import { createToolExecutors } from './tool-executors';
 import { CapturingLogger } from './testing/capturing-logger';
 import { InMemoryConversationStore } from './testing/in-memory-conversation-store';
 import {
@@ -203,6 +204,44 @@ describe('BR-AI-05 · citations of computed figures', () => {
     await ask(deps, contextOf(['invoicing']), '¿Cuánto?');
 
     expect(toolResultsIn(model.requests[1]!.messages)[0]).not.toContain('moreSources');
+  });
+
+  it('BR-AI-05: a listing with a summary (total, truncated, period) still gives every row its ref', async () => {
+    // Regression check for the {rows, total} listings: the summary goes first, the rows keep refs.
+    const listThirdParties = vi.fn(async () => ({
+      rows: [
+        { id: 'tp-1', name: 'Olivar Nuevo S.L.', nif: 'B1', createdAt: '2026-10-16' },
+        { id: 'tp-2', name: 'Southern Fertilizers', nif: 'B2', createdAt: '2026-01-10' },
+      ],
+      total: 9,
+    }));
+    const real = createToolExecutors(
+      { invoicing: { listThirdParties } } as unknown as DataSources,
+      () => '2026-10-20',
+    );
+    const model = new ScriptedLanguageModel([
+      callTools({ name: 'list_third_parties', input: { type: 'supplier', period: 'this_year' } }),
+      say('El último es Olivar Nuevo S.L. [S1].'),
+    ]);
+    const { deps } = build(model, { list_third_parties: real.list_third_parties });
+
+    const { answer } = await ask(deps, contextOf(['invoicing']), '¿Último proveedor?');
+
+    const body = JSON.parse(
+      toolResultsIn(model.requests[1]!.messages)[0]!.replace(/^<tool_data>|<\/tool_data>$/g, ''),
+    );
+    expect(body).toMatchObject({
+      total: 9,
+      truncated: true,
+      periodText: 'del 2026-01-01 al 2026-12-31',
+    });
+    expect(body.results.map((row: { ref: string; name: string }) => [row.ref, row.name])).toEqual([
+      ['S1', 'Olivar Nuevo S.L.'],
+      ['S2', 'Southern Fertilizers'],
+    ]);
+    expect(answer.citations.map((c) => [c.kind, c.resourceId, c.title])).toEqual([
+      ['third_party', 'tp-1', 'Olivar Nuevo S.L.'],
+    ]);
   });
 });
 

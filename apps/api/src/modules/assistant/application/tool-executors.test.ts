@@ -33,7 +33,7 @@ describe('US-AI-02 · list_third_parties', () => {
 
     const output = await executors.list_third_parties(context, {
       type: 'supplier',
-      created_from: '2026-10-12',
+      from: '2026-10-12',
     });
 
     expect(listThirdParties).toHaveBeenCalledWith(context, {
@@ -74,19 +74,17 @@ describe('US-AI-02 · list_third_parties', () => {
     );
   });
 
-  it.each([
-    [{ limit: 51 }],
-    [{ limit: 0 }],
-    [{ created_from: '12/10/2026' }],
-    [{ type: 'member' }],
-  ])('BR-AI-06: invalid input %j is rejected so the model can retry', async (input) => {
-    const { executors, listThirdParties } = setup();
+  it.each([[{ limit: 51 }], [{ limit: 0 }], [{ from: '12/10/2026' }], [{ type: 'member' }]])(
+    'BR-AI-06: invalid input %j is rejected so the model can retry',
+    async (input) => {
+      const { executors, listThirdParties } = setup();
 
-    await expect(executors.list_third_parties(context, input)).rejects.toBeInstanceOf(
-      InvalidToolInputError,
-    );
-    expect(listThirdParties).not.toHaveBeenCalled();
-  });
+      await expect(executors.list_third_parties(context, input)).rejects.toBeInstanceOf(
+        InvalidToolInputError,
+      );
+      expect(listThirdParties).not.toHaveBeenCalled();
+    },
+  );
 
   it('BR-AI-01: needs invoicing read, like find_third_party', () => {
     const grants = (module: string) => module === 'invoicing';
@@ -218,26 +216,28 @@ describe('US-AI-09 · the cooperative-wide member tools (ADR-025)', () => {
     invoicing: { tradeByNif },
   } as unknown as DataSources);
 
-  it('BR-AI-02: capital_summary passes the period and the caller context, and flattens the summary', async () => {
-    const output = await executors.capital_summary(context, { from: '2026-01-01' });
-
-    expect(memberArea.capitalSummary).toHaveBeenCalledWith(context, { from: '2026-01-01' });
-    expect(output.items).toEqual([]);
-    expect(output.summary).toMatchObject({
-      totalCapital: '12400.00',
-      partners: 24,
-      refunds: '5.00',
-    });
-  });
-
-  it('BR-AI-02: member_census passes the period', async () => {
-    const output = await executors.member_census(context, { from: '2026-01-01', to: '2026-12-31' });
-
-    expect(memberArea.census).toHaveBeenCalledWith(context, {
+  it('BR-AI-02: partners_summary passes the period and the caller context to capital and census, in one flat summary', async () => {
+    const output = await executors.partners_summary(context, {
       from: '2026-01-01',
       to: '2026-12-31',
     });
-    expect(output.summary).toMatchObject({ activePartners: 22, invitedNotActivated: 2 });
+
+    const period = { from: '2026-01-01', to: '2026-12-31' };
+    expect(memberArea.capitalSummary).toHaveBeenCalledWith(context, period);
+    expect(memberArea.census).toHaveBeenCalledWith(context, period);
+    expect(output.items).toEqual([]);
+    expect(output.summary).toMatchObject({
+      periodText: 'del 2026-01-01 al 2026-12-31',
+      totalCapital: '12400.00',
+      partners: 24,
+      refunds: '5.00',
+      activePartners: 22,
+      invitedNotActivated: 2,
+    });
+    expect(output.summary).not.toHaveProperty('period');
+    expect(String(output.summary?.text)).toMatch(
+      /^Capital social 12400\.00 de 24 socios; 22 activos, .*\. Del 2026-01-01 al 2026-12-31: \d+ altas, \d+ bajas; aportaciones .*, devoluciones 5\.00$/,
+    );
   });
 
   it('BR-AI-03: member_detail looks up by text, returns one item per match and cites nothing', async () => {
@@ -293,13 +293,12 @@ describe('US-AI-09 · the cooperative-wide member tools (ADR-025)', () => {
 
     expect(names(grants(['member-area'], 'all'))).toEqual([
       'my_contributions',
-      'capital_summary',
-      'member_census',
+      'partners_summary',
       'member_detail',
     ]);
     expect(names(grants(['member-area', 'invoicing'], 'all'))).toContain('partner_trade');
     expect(names(grants(['member-area', 'invoicing'], undefined))).toEqual(
-      expect.not.arrayContaining(['capital_summary', 'partner_trade']),
+      expect.not.arrayContaining(['partners_summary', 'partner_trade']),
     );
   });
 });
@@ -311,7 +310,7 @@ describe('US-AI-08 · invoicing analytics tools', () => {
     'open_discrepancies',
     'cash_forecast',
     'top_items',
-    'third_party_summary',
+    'find_third_party',
   ];
   const totals = { count: 2, base: '200.00', vatAmount: '42.00', total: '242.00' };
   const detail = {
@@ -361,12 +360,16 @@ describe('US-AI-08 · invoicing analytics tools', () => {
   const executors = createToolExecutors({ invoicing } as unknown as DataSources);
 
   it('US-AI-08: a list says how many matched and asks to say "muestro X de N" when it is cut', async () => {
-    const output = await executors.list_invoices(context, { settled_from: '2026-09-01' });
+    const output = await executors.list_invoices(context, {
+      from: '2026-09-01',
+      date: 'settled',
+    });
 
     expect(invoicing.invoices).toHaveBeenCalledWith(
       context,
-      expect.objectContaining({ settledFrom: '2026-09-01', settledTo: undefined }),
+      expect.objectContaining({ settledFrom: '2026-09-01', settledTo: undefined, from: undefined }),
     );
+    expect(output.summary).toMatchObject({ periodText: 'desde el 2026-09-01' });
     expect(output.summary).toMatchObject({ total: 40, truncated: true });
     expect(String(output.summary?.note)).toContain('muestro 1 de 40');
   });
@@ -414,7 +417,9 @@ describe('US-AI-08 · invoicing analytics tools', () => {
     ['invoice_detail', {}],
     ['cash_forecast', { group_by: 'day' }],
     ['top_items', { source: 'orders' }],
-    ['third_party_summary', { text: 'a' }],
+    ['find_third_party', { text: 'a' }],
+    ['list_invoices', { date: 'created' }],
+    ['invoice_totals', { date: 'due' }],
   ])(
     'BR-AI-06: invalid input for %s %j is rejected so the model can retry',
     async (tool, input) => {
@@ -439,17 +444,38 @@ describe('US-AI-08 · invoicing analytics tools', () => {
       'deliveredQuantity',
       'invoicedQuantity',
       'difference',
+      'text',
       'explanation',
     ]);
-    expect(data.explanationNote).toContain('numeric detail governs');
+    expect(data.discrepancies[0]!.text).toBe(
+      'Herramientas: entregado 1200 ud, facturado 1250 ud, diferencia 50 ud',
+    );
+    expect(data.explanationNote).toContain('orientativa');
     expect(output.items[0]!.source).toMatchObject({ kind: 'invoice', resourceId: 'inv-1' });
   });
 
-  it('US-AI-08: third_party_summary with several matches lists them and asks the model to ask', async () => {
-    const output = await executors.third_party_summary(context, { text: 'agro' });
+  it('US-AI-08: find_third_party with several matches lists them and asks the model to ask', async () => {
+    const output = await executors.find_third_party(context, { text: 'agro' });
 
     expect(output.items.map((item) => item.data.name)).toEqual(['Agro Sur', 'Agro Norte']);
     expect(String(output.summary?.note)).toContain('ask which one');
+  });
+
+  it('US-AI-08: find_third_party with one match gives its whole situation as a citable third party', async () => {
+    invoicing.thirdPartySummary.mockResolvedValueOnce({
+      candidates: [],
+      summary: { id: 'tp-9', name: 'Southern Fertilizers', nif: 'B9', lastInvoice: null },
+    } as never);
+
+    const output = await executors.find_third_party(context, { text: 'Southern' });
+
+    expect(invoicing.thirdPartySummary).toHaveBeenLastCalledWith(context, 'Southern');
+    expect(output.items).toEqual([
+      {
+        data: { name: 'Southern Fertilizers', nif: 'B9', lastInvoice: null },
+        source: expect.objectContaining({ kind: 'third_party', resourceId: 'tp-9' }),
+      },
+    ]);
   });
 
   it('US-AI-08: top_items defaults to delivery notes, no grouping and 10 items', async () => {
@@ -509,12 +535,15 @@ describe('US-AI-08 · relative periods resolved by the server', () => {
       expect.objectContaining({ from: '2026-10-01', to: '2026-12-31' }),
     );
     expect(output.summary).toMatchObject({ period: { from: '2026-10-01', to: '2026-12-31' } });
+    expect(String(output.summary?.text)).toMatch(/^Del 2026-10-01 al 2026-12-31: 0 facturas;/);
+    // The dates come first, so the model reads them before the figures.
+    expect(Object.keys(output.summary!)[0]).toBe('period');
   });
 
-  it('US-AI-08: period_of chooses the date a period applies to (list_invoices: due)', async () => {
+  it('US-AI-08: "date" chooses the date a period applies to (list_invoices: due)', async () => {
     const output = await executors.list_invoices(context, {
       period: 'this_week',
-      period_of: 'due',
+      date: 'due',
     });
 
     expect(invoicing.invoices).toHaveBeenLastCalledWith(
@@ -529,8 +558,8 @@ describe('US-AI-08 · relative periods resolved by the server', () => {
     expect(output.summary).toMatchObject({ period: { from: '2026-10-19', to: '2026-10-25' } });
   });
 
-  it('US-AI-08: invoice_totals with period_of settled filters on the settlement date', async () => {
-    await executors.invoice_totals(context, { period: 'last_month', period_of: 'settled' });
+  it('US-AI-08: invoice_totals with date settled filters on the settlement date', async () => {
+    await executors.invoice_totals(context, { period: 'last_month', date: 'settled' });
 
     expect(invoicing.invoiceTotals).toHaveBeenLastCalledWith(
       context,
@@ -553,6 +582,37 @@ describe('US-AI-08 · relative periods resolved by the server', () => {
       expect.objectContaining({ from: '2026-03-01', to: undefined }),
     );
     expect(output.summary).not.toHaveProperty('period');
+  });
+
+  it('US-AI-08: settled invoices of a period are those settled in it, unless "date" says otherwise', async () => {
+    await executors.list_invoices(context, { status: 'settled', period: 'last_month' });
+    expect(invoicing.invoices).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({
+        settledFrom: '2026-09-01',
+        settledTo: '2026-09-30',
+        from: undefined,
+      }),
+    );
+
+    await executors.list_invoices(context, {
+      status: 'settled',
+      period: 'last_month',
+      date: 'issued',
+    });
+    expect(invoicing.invoices).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({ from: '2026-09-01', to: '2026-09-30', settledFrom: undefined }),
+    );
+  });
+
+  it('US-AI-08: explicit dates of list_invoices apply to the chosen date too', async () => {
+    await executors.list_invoices(context, { from: '2026-09-01', to: '2026-09-30', date: 'due' });
+
+    expect(invoicing.invoices).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({ dueFrom: '2026-09-01', dueTo: '2026-09-30', from: undefined }),
+    );
   });
 
   it('US-AI-08: cash_forecast applies the period to the due date', async () => {
@@ -582,19 +642,16 @@ describe('US-AI-08 · relative periods resolved by the server', () => {
     );
   });
 
-  it('US-AI-08: the member tools take a period too', async () => {
-    const capital = await executors.capital_summary(context, { period: 'this_year' });
-    await executors.member_census(context, { period: 'last_year' });
+  it('US-AI-08: partners_summary takes a period too', async () => {
+    const output = await executors.partners_summary(context, { period: 'last_year' });
 
-    expect(memberArea.capitalSummary).toHaveBeenCalledWith(context, {
-      from: '2026-01-01',
-      to: '2026-12-31',
+    const lastYear = { from: '2025-01-01', to: '2025-12-31' };
+    expect(memberArea.capitalSummary).toHaveBeenCalledWith(context, lastYear);
+    expect(memberArea.census).toHaveBeenCalledWith(context, lastYear);
+    expect(output.summary).toMatchObject({
+      period: lastYear,
+      periodText: 'del 2025-01-01 al 2025-12-31',
     });
-    expect(memberArea.census).toHaveBeenCalledWith(context, {
-      from: '2025-01-01',
-      to: '2025-12-31',
-    });
-    expect(capital.summary).toMatchObject({ period: { from: '2026-01-01', to: '2026-12-31' } });
   });
 
   it('BR-AI-06: an unknown period is rejected so the model can retry', async () => {
@@ -613,6 +670,7 @@ describe('BR-AI-05 · computed figures carry the records behind them', () => {
     thirdParty: 'Southern',
     paymentStatus: 'pending',
     dueDate: `2026-11-0${n}`,
+    total: '1.21',
     ...overrides,
   });
   const totals = (count: number) => ({ count, base: '1.00', vatAmount: '0.21', total: '1.21' });
@@ -654,6 +712,10 @@ describe('BR-AI-05 · computed figures carry the records behind them', () => {
       title: 'Invoice F-2 · Southern',
     });
     expect(output.evidence!.more).toBe(2);
+    // The figure as a phrase to repeat: dates, the invoices behind it and the amounts.
+    expect(output.summary?.text).toBe(
+      'Desde el 2026-01-01: 7 facturas (F-2, F-3, F-4, F-5, F-6 y 2 más); base 1.00, IVA 0.21, total 1.21',
+    );
   });
 
   it('BR-AI-05: a total of nothing cites nothing and does not even list invoices', async () => {
@@ -708,7 +770,7 @@ describe('BR-AI-05 · computed figures carry the records behind them', () => {
       },
     } as unknown as DataSources);
 
-    const output = await executors.cash_forecast(context, { due_from: '2026-09-01' });
+    const output = await executors.cash_forecast(context, { from: '2026-09-01' });
 
     expect(invoices).toHaveBeenCalledWith(
       context,
@@ -716,6 +778,45 @@ describe('BR-AI-05 · computed figures carry the records behind them', () => {
     );
     expect(output.evidence!.sources.map((s) => s.resourceId)).toEqual(['inv-9', 'inv-2', 'inv-3']);
     expect(output.evidence!.more).toBe(0);
+    expect(output.summary?.text).toBe(
+      'Desde el 2026-09-01: a pagar 1.00 (3, vencido 0.00); a cobrar 1.00 (0, vencido 0.00); primeras: F-9 1.21 vence 2026-09-30, F-2 1.21 vence 2026-11-02, F-3 1.21 vence 2026-11-03',
+    );
+  });
+
+  it('US-AI-08: a forecast from today on also says what is already overdue, apart and exact', async () => {
+    const invoiceTotals = vi.fn(async (_c: unknown, filter: { operation: string }) => ({
+      overall: { ...totals(filter.operation === 'purchase' ? 1 : 0), total: '300.00' },
+      groups: [],
+      groupCount: 0,
+    }));
+    const executors = createToolExecutors(
+      {
+        invoicing: {
+          invoices: async () => ({ rows: [], total: 0 }),
+          invoiceTotals,
+          cashForecast: async () => ({
+            overall: { toPay: flow(0), toCollect: flow(0) },
+            buckets: [],
+            bucketCount: 0,
+          }),
+        },
+      } as unknown as DataSources,
+      () => '2026-10-20',
+    );
+
+    const output = await executors.cash_forecast(context, { period: 'next_30_days' });
+
+    expect(invoiceTotals).toHaveBeenCalledWith(
+      context,
+      expect.objectContaining({ operation: 'purchase', status: 'overdue' }),
+    );
+    expect(String(output.summary?.text)).toContain(
+      'además, ya vencido antes y sin liquidar: a pagar 300.00 (1), a cobrar 300.00 (0)',
+    );
+
+    invoiceTotals.mockClear();
+    await executors.cash_forecast(context, { from: '2026-09-01' });
+    expect(invoiceTotals).not.toHaveBeenCalled();
   });
 
   it('BR-AI-05: partner_trade cites the third parties behind the figures', async () => {
@@ -760,7 +861,11 @@ describe('BR-AI-05 · computed figures carry the records behind them', () => {
     const executors = createToolExecutors({
       invoicing: {
         deliveryNotes,
-        topItems: async () => ({ rows: [], total: 0, truncated: false }),
+        topItems: async () => ({
+          rows: [{ concept: 'Aceite de oliva', unit: 'kg', quantity: '2', lines: 2 }],
+          total: 1,
+          truncated: false,
+        }),
       },
     } as unknown as DataSources);
 
@@ -770,6 +875,21 @@ describe('BR-AI-05 · computed figures carry the records behind them', () => {
       ['delivery_note', 'dn-1'],
       ['delivery_note', 'dn-3'],
     ]);
+  });
+
+  it('BR-AI-05: top_items that adds up nothing cites nothing and reads no delivery notes', async () => {
+    const deliveryNotes = vi.fn();
+    const executors = createToolExecutors({
+      invoicing: {
+        deliveryNotes,
+        topItems: async () => ({ rows: [], total: 0, truncated: false }),
+      },
+    } as unknown as DataSources);
+
+    const output = await executors.top_items(context, { group_by: 'month' });
+
+    expect(output.evidence).toBeUndefined();
+    expect(deliveryNotes).not.toHaveBeenCalled();
   });
 
   it('BR-AI-05: top_items over invoices cannot say which ones hold a concept, so it cites none then', async () => {
@@ -794,8 +914,7 @@ describe('BR-AI-05 · computed figures carry the records behind them', () => {
     } as unknown as DataSources);
 
     const outputs = [
-      await executors.capital_summary(context, {}),
-      await executors.member_census(context, {}),
+      await executors.partners_summary(context, {}),
       await executors.member_detail(context, { query: 'Luis' }),
     ];
 

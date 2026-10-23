@@ -246,7 +246,7 @@ describe('US-AI-02 · ask about my data', () => {
     script = new ScriptedLanguageModel([
       callTools({
         name: 'list_invoices',
-        input: { operation: 'purchase', due_from: '2026-10-19', due_to: '2026-10-25' },
+        input: { operation: 'purchase', from: '2026-10-19', to: '2026-10-25', date: 'due' },
       }),
       say('Vence la factura F-2026-77 de Southern Fertilizers [S1].'),
     ]);

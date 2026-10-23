@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { PERIODS, rangeFor, resolvePeriod, type Period } from './period';
+import { PERIODS, rangeFor, resolvePeriod, resolvePeriodText, type Period } from './period';
 
 describe('US-AI-08 · resolvePeriod (fixed clock)', () => {
   // 2026-10-23 is a Friday.
@@ -99,5 +99,36 @@ describe('US-AI-08 · rangeFor: explicit dates win over the period', () => {
 
   it('without period nor dates leaves the range open', () => {
     expect(rangeFor(undefined, {}, '2026-10-23')).toEqual({});
+  });
+});
+
+describe('US-AI-08 · resolvePeriodText: what the model may send as "period"', () => {
+  it.each([
+    ['this_quarter', '2026-10-01', '2026-12-31'],
+    ['This Quarter', '2026-10-01', '2026-12-31'],
+    ['last-month', '2026-09-01', '2026-09-30'],
+    ['september', '2026-09-01', '2026-09-30'],
+    ['Septiembre', '2026-09-01', '2026-09-30'],
+    ['diciembre', '2026-12-01', '2026-12-31'],
+    ['febrero', '2026-02-01', '2026-02-28'],
+    ['2025-02', '2025-02-01', '2025-02-28'],
+    ['2025', '2025-01-01', '2025-12-31'],
+  ])('%s on 2026-10-23 is %s to %s', (text, from, to) => {
+    expect(resolvePeriodText(text, '2026-10-23')).toEqual({ from, to });
+  });
+
+  it.each(['next_decade', 'sept', '2026-13', '26', ''])('%j is not a period', (text) => {
+    expect(resolvePeriodText(text, '2026-10-23')).toBeNull();
+  });
+
+  it('rangeFor takes a month name too, and explicit dates still win', () => {
+    expect(rangeFor('september', {}, '2026-10-23')).toMatchObject({
+      from: '2026-09-01',
+      to: '2026-09-30',
+    });
+    expect(rangeFor('september', { from: '2026-09-10' }, '2026-10-23')).toEqual({
+      from: '2026-09-10',
+      to: undefined,
+    });
   });
 });
