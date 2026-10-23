@@ -92,7 +92,7 @@ Pantalla: editor.
 3. Un test de dominio (TDD) y señalar un identificador de requisito (`US-...`, `BR-...`) en el nombre.
 4. Un ADR (por ejemplo ADR-013, modelo local para el asistente, o ADR-012, servidor propio) y recordar que hay 26; ADR-020 es la migración a react-native-paper, ADR-021 retira el logo por cooperativa, ADR-022 y ADR-023 mejoran la recuperación de documentos (RAG) y ADR-024 adopta el sistema de diseño de `docs/design-system/`, ADR-025 cruza socios y terceros por NIF y el último, ADR-026, pone Gemini en el asistente de la demo publicada.
 5. El conjunto de evaluación del asistente (60 preguntas, `ai:eval`; qwen3:4b-instruct 47/60, gemini-3.5-flash-lite 53/60) y el benchmark de modelos locales del ADR-013 (qwen3:8b 19/22, qwen3:4b-instruct 18/22, gemma4:e4b 15/22).
-6. Cifras (a fecha 2026-10-23): 1504 tests unitarios (136 ficheros) y 611 de integración (32 ficheros), y 245 de 246 commits sin fusiones co-autorados con Claude (`git rev-list --no-merges`).
+6. Cifras (a fecha 2026-10-23): 1504 tests unitarios (136 ficheros) y 611 de integración (32 ficheros), y 246 de 247 commits sin fusiones co-autorados con Claude (`git rev-list --no-merges`).
 7. Proceso con IA, en una o dos frases: `skills-lock.json` y `.agents/skills` (skills de la comunidad fijadas, siempre por debajo de `CLAUDE.md`, los ADR y las especificaciones) y agentes en paralelo. El flujo del diseño (diapositiva 6): brief de interfaz (`docs/05-ui-design-brief.md`), herramienta de diseño con IA que genera el sistema de diseño (`docs/design-system/`: tokens, 8 colores de marca, unos 40 componentes, 14 pantallas), análisis de brechas con la app (`docs/06-design-system-migration.md`) y migración por un orquestador con un subagente de base, siete en paralelo sobre carpetas de funcionalidad disjuntas, uno de verificación y otro que lanzó la app en web con Playwright, hizo capturas y encontró errores visuales que se corrigieron. Antes también trabajé con agentes en git worktrees.
 
 ### 8:30-9:15 Despliegue
@@ -103,7 +103,7 @@ Decir: coste 0 EUR y sin tarjeta; Render y Railway pedían tarjeta, así que la 
 ### 9:15-10:00 Cierre
 
 Pantalla: diapositivas 14 y 15.
-Decir: lo implementado (los siete módulos del MVP), lo que queda (notificaciones push, Sentry, E2E con Maestro, reclamaciones de facturas, binarios nativos) y lo aprendido: venir de casi quince años como desarrollador iOS nativo y aprender todas las tecnologías del proyecto, desde Docker hasta el backend, la base de datos y la IA; la cuota de Gemini llevó al modelo local y la lentitud de la CPU del servidor devolvió la demo a Gemini (ADR-026), y evaluar con el modelo real encontró errores reales. Dónde están el repositorio y la demo. Agradecer.
+Decir: lo implementado (los siete módulos del MVP), lo que queda (notificaciones push, Sentry, E2E con Maestro, reclamaciones de facturas, binarios nativos) y lo aprendido: venir de casi quince años como desarrollador iOS nativo y aprender todas las tecnologías del proyecto, desde Docker hasta el backend, la base de datos y la IA; este máster ha sido una ampliación de conocimientos con IA, después de terminar el Máster oficial en Inteligencia Artificial de UNIR; la cuota de Gemini llevó al modelo local y la lentitud de la CPU del servidor devolvió la demo a Gemini (ADR-026), y evaluar con el modelo real encontró errores reales. Dónde están el repositorio y la demo. Agradecer.
 
 ## Después de grabar
 
