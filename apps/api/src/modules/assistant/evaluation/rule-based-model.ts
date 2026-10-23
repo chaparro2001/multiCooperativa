@@ -9,9 +9,26 @@ const usage = { inputTokens: 0, outputTokens: 0 };
 
 const plain = (text: string) => text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
+/** The `period` a sensible model passes for a relative expression, instead of computing dates. */
+const RELATIVE_PERIODS: [RegExp, string][] = [
+  [/ultimos 30 dias/, 'last_30_days'],
+  [/proximos 30 dias/, 'next_30_days'],
+  [/trimestre pasado/, 'last_quarter'],
+  [/este trimestre/, 'this_quarter'],
+  [/ano pasado/, 'last_year'],
+  [/este ano/, 'this_year'],
+  [/mes pasado/, 'last_month'],
+  [/este mes/, 'this_month'],
+  [/semana pasada/, 'last_week'],
+  [/semana que viene|proxima semana/, 'next_week'],
+  [/mes que viene|proximo mes/, 'next_month'],
+  [/esta semana/, 'this_week'],
+];
+
 /** Keyword rules from a Spanish question to the tools a sensible model would call. */
 function plan(question: string): { name: string; input: unknown }[] {
   const q = plain(question);
+  const when = RELATIVE_PERIODS.find(([pattern]) => pattern.test(q))?.[1];
   const calls: { name: string; input: unknown }[] = [];
   const add = (name: string, input: unknown = {}) => {
     if (!calls.some((call) => call.name === name)) calls.push({ name, input });
@@ -23,11 +40,11 @@ function plan(question: string): { name: string; input: unknown }[] {
       q,
     ) && !/tengo|mi |mis /.test(q);
   if (aboutMembers && /proveedor|compramos|vendimos|clientes/.test(q)) {
-    add('partner_trade', { from: '2026-01-01', to: '2026-12-31' });
+    add('partner_trade', { period: when ?? 'this_year' });
   } else if (aboutMembers && /capital social|capital de la cooperativa|capital total/.test(q)) {
-    add('capital_summary');
+    add('capital_summary', when ? { period: when } : {});
   } else if (aboutMembers && /cuantos socios|socios activos|altas|bajas|invitad/.test(q)) {
-    add('member_census', { from: '2026-01-01', to: '2026-12-31' });
+    add('member_census', { period: when ?? 'this_year' });
   } else if (aboutMembers && /capital|aportacion|numero de socio/.test(q)) {
     const named = question.match(/socio\s+(?:n[º°.]*\s*)?([^?¿]+?)\s*\??$/i)?.[1];
     add('member_detail', { query: (named ?? question).trim() });
@@ -39,33 +56,33 @@ function plan(question: string): { name: string; input: unknown }[] {
   } else if (q.includes('mayores proveedores')) {
     add('invoice_totals', {
       operation: 'purchase',
-      from: '2026-01-01',
-      to: '2026-12-31',
+      period: when ?? 'this_year',
       group_by: 'third_party',
       limit: 5,
     });
   } else if (q.includes('hemos facturado')) {
-    add('invoice_totals', { operation: 'sale', from: '2026-01-01', to: '2026-12-31' });
+    add('invoice_totals', { operation: 'sale', period: when ?? 'this_year' });
   } else if (q.includes('detalle de la factura')) {
     add('invoice_detail', { number: question.match(/factura\s+([\w-]+)/i)?.[1] });
   } else if (q.includes('discrepancia')) {
     add('open_discrepancies');
   } else if (q.includes('prevision de caja')) {
-    add('cash_forecast', { group_by: 'week' });
+    add('cash_forecast', { group_by: 'week', ...(when && { period: when }) });
   } else if (q.includes('evolucionado')) {
     add('top_items', { concept: 'aceite', group_by: 'month', operation: 'purchase' });
   } else if (q.includes('compramos mas')) {
-    add('top_items', { operation: 'purchase' });
+    add('top_items', { operation: 'purchase', ...(when && { period: when }) });
   } else if (q.includes('sin actividad')) {
     add('list_third_parties', { type: 'supplier', inactive_since: '2026-09-01' });
   } else if (q.includes('albaran') && q.includes('antiguos')) {
     add('list_delivery_notes', { status: 'pending_invoicing', sort: 'oldest_first' });
-  } else if (q.includes('se pagaron')) {
-    add('list_invoices', {
-      status: 'settled',
-      settled_from: '2026-09-01',
-      settled_to: '2026-09-30',
-    });
+  } else if (q.includes('se pagaron') || q.includes('se han pagado')) {
+    add(
+      'list_invoices',
+      when
+        ? { status: 'settled', period: when, period_of: 'settled' }
+        : { status: 'settled', settled_from: '2026-09-01', settled_to: '2026-09-30' },
+    );
   } else if (q.includes('busca el proveedor')) {
     add('find_third_party', { text: question.trim().split(/\s+/).at(-1) });
   } else if (q.includes('ultimo proveedor') || q.includes('proveedor nuevo')) {
@@ -79,7 +96,7 @@ function plan(question: string): { name: string; input: unknown }[] {
   } else if (q.includes('factura') && q.includes('venta')) {
     add('list_invoices', { operation: 'sale', status: 'pending' });
   } else if (q.includes('factura') && q.includes('vencen')) {
-    add('list_invoices', { operation: 'purchase', due_from: '2026-10-19', due_to: '2026-10-25' });
+    add('list_invoices', { operation: 'purchase', period: when ?? 'this_week', period_of: 'due' });
   } else if (q.includes('factura')) {
     add('list_invoices');
   }
@@ -98,6 +115,7 @@ function plan(question: string): { name: string; input: unknown }[] {
 
 interface ToolData {
   results?: Record<string, unknown>[];
+  sources?: { ref: string; source: string }[];
   [key: string]: unknown;
 }
 
@@ -151,8 +169,10 @@ export class RuleBasedLanguageModel implements LanguageModel {
     const lines: string[] = [];
     for (const content of contents) {
       const data = JSON.parse(content.replace(/^<tool_data>|<\/tool_data>$/g, '')) as ToolData;
-      const { results = [], ...summary } = data;
+      const { results = [], sources = [], ...summary } = data;
       if (Object.keys(summary).length > 0 && !('note' in summary)) lines.push(flatten(summary));
+      // The records behind a computed figure, each with its marker.
+      for (const { ref, source } of sources) lines.push(`${source} [${ref}]`);
       for (const item of results) {
         const { ref, ...fields } = item;
         lines.push(`${flatten(fields)}${ref ? ` [${String(ref)}]` : ''}`);

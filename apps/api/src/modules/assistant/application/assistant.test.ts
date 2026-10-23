@@ -151,6 +151,61 @@ describe('US-AI-01 · ask about the documents', () => {
   });
 });
 
+describe('BR-AI-05 · citations of computed figures', () => {
+  const invoice = (n: number) => ({
+    kind: 'invoice' as const,
+    resourceId: `inv-${n}`,
+    title: `Invoice F-${n}`,
+    page: null,
+    versionId: null,
+    excerpt: null,
+  });
+
+  it('BR-AI-05: the records behind a total get refs the answer can cite, and "moreSources" says there are others', async () => {
+    const totals = vi.fn(async () => ({
+      items: [],
+      evidence: { sources: [invoice(1), invoice(2)], more: 3 },
+      summary: { overall: { total: '500.00' } },
+    }));
+    const model = new ScriptedLanguageModel([
+      callTools({ name: 'invoice_totals', input: {} }),
+      say('Hemos facturado 500,00 € [S1][S2].'),
+    ]);
+    const { deps } = build(model, { invoice_totals: totals });
+
+    const { answer } = await ask(deps, contextOf(['invoicing']), '¿Cuánto hemos facturado?');
+
+    const body = JSON.parse(
+      toolResultsIn(model.requests[1]!.messages)[0]!.replace(/^<tool_data>|<\/tool_data>$/g, ''),
+    );
+    expect(body.sources).toEqual([
+      { ref: 'S1', source: 'Invoice F-1' },
+      { ref: 'S2', source: 'Invoice F-2' },
+    ]);
+    expect(body.moreSources).toBe(3);
+    expect(answer.citations.map((c) => [c.ref, c.kind, c.resourceId])).toEqual([
+      ['S1', 'invoice', 'inv-1'],
+      ['S2', 'invoice', 'inv-2'],
+    ]);
+  });
+
+  it('BR-AI-05: a complete set of sources carries no "moreSources"', async () => {
+    const totals = vi.fn(async () => ({
+      items: [],
+      evidence: { sources: [invoice(1)], more: 0 },
+    }));
+    const model = new ScriptedLanguageModel([
+      callTools({ name: 'invoice_totals', input: {} }),
+      say('Una factura [S1].'),
+    ]);
+    const { deps } = build(model, { invoice_totals: totals });
+
+    await ask(deps, contextOf(['invoicing']), '¿Cuánto?');
+
+    expect(toolResultsIn(model.requests[1]!.messages)[0]).not.toContain('moreSources');
+  });
+});
+
 describe('US-AI-03 · respect my permissions', () => {
   it('BR-AI-01: the model is only offered the tools of the modules the profile can read', async () => {
     const model = new ScriptedLanguageModel([say('ok')]);

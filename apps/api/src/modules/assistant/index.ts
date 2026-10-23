@@ -128,7 +128,7 @@ export function createAssistantModule(deps: {
     conversations: new PrismaConversationStore(deps.prisma),
     model: deps.model,
     localModels: settingsDeps,
-    executors: createToolExecutors(deps.sources),
+    executors: createToolExecutors(deps.sources, () => todayInSpain(now())),
     now,
     today: () => todayInSpain(now()),
     messageLimitPerHour: deps.messageLimitPerHour ?? MESSAGE_LIMIT_PER_HOUR,

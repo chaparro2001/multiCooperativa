@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { TOOL_CATALOG, TOOL_NAMES } from '../domain/tool-catalog';
 import { say, ScriptedLanguageModel } from '../application/testing/scripted-language-model';
 import { EVALUATION_CASES } from './cases';
 import { RuleBasedLanguageModel } from './rule-based-model';
@@ -13,6 +14,31 @@ describe('evaluation set (NFR-AI-05)', () => {
     for (const spec of ['US-AI-01', 'US-AI-02', 'US-AI-03', 'BR-AI-05', 'BR-AI-06']) {
       expect(specs).toContain(spec);
     }
+  });
+
+  it('NFR-AI-05: every tool has a positive case, and every tool a profile may lack has a denial case', () => {
+    // Tools every predefined profile gets (documents, announcements, own capital) need no denial.
+    const forEveryone = new Set(['search_documents', 'latest_announcements', 'my_contributions']);
+    for (const name of TOOL_NAMES) {
+      expect(
+        EVALUATION_CASES.some((c) => c.tools.includes(name)),
+        `no positive case for ${name}`,
+      ).toBe(true);
+      if (forEveryone.has(name)) continue;
+      expect(
+        EVALUATION_CASES.some((c) => c.forbiddenTools?.includes(name)),
+        `no denial case for ${name}`,
+      ).toBe(true);
+    }
+    expect(TOOL_CATALOG.map((tool) => tool.name)).toEqual([...TOOL_NAMES]);
+  });
+
+  it('US-AI-08: relative periods and cited figures are part of the set', () => {
+    const periods = EVALUATION_CASES.filter((c) => c.spec.includes('period'));
+    expect(periods.length).toBeGreaterThanOrEqual(5);
+    expect(
+      EVALUATION_CASES.filter((c) => c.spec.includes('BR-AI-05') && c.cites.length > 0).length,
+    ).toBeGreaterThanOrEqual(3);
   });
 
   it('NFR-AI-05: every question passes through the real pipeline with the rule-based model', async () => {

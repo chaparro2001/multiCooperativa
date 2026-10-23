@@ -353,6 +353,7 @@ export function createCannedSources(): DataSources {
         const bounded = Boolean(period.from || period.to);
         return [
           {
+            id: id(36),
             nif: LUIS.nif,
             name: LUIS.name,
             supplier: true,

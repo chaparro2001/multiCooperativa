@@ -1,3 +1,5 @@
+import { PERIODS } from './period';
+
 /** Modules whose data the assistant can read. */
 export type ToolModule = 'documents' | 'invoicing' | 'assemblies' | 'announcements' | 'member-area';
 
@@ -48,6 +50,19 @@ export const TOOL_NAMES = [
 export type ToolName = (typeof TOOL_NAMES)[number];
 
 const day = { type: 'string', description: 'Date as YYYY-MM-DD.' } as const;
+/** One shared definition: the server turns it into dates, so the model does no date arithmetic. */
+const period = {
+  type: 'string',
+  enum: [...PERIODS],
+  description:
+    'Relative period resolved by the server (weeks Monday to Sunday). Use it instead of working out dates; from/to, if given, win over it. The result shows the dates used.',
+} as const;
+const periodOf = (...fields: string[]) =>
+  ({
+    type: 'string',
+    enum: fields,
+    description: `Which date the period applies to (default ${fields[0]}).`,
+  }) as const;
 const operation = {
   type: 'string',
   enum: ['purchase', 'sale'],
@@ -97,6 +112,8 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
         third_party: thirdParty,
         from: { ...day, description: 'Only invoices issued from this date.' },
         to: { ...day, description: 'Only invoices issued up to this date.' },
+        period,
+        period_of: periodOf('issued', 'due', 'settled'),
         due_from: { ...day, description: 'Only invoices that fall due from this date.' },
         due_to: { ...day, description: 'Only invoices that fall due up to this date.' },
         settled_from: {
@@ -123,6 +140,7 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
         third_party: thirdParty,
         from: day,
         to: day,
+        period,
         sort: {
           type: 'string',
           enum: ['newest_first', 'oldest_first'],
@@ -136,7 +154,7 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
   {
     name: 'invoice_totals',
     description:
-      'Adds up invoices in the database: count, base, VAT amount and total (exact; never add figures yourself). Use it for "how much did we buy/sell/invoice", "how many invoices", totals per month and rankings: group_by third_party ranks suppliers or customers by total, highest first ("top 5 suppliers this year": operation purchase, from and to the year, group_by third_party, limit 5); group_by month gives one row per month. Voided invoices are left out unless status is voided. For what was paid or collected in a period use settled_from and settled_to (months then follow the settlement date).',
+      'Adds up invoices in the database: count, base, VAT amount and total (exact; never add figures yourself). Use it for "how much did we buy/sell/invoice", "how many invoices", totals per month and rankings: group_by third_party ranks suppliers or customers by total, highest first ("top 5 suppliers this year": operation purchase, period this_year, group_by third_party, limit 5); group_by month gives one row per month. Voided invoices are left out unless status is voided. For what was paid or collected in a period use period_of settled (months then follow the settlement date).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -151,6 +169,8 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
         to: { ...day, description: 'Only invoices issued up to this date.' },
         settled_from: { ...day, description: 'Only invoices paid or collected from this date.' },
         settled_to: { ...day, description: 'Only invoices paid or collected up to this date.' },
+        period,
+        period_of: periodOf('issued', 'settled'),
         group_by: {
           type: 'string',
           enum: ['none', 'third_party', 'month'],
@@ -206,6 +226,7 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
         operation,
         due_from: { ...day, description: 'Only invoices that fall due from this date.' },
         due_to: { ...day, description: 'Only invoices that fall due up to this date.' },
+        period: { ...period, description: period.description + ' Applies to the due date.' },
         group_by: {
           type: 'string',
           enum: ['week', 'month'],
@@ -234,6 +255,7 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
           description: 'From this date (the delivery note date or invoice issue date).',
         },
         to: { ...day, description: 'Up to this date.' },
+        period,
         concept: { type: 'string', description: 'Only concepts containing this text.' },
         group_by: {
           type: 'string',
@@ -297,6 +319,10 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
         },
         created_from: { ...day, description: 'Only those registered from this date.' },
         created_to: { ...day, description: 'Only those registered up to this date.' },
+        period: {
+          ...period,
+          description: period.description + ' Applies to the registration date.',
+        },
         inactive_since: {
           ...day,
           description:
@@ -382,6 +408,7 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
           description: 'Start of the period (inclusive). Leave out for all history.',
         },
         to: { ...day, description: 'End of the period (inclusive).' },
+        period,
       },
       additionalProperties: false,
     },
@@ -396,6 +423,7 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
       properties: {
         from: { ...day, description: 'Start of the period for joins and leaves (inclusive).' },
         to: { ...day, description: 'End of the period (inclusive).' },
+        period,
       },
       additionalProperties: false,
     },
@@ -430,6 +458,7 @@ export const TOOL_CATALOG: readonly ToolSpec[] = [
       properties: {
         from: { ...day, description: 'Only invoices issued from this date.' },
         to: { ...day, description: 'Only invoices issued up to this date.' },
+        period,
       },
       additionalProperties: false,
     },

@@ -158,10 +158,19 @@ function serialize(output: ToolOutput, sources: Map<string, Source>): string {
     sources.set(ref, item.source);
     return { ref, ...item.data };
   });
+  // A computed figure cites the records behind it: each gets a ref the answer can mark.
+  const evidence = output.evidence && {
+    sources: output.evidence.sources.map((source) => {
+      const ref = `S${sources.size + 1}`;
+      sources.set(ref, source);
+      return { ref, source: source.title };
+    }),
+    ...(output.evidence.more > 0 && { moreSources: output.evidence.more }),
+  };
   const body =
     results.length === 0 && !output.summary
-      ? { results: [], note: 'No results.' }
-      : { ...output.summary, results };
+      ? { results: [], note: 'No results.', ...evidence }
+      : { ...output.summary, ...evidence, results };
   return `<tool_data>${JSON.stringify(body)}</tool_data>`;
 }
 

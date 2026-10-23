@@ -252,6 +252,8 @@ export interface InvoicingReads {
 }
 
 export interface NifTrade {
+  /** The third party's id, so the trade can cite it. */
+  id: string;
   nif: string;
   name: string;
   supplier: boolean;
@@ -497,6 +499,7 @@ export function createInvoicingReads(
       };
       return Promise.all(
         parties.map(async (party) => ({
+          id: party.id,
           nif: party.nif,
           name: party.name,
           supplier: party.isSupplier,
