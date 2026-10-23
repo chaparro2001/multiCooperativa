@@ -11,6 +11,7 @@ import type {
   NewInvitation,
   ProfileRecord,
 } from '../application/ports/member-store';
+import { MemberNifTakenError } from '../application/errors';
 
 type Transaction = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
 
@@ -22,6 +23,7 @@ const memberSelect = {
   status: true,
   isPartner: true,
   partnerNumber: true,
+  nif: true,
   user: { select: { id: true, email: true, name: true } },
   profile: {
     select: {
@@ -37,6 +39,7 @@ type MemberRow = {
   status: MemberRecord['status'];
   isPartner: boolean;
   partnerNumber: string | null;
+  nif: string | null;
   user: { id: string; email: string; name: string };
   profile: { id: string; name: string; permissions: { module: string }[] };
 };
@@ -53,6 +56,7 @@ function toMember(row: MemberRow): MemberRecord {
     status: row.status,
     isPartner: row.isPartner,
     partnerNumber: row.partnerNumber,
+    nif: row.nif,
   };
 }
 
@@ -69,6 +73,7 @@ const foldAccents = (text: string) =>
 
 /** Thrown inside a transaction to roll it back without it being a failure. */
 class AlreadyMember extends Error {}
+class NifTaken extends Error {}
 
 function isUniqueViolation(error: unknown): boolean {
   return (error as { code?: unknown } | null)?.code === 'P2002';
@@ -161,10 +166,11 @@ export class PrismaMemberStore implements MemberStore {
       profileId: string;
       isPartner: boolean;
       partnerNumber: string | null;
+      nif: string | null;
       invitation: NewInvitation;
       audit: AuditInput;
     },
-  ): Promise<{ membershipId: string; userId: string } | 'already_member'> {
+  ): Promise<{ membershipId: string; userId: string } | 'already_member' | 'nif_taken'> {
     try {
       return await this.prisma.$transaction(async (tx) => {
         // An existing user (another cooperative, or a former member) keeps their account.
@@ -178,6 +184,7 @@ export class PrismaMemberStore implements MemberStore {
           where: { userId: user.id, cooperativeId, status: { not: 'removed' } },
         });
         if (live > 0) throw new AlreadyMember();
+        if (data.nif && (await this.nifInUse(tx, cooperativeId, data.nif))) throw new NifTaken();
 
         const membership = await tx.membership.create({
           data: {
@@ -186,6 +193,7 @@ export class PrismaMemberStore implements MemberStore {
             profileId: data.profileId,
             isPartner: data.isPartner,
             partnerNumber: data.partnerNumber,
+            nif: data.nif,
             invitation: { create: data.invitation },
           },
           select: { id: true },
@@ -195,7 +203,13 @@ export class PrismaMemberStore implements MemberStore {
       });
     } catch (error) {
       // The partial unique index (BR-ACC-02) settles two simultaneous invitations.
-      if (error instanceof AlreadyMember || isUniqueViolation(error)) return 'already_member';
+      if (error instanceof NifTaken) return 'nif_taken';
+      if (error instanceof AlreadyMember) return 'already_member';
+      if (isUniqueViolation(error)) {
+        // Two unique keys can fire: tell the NIF one from the user one.
+        const nifTaken = data.nif && (await this.nifInUse(this.prisma, cooperativeId, data.nif));
+        return nifTaken ? 'nif_taken' : 'already_member';
+      }
       throw error;
     }
   }
@@ -226,11 +240,25 @@ export class PrismaMemberStore implements MemberStore {
       const member = toMember(row);
       const update = decide({ member, activeAdminCount });
 
-      if (update.status || update.profileId) {
-        await tx.membership.update({
-          where: { id: membershipId },
-          data: { status: update.status, profileId: update.profileId },
-        });
+      if (update.nif && (await this.nifInUse(tx, cooperativeId, update.nif, membershipId))) {
+        throw new MemberNifTakenError();
+      }
+      if (update.status || update.profileId || update.nif !== undefined) {
+        try {
+          await tx.membership.update({
+            where: { id: membershipId },
+            data: {
+              status: update.status,
+              profileId: update.profileId,
+              nif: update.nif,
+              // The day it left, for the census (ADR-025).
+              ...(update.status === 'removed' && { leftAt: new Date() }),
+            },
+          });
+        } catch (error) {
+          if (isUniqueViolation(error)) throw new MemberNifTakenError();
+          throw error;
+        }
       }
       if (update.invitation) {
         await tx.invitation.upsert({
@@ -248,6 +276,24 @@ export class PrismaMemberStore implements MemberStore {
         }),
       );
     });
+  }
+
+  /** A live membership of the cooperative already holds this NIF (ADR-025); `except` skips the member being edited. */
+  private async nifInUse(
+    db: Pick<PrismaClient, 'membership'>,
+    cooperativeId: string,
+    nif: string,
+    except?: string,
+  ): Promise<boolean> {
+    const count = await db.membership.count({
+      where: {
+        cooperativeId,
+        nif,
+        status: { not: 'removed' },
+        ...(except && { id: { not: except } }),
+      },
+    });
+    return count > 0;
   }
 
   async listAudit(cooperativeId: string, limit: number): Promise<AuditRecord[]> {

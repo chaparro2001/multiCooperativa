@@ -24,6 +24,9 @@ const reads = createInvoicingReads({
   thirdParties: new PrismaThirdPartyStore(prisma),
 } as unknown as Parameters<typeof createInvoicingReads>[0]);
 
+const list = async (...args: Parameters<typeof reads.listThirdParties>) =>
+  (await reads.listThirdParties(...args)).rows;
+
 async function party(
   cooperativeId: string,
   nif: string,
@@ -59,30 +62,26 @@ afterAll(() => prisma.$disconnect());
 
 describe('US-AI-02 · list_third_parties read (integration)', () => {
   it('US-AI-02: newest first by creation date, inactive ones excluded by default', async () => {
-    const rows = await reads.listThirdParties(contextFor(COOP_A, 'read'), {});
+    const rows = await list(contextFor(COOP_A, 'read'), {});
 
     expect(rows.map((row) => row.name)).toEqual(['New Supplier', 'A Customer', 'Old Supplier']);
     expect(rows[0]).toMatchObject({ createdAt: '2026-10-16', active: true, supplier: true });
   });
 
   it('BR-INV-01: never returns another cooperative, even if it is the newest', async () => {
-    const rows = await reads.listThirdParties(contextFor(COOP_A, 'read'), { limit: 50 });
+    const rows = await list(contextFor(COOP_A, 'read'), { limit: 50 });
 
     expect(rows.map((row) => row.name)).not.toContain('Other Coop Newest');
-    const other = await reads.listThirdParties(contextFor(COOP_B, 'read'), {});
+    const other = await list(contextFor(COOP_B, 'read'), {});
     expect(other.map((row) => row.name)).toEqual(['Other Coop Newest']);
   });
 
   it('US-AI-02: filters by type, limit and an inclusive creation date range', async () => {
     const ctx = contextFor(COOP_A, 'read');
 
-    expect((await reads.listThirdParties(ctx, { type: 'customer' })).map((r) => r.name)).toEqual([
-      'A Customer',
-    ]);
-    expect((await reads.listThirdParties(ctx, { limit: 1 })).map((r) => r.name)).toEqual([
-      'New Supplier',
-    ]);
-    const week = await reads.listThirdParties(ctx, {
+    expect((await list(ctx, { type: 'customer' })).map((r) => r.name)).toEqual(['A Customer']);
+    expect((await list(ctx, { limit: 1 })).map((r) => r.name)).toEqual(['New Supplier']);
+    const week = await list(ctx, {
       createdFrom: '2026-10-16',
       createdTo: '2026-10-16',
     });
@@ -90,12 +89,12 @@ describe('US-AI-02 · list_third_parties read (integration)', () => {
   });
 
   it('BR-INV-14: inactive ones appear only for a user who can manage', async () => {
-    const asReader = await reads.listThirdParties(contextFor(COOP_A, 'read'), {
+    const asReader = await list(contextFor(COOP_A, 'read'), {
       includeInactive: true,
     });
     expect(asReader.map((r) => r.name)).not.toContain('Gone Supplier');
 
-    const asManager = await reads.listThirdParties(contextFor(COOP_A, 'manage'), {
+    const asManager = await list(contextFor(COOP_A, 'manage'), {
       includeInactive: true,
     });
     expect(asManager.map((r) => r.name)).toEqual([

@@ -23,6 +23,7 @@ const member = (n: number, overrides: Partial<MemberRecord> = {}): MemberRecord 
   name: `Member ${n}`,
   email: `m${n}@test.test`,
   partnerNumber: String(n).padStart(3, '0'),
+  nif: null,
   isPartner: true,
   status: 'active',
   profileName: 'Socio',
@@ -30,8 +31,8 @@ const member = (n: number, overrides: Partial<MemberRecord> = {}): MemberRecord 
   ...overrides,
 });
 
-const ANA = member(1); // member (own scope)
-const BEN = member(2); // member
+const ANA = member(1, { name: 'Ana García' }); // member (own scope)
+const BEN = member(2, { nif: '12345678Z' }); // member, also a supplier
 const BOARD = member(3, { profileName: 'Consejo rector' });
 const MANAGER = member(4, { isPartner: false, partnerNumber: null, profileName: 'Gestor' });
 const GONE = member(5, { status: 'removed' });
@@ -49,7 +50,18 @@ const directory: MemberDirectory = {
   async listPartners(cooperativeId) {
     return poolOf(cooperativeId).filter((m) => m.isPartner && m.status !== 'removed');
   },
+  async partnerCensus(cooperativeId, period) {
+    censusCalls.push({ cooperativeId, ...period });
+    return {
+      activePartners: 2,
+      invitedNotActivated: 1,
+      suspendedPartners: 0,
+      joinedInPeriod: 1,
+      leftInPeriod: 1,
+    };
+  },
 };
+const censusCalls: { cooperativeId: string; from?: string; to?: string }[] = [];
 
 const contextOf = (
   who: MemberRecord,
@@ -318,5 +330,101 @@ describe('assistant reads (BR-AI-02)', () => {
     await expect(
       createMemberAreaReads(deps).myContributions(contextOf(ANA, null), 5),
     ).rejects.toMatchObject({ code: 'forbidden' });
+  });
+});
+
+describe('US-MEM-05 · assistant reads about the whole cooperative (ADR-025)', () => {
+  const reads = (deps: ReturnType<typeof setup>['deps']) => createMemberAreaReads(deps);
+
+  it('capital_summary: the total is what the partners hold now and the period counts what was registered in it', async () => {
+    const { deps, capital } = setup();
+    capital.add(COOP, ANA.membershipId, {
+      date: '2025-12-31',
+      type: 'correction',
+      concept: 'Old',
+      amountCents: -500n,
+    });
+
+    const all = await reads(deps).capitalSummary(asBoard, {});
+    const year = await reads(deps).capitalSummary(asBoard, {
+      from: '2026-01-01',
+      to: '2026-12-31',
+    });
+
+    // Ana 500.00 - 5.00 = 495.00 (only one correction, before the period), Ben 300.00.
+    expect(all.totalCapital).toBe('795.00');
+    expect(all.partners).toBe(3);
+    expect(year.period).toMatchObject({
+      contributions: '900.00',
+      refunds: '100.00',
+      corrections: '0.00',
+      from: '2026-01-01',
+    });
+    expect(all.period.corrections).toBe('-5.00');
+  });
+
+  it('BR-MEM-06: a member with "own" scope is denied every whole-cooperative read, and so is a profile without the module', async () => {
+    const { deps } = setup();
+    const nobody = contextOf(ANA, null);
+
+    for (const context of [asMember, nobody]) {
+      await expect(reads(deps).capitalSummary(context, {})).rejects.toThrow();
+      await expect(reads(deps).census(context, {})).rejects.toThrow();
+      await expect(reads(deps).memberDetail(context, 'Ben', 5)).rejects.toThrow();
+      await expect(reads(deps).partnersWithNif(context)).rejects.toThrow();
+    }
+  });
+
+  it('census: joins and leaves only when a period is asked, and always for the caller cooperative', async () => {
+    const { deps } = setup();
+    censusCalls.length = 0;
+
+    const open = await reads(deps).census(asManager, {});
+    const bounded = await reads(deps).census(asManager, { from: '2026-01-01' });
+
+    expect(open).toMatchObject({ activePartners: 2, invitedNotActivated: 1, joinedInPeriod: null });
+    expect(bounded).toMatchObject({ joinedInPeriod: 1, leftInPeriod: 1 });
+    expect(censusCalls.map((call) => call.cooperativeId)).toEqual([COOP, COOP]);
+  });
+
+  it('member_detail: one match gives the record with the NIF, the capital and the latest movements', async () => {
+    const { deps } = setup();
+
+    const [ben, ...rest] = await reads(deps).memberDetail(asBoard, 'member 2', 5);
+
+    expect(rest).toEqual([]);
+    expect(ben).toMatchObject({
+      name: 'Member 2',
+      partnerNumber: '002',
+      nif: '12345678Z',
+      capital: '300.00',
+    });
+    expect(ben!.latestMovements).toHaveLength(1);
+  });
+
+  it('member_detail: several matches give their summary only, and a partner number matches ignoring zeros', async () => {
+    const { deps } = setup();
+
+    const several = await reads(deps).memberDetail(asBoard, 'member', 5);
+    const byNumber = await reads(deps).memberDetail(asBoard, '2', 5);
+
+    expect(several.length).toBeGreaterThan(1);
+    expect(several.every((match) => match.latestMovements === undefined)).toBe(true);
+    expect(byNumber.map((match) => match.partnerNumber)).toEqual(['002']);
+  });
+
+  it('BR-MEM-07: another cooperative and a partner who left are never found', async () => {
+    const { deps } = setup();
+
+    expect(await reads(deps).memberDetail(asBoard, 'Member 6', 5)).toEqual([]);
+    expect(await reads(deps).memberDetail(asBoard, 'Member 5', 5)).toEqual([]);
+  });
+
+  it('partnersWithNif: only partners that have one', async () => {
+    const { deps } = setup();
+
+    expect(await reads(deps).partnersWithNif(asBoard)).toEqual([
+      { name: 'Member 2', partnerNumber: '002', nif: '12345678Z' },
+    ]);
   });
 });

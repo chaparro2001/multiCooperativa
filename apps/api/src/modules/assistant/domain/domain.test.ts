@@ -12,7 +12,10 @@ import { availableTools, TOOL_CATALOG } from './tool-catalog';
 import { buildSystemPrompt } from './system-prompt';
 
 type Grants = Record<string, 'read' | 'manage'>;
-const can = (grants: Grants) => (module: string, level: 'read' | 'manage') => {
+// A profile that reads only its own data in the member area (requirements/01, section 3).
+const OWN_SCOPE = new Set<Grants>();
+const can = (grants: Grants) => (module: string, level: 'read' | 'manage', scope?: 'all') => {
+  if (scope === 'all' && OWN_SCOPE.has(grants)) return false;
   const granted = grants[module];
   return granted === 'manage' || granted === level;
 };
@@ -26,6 +29,7 @@ const SOCIO: Grants = {
   'member-area': 'read',
   assistant: 'read',
 };
+OWN_SCOPE.add(SOCIO);
 const GESTOR: Grants = {
   announcements: 'read',
   documents: 'read',
@@ -57,17 +61,36 @@ describe('tools available per profile (BR-AI-01, US-AI-03)', () => {
     expect(names(GESTOR)).toEqual([
       'search_documents',
       'list_invoices',
-      'list_delivery_notes',
+      'invoice_totals',
+      'invoice_detail',
+      'open_discrepancies',
       'payments_and_collections_summary',
+      'cash_forecast',
+      'list_delivery_notes',
+      'top_items',
       'find_third_party',
       'list_third_parties',
       'latest_announcements',
       'my_contributions',
+      'partners_summary',
+      'member_detail',
+      'partner_trade',
     ]);
   });
 
   it('BR-AI-01: the board gets every tool that exists', () => {
     expect(names(CONSEJO)).toEqual(TOOL_CATALOG.map((tool) => tool.name));
+  });
+
+  it('BR-AI-01 (ADR-025): tools on other members need "all" scope; partner_trade also needs invoicing', () => {
+    const memberTools = ['partners_summary', 'member_detail', 'partner_trade'];
+    expect(names(SOCIO)).not.toEqual(expect.arrayContaining(memberTools.slice(0, 1)));
+    for (const tool of memberTools) expect(names(SOCIO)).not.toContain(tool);
+    expect(names({ 'member-area': 'read', assistant: 'read' })).toEqual([
+      'my_contributions',
+      'partners_summary',
+      'member_detail',
+    ]);
   });
 
   it('US-AI-03: a profile with no module at all gets no tool', () => {
@@ -162,6 +185,8 @@ describe('conversation title (US-AI-04)', () => {
 
 describe('system prompt (BR-AI-06, hallucinations)', () => {
   const prompt = buildSystemPrompt({ today: '2026-10-20', toolNames: ['search_documents'] });
+  const forTools = (...toolNames: string[]) =>
+    buildSystemPrompt({ today: '2026-10-20', toolNames });
 
   it('BR-AI-06: tells the model that retrieved content is data and not instructions', () => {
     expect(prompt).toContain('<tool_data>');
@@ -172,15 +197,46 @@ describe('system prompt (BR-AI-06, hallucinations)', () => {
     expect(prompt).toMatch(/Spanish/);
     expect(prompt).toContain('[S1]');
     expect(prompt).toMatch(/do not make up/i);
+    expect(prompt).toContain('No lo encuentro en la documentación');
   });
 
-  it('US-AI-03: a topic without tools gets "no access", never a document search', () => {
+  it('US-AI-03: a module without tools gets "no access", never a document search', () => {
     expect(prompt).toContain('No tengo acceso a esa información');
     expect(prompt).toMatch(/never use the document search as a substitute/i);
   });
 
+  it('US-AI-03: the denial examples are only those of the modules the user lacks', () => {
+    const member = forTools('search_documents', 'upcoming_assemblies', 'my_contributions');
+    expect(member).toMatch(/invoices/);
+    expect(member).toMatch(/other partners/);
+    expect(member).not.toMatch(/assemblies and votes/);
+
+    const manager = forTools('search_documents', 'list_invoices', 'partners_summary');
+    expect(manager).toMatch(/assemblies and votes/);
+    expect(manager).not.toMatch(/other partners/);
+
+    const board = forTools('list_invoices', 'upcoming_assemblies', 'partners_summary');
+    expect(board).not.toContain('No tengo acceso');
+  });
+
+  it('US-AI-02: the own capital goes to my_contributions; another partner only with member_detail', () => {
+    expect(forTools('my_contributions')).toMatch(/my_contributions/);
+    expect(forTools('my_contributions')).not.toMatch(/member_detail/);
+    expect(forTools('my_contributions', 'member_detail', 'partners_summary')).toMatch(
+      /Another partner -> member_detail/,
+    );
+  });
+
+  it('US-AI-08: the rules of periods and totals appear only with the tools that use them', () => {
+    expect(prompt).not.toMatch(/"period"/);
+    const invoicing = forTools('list_invoices', 'invoice_totals');
+    expect(invoicing).toMatch(/"period".*today, this_week.*september/);
+    expect(invoicing).toMatch(/begin the answer with its dates: "Del <from> al <to>/);
+    expect(invoicing).toMatch(/invoice_totals does it/);
+  });
+
   it('US-AI-03: states which tools exist, so it can say a module is not available', () => {
     expect(prompt).toContain('search_documents');
-    expect(buildSystemPrompt({ today: '2026-10-20', toolNames: [] })).toMatch(/no tools/i);
+    expect(forTools()).toMatch(/no tools/i);
   });
 });

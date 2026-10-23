@@ -43,6 +43,7 @@ describe('partner search (US-MEM-04)', () => {
       name,
       email,
       partnerNumber,
+      nif: null,
       isPartner: true,
       status: 'active',
       profileName: 'Socio',

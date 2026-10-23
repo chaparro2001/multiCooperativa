@@ -1,11 +1,25 @@
 import type { PrismaClient } from '../../../shared/infrastructure/prisma';
 
+/** Partner head counts (structurally the member area's `PartnerCensus`, ADR-025). */
+export interface PartnerCensus {
+  activePartners: number;
+  invitedNotActivated: number;
+  suspendedPartners: number;
+  joinedInPeriod: number;
+  leftInPeriod: number;
+}
+
+const nextDay = (day: string) =>
+  new Date(new Date(`${day}T00:00:00Z`).getTime() + 24 * 60 * 60 * 1000);
+
 /** A member as the member area shows them (requirements/06, US-MEM-01). */
 export interface MemberRecord {
   membershipId: string;
   name: string;
   email: string;
   partnerNumber: string | null;
+  /** Normalized tax id (ADR-025). */
+  nif: string | null;
   isPartner: boolean;
   status: 'invited' | 'active' | 'suspended' | 'removed';
   profileName: string;
@@ -18,6 +32,7 @@ const memberSelect = {
   status: true,
   isPartner: true,
   partnerNumber: true,
+  nif: true,
   joinedAt: true,
   createdAt: true,
   user: { select: { name: true, email: true } },
@@ -29,6 +44,7 @@ type MemberRow = {
   status: MemberRecord['status'];
   isPartner: boolean;
   partnerNumber: string | null;
+  nif: string | null;
   joinedAt: Date | null;
   createdAt: Date;
   user: { name: string; email: string };
@@ -40,6 +56,7 @@ const toMemberRecord = (row: MemberRow): MemberRecord => ({
   name: row.user.name,
   email: row.user.email,
   partnerNumber: row.partnerNumber,
+  nif: row.nif,
   isPartner: row.isPartner,
   status: row.status,
   profileName: row.profile.name,
@@ -90,6 +107,56 @@ export class PrismaMemberDirectory {
       select: memberSelect,
     });
     return row ? toMemberRecord(row) : null;
+  }
+
+  /** ADR-025: partner head counts for the census; the joining date falls back to the creation date like the record's. */
+  async partnerCensus(
+    cooperativeId: string,
+    period: { from?: string; to?: string },
+  ): Promise<PartnerCensus> {
+    // Dates are DATE columns (inclusive days); `createdAt` is an instant, so its end is exclusive.
+    const days = (from?: string, to?: string) => ({
+      ...(from && { gte: new Date(`${from}T00:00:00Z`) }),
+      ...(to && { lte: new Date(`${to}T00:00:00Z`) }),
+    });
+    const instants = (from?: string, to?: string) => ({
+      ...(from && { gte: new Date(`${from}T00:00:00Z`) }),
+      ...(to && { lt: nextDay(to) }),
+    });
+    const bounded = Boolean(period.from || period.to);
+    const partners = { cooperativeId, isPartner: true };
+    const [activePartners, invitedNotActivated, suspendedPartners, joined, leftInPeriod] =
+      await Promise.all([
+        this.prisma.membership.count({ where: { ...partners, status: 'active' } }),
+        this.prisma.membership.count({ where: { ...partners, status: 'invited' } }),
+        this.prisma.membership.count({ where: { ...partners, status: 'suspended' } }),
+        // Same fallback as the record: no joining date means the creation day.
+        this.prisma.membership.count({
+          where: {
+            ...partners,
+            ...(bounded && {
+              OR: [
+                { joinedAt: days(period.from, period.to) },
+                { joinedAt: null, createdAt: instants(period.from, period.to) },
+              ],
+            }),
+          },
+        }),
+        this.prisma.membership.count({
+          where: {
+            ...partners,
+            status: 'removed',
+            ...(bounded && { leftAt: days(period.from, period.to) }),
+          },
+        }),
+      ]);
+    return {
+      activePartners,
+      invitedNotActivated,
+      suspendedPartners,
+      joinedInPeriod: joined,
+      leftInPeriod,
+    };
   }
 
   /** The cooperative's partners that have not left (BR-ACC-14), by partner number: who holds share capital. */

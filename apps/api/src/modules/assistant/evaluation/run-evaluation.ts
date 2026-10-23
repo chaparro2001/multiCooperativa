@@ -52,6 +52,9 @@ function contextFor(profile: EvalProfile): CooperativeContext {
   } as CooperativeContext;
 }
 
+/** The day the evaluation pretends it is (a Tuesday): relative periods resolve against it. */
+const EVAL_TODAY = '2026-10-20';
+
 const plain = (text: string) => text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 export interface EvalResult {
@@ -120,7 +123,7 @@ export async function runEvaluation(options: {
   const conversations = new InMemoryConversationStore();
   // What the model asked the document search for, to check that follow-ups were rewritten.
   const searchQueries: string[] = [];
-  const executors = createToolExecutors(createCannedSources());
+  const executors = createToolExecutors(createCannedSources(), () => EVAL_TODAY);
   const recordingExecutors = {
     ...executors,
     search_documents: (context: CooperativeContext, input: unknown) => {
@@ -133,7 +136,7 @@ export async function runEvaluation(options: {
     model: options.model,
     executors: recordingExecutors,
     now: () => new Date('2026-10-20T10:00:00Z'),
-    today: () => '2026-10-20',
+    today: () => EVAL_TODAY,
     // Each case has its own conversation; the limit must not get in the way of 20 questions.
     messageLimitPerHour: 1000,
     logger: log,

@@ -91,6 +91,26 @@ export function sampleInvoicing(today: string) {
       email: null,
       phone: null,
     },
+    // A partner who is also a supplier (ADR-025): the NIF is Javier López's, a partner of San Isidro.
+    partnerSupplier: {
+      nif: '33333333P',
+      name: 'Javier López (huerta)',
+      isSupplier: true,
+      isCustomer: false,
+      email: null,
+      phone: null,
+    },
+    partnerInvoice: {
+      operation: 'purchase' as const,
+      number: 'DEMO-F-002',
+      issueDate: addDays(today, -12),
+      dueDate: addDays(today, 18),
+      base: '400.00',
+      vatRate: '10',
+      total: '440.00',
+      lines: [],
+      deliveryNoteIds: [] as string[],
+    },
     note: {
       operation: 'purchase' as const,
       number: 'DEMO-A-001',

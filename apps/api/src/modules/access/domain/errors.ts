@@ -57,3 +57,12 @@ export class InvitationNotUsableError extends AccessDomainError {
 export class WeakPasswordError extends AccessDomainError {
   readonly code = 'weak_password';
 }
+
+/** The partner's NIF has a wrong letter or check digit (ADR-025). */
+export class InvalidMemberNifError extends AccessDomainError {
+  readonly code = 'invalid_member_nif';
+
+  constructor() {
+    super('The NIF is not valid: check the letter or the check digit.');
+  }
+}

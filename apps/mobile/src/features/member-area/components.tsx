@@ -42,6 +42,9 @@ export function RecordCard({ member }: { member: MemberRecord }) {
           {member.partnerNumber ?? t('memberArea.fields.noPartnerNumber')}
         </Fact>
       ) : null}
+      {member.isPartner ? (
+        <Fact label={t('memberArea.fields.nif')}>{member.nif ?? t('memberArea.fields.noNif')}</Fact>
+      ) : null}
       <Fact label={t('memberArea.fields.joinedAt')}>{formatDay(member.joinedAt)}</Fact>
       <Fact label={t('memberArea.fields.profile')}>{member.profileName}</Fact>
       <Fact label={t('memberArea.fields.email')}>{member.email}</Fact>

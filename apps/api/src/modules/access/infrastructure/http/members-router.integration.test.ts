@@ -545,3 +545,92 @@ describe('members list: keyset pages, search and status (US-ACC-10)', () => {
     ).toHaveLength(1);
   });
 });
+
+describe('partner NIF (ADR-025, BR-ACC-18)', () => {
+  const inviteWithNif = async (email: string, nif: string | null, coop = fieldCoop) =>
+    request(app)
+      .post(`/cooperatives/${coop}/members`)
+      .set(as(coop === fieldCoop ? adminToken : await login('admin@mar.es')))
+      .send({
+        email,
+        name: 'Margaret',
+        profileId: await profileId(coop, 'Socio'),
+        isPartner: true,
+        nif,
+      });
+
+  it('stores the NIF normalized and shows it in the member', async () => {
+    const created = await inviteWithNif('margaret@campo.es', ' 12.345.678-z ');
+    expect(created.status).toBe(201);
+    const { membershipId } = inviteMemberResponseSchema.parse(created.body);
+
+    const detail = await request(app)
+      .get(`/cooperatives/${fieldCoop}/members/${membershipId}`)
+      .set(as(adminToken));
+
+    expect(memberSchema.parse(detail.body).nif).toBe('12345678Z');
+  });
+
+  it('rejects a NIF with a wrong control character with 400 and creates nothing', async () => {
+    const response = await inviteWithNif('margaret@campo.es', '12345678A');
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('invalid_member_nif');
+    expect(await prisma.user.count({ where: { email: 'margaret@campo.es' } })).toBe(0);
+  });
+
+  it('409 when another live member of the cooperative has it; another cooperative may repeat it', async () => {
+    await inviteWithNif('margaret@campo.es', '12345678Z');
+
+    const same = await inviteWithNif('ada2@campo.es', '12345678z');
+    const otherCoop = await inviteWithNif('margaret@mar.es', '12345678Z', seaCoop);
+
+    expect(same.status).toBe(409);
+    expect(same.body.error).toBe('member_nif_taken');
+    expect(otherCoop.status).toBe(201);
+  });
+
+  it('PATCH sets, changes and clears the NIF; a taken one is 409 and an invalid one 400', async () => {
+    const one = inviteMemberResponseSchema.parse((await invite('one@campo.es')).body);
+    const two = inviteMemberResponseSchema.parse((await invite('two@campo.es')).body);
+    const patch = (id: string, body: object) =>
+      request(app).patch(`/cooperatives/${fieldCoop}/members/${id}`).set(as(adminToken)).send(body);
+
+    const set = await patch(one.membershipId, { nif: '12345678z' });
+    const taken = await patch(two.membershipId, { nif: '12345678Z' });
+    const invalid = await patch(two.membershipId, { nif: '12345678A' });
+    const cleared = await patch(one.membershipId, { nif: null });
+    const reused = await patch(two.membershipId, { nif: '12345678Z' });
+
+    expect(memberSchema.parse(set.body).nif).toBe('12345678Z');
+    expect([taken.status, taken.body.error]).toEqual([409, 'member_nif_taken']);
+    expect([invalid.status, invalid.body.error]).toEqual([400, 'invalid_member_nif']);
+    expect(memberSchema.parse(cleared.body).nif).toBeNull();
+    expect(reused.status).toBe(200);
+  });
+
+  it('a removed member releases the NIF and the day they left is recorded', async () => {
+    const { membershipId } = await activeMember('margaret@campo.es');
+    await prisma.membership.update({ where: { id: membershipId }, data: { nif: '12345678Z' } });
+
+    const removal = await request(app)
+      .post(`/cooperatives/${fieldCoop}/members/${membershipId}/removal`)
+      .set(as(adminToken));
+    const again = await inviteWithNif('ada2@campo.es', '12345678Z');
+
+    expect(removal.status).toBe(200);
+    expect(again.status).toBe(201);
+    const row = await prisma.membership.findUniqueOrThrow({ where: { id: membershipId } });
+    expect(row.leftAt?.toISOString().slice(0, 10)).toBe(new Date().toISOString().slice(0, 10));
+  });
+
+  it('the database refuses two live memberships with the same NIF in a cooperative', async () => {
+    const one = inviteMemberResponseSchema.parse((await invite('one@campo.es')).body);
+    const two = inviteMemberResponseSchema.parse((await invite('two@campo.es')).body);
+    await prisma.membership.update({ where: { id: one.membershipId }, data: { nif: 'B12345674' } });
+
+    await expect(
+      prisma.membership.update({ where: { id: two.membershipId }, data: { nif: 'B12345674' } }),
+    ).rejects.toThrow();
+  });
+});

@@ -52,6 +52,18 @@ export class InMemoryCapitalStore implements CapitalStore {
       .slice(0, page.limit);
   }
 
+  async periodTotals(cooperativeId: string, period: { from?: string; to?: string }) {
+    const totals = { contributionsCents: 0n, refundsCents: 0n, correctionsCents: 0n };
+    for (const row of this.rows) {
+      if (row.cooperativeId !== cooperativeId) continue;
+      if ((period.from && row.date < period.from) || (period.to && row.date > period.to)) continue;
+      if (row.type === 'refund') totals.refundsCents += row.amountCents;
+      else if (row.type === 'correction') totals.correctionsCents += row.amountCents;
+      else totals.contributionsCents += row.amountCents;
+    }
+    return totals;
+  }
+
   async balances(cooperativeId: string, membershipIds: string[]) {
     const result = new Map<string, bigint>();
     for (const id of membershipIds) {

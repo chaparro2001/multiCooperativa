@@ -53,6 +53,8 @@ export interface InvoiceRecord extends InvoiceState {
 export interface DocumentFilter {
   operation?: Operation;
   thirdPartyId?: string;
+  /** Exact number, ignoring case. */
+  number?: string;
   from?: string;
   to?: string;
 }

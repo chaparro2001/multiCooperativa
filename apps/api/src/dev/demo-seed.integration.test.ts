@@ -13,7 +13,9 @@ import { InMemoryFileStorage } from '../shared/files/in-memory-file-storage';
 import { loadEnv } from '../config/env';
 import { createAccessModule } from '../modules/access';
 import { HashingEmbedder } from '../modules/documents';
+import { isValidNif } from '../shared/domain/nif';
 import { DEMO_COOPERATIVES, type DemoSeedResult, seedDemoData } from './demo-seed';
+import { sampleInvoicing } from './sample-content';
 
 const PASSWORD = 'a-long-demo-password';
 const prisma = createTestPrisma();
@@ -122,6 +124,7 @@ describe('sample data', () => {
     expect(again.invitations).toEqual([]);
     expect(await prisma.membership.count()).toBe(before);
     expect(again.capitalMovementsAdded).toBe(0);
+    expect(again.nifsSet).toBe(0);
   });
 
   it('US-MEM-02: the demo partner sees their own capital through the API', async () => {
@@ -165,5 +168,35 @@ describe('sample data', () => {
     await seedDemoData({ prisma, access }, PASSWORD);
 
     expect(await prisma.capitalMovement.count({ where: { membershipId: member.id } })).toBe(before);
+  });
+
+  it('ADR-025: the sample partners have a valid NIF and Javier, a supplier too, shares his with a third party', async () => {
+    const withNif = await prisma.membership.findMany({
+      where: { isPartner: true, nif: { not: null } },
+      select: { nif: true },
+    });
+    const javier = await prisma.membership.findFirstOrThrow({
+      where: { user: { email: 'socio@sanisidro.test' } },
+    });
+
+    expect(withNif.length).toBe(
+      DEMO_COOPERATIVES.reduce(
+        (sum, coop) => sum + 1 + coop.members.filter((member) => member.nif).length,
+        0,
+      ),
+    );
+    expect(withNif.every((row) => isValidNif(row.nif!))).toBe(true);
+    // seed:content registers the third party with this NIF (sampleInvoicing).
+    expect(javier.nif).toBe(sampleInvoicing('2026-10-21').partnerSupplier.nif);
+  });
+
+  it('ADR-025: fills the NIF of a cooperative that already existed without them, once', async () => {
+    await prisma.membership.updateMany({ data: { nif: null } });
+
+    const first = await seedDemoData({ prisma, access }, PASSWORD);
+    const second = await seedDemoData({ prisma, access }, PASSWORD);
+
+    expect(first.nifsSet).toBeGreaterThan(5);
+    expect(second.nifsSet).toBe(0);
   });
 });

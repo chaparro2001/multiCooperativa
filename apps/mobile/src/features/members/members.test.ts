@@ -13,6 +13,7 @@ const base: Member = {
   status: 'active',
   isPartner: true,
   partnerNumber: null,
+  nif: null,
 };
 const member = (patch: Partial<Member>): Member => ({ ...base, ...patch });
 
@@ -31,6 +32,7 @@ describe('member actions (US-ACC-09, US-ACC-10, BR-ACC-08)', () => {
     suspend: false,
     reactivate: false,
     resendInvitation: false,
+    editNif: false,
   };
 
   it('offers profile change and suspension on an active member', () => {
@@ -38,7 +40,14 @@ describe('member actions (US-ACC-09, US-ACC-10, BR-ACC-08)', () => {
       ...none,
       changeProfile: true,
       suspend: true,
+      editNif: true,
     });
+  });
+
+  it('ADR-025: the NIF is edited on partners only', () => {
+    expect(memberActions(member({ isPartner: false }), other, true).editNif).toBe(false);
+    expect(memberActions(member({ status: 'invited' }), other, true).editNif).toBe(true);
+    expect(memberActions(member({ status: 'suspended' }), other, true).editNif).toBe(true);
   });
 
   it('offers reactivation on a suspended member and resending on an invited one', () => {

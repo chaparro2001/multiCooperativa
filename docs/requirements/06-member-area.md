@@ -36,6 +36,18 @@ As a manager, I want to register a member's contributions and refunds.
 
 - **Given** read permission with "all" scope, **when** I open the list, **then** I see each member's capital and the cooperative's total.
 
+#### US-MEM-05 · See the cooperative's capital and census
+
+- **Given** read permission with "all" scope, **when** I ask for the cooperative's capital, **then** I get the total share capital, the number of partners and the contributions, refunds and net corrections registered in a period, as exact decimals.
+- **Given** the same permission, **when** I ask for the census, **then** I get the active, suspended and invited-not-yet-activated partners now and, for a period, how many joined and how many left.
+- **Given** "own" scope or no access, **then** none of this is available (403).
+- These figures and the record of one partner (US-MEM-04, with the NIF) are read through the AI assistant (US-AI-09); the app has no new screen for them.
+
+#### US-MEM-06 · Know which partners are also suppliers or customers
+
+- **Given** a partner whose NIF equals the NIF of a supplier or customer of the same cooperative, **when** someone with member area ("all") and invoicing read permission asks, **then** the assistant lists those partners and the purchases and sales of the period per partner, voided invoices excluded (ADR-025).
+- **Given** an administrator inviting a partner or editing a member, **when** they type a NIF, **then** it is normalized and validated like a third party's; a wrong control character is `400 invalid_member_nif` and a NIF another live member holds is `409 member_nif_taken`.
+
 ### Could
 
 - Export the contributions statement to PDF.
@@ -49,13 +61,15 @@ As a manager, I want to register a member's contributions and refunds.
 
 ## 2. Business rules
 
-| Id        | Rule                                                                                      |
-| --------- | ----------------------------------------------------------------------------------------- |
-| BR-MEM-01 | Capital movements are immutable. A mistake is corrected with a movement of opposite sign. |
-| BR-MEM-02 | Types: mandatory contribution, voluntary contribution, refund, correction.                |
-| BR-MEM-03 | Member's capital = sum of contributions − refunds ± corrections. Never negative.          |
-| BR-MEM-04 | Amounts in euros with exact decimals.                                                     |
-| BR-MEM-05 | Contributions do not influence the right to vote (BR-ASM-01).                             |
+| Id        | Rule                                                                                                                                                                                                 |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-MEM-01 | Capital movements are immutable. A mistake is corrected with a movement of opposite sign.                                                                                                            |
+| BR-MEM-02 | Types: mandatory contribution, voluntary contribution, refund, correction.                                                                                                                           |
+| BR-MEM-03 | Member's capital = sum of contributions − refunds ± corrections. Never negative.                                                                                                                     |
+| BR-MEM-04 | Amounts in euros with exact decimals.                                                                                                                                                                |
+| BR-MEM-05 | Contributions do not influence the right to vote (BR-ASM-01).                                                                                                                                        |
+| BR-MEM-06 | Reading other members' data (a partner's record, the cooperative's capital, the census, the crossing with third parties) needs the member area with "all" scope; "own" scope or no module is denied. |
+| BR-MEM-07 | Those reads only see partners of the caller's cooperative who have not left.                                                                                                                         |
 
 ## 3. Model
 
@@ -113,6 +127,8 @@ Where the specification above is silent, the implementation (module `apps/api/sr
 - **Errors**: 400 `invalid_request` (body out of contract, e.g. a malformed amount or date) or `invalid_movement` (rule violated: zero or negative amount, empty or too long concept, amount over 9,999,999,999.99), 403 `forbidden`, 404 `not_found`, 409 `insufficient_capital`.
 - **App**: `/member-area` (my record, capital and movements); with scope `all`, `/member-area/members` (searchable list with the cooperative's total) and `/member-area/members/{id}`; with manage, `/member-area/members/{id}/register`.
 - **Assistant**: the `my_contributions` tool (requirements/07) calls the module's read facade with the caller's context: always the caller's own capital, whatever their scope.
+
+- **Partner NIF and census (ADR-025)**. `Membership.nif` (optional, normalized, unique among live memberships of a cooperative) is returned in the member record and set from the users module (`POST/PATCH .../members`, BR-ACC-18). `Membership.leftAt` records the day of removal, for the census of leavers. `CapitalStore.periodTotals` sums movements by type in a period; `MemberDirectory.partnerCensus` counts partners. The NIF is personal data: it appears only to the partner themself and to profiles with "all" scope in the member area, and audit events never carry its value.
 
 ## 7. Test strategy
 

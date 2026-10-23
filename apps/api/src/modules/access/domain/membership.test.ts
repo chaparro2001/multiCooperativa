@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { InvalidMembershipTransitionError } from './errors';
+import { InvalidMemberNifError, InvalidMembershipTransitionError } from './errors';
 import {
   activate,
   canVote,
   grantsAccess,
   type MembershipStatus,
+  parseMemberNif,
   reactivate,
   remove,
   suspend,
@@ -73,6 +74,28 @@ describe('canVote (BR-ACC-06)', () => {
     'a partner with a %s membership does not vote',
     (status) => {
       expect(canVote(membership(status, true))).toBe(false);
+    },
+  );
+});
+
+describe('the NIF of a partner (ADR-025, BR-ACC-18)', () => {
+  it.each([
+    ['12345678z', '12345678Z'],
+    [' 12.345.678-Z ', '12345678Z'],
+    ['x-1234567-l', 'X1234567L'],
+    ['b 12345674', 'B12345674'],
+  ])('normalizes %s to %s', (raw, stored) => {
+    expect(parseMemberNif(raw)).toBe(stored);
+  });
+
+  it.each([undefined, null, '', '   '])('treats %j as no NIF', (raw) => {
+    expect(parseMemberNif(raw)).toBeNull();
+  });
+
+  it.each(['12345678A', 'B12345675', '1234567Z', 'ABCDEFGHI'])(
+    'rejects %s: the same rule as a third party NIF',
+    (raw) => {
+      expect(() => parseMemberNif(raw)).toThrow(InvalidMemberNifError);
     },
   );
 });

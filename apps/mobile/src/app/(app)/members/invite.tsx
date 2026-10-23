@@ -30,6 +30,7 @@ export default function InviteMemberScreen() {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [isPartner, setIsPartner] = useState(true);
   const [partnerNumber, setPartnerNumber] = useState('');
+  const [nif, setNif] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<{
     email: string;
@@ -38,7 +39,7 @@ export default function InviteMemberScreen() {
   } | null>(null);
 
   const form = useForm({
-    values: { email, name, profileId, isPartner, partnerNumber },
+    values: { email, name, profileId, isPartner, partnerNumber, nif },
     validate: validateInvite,
   });
 
@@ -52,6 +53,7 @@ export default function InviteMemberScreen() {
         profileId: profileId!,
         isPartner,
         partnerNumber: isPartner ? partnerNumber.trim() || null : null,
+        nif: isPartner ? nif.trim() || null : null,
       });
       setSent({ email: email.trim(), ...issued });
     } catch (failure) {
@@ -121,6 +123,23 @@ export default function InviteMemberScreen() {
           maxLength={50}
           testID="invite-partner-number"
         />
+      ) : null}
+      {isPartner ? (
+        <>
+          <TextField
+            label={t('members.fields.nif')}
+            name="nif"
+            value={nif}
+            onChangeText={setNif}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={20}
+            testID="invite-nif"
+          />
+          <Text variant="bodySmall" style={[styles.hint, { color: colors.onSurfaceVariant }]}>
+            {t('members.invite.nifHint')}
+          </Text>
+        </>
       ) : null}
       <FormSummary form={form}>{error}</FormSummary>
       <Button

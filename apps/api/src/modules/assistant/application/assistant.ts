@@ -1,5 +1,5 @@
 import type { Logger } from '../../../shared/logger';
-import { hasAccess, ModuleAccessDeniedError, requireAccess } from '../../access';
+import { ModuleAccessDeniedError, requireAccess, resolveAccess } from '../../access';
 import { extractCitations, type Source } from '../domain/citations';
 import { buildSystemPrompt } from '../domain/system-prompt';
 import { availableTools, type ToolName, type ToolSpec } from '../domain/tool-catalog';
@@ -60,7 +60,10 @@ export const HISTORY_MESSAGES = 20;
 
 /** BR-AI-01: the tools are computed from the user's permissions on every request. */
 function toolsFor(context: CooperativeContext): readonly ToolSpec[] {
-  return availableTools((module, level) => hasAccess(context.permissions, module, level));
+  return availableTools((module, level, scope) => {
+    const access = resolveAccess(context.permissions, module, level);
+    return access.granted && (scope === undefined || access.scope === scope);
+  });
 }
 
 // ── Conversations (US-AI-04, BR-AI-07) ──
@@ -155,10 +158,19 @@ function serialize(output: ToolOutput, sources: Map<string, Source>): string {
     sources.set(ref, item.source);
     return { ref, ...item.data };
   });
+  // A computed figure cites the records behind it: each gets a ref the answer can mark.
+  const evidence = output.evidence && {
+    sources: output.evidence.sources.map((source) => {
+      const ref = `S${sources.size + 1}`;
+      sources.set(ref, source);
+      return { ref, source: source.title };
+    }),
+    ...(output.evidence.more > 0 && { moreSources: output.evidence.more }),
+  };
   const body =
     results.length === 0 && !output.summary
-      ? { results: [], note: 'No results.' }
-      : { ...output.summary, results };
+      ? { results: [], note: 'No results.', ...evidence }
+      : { ...output.summary, ...evidence, results };
   return `<tool_data>${JSON.stringify(body)}</tool_data>`;
 }
 

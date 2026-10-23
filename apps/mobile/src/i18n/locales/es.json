@@ -60,7 +60,9 @@
       "duplicate_number": "Ya existe un documento con este número.",
       "third_party_exists": "Ya existe un proveedor o cliente con este NIF.",
       "insufficient_capital": "El reembolso supera el capital disponible del socio ({{available}} €).",
-      "member_already_exists": "Este email ya pertenece a un miembro de la cooperativa."
+      "member_already_exists": "Este email ya pertenece a un miembro de la cooperativa.",
+      "invalid_member_nif": "El NIF no es válido: revisa la letra o el dígito de control.",
+      "member_nif_taken": "Ya hay otro socio de la cooperativa con este NIF."
     },
     "serverField": {
       "invalid_third_party": {
@@ -846,12 +848,14 @@
       "name": "Nombre",
       "profile": "Perfil",
       "isPartner": "Es socio",
-      "partnerNumber": "Número de socio"
+      "partnerNumber": "Número de socio",
+      "nif": "NIF (opcional)"
     },
     "invite": {
       "title": "Invitar",
       "submit": "Crear invitación",
       "nameHint": "El nombre se usa solo si la persona aún no tiene cuenta en multiCooperativa.",
+      "nifHint": "Con el NIF se cruza al socio con sus facturas si también es proveedor o cliente.",
       "sentTitle": "Invitación registrada",
       "sentMessage": "Se ha invitado a {{email}}. Compártele el enlace de abajo para que active su acceso.",
       "sentNoLink": "Se ha invitado a {{email}}. Este servidor no muestra el enlace: en desarrollo aparece en la consola de la API.",
@@ -869,6 +873,10 @@
     "detail": {
       "title": "Miembro",
       "saveProfile": "Guardar perfil",
+      "nif": "NIF",
+      "noNif": "Sin NIF",
+      "saveNif": "Guardar NIF",
+      "nifSaved": "NIF actualizado.",
       "profileSaved": "Perfil actualizado.",
       "suspend": "Suspender",
       "suspendTitle": "Suspender acceso",
@@ -890,7 +898,9 @@
       "joinedAt": "Fecha de alta",
       "profile": "Perfil",
       "email": "Email",
-      "noPartnerNumber": "Sin número"
+      "noPartnerNumber": "Sin número",
+      "nif": "NIF",
+      "noNif": "Sin NIF"
     },
     "me": {
       "record": "Mis datos",

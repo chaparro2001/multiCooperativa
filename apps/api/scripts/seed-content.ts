@@ -197,6 +197,32 @@ if (existingInvoices.items.some((invoice) => invoice.number === invoicing.invoic
   console.log(`Invoice registered: ${invoicing.invoice.number}`);
 }
 
+// A partner who is also a supplier (ADR-025): matched with the member by NIF.
+let partnerSupplier = suppliers.items.find((party) => party.nif === invoicing.partnerSupplier.nif);
+if (!partnerSupplier) {
+  partnerSupplier = await call(
+    thirdPartySchema,
+    `${base}/third-parties`,
+    { method: 'POST', body: JSON.stringify(invoicing.partnerSupplier) },
+    accessToken,
+  );
+  console.log(`Third party created: ${partnerSupplier.name}`);
+}
+if (existingInvoices.items.some((invoice) => invoice.number === invoicing.partnerInvoice.number)) {
+  console.log(`Invoice already there: ${invoicing.partnerInvoice.number}`);
+} else {
+  await call(
+    invoiceSchema,
+    `${base}/invoices`,
+    {
+      method: 'POST',
+      body: multipart({ ...invoicing.partnerInvoice, thirdPartyId: partnerSupplier.id }),
+    },
+    accessToken,
+  );
+  console.log(`Invoice registered: ${invoicing.partnerInvoice.number}`);
+}
+
 // Indexing is asynchronous: wait so that a failing embeddings provider is noticed now.
 const deadline = Date.now() + INDEXING_TIMEOUT_MS;
 let failed = false;

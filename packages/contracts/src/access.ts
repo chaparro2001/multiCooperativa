@@ -59,6 +59,8 @@ export const memberSchema = z.object({
   status: membershipStatusSchema,
   isPartner: z.boolean(),
   partnerNumber: z.string().nullable(),
+  /** Tax id of the partner, normalized (ADR-025); null when none was recorded. */
+  nif: z.string().nullable(),
 });
 
 /** GET /cooperatives/{id}/members?q=…&status=…: everyone except removed members, by name (US-ACC-10). */
@@ -89,6 +91,8 @@ export const inviteMemberRequestSchema = z.object({
   profileId: z.uuid(),
   isPartner: z.boolean(),
   partnerNumber: z.string().trim().max(50).nullable().optional(),
+  /** Optional tax id (DNI, NIE or CIF); the server validates its control character (ADR-025). */
+  nif: z.string().trim().max(20).nullable().optional(),
 });
 
 /**
@@ -109,6 +113,8 @@ export const resendInvitationResponseSchema = invitationIssuedSchema;
 export const updateMemberRequestSchema = z.union([
   z.strictObject({ profileId: z.uuid() }),
   z.strictObject({ status: z.enum(['active', 'suspended']) }),
+  /** Sets the partner's NIF, or clears it with null (ADR-025). */
+  z.strictObject({ nif: z.string().trim().max(20).nullable() }),
 ]);
 
 export const auditEventSchema = z.object({

@@ -57,6 +57,7 @@ function toMember(member: MemberRecord): Member {
     status: member.status,
     isPartner: member.isPartner,
     partnerNumber: member.partnerNumber,
+    nif: member.nif,
   };
 }
 

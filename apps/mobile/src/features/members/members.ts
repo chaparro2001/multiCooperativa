@@ -20,6 +20,8 @@ export interface MemberActions {
   suspend: boolean;
   reactivate: boolean;
   resendInvitation: boolean;
+  /** ADR-025: the partner's NIF. */
+  editNif: boolean;
 }
 
 /**
@@ -37,15 +39,16 @@ export function memberActions(
     suspend: false,
     reactivate: false,
     resendInvitation: false,
+    editNif: false,
   };
   if (!canManage || member.userId === currentUserId) return none;
   switch (member.status) {
     case 'active':
-      return { ...none, changeProfile: true, suspend: true };
+      return { ...none, changeProfile: true, suspend: true, editNif: member.isPartner };
     case 'suspended':
-      return { ...none, changeProfile: true, reactivate: true };
+      return { ...none, changeProfile: true, reactivate: true, editNif: member.isPartner };
     case 'invited':
-      return { ...none, changeProfile: true, resendInvitation: true };
+      return { ...none, changeProfile: true, resendInvitation: true, editNif: member.isPartner };
     case 'removed':
       return none;
   }

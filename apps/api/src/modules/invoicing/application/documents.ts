@@ -357,7 +357,7 @@ export interface Amounts {
   overdueCount: number;
 }
 
-function amountsOf(
+export function amountsOf(
   rows: Awaited<ReturnType<InvoiceStore['totals']>>,
   operation: Operation,
 ): Amounts {

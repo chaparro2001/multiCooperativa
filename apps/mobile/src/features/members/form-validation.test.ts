@@ -19,6 +19,7 @@ const draft = (overrides: Partial<InviteDraft> = {}): InviteDraft => ({
   profileId: PROFILE,
   isPartner: true,
   partnerNumber: '',
+  nif: '',
   ...overrides,
 });
 
@@ -70,5 +71,37 @@ describe('API errors on the invitation form (US-ACC-08)', () => {
       }),
     );
     expect(Object.keys(fields)).toEqual(['email']);
+  });
+});
+
+describe('NIF of the partner (ADR-025)', () => {
+  it('is optional: blank is accepted', () => {
+    expect(validateInvite(draft({ nif: '   ' }))).toEqual({});
+    expect(validateInvite(draft({ nif: '12345678Z' }))).toEqual({});
+  });
+
+  it('is not asked of a non-partner', () => {
+    expect(validateInvite(draft({ isPartner: false, nif: 'x'.repeat(40) }))).toEqual({});
+  });
+
+  it('marks a text over the contract limit on the NIF field', () => {
+    expect(validateInvite(draft({ nif: '9'.repeat(21) })).nif?.key).toBe('forms.errors.tooLong');
+  });
+
+  it('puts the server verdicts (wrong control character, taken) on the NIF field with its own text', () => {
+    const route = (error: ApiError) =>
+      routeServerError(error, INVITE_SERVER_MAPPING, (field) =>
+        (INVITE_FIELDS as readonly string[]).includes(field),
+      );
+
+    const invalid = route(new ApiError(400, 'invalid_member_nif', '', {}));
+    const taken = route(new ApiError(409, 'member_nif_taken', '', {}));
+
+    expect(Object.keys(invalid.fields)).toEqual(['nif']);
+    expect(messageText(invalid.fields.nif!)).toBe(
+      'El NIF no es válido: revisa la letra o el dígito de control.',
+    );
+    expect(messageText(taken.fields.nif!)).toMatch(/otro socio/);
+    expect(invalid.banner).toBeNull();
   });
 });

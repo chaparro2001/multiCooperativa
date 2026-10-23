@@ -15,6 +15,8 @@ const STATUS_BY_CODE: Record<string, number> = {
   forbidden: 403,
   not_found: 404,
   member_already_exists: 409,
+  member_nif_taken: 409,
+  invalid_member_nif: 400,
   invitation_not_pending: 409,
   self_modification: 409,
   last_admin: 409,

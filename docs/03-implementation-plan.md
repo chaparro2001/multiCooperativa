@@ -100,6 +100,33 @@ Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assis
 - [x] Keyset pagination (`{ items, nextCursor }`, `limit` and `before`, like the assistant history) of delivery notes, invoices, documents, members and a member's capital movements, with composite indexes starting with `cooperativeId`; totals, summaries and badges stay computed by the server. The mobile lists are `FlatList`/`SectionList` with `useInfiniteQuery`. No new dependency.
 - [x] Document search debounced 300 ms (`useDebouncedValue`) with `keepPreviousData`, so the lists do not flash while typing.
 
+## Assistant insights (post-freeze, 2026-10-23)
+
+Twenty improvements so the assistant answers aggregates, rankings and member questions exactly instead of reading capped lists. Specification: [07-ai-assistant](requirements/07-ai-assistant.md) (US-AI-08, US-AI-09, sections 3.1 and 3.2) and [ADR-025](adr/ADR-025-partner-nif-and-member-third-party-crossing.md). Branch `feat/assistant-insights`.
+
+- [x] 1. Lists return `total` and `truncated` and the answer says "muestro X de N" (US-AI-08).
+- [x] 2. Invoices carry base, VAT rate and VAT amount.
+- [x] 3. `invoice_totals`: count, base, VAT and total computed by the database as exact decimals.
+- [x] 4. `third_party_summary`: pending, overdue, last delivery note and invoice, totals of the year.
+- [x] 5. Rankings of suppliers or customers (`invoice_totals` with `group_by=third_party`).
+- [x] 6. Third parties with no activity since a date (`list_third_parties` with `inactive_since`).
+- [x] 7. `invoice_detail`: lines, linked delivery notes and differences.
+- [x] 8. `open_discrepancies` with the AI explanation presented as indicative (BR-INV-12).
+- [x] 9. `cash_forecast`: what is due per week or month.
+- [x] 10. What was paid or collected in a period (`settled_from`/`settled_to`).
+- [x] 11. `top_items`: most bought or sold products.
+- [x] 12. Evolution of a concept by month (`top_items` with `group_by=month`).
+- [x] 13. Age in days of the delivery notes pending invoicing, oldest first.
+- [x] 14. `capital_summary` (US-AI-09, US-MEM-05).
+- [x] 15. `member_census`: head counts, joins and leaves (US-AI-09).
+- [x] 16. `member_detail`, behind the member area "all" scope (US-AI-09, BR-AI-01).
+- [x] 17. Partner NIF and `partner_trade`, crossing partners and third parties by NIF (US-MEM-06, ADR-025).
+- [x] 18. Relative dates resolved on the server: `period` enum shared by the date-range tools, pure `domain/period.ts` with a fixed-clock test, `period_of` for the date it applies to, explicit dates win, resolved range echoed as `period: {from, to}`.
+- [x] 19. Citations for computed figures: up to 5 invoices, delivery notes or third parties per figure plus `moreSources`, shown as "Fuentes" (BR-AI-05); member tools cite nothing because the member record needs the `users` permission.
+- [x] 20. Evaluation set reviewed: 60 questions (was 46) with relative periods, cited figures and a positive and a denial case for every tool (checked by a test).
+- [x] Regression: lint, typecheck, 1479 unit tests, 611 integration tests, `ai:eval --offline` 60/60.
+- [x] Catalog compacted for the local 4B model (manager prompt ~6.0k -> ~3.6k tokens per call): `partners_summary` replaces `capital_summary` and `member_census`, `find_third_party` absorbs `third_party_summary`, one `date` selector replaces `due_*`/`settled_*`/`period_of`, `period` without enum (also month names, `YYYY-MM`, `YYYY`), system prompt built from the user's tools, ready-to-quote `text` in computed results.
+
 ## Design system migration (22–24 Oct)
 
 Adopts [design-system/](design-system/README.md) in `apps/mobile` ([ADR-024](adr/ADR-024-adopt-the-design-system.md)); gap analysis and phases in [06-design-system-migration.md](06-design-system-migration.md). Visual change; same data, copy, permissions and Maestro selectors.

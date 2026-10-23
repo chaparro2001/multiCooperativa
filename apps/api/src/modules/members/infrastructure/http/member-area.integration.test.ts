@@ -14,6 +14,7 @@ import { createApi } from '../../../../api';
 import { loadEnv } from '../../../../config/env';
 import { InMemoryFileStorage } from '../../../../shared/files/in-memory-file-storage';
 import { createAccessModule } from '../../../access';
+import { PrismaCapitalStore } from '../prisma-capital-store';
 import { HashingEmbedder } from '../../../documents';
 
 const PASSWORD = 'una-clave-larga';
@@ -468,5 +469,112 @@ describe('BR-MEM-01 · immutability in the database', () => {
     await expect(
       prisma.capitalMovement.create({ data: { ...base, type: 'correction', amount: '-1.00' } }),
     ).resolves.toBeDefined();
+  });
+});
+
+describe('ADR-025 · NIF in the record, period totals and the partner census', () => {
+  it('US-MEM-01: the NIF is in the record of the member and in the list for who reads everyone', async () => {
+    await prisma.membership.update({ where: { id: anaId }, data: { nif: '12345678Z' } });
+
+    const mine = await request(app).get(`${area()}/me`).set(as(ana));
+    const list = await request(app).get(`${area()}/members`).set(as(board));
+
+    expect(myMemberAreaResponseSchema.parse(mine.body).member.nif).toBe('12345678Z');
+    const items = listMembersCapitalResponseSchema.parse(list.body).items;
+    expect(items.find((item) => item.member.membershipId === anaId)?.member.nif).toBe('12345678Z');
+    expect(items.find((item) => item.member.membershipId === benId)?.member.nif).toBeNull();
+  });
+
+  it('periodTotals: exact sums by type inside the period and the cooperative, none from another', async () => {
+    await register(manager, anaId, movement({ date: '2025-12-31', amount: '1000.10' }));
+    await register(manager, anaId, movement({ date: '2026-01-10', amount: '600.10' }));
+    await register(
+      manager,
+      benId,
+      movement({ date: '2026-02-10', type: 'voluntary_contribution', amount: '0.20' }),
+    );
+    await register(
+      manager,
+      anaId,
+      movement({ date: '2026-03-10', type: 'refund', concept: 'R', amount: '100.05' }),
+    );
+    await register(
+      manager,
+      benId,
+      movement({ date: '2026-04-10', type: 'correction', concept: 'C', amount: '-0.10' }),
+    );
+    await register(
+      adminToken,
+      seaMemberId,
+      movement({ date: '2026-02-01', amount: '999.00' }),
+      seaCoop,
+    );
+    const store = new PrismaCapitalStore(prisma);
+
+    const year = await store.periodTotals(fieldCoop, { from: '2026-01-01', to: '2026-12-31' });
+    const all = await store.periodTotals(fieldCoop, {});
+
+    expect(year).toEqual({
+      contributionsCents: 60030n,
+      refundsCents: 10005n,
+      correctionsCents: -10n,
+    });
+    expect(all.contributionsCents).toBe(160040n);
+  });
+
+  it('partnerCensus: head counts by status, joins and leaves in a period, only this cooperative', async () => {
+    const access = createAccessModule({ prisma, jwtSecret: env.JWT_SECRET, invitationSender });
+    const profile = await prisma.profile.findFirstOrThrow({
+      where: { cooperativeId: fieldCoop, name: 'Socio' },
+    });
+    const add = async (email: string, data: object) => {
+      const user = await prisma.user.upsert({
+        where: { email },
+        update: {},
+        create: { email, name: email },
+      });
+      await prisma.membership.create({
+        data: {
+          userId: user.id,
+          cooperativeId: fieldCoop,
+          profileId: profile.id,
+          isPartner: true,
+          ...data,
+        },
+      });
+    };
+    await prisma.membership.update({
+      where: { id: anaId },
+      data: { joinedAt: new Date('2026-03-01T00:00:00Z') },
+    });
+    await prisma.membership.update({
+      where: { id: benId },
+      data: { joinedAt: new Date('2019-03-01T00:00:00Z') },
+    });
+    await add('invited@field.test', { status: 'invited' });
+    await add('suspended@field.test', { status: 'suspended' });
+    await add('gone@field.test', { status: 'removed', leftAt: new Date('2026-06-30T00:00:00Z') });
+    await add('gone-old@field.test', {
+      status: 'removed',
+      leftAt: new Date('2024-06-30T00:00:00Z'),
+    });
+
+    const census = await access.directory.partnerCensus(fieldCoop, {
+      from: '2026-01-01',
+      to: '2026-12-31',
+    });
+    const everyone = await access.directory.partnerCensus(fieldCoop, {});
+
+    // Active partners: Ana, Ben and the board member (the manager is not a partner).
+    expect(census).toMatchObject({
+      activePartners: 3,
+      invitedNotActivated: 1,
+      suspendedPartners: 1,
+      leftInPeriod: 1,
+    });
+    // Joined in 2026: Ana (recorded date). The rest fall back to their creation date, which is today.
+    expect(census.joinedInPeriod).toBeGreaterThanOrEqual(1);
+    expect(everyone.leftInPeriod).toBe(2);
+    expect((await access.directory.partnerCensus(seaCoop, {})).activePartners).toBe(1);
   });
 });

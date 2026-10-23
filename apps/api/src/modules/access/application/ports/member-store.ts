@@ -13,6 +13,8 @@ export interface MemberRecord {
   status: MembershipStatus;
   isPartner: boolean;
   partnerNumber: string | null;
+  /** Normalized tax id (ADR-025); null when none was recorded. */
+  nif: string | null;
 }
 
 export interface ProfileRecord {
@@ -46,6 +48,8 @@ export interface NewInvitation {
 export interface MemberUpdate {
   status?: MembershipStatus;
   profileId?: string;
+  /** Sets or clears (null) the partner's NIF; 'nif_taken' is thrown by the store (MemberNifTakenError). */
+  nif?: string | null;
   /** Replaces the pending invitation; the previous token stops working. */
   invitation?: NewInvitation;
   audit: AuditInput;
@@ -89,10 +93,11 @@ export interface MemberStore {
       profileId: string;
       isPartner: boolean;
       partnerNumber: string | null;
+      nif: string | null;
       invitation: NewInvitation;
       audit: AuditInput;
     },
-  ): Promise<{ membershipId: string; userId: string } | 'already_member'>;
+  ): Promise<{ membershipId: string; userId: string } | 'already_member' | 'nif_taken'>;
   /**
    * Runs `decide` with the cooperative's memberships locked, so rules that
    * count administrators hold under concurrent changes, then persists its result.

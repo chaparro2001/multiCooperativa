@@ -7,19 +7,22 @@ import { createToolExecutors, InvalidToolInputError, type DataSources } from './
 const context = { cooperativeId: 'coop-1', userId: 'u1' } as unknown as CooperativeContext;
 
 function setup() {
-  const listThirdParties = vi.fn(async () => [
-    {
-      id: 'tp-1',
-      name: 'Olivar Nuevo S.L.',
-      nif: 'B98765432',
-      supplier: true,
-      customer: false,
-      active: true,
-      createdAt: '2026-10-16',
-      email: null,
-      phone: '600123123',
-    },
-  ]);
+  const listThirdParties = vi.fn(async () => ({
+    total: 1,
+    rows: [
+      {
+        id: 'tp-1',
+        name: 'Olivar Nuevo S.L.',
+        nif: 'B98765432',
+        supplier: true,
+        customer: false,
+        active: true,
+        createdAt: '2026-10-16',
+        email: null,
+        phone: '600123123',
+      },
+    ],
+  }));
   const sources = { invoicing: { listThirdParties } } as unknown as DataSources;
   return { listThirdParties, executors: createToolExecutors(sources) };
 }
@@ -30,7 +33,7 @@ describe('US-AI-02 · list_third_parties', () => {
 
     const output = await executors.list_third_parties(context, {
       type: 'supplier',
-      created_from: '2026-10-12',
+      from: '2026-10-12',
     });
 
     expect(listThirdParties).toHaveBeenCalledWith(context, {
@@ -38,6 +41,7 @@ describe('US-AI-02 · list_third_parties', () => {
       createdFrom: '2026-10-12',
       createdTo: undefined,
       includeInactive: false,
+      inactiveSince: undefined,
       limit: 10,
     });
     expect(output.items).toHaveLength(1);
@@ -70,19 +74,17 @@ describe('US-AI-02 · list_third_parties', () => {
     );
   });
 
-  it.each([
-    [{ limit: 51 }],
-    [{ limit: 0 }],
-    [{ created_from: '12/10/2026' }],
-    [{ type: 'member' }],
-  ])('BR-AI-06: invalid input %j is rejected so the model can retry', async (input) => {
-    const { executors, listThirdParties } = setup();
+  it.each([[{ limit: 51 }], [{ limit: 0 }], [{ from: '12/10/2026' }], [{ type: 'member' }]])(
+    'BR-AI-06: invalid input %j is rejected so the model can retry',
+    async (input) => {
+      const { executors, listThirdParties } = setup();
 
-    await expect(executors.list_third_parties(context, input)).rejects.toBeInstanceOf(
-      InvalidToolInputError,
-    );
-    expect(listThirdParties).not.toHaveBeenCalled();
-  });
+      await expect(executors.list_third_parties(context, input)).rejects.toBeInstanceOf(
+        InvalidToolInputError,
+      );
+      expect(listThirdParties).not.toHaveBeenCalled();
+    },
+  );
 
   it('BR-AI-01: needs invoicing read, like find_third_party', () => {
     const grants = (module: string) => module === 'invoicing';
@@ -129,8 +131,9 @@ describe('US-AI-02 · my_contributions (US-MEM-02)', () => {
     expect(myContributions).toHaveBeenCalledWith(context, 3);
   });
 
-  it('BR-AI-01: needs member area read', () => {
-    const can = (module: string) => module === 'member-area';
+  it('BR-AI-01: needs member area read, even with "own" scope only', () => {
+    const can = (module: string, _level: string, scope?: 'all') =>
+      module === 'member-area' && scope !== 'all';
     expect(availableTools(can).map((tool) => tool.name)).toEqual(['my_contributions']);
   });
 });
@@ -156,5 +159,768 @@ describe('US-AI-02 · search_documents with neighbour context (ADR-023)', () => 
 
     expect(items[0]?.data.text).toBe(hit.context);
     expect(items[0]?.source).toMatchObject({ page: 3, excerpt: 'Artículo 5. Corto.' });
+  });
+});
+
+describe('US-AI-09 · the cooperative-wide member tools (ADR-025)', () => {
+  const memberArea = {
+    capitalSummary: vi.fn(async () => ({
+      totalCapital: '12400.00',
+      partners: 24,
+      period: {
+        from: '2026-01-01',
+        to: null,
+        contributions: '10.00',
+        refunds: '5.00',
+        corrections: '0.00',
+      },
+    })),
+    census: vi.fn(async () => ({
+      activePartners: 22,
+      suspendedPartners: 1,
+      invitedNotActivated: 2,
+      joinedInPeriod: 3,
+      leftInPeriod: 1,
+      period: { from: '2026-01-01', to: null },
+    })),
+    memberDetail: vi.fn(async () => [
+      { name: 'Luis', partnerNumber: '012', nif: '12345678Z', capital: '1800.00' },
+    ]),
+    partnersWithNif: vi.fn(async () => [
+      { name: 'Luis', partnerNumber: '012', nif: '12345678Z' },
+      { name: 'Eva', partnerNumber: '013', nif: 'X1234567L' },
+    ]),
+  };
+  const tradeByNif = vi.fn(async () => [
+    {
+      id: 'tp-luis',
+      nif: '12345678Z',
+      name: 'Luis Martín',
+      supplier: true,
+      customer: false,
+      purchases: { total: '1000.10', count: 2 },
+      sales: { total: '0.00', count: 0 },
+    },
+    {
+      id: 'tp-eva',
+      nif: 'X1234567L',
+      name: 'Eva SL',
+      supplier: true,
+      customer: true,
+      purchases: { total: '0.20', count: 1 },
+      sales: { total: '50.00', count: 1 },
+    },
+  ]);
+  const executors = createToolExecutors({
+    memberArea,
+    invoicing: { tradeByNif },
+  } as unknown as DataSources);
+
+  it('BR-AI-02: partners_summary passes the period and the caller context to capital and census, in one flat summary', async () => {
+    const output = await executors.partners_summary(context, {
+      from: '2026-01-01',
+      to: '2026-12-31',
+    });
+
+    const period = { from: '2026-01-01', to: '2026-12-31' };
+    expect(memberArea.capitalSummary).toHaveBeenCalledWith(context, period);
+    expect(memberArea.census).toHaveBeenCalledWith(context, period);
+    expect(output.items).toEqual([]);
+    expect(output.summary).toMatchObject({
+      periodText: 'del 2026-01-01 al 2026-12-31',
+      totalCapital: '12400.00',
+      partners: 24,
+      refunds: '5.00',
+      activePartners: 22,
+      invitedNotActivated: 2,
+    });
+    expect(output.summary).not.toHaveProperty('period');
+    expect(String(output.summary?.text)).toMatch(
+      /^Capital social 12400\.00 de 24 socios; 22 activos, .*\. Del 2026-01-01 al 2026-12-31: \d+ altas, \d+ bajas; aportaciones .*, devoluciones 5\.00$/,
+    );
+  });
+
+  it('BR-AI-03: member_detail looks up by text, returns one item per match and cites nothing', async () => {
+    const output = await executors.member_detail(context, { query: ' Luis ' });
+
+    expect(memberArea.memberDetail).toHaveBeenCalledWith(context, 'Luis', 10);
+    expect(output.items).toHaveLength(1);
+    expect(output.items[0]!.data).toMatchObject({ nif: '12345678Z', capital: '1800.00' });
+    expect(output.items[0]!.source).toBeUndefined();
+  });
+
+  it('BR-AI-06: member_detail needs a query', async () => {
+    await expect(executors.member_detail(context, {})).rejects.toBeInstanceOf(
+      InvalidToolInputError,
+    );
+  });
+
+  it('BR-AI-02 (ADR-025): partner_trade crosses the partners NIFs with invoicing, and totals are exact decimals', async () => {
+    const output = await executors.partner_trade(context, { from: '2026-01-01', to: '2026-12-31' });
+
+    expect(tradeByNif).toHaveBeenCalledWith(context, ['12345678Z', 'X1234567L'], {
+      from: '2026-01-01',
+      to: '2026-12-31',
+    });
+    expect(output.items.map((item) => item.data.partner)).toEqual(['Luis', 'Eva']);
+    // 1000.10 + 0.20 must be 1000.30, not 1000.3000000000001.
+    expect(output.summary).toMatchObject({
+      partnersWithNif: 2,
+      partnersAlsoThirdParties: 2,
+      purchasesTotal: '1000.30',
+      salesTotal: '50.00',
+    });
+  });
+
+  it('ADR-025: with no partner NIF it does not even ask invoicing', async () => {
+    tradeByNif.mockClear();
+    const none = createToolExecutors({
+      memberArea: { partnersWithNif: async () => [] },
+      invoicing: { tradeByNif },
+    } as unknown as DataSources);
+
+    const output = await none.partner_trade(context, {});
+
+    expect(tradeByNif).not.toHaveBeenCalled();
+    expect(output.items).toEqual([]);
+    expect(output.summary).toMatchObject({ partnersWithNif: 0, purchasesTotal: '0.00' });
+  });
+
+  it('BR-AI-01: partner_trade needs member area "all" and invoicing; the others only the member area', () => {
+    const grants = (modules: string[], scope?: 'all') => (module: string, _l: string, s?: 'all') =>
+      modules.includes(module) && (s === undefined || s === scope);
+    const names = (can: ReturnType<typeof grants>) => availableTools(can).map((tool) => tool.name);
+
+    expect(names(grants(['member-area'], 'all'))).toEqual([
+      'my_contributions',
+      'partners_summary',
+      'member_detail',
+    ]);
+    expect(names(grants(['member-area', 'invoicing'], 'all'))).toContain('partner_trade');
+    expect(names(grants(['member-area', 'invoicing'], undefined))).toEqual(
+      expect.not.arrayContaining(['partners_summary', 'partner_trade']),
+    );
+  });
+});
+
+describe('US-AI-08 · invoicing analytics tools', () => {
+  const invoicingTools = [
+    'invoice_totals',
+    'invoice_detail',
+    'open_discrepancies',
+    'cash_forecast',
+    'top_items',
+    'find_third_party',
+  ];
+  const totals = { count: 2, base: '200.00', vatAmount: '42.00', total: '242.00' };
+  const detail = {
+    id: 'inv-1',
+    operation: 'purchase',
+    number: 'F-80',
+    thirdParty: 'Agrotools',
+    total: '300.00',
+    lines: [],
+    deliveryNotes: [{ number: 'A-0', date: '2026-09-20' }],
+    discrepancies: [
+      {
+        concept: 'Herramientas',
+        unit: 'ud',
+        deliveredQuantity: '1200',
+        invoicedQuantity: '1250',
+        difference: '50',
+        explanation: 'Se facturaron 50 de más.',
+      },
+    ],
+  };
+  const invoicing = {
+    invoices: vi.fn(async () => ({
+      rows: [{ id: 'i1', number: 'F-1', thirdParty: 'X' }],
+      total: 40,
+    })),
+    deliveryNotes: vi.fn(async () => ({ rows: [], total: 0 })),
+    invoiceTotals: vi.fn(async () => ({
+      overall: totals,
+      groups: [{ key: 'tp-1', label: 'Southern', ...totals }],
+      groupCount: 7,
+    })),
+    invoiceDetail: vi.fn(async () => ({ rows: [detail], total: 1 })),
+    thirdPartySummary: vi.fn(async () => ({
+      candidates: [
+        { id: 'tp-1', name: 'Agro Sur', nif: 'B1', supplier: true, customer: false },
+        { id: 'tp-2', name: 'Agro Norte', nif: 'B2', supplier: true, customer: false },
+      ],
+      summary: null,
+    })),
+    topItems: vi.fn(async () => ({
+      rows: [{ concept: 'Aceite', unit: 'l', quantity: '800', lines: 3 }],
+      total: 1,
+      truncated: false,
+    })),
+  };
+  const executors = createToolExecutors({ invoicing } as unknown as DataSources);
+
+  it('US-AI-08: a list says how many matched and asks to say "muestro X de N" when it is cut', async () => {
+    const output = await executors.list_invoices(context, {
+      from: '2026-09-01',
+      date: 'settled',
+    });
+
+    expect(invoicing.invoices).toHaveBeenCalledWith(
+      context,
+      expect.objectContaining({ settledFrom: '2026-09-01', settledTo: undefined, from: undefined }),
+    );
+    expect(output.summary).toMatchObject({ periodText: 'desde el 2026-09-01' });
+    expect(output.summary).toMatchObject({ total: 40, truncated: true });
+    expect(String(output.summary?.note)).toContain('muestro 1 de 40');
+  });
+
+  it('US-AI-08: a complete list carries no cut note', async () => {
+    invoicing.invoices.mockResolvedValueOnce({ rows: [], total: 0 });
+
+    const output = await executors.list_invoices(context, {});
+
+    expect(output.summary).toEqual({ total: 0, truncated: false });
+  });
+
+  it('US-AI-08: invoice_totals ranks third parties (citable) with the overall figures', async () => {
+    const output = await executors.invoice_totals(context, {
+      operation: 'purchase',
+      from: '2026-01-01',
+      to: '2026-12-31',
+      group_by: 'third_party',
+      limit: 5,
+    });
+
+    expect(invoicing.invoiceTotals).toHaveBeenCalledWith(
+      context,
+      expect.objectContaining({ operation: 'purchase', groupBy: 'third_party', limit: 5 }),
+    );
+    expect(output.items[0]).toMatchObject({
+      data: { thirdParty: 'Southern', total: '242.00' },
+      source: { kind: 'third_party', resourceId: 'tp-1' },
+    });
+    expect(output.summary).toMatchObject({ overall: totals, total: 7, truncated: true });
+  });
+
+  it('US-AI-08: invoice_totals defaults to one total with no grouping', async () => {
+    await executors.invoice_totals(context, {});
+
+    expect(invoicing.invoiceTotals).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({ groupBy: 'none', limit: 10 }),
+    );
+  });
+
+  it.each([
+    ['invoice_totals', { group_by: 'year' }],
+    ['invoice_totals', { limit: 26 }],
+    ['invoice_detail', {}],
+    ['cash_forecast', { group_by: 'day' }],
+    ['top_items', { source: 'orders' }],
+    ['find_third_party', { text: 'a' }],
+    ['list_invoices', { date: 'created' }],
+    ['invoice_totals', { date: 'due' }],
+  ])(
+    'BR-AI-06: invalid input for %s %j is rejected so the model can retry',
+    async (tool, input) => {
+      await expect(
+        (executors as unknown as Record<string, (c: unknown, i: unknown) => Promise<unknown>>)[
+          tool
+        ]!(context, input),
+      ).rejects.toBeInstanceOf(InvalidToolInputError);
+    },
+  );
+
+  it('BR-INV-12: invoice_detail gives the numeric differences first and flags the explanation as indicative', async () => {
+    const output = await executors.invoice_detail(context, { number: 'F-80' });
+    const data = output.items[0]!.data as {
+      discrepancies: Record<string, unknown>[];
+      explanationNote: string;
+    };
+
+    expect(Object.keys(data.discrepancies[0]!)).toEqual([
+      'concept',
+      'unit',
+      'deliveredQuantity',
+      'invoicedQuantity',
+      'difference',
+      'text',
+      'explanation',
+    ]);
+    expect(data.discrepancies[0]!.text).toBe(
+      'Herramientas: entregado 1200 ud, facturado 1250 ud, diferencia 50 ud',
+    );
+    expect(data.explanationNote).toContain('orientativa');
+    expect(output.items[0]!.source).toMatchObject({ kind: 'invoice', resourceId: 'inv-1' });
+  });
+
+  it('US-AI-08: find_third_party with several matches lists them and asks the model to ask', async () => {
+    const output = await executors.find_third_party(context, { text: 'agro' });
+
+    expect(output.items.map((item) => item.data.name)).toEqual(['Agro Sur', 'Agro Norte']);
+    expect(String(output.summary?.note)).toContain('ask which one');
+  });
+
+  it('US-AI-08: find_third_party with one match gives its whole situation as a citable third party', async () => {
+    invoicing.thirdPartySummary.mockResolvedValueOnce({
+      candidates: [],
+      summary: { id: 'tp-9', name: 'Southern Fertilizers', nif: 'B9', lastInvoice: null },
+    } as never);
+
+    const output = await executors.find_third_party(context, { text: 'Southern' });
+
+    expect(invoicing.thirdPartySummary).toHaveBeenLastCalledWith(context, 'Southern');
+    expect(output.items).toEqual([
+      {
+        data: { name: 'Southern Fertilizers', nif: 'B9', lastInvoice: null },
+        source: expect.objectContaining({ kind: 'third_party', resourceId: 'tp-9' }),
+      },
+    ]);
+  });
+
+  it('US-AI-08: top_items defaults to delivery notes, no grouping and 10 items', async () => {
+    await executors.top_items(context, { concept: 'aceite' });
+
+    expect(invoicing.topItems).toHaveBeenCalledWith(context, {
+      source: 'delivery_notes',
+      operation: undefined,
+      from: undefined,
+      to: undefined,
+      concept: 'aceite',
+      groupBy: 'none',
+      limit: 10,
+    });
+  });
+
+  it('BR-AI-01: every analytic tool needs invoicing read; a member without it does not see them', () => {
+    const withInvoicing = availableTools((module) => module === 'invoicing').map((t) => t.name);
+    const withoutInvoicing = availableTools((module) => module !== 'invoicing').map((t) => t.name);
+
+    expect(withInvoicing).toEqual(expect.arrayContaining(invoicingTools));
+    for (const tool of invoicingTools) expect(withoutInvoicing).not.toContain(tool);
+  });
+});
+
+describe('US-AI-08 · relative periods resolved by the server', () => {
+  // 2026-10-23 is a Friday: this week is 2026-10-19 to 2026-10-25.
+  const today = () => '2026-10-23';
+  const emptyListing = { rows: [], total: 0 };
+  const totals = { count: 0, base: '0.00', vatAmount: '0.00', total: '0.00' };
+  const invoicing = {
+    invoices: vi.fn(async () => emptyListing),
+    deliveryNotes: vi.fn(async () => emptyListing),
+    invoiceTotals: vi.fn(async () => ({ overall: totals, groups: [], groupCount: 0 })),
+    cashForecast: vi.fn(async () => ({
+      overall: {
+        toPay: { total: '0.00', count: 0, overdueTotal: '0.00', overdueCount: 0 },
+        toCollect: { total: '0.00', count: 0, overdueTotal: '0.00', overdueCount: 0 },
+      },
+      buckets: [],
+      bucketCount: 0,
+    })),
+    topItems: vi.fn(async () => ({ rows: [], total: 0, truncated: false })),
+    listThirdParties: vi.fn(async () => emptyListing),
+  };
+  const memberArea = {
+    capitalSummary: vi.fn(async () => ({ totalCapital: '0.00', partners: 0, period: {} })),
+    census: vi.fn(async () => ({ activePartners: 0 })),
+  };
+  const executors = createToolExecutors({ invoicing, memberArea } as unknown as DataSources, today);
+
+  it('US-AI-08: invoice_totals turns "this_quarter" into dates and returns them', async () => {
+    const output = await executors.invoice_totals(context, { period: 'this_quarter' });
+
+    expect(invoicing.invoiceTotals).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({ from: '2026-10-01', to: '2026-12-31' }),
+    );
+    expect(output.summary).toMatchObject({ period: { from: '2026-10-01', to: '2026-12-31' } });
+    expect(String(output.summary?.text)).toMatch(/^Del 2026-10-01 al 2026-12-31: 0 facturas;/);
+    // The dates come first, so the model reads them before the figures.
+    expect(Object.keys(output.summary!)[0]).toBe('period');
+  });
+
+  it('US-AI-08: "date" chooses the date a period applies to (list_invoices: due)', async () => {
+    const output = await executors.list_invoices(context, {
+      period: 'this_week',
+      date: 'due',
+    });
+
+    expect(invoicing.invoices).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({
+        dueFrom: '2026-10-19',
+        dueTo: '2026-10-25',
+        from: undefined,
+        to: undefined,
+      }),
+    );
+    expect(output.summary).toMatchObject({ period: { from: '2026-10-19', to: '2026-10-25' } });
+  });
+
+  it('US-AI-08: invoice_totals with date settled filters on the settlement date', async () => {
+    await executors.invoice_totals(context, { period: 'last_month', date: 'settled' });
+
+    expect(invoicing.invoiceTotals).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({
+        settledFrom: '2026-09-01',
+        settledTo: '2026-09-30',
+        from: undefined,
+      }),
+    );
+  });
+
+  it('US-AI-08: explicit dates win over the period, and no period is reported', async () => {
+    const output = await executors.invoice_totals(context, {
+      period: 'this_year',
+      from: '2026-03-01',
+    });
+
+    expect(invoicing.invoiceTotals).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({ from: '2026-03-01', to: undefined }),
+    );
+    expect(output.summary).not.toHaveProperty('period');
+  });
+
+  it('US-AI-08: settled invoices of a period are those settled in it, unless "date" says otherwise', async () => {
+    await executors.list_invoices(context, { status: 'settled', period: 'last_month' });
+    expect(invoicing.invoices).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({
+        settledFrom: '2026-09-01',
+        settledTo: '2026-09-30',
+        from: undefined,
+      }),
+    );
+
+    await executors.list_invoices(context, {
+      status: 'settled',
+      period: 'last_month',
+      date: 'issued',
+    });
+    expect(invoicing.invoices).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({ from: '2026-09-01', to: '2026-09-30', settledFrom: undefined }),
+    );
+  });
+
+  it('US-AI-08: explicit dates of list_invoices apply to the chosen date too', async () => {
+    await executors.list_invoices(context, { from: '2026-09-01', to: '2026-09-30', date: 'due' });
+
+    expect(invoicing.invoices).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({ dueFrom: '2026-09-01', dueTo: '2026-09-30', from: undefined }),
+    );
+  });
+
+  it('US-AI-08: cash_forecast applies the period to the due date', async () => {
+    await executors.cash_forecast(context, { period: 'next_month' });
+
+    expect(invoicing.cashForecast).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({ dueFrom: '2026-11-01', dueTo: '2026-11-30' }),
+    );
+  });
+
+  it.each([
+    ['list_delivery_notes', invoicing.deliveryNotes, { from: '2026-10-12', to: '2026-10-18' }],
+    ['top_items', invoicing.topItems, { from: '2026-10-12', to: '2026-10-18' }],
+  ] as const)('US-AI-08: %s resolves "last_week"', async (tool, read, expected) => {
+    await (executors[tool] as ToolExecutorLike)(context, { period: 'last_week' });
+
+    expect(read).toHaveBeenCalledWith(context, expect.objectContaining(expected));
+  });
+
+  it('US-AI-08: list_third_parties applies the period to the registration date', async () => {
+    await executors.list_third_parties(context, { period: 'this_week' });
+
+    expect(invoicing.listThirdParties).toHaveBeenLastCalledWith(
+      context,
+      expect.objectContaining({ createdFrom: '2026-10-19', createdTo: '2026-10-25' }),
+    );
+  });
+
+  it('US-AI-08: partners_summary takes a period too', async () => {
+    const output = await executors.partners_summary(context, { period: 'last_year' });
+
+    const lastYear = { from: '2025-01-01', to: '2025-12-31' };
+    expect(memberArea.capitalSummary).toHaveBeenCalledWith(context, lastYear);
+    expect(memberArea.census).toHaveBeenCalledWith(context, lastYear);
+    expect(output.summary).toMatchObject({
+      period: lastYear,
+      periodText: 'del 2025-01-01 al 2025-12-31',
+    });
+  });
+
+  it('BR-AI-06: an unknown period is rejected so the model can retry', async () => {
+    await expect(
+      executors.invoice_totals(context, { period: 'next_decade' }),
+    ).rejects.toBeInstanceOf(InvalidToolInputError);
+  });
+});
+
+type ToolExecutorLike = (context: unknown, input: unknown) => Promise<unknown>;
+
+describe('BR-AI-05 · computed figures carry the records behind them', () => {
+  const row = (n: number, overrides: Record<string, unknown> = {}) => ({
+    id: `inv-${n}`,
+    number: `F-${n}`,
+    thirdParty: 'Southern',
+    paymentStatus: 'pending',
+    dueDate: `2026-11-0${n}`,
+    total: '1.21',
+    ...overrides,
+  });
+  const totals = (count: number) => ({ count, base: '1.00', vatAmount: '0.21', total: '1.21' });
+  const flow = (count: number) => ({
+    total: '1.00',
+    count,
+    overdueTotal: '0.00',
+    overdueCount: 0,
+  });
+
+  it('BR-AI-05: invoice_totals cites up to 5 invoices and says how many more, leaving voided ones out', async () => {
+    const rows = [1, 2, 3, 4, 5, 6].map((n) => row(n, n === 1 ? { paymentStatus: 'voided' } : {}));
+    const invoices = vi.fn(async () => ({ rows, total: 8 }));
+    const executors = createToolExecutors({
+      invoicing: {
+        invoices,
+        invoiceTotals: async () => ({ overall: totals(7), groups: [], groupCount: 0 }),
+      },
+    } as unknown as DataSources);
+
+    const output = await executors.invoice_totals(context, {
+      operation: 'purchase',
+      from: '2026-01-01',
+    });
+
+    expect(invoices).toHaveBeenCalledWith(
+      context,
+      expect.objectContaining({ operation: 'purchase', from: '2026-01-01' }),
+    );
+    expect(output.evidence!.sources.map((s) => s.resourceId)).toEqual([
+      'inv-2',
+      'inv-3',
+      'inv-4',
+      'inv-5',
+      'inv-6',
+    ]);
+    expect(output.evidence!.sources[0]).toMatchObject({
+      kind: 'invoice',
+      title: 'Invoice F-2 · Southern',
+    });
+    expect(output.evidence!.more).toBe(2);
+    // The figure as a phrase to repeat: dates, the invoices behind it and the amounts.
+    expect(output.summary?.text).toBe(
+      'Desde el 2026-01-01: 7 facturas (F-2, F-3, F-4, F-5, F-6 y 2 más); base 1.00, IVA 0.21, total 1.21',
+    );
+  });
+
+  it('BR-AI-05: a total of nothing cites nothing and does not even list invoices', async () => {
+    const invoices = vi.fn();
+    const executors = createToolExecutors({
+      invoicing: {
+        invoices,
+        invoiceTotals: async () => ({ overall: totals(0), groups: [], groupCount: 0 }),
+      },
+    } as unknown as DataSources);
+
+    const output = await executors.invoice_totals(context, {});
+
+    expect(output.evidence).toBeUndefined();
+    expect(invoices).not.toHaveBeenCalled();
+  });
+
+  it('BR-AI-05: a ranking by third party is cited through its rows, with no extra evidence', async () => {
+    const invoices = vi.fn();
+    const executors = createToolExecutors({
+      invoicing: {
+        invoices,
+        invoiceTotals: async () => ({
+          overall: totals(2),
+          groups: [{ key: 'tp-1', label: 'Southern', ...totals(2) }],
+          groupCount: 1,
+        }),
+      },
+    } as unknown as DataSources);
+
+    const output = await executors.invoice_totals(context, { group_by: 'third_party' });
+
+    expect(output.evidence).toBeUndefined();
+    expect(output.items[0]!.source).toMatchObject({ kind: 'third_party', resourceId: 'tp-1' });
+    expect(invoices).not.toHaveBeenCalled();
+  });
+
+  it('BR-AI-05: cash_forecast cites the soonest pending and overdue invoices', async () => {
+    const invoices = vi.fn(async (_c: unknown, filter: { status: string }) =>
+      filter.status === 'overdue'
+        ? { rows: [row(9, { paymentStatus: 'overdue', dueDate: '2026-09-30' })], total: 1 }
+        : { rows: [row(3), row(2)], total: 2 },
+    );
+    const executors = createToolExecutors({
+      invoicing: {
+        invoices,
+        cashForecast: async () => ({
+          overall: { toPay: flow(3), toCollect: flow(0) },
+          buckets: [],
+          bucketCount: 0,
+        }),
+      },
+    } as unknown as DataSources);
+
+    const output = await executors.cash_forecast(context, { from: '2026-09-01' });
+
+    expect(invoices).toHaveBeenCalledWith(
+      context,
+      expect.objectContaining({ status: 'pending', dueFrom: '2026-09-01' }),
+    );
+    expect(output.evidence!.sources.map((s) => s.resourceId)).toEqual(['inv-9', 'inv-2', 'inv-3']);
+    expect(output.evidence!.more).toBe(0);
+    expect(output.summary?.text).toBe(
+      'Desde el 2026-09-01: a pagar 1.00 (3, vencido 0.00); a cobrar 1.00 (0, vencido 0.00); primeras: F-9 1.21 vence 2026-09-30, F-2 1.21 vence 2026-11-02, F-3 1.21 vence 2026-11-03',
+    );
+  });
+
+  it('US-AI-08: a forecast from today on also says what is already overdue, apart and exact', async () => {
+    const invoiceTotals = vi.fn(async (_c: unknown, filter: { operation: string }) => ({
+      overall: { ...totals(filter.operation === 'purchase' ? 1 : 0), total: '300.00' },
+      groups: [],
+      groupCount: 0,
+    }));
+    const executors = createToolExecutors(
+      {
+        invoicing: {
+          invoices: async () => ({ rows: [], total: 0 }),
+          invoiceTotals,
+          cashForecast: async () => ({
+            overall: { toPay: flow(0), toCollect: flow(0) },
+            buckets: [],
+            bucketCount: 0,
+          }),
+        },
+      } as unknown as DataSources,
+      () => '2026-10-20',
+    );
+
+    const output = await executors.cash_forecast(context, { period: 'next_30_days' });
+
+    expect(invoiceTotals).toHaveBeenCalledWith(
+      context,
+      expect.objectContaining({ operation: 'purchase', status: 'overdue' }),
+    );
+    expect(String(output.summary?.text)).toContain(
+      'además, ya vencido antes y sin liquidar: a pagar 300.00 (1), a cobrar 300.00 (0)',
+    );
+
+    invoiceTotals.mockClear();
+    await executors.cash_forecast(context, { from: '2026-09-01' });
+    expect(invoiceTotals).not.toHaveBeenCalled();
+  });
+
+  it('BR-AI-05: partner_trade cites the third parties behind the figures', async () => {
+    const trade = (n: number) => ({
+      id: `tp-${n}`,
+      nif: `N${n}`,
+      name: `Partner ${n}`,
+      supplier: true,
+      customer: false,
+      purchases: { total: '1.00', count: 1 },
+      sales: { total: '0.00', count: 0 },
+    });
+    const trades = [1, 2, 3, 4, 5, 6, 7].map(trade);
+    const executors = createToolExecutors({
+      memberArea: {
+        partnersWithNif: async () =>
+          trades.map((t) => ({ name: t.name, partnerNumber: '1', nif: t.nif })),
+      },
+      invoicing: { tradeByNif: async () => trades },
+    } as unknown as DataSources);
+
+    const output = await executors.partner_trade(context, {});
+
+    expect(output.evidence!.sources.map((s) => [s.kind, s.resourceId])).toEqual(
+      [1, 2, 3, 4, 5].map((n) => ['third_party', `tp-${n}`]),
+    );
+    expect(output.evidence!.more).toBe(2);
+  });
+
+  it('BR-AI-05: top_items cites delivery notes, only those with the concept asked for', async () => {
+    const note = (n: number, concept: string) => ({
+      id: `dn-${n}`,
+      number: `A-${n}`,
+      thirdParty: 'Southern',
+      status: 'pending_invoicing',
+      lines: [{ concept, quantity: '1', unit: 'kg' }],
+    });
+    const deliveryNotes = vi.fn(async () => ({
+      rows: [note(1, 'Aceite de oliva'), note(2, 'Fertilizante'), note(3, 'ACEITE')],
+      total: 3,
+    }));
+    const executors = createToolExecutors({
+      invoicing: {
+        deliveryNotes,
+        topItems: async () => ({
+          rows: [{ concept: 'Aceite de oliva', unit: 'kg', quantity: '2', lines: 2 }],
+          total: 1,
+          truncated: false,
+        }),
+      },
+    } as unknown as DataSources);
+
+    const output = await executors.top_items(context, { concept: 'aceite' });
+
+    expect(output.evidence!.sources.map((s) => [s.kind, s.resourceId])).toEqual([
+      ['delivery_note', 'dn-1'],
+      ['delivery_note', 'dn-3'],
+    ]);
+  });
+
+  it('BR-AI-05: top_items that adds up nothing cites nothing and reads no delivery notes', async () => {
+    const deliveryNotes = vi.fn();
+    const executors = createToolExecutors({
+      invoicing: {
+        deliveryNotes,
+        topItems: async () => ({ rows: [], total: 0, truncated: false }),
+      },
+    } as unknown as DataSources);
+
+    const output = await executors.top_items(context, { group_by: 'month' });
+
+    expect(output.evidence).toBeUndefined();
+    expect(deliveryNotes).not.toHaveBeenCalled();
+  });
+
+  it('BR-AI-05: top_items over invoices cannot say which ones hold a concept, so it cites none then', async () => {
+    const invoices = vi.fn();
+    const executors = createToolExecutors({
+      invoicing: { invoices, topItems: async () => ({ rows: [], total: 0, truncated: false }) },
+    } as unknown as DataSources);
+
+    const output = await executors.top_items(context, { source: 'invoices', concept: 'aceite' });
+
+    expect(output.evidence).toBeUndefined();
+    expect(invoices).not.toHaveBeenCalled();
+  });
+
+  it('BR-AI-05: the member tools cite nothing (the member record needs another permission)', async () => {
+    const executors = createToolExecutors({
+      memberArea: {
+        capitalSummary: async () => ({ totalCapital: '1.00', partners: 1, period: {} }),
+        census: async () => ({ activePartners: 1 }),
+        memberDetail: async () => [{ name: 'Luis', nif: 'X', capital: '1.00' }],
+      },
+    } as unknown as DataSources);
+
+    const outputs = [
+      await executors.partners_summary(context, {}),
+      await executors.member_detail(context, { query: 'Luis' }),
+    ];
+
+    for (const output of outputs) {
+      expect(output.evidence).toBeUndefined();
+      expect(output.items.every((item) => item.source === undefined)).toBe(true);
+    }
   });
 });

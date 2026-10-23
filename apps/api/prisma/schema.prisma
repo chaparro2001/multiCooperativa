@@ -103,6 +103,10 @@ model Membership {
   partnerNumber String?
   /// Day the partner joined the cooperative (requirements/06); null falls back to the creation date.
   joinedAt      DateTime?        @db.Date
+  /// Day the membership was removed (BR-ACC-14); null while it is live. Feeds the census of leavers (ADR-025).
+  leftAt        DateTime?        @db.Date
+  /// Partner's tax id, normalized (uppercase, no spaces or hyphens) and validated like a third party's (ADR-025).
+  nif           String?          @db.VarChar(9)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -115,6 +119,8 @@ model Membership {
   // BR-ACC-02 with BR-ACC-14: one live membership per user and cooperative;
   // removed ones are kept and do not prevent a new membership.
   @@unique([userId, cooperativeId], where: raw("status <> 'removed'"))
+  // ADR-025: a NIF identifies one live partner per cooperative; removed memberships keep theirs without blocking it.
+  @@unique([cooperativeId, nif], map: "Membership_live_nif_key", where: raw("status <> 'removed' AND nif IS NOT NULL"))
   @@index([cooperativeId, status])
   @@index([profileId])
 }
