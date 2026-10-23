@@ -92,13 +92,13 @@ Pantalla: editor.
 3. Un test de dominio (TDD) y señalar un identificador de requisito (`US-...`, `BR-...`) en el nombre.
 4. Un ADR (por ejemplo ADR-013, modelo local para el asistente, o ADR-012, servidor propio) y recordar que hay 26; ADR-020 es la migración a react-native-paper, ADR-021 retira el logo por cooperativa, ADR-022 y ADR-023 mejoran la recuperación de documentos (RAG) y ADR-024 adopta el sistema de diseño de `docs/design-system/`, ADR-025 cruza socios y terceros por NIF y el último, ADR-026, pone Gemini en el asistente de la demo publicada.
 5. El conjunto de evaluación del asistente (60 preguntas, `ai:eval`; qwen3:4b-instruct 47/60, gemini-3.5-flash-lite 53/60) y el benchmark de modelos locales del ADR-013 (qwen3:8b 19/22, qwen3:4b-instruct 18/22, gemma4:e4b 15/22).
-6. Cifras (a fecha 2026-10-23): 1504 tests unitarios (136 ficheros) y 611 de integración (32 ficheros), y 248 de 249 commits sin fusiones co-autorados con Claude (`git rev-list --no-merges`).
+6. Cifras (a fecha 2026-10-23): 1504 tests unitarios (136 ficheros) y 611 de integración (32 ficheros), y 249 de 250 commits sin fusiones co-autorados con Claude (`git rev-list --no-merges`).
 7. Proceso con IA, en una o dos frases: `skills-lock.json` y `.agents/skills` (skills de la comunidad fijadas, siempre por debajo de `CLAUDE.md`, los ADR y las especificaciones) y agentes en paralelo. El flujo del diseño (diapositiva 6): brief de interfaz (`docs/05-ui-design-brief.md`), herramienta de diseño con IA que genera el sistema de diseño (`docs/design-system/`: tokens, 8 colores de marca, unos 40 componentes, 14 pantallas), análisis de brechas con la app (`docs/06-design-system-migration.md`) y migración por un orquestador con un subagente de base, siete en paralelo sobre carpetas de funcionalidad disjuntas, uno de verificación y otro que lanzó la app en web con Playwright, hizo capturas y encontró errores visuales que se corrigieron. Antes también trabajé con agentes en git worktrees.
 
 ### 8:30-9:15 Despliegue
 
 Pantalla: diapositiva 12.
-Decir: coste 0 EUR y sin tarjeta; Render y Railway pedían tarjeta, así que la API corre en un servidor de casa (Windows, Docker Desktop, i5-10500, 32 GB) con Cloudflare Tunnel (ADR-012), sin abrir puertos del router. La web, en GitHub Pages con dominio propio (ADR-017); los ficheros, con URLs firmadas; un cron de GitHub Actions cada hora para los vencimientos. Límites: depende de que el servidor esté encendido y no es un sistema de registro.
+Decir: coste 0 EUR: la API corre en un servidor de casa (Windows, Docker Desktop, i5-10500, 32 GB) con Cloudflare Tunnel (ADR-012), sin abrir puertos del router. La web, en GitHub Pages con dominio propio (ADR-017); los ficheros, con URLs firmadas; un cron de GitHub Actions cada hora para los vencimientos. Límites: depende de que el servidor esté encendido y no es un sistema de registro.
 
 ### 9:15-10:00 Cierre
 
