@@ -4,9 +4,9 @@ Grabación de pantalla mientras se explica en voz alta (la cara es opcional). Du
 
 ## Antes de grabar
 
-- [ ] **Calentar la API y el modelo** unos 2 minutos antes: abre la demo, entra como `socio@sanisidro.test` y haz una pregunta al asistente. El modelo local de Ollama se carga en memoria con la primera pregunta y esa primera respuesta es la más lenta; el resto, en la grabación, responde con la velocidad normal de la CPU del servidor.
+- [ ] **Calentar la API y el modelo** unos 2 minutos antes: abre la demo, entra como `socio@sanisidro.test` y haz una pregunta al asistente. La grabación usa Gemini (`ASSISTANT_LLM_PROVIDER=gemini` en el servidor, ADR-026), así que no hay modelo local que cargar; aun así, la primera pregunta calienta la API. Comprueba que las cooperativas están en «Modelo del servidor».
 - [ ] Comprobar que el servidor de casa está encendido y la demo responde (la API solo funciona con el servidor en marcha; no hay arranque en frío como en Render).
-- [ ] **No gastar la cuota de Gemini antes**: solo se usa para el escaneo de facturas y la explicación de discrepancias (unas 20 peticiones al día por modelo Flash). No repitas pruebas de escaneo antes de grabar y reserva las llamadas para la toma.
+- [ ] **No gastar la cuota de Gemini antes**: se usa para el asistente (ADR-026), el escaneo de facturas y la explicación de discrepancias, con la misma clave y la misma cuota diaria (unas 20 peticiones al día por modelo Flash; la demo usa Flash-Lite y modelos de respaldo). No repitas pruebas de escaneo antes de grabar y reserva las llamadas para la toma.
 - [ ] **Solo facturas y albaranes ficticios**: la capa gratuita de Gemini puede usar el contenido. Prepara una factura de ejemplo (foto o PDF) para el escaneo y una factura y un albarán que no cuadren para la explicación de discrepancia.
 - [ ] **Limpiar datos de prueba basura**: comunicados de prueba, documentos duplicados, conversaciones del asistente antiguas, proveedores o facturas de pruebas anteriores. Deja el comunicado y los documentos de ejemplo (`db:seed:content`, ver [sample-data.md](../sample-data.md)) y una asamblea con votación abierta.
 - [ ] **Contraseña de la demo a mano** (`<contraseña demo>`); no la muestres en pantalla al teclearla.
@@ -62,7 +62,7 @@ Hacer:
 2. Preguntar "¿cuánto he aportado?": usa la herramienta `my_contributions` con los permisos del socio.
 3. Preguntar por las facturas: el socio no obtiene datos, porque el asistente usa los permisos del usuario.
 
-Decir: el modelo es local, en el servidor propio, así que la pregunta no sale a internet.
+Decir: la demo publicada usa Gemini Flash-Lite (ADR-026) porque el modelo local tardaba más de 30 s en la CPU del servidor; los datos de la demo son ficticios. Por defecto el modelo es local y la pregunta no sale a internet (ADR-013).
 
 ### 4:40-6:00 Cambio a gestor: facturas, escaneo con IA, discrepancia, proveedores y clientes
 
@@ -80,7 +80,7 @@ Hacer: cerrar sesión y entrar con `admin@sanisidro.test`.
 1. **Miembros e invitación con enlace**: abrir la lista de miembros, invitar a `nueva@sanisidro.test`, mostrar el enlace de invitación y copiarlo. Decir que no hay proveedor de correo (ADR-016): el administrador recibe el enlace y lo entrega por el canal que prefiera; caduca a los 7 días y es de un solo uso. Opcional: cambiar el perfil de un miembro.
 2. **Ajustes, Apariencia** (Ajustes está dividido en subpáginas: Apariencia, Facturación y Asistente IA): elegir un color y ver cómo cambia la app; probar un color demasiado claro y enseñar que se rechaza por contraste insuficiente (WCAG AA, 4,5:1); el color se guarda por cooperativa y lo ven todos sus miembros. ADR-018 (el logo se eliminó en ADR-021).
    **Momento del sistema de diseño (unos 15 segundos):** con el color elegido, mostrar que el tema Material Design 3 y los tokens del sistema de diseño se generan a partir de ese color y llegan a los controles: los chips, los segmentos y las opciones seleccionadas (por ejemplo, el filtro de la lista de facturas o la opción de voto) usan el color de la cooperativa, mientras que el rojo de error y el de aviso no cambian. Decir en una frase que los componentes están centralizados en el kit de `src/ui` y que las pantallas no importan Paper directamente (ADR-020, ADR-024).
-3. **Selector de modelo del asistente**: en Ajustes, abrir el selector y mostrar los modelos locales instalados (qwen3:4b-instruct por defecto, qwen3:8b); cambiar de modelo y hacer una pregunta. Decir en una frase que una cooperativa también puede usar un proveedor externo con su propia clave, cifrada en el servidor (ADR-019); no pegues ninguna clave real en pantalla.
+3. **Selector de modelo del asistente**: en Ajustes, abrir el selector y mostrar los modelos locales instalados (qwen3:4b-instruct por defecto, qwen3:8b), pero decir que en la demo publicada no tiene efecto mientras el servidor use Gemini (ADR-026): se explica cómo se vuelve al modelo local con una variable. No cambies de modelo para hacer la pregunta. Decir en una frase que una cooperativa también puede usar un proveedor externo con su propia clave, cifrada en el servidor (ADR-019); no pegues ninguna clave real en pantalla.
 4. **Historial**: en el asistente, abrir el historial de conversaciones, reabrir una y eliminar otra.
 
 ### 7:30-8:30 Vistazo al código
@@ -90,8 +90,8 @@ Pantalla: editor.
 1. `CLAUDE.md`: el contrato con el agente (reglas no negociables, forma de trabajar, comandos) y su sección de skills de la comunidad.
 2. Estructura de un módulo en `apps/api/src/modules/<módulo>/`: `domain`, `application`, `infrastructure` e `index.ts` como única interfaz pública; mencionar la regla ESLint de fronteras.
 3. Un test de dominio (TDD) y señalar un identificador de requisito (`US-...`, `BR-...`) en el nombre.
-4. Un ADR (por ejemplo ADR-013, modelo local para el asistente, o ADR-012, servidor propio) y recordar que hay 24; ADR-020 es la migración a react-native-paper, ADR-021 retira el logo por cooperativa, ADR-022 y ADR-023 mejoran la recuperación de documentos (RAG) y el último, ADR-024, adopta el sistema de diseño de `docs/design-system/`.
-5. El conjunto de evaluación del asistente (26 preguntas, `ai:eval`) y el benchmark de modelos locales del ADR-013 (qwen3:8b 19/22, qwen3:4b-instruct 18/22, gemma4:e4b 15/22).
+4. Un ADR (por ejemplo ADR-013, modelo local para el asistente, o ADR-012, servidor propio) y recordar que hay 26; ADR-020 es la migración a react-native-paper, ADR-021 retira el logo por cooperativa, ADR-022 y ADR-023 mejoran la recuperación de documentos (RAG) y ADR-024 adopta el sistema de diseño de `docs/design-system/`, ADR-025 cruza socios y terceros por NIF y el último, ADR-026, pone Gemini en el asistente de la demo publicada.
+5. El conjunto de evaluación del asistente (60 preguntas, `ai:eval`; qwen3:4b-instruct 47/60) y el benchmark de modelos locales del ADR-013 (qwen3:8b 19/22, qwen3:4b-instruct 18/22, gemma4:e4b 15/22).
 6. Cifras (a fecha 2026-10-22): 1338 tests unitarios (133 ficheros) y 574 de integración (30 ficheros), y 236 de 237 commits sin fusiones co-autorados con Claude (`git rev-list --no-merges`).
 7. Proceso con IA, en una o dos frases: `skills-lock.json` y `.agents/skills` (skills de la comunidad fijadas, siempre por debajo de `CLAUDE.md`, los ADR y las especificaciones) y agentes en paralelo. El flujo del diseño (diapositiva 6): brief de interfaz (`docs/05-ui-design-brief.md`), herramienta de diseño con IA que genera el sistema de diseño (`docs/design-system/`: tokens, 8 colores de marca, unos 40 componentes, 14 pantallas), análisis de brechas con la app (`docs/06-design-system-migration.md`) y migración por un orquestador con un subagente de base, siete en paralelo sobre carpetas de funcionalidad disjuntas, uno de verificación y otro que lanzó la app en web con Playwright, hizo capturas y encontró errores visuales que se corrigieron. Antes también trabajé con agentes en git worktrees.
 
@@ -103,7 +103,7 @@ Decir: coste 0 EUR y sin tarjeta; Render y Railway pedían tarjeta, así que la 
 ### 9:15-10:00 Cierre
 
 Pantalla: diapositivas 14 y 15.
-Decir: lo implementado (los siete módulos del MVP), lo que queda (notificaciones push, Sentry, E2E con Maestro, reclamaciones de facturas, binarios nativos) y lo aprendido: sin tarjeta no hay nube gratuita, la cuota de Gemini llevó al modelo local, y evaluar con el modelo real encontró errores reales. Dónde están el repositorio y la demo. Agradecer.
+Decir: lo implementado (los siete módulos del MVP), lo que queda (notificaciones push, Sentry, E2E con Maestro, reclamaciones de facturas, binarios nativos) y lo aprendido: sin tarjeta no hay nube gratuita, la cuota de Gemini llevó al modelo local y la lentitud de la CPU del servidor devolvió la demo a Gemini (ADR-026), y evaluar con el modelo real encontró errores reales. Dónde están el repositorio y la demo. Agradecer.
 
 ## Después de grabar
 

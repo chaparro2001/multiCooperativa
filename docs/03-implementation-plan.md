@@ -84,7 +84,7 @@ Specifications: [06-member-area](requirements/06-member-area.md) · [07-ai-assis
 - [x] Tools filtered by permissions reusing the use cases (including `my_contributions`, over the member area).
 - [x] RAG with citations.
 - [x] Conversations and usage limit.
-- [x] Evaluation set of 26 questions (`pnpm --filter @multicooperativa/api ai:eval`).
+- [x] Evaluation set of 60 questions (`pnpm --filter @multicooperativa/api ai:eval`).
 - [x] App: chat with citations and links.
 - [x] Conversation history: list, reopen, new conversation and delete (US-AI-04).
 
@@ -126,6 +126,7 @@ Twenty improvements so the assistant answers aggregates, rankings and member que
 - [x] 20. Evaluation set reviewed: 60 questions (was 46) with relative periods, cited figures and a positive and a denial case for every tool (checked by a test).
 - [x] Regression: lint, typecheck, 1479 unit tests, 611 integration tests, `ai:eval --offline` 60/60.
 - [x] Catalog compacted for the local 4B model (manager prompt ~6.0k -> ~3.6k tokens per call): `partners_summary` replaces `capital_summary` and `member_census`, `find_third_party` absorbs `third_party_summary`, one `date` selector replaces `due_*`/`settled_*`/`period_of`, `period` without enum (also month names, `YYYY-MM`, `YYYY`), system prompt built from the user's tools, ready-to-quote `text` in computed results.
+- [x] Published demo assistant on Gemini Flash-Lite (`ASSISTANT_LLM_PROVIDER=gemini` in `.env.server`, ADR-026): the local 4B model took more than 30 s per question on the server CPU and the Groq free tier hit rate limits. The stack default stays `ollama`. `gemini-3.5-flash-lite` is not yet measured on the 60-question set.
 
 ## Design system migration (22–24 Oct)
 
