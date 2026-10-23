@@ -1,5 +1,6 @@
 import { type CooperativeContext, ModuleAccessDeniedError, requireAccess } from '../../access';
 import { createMovement, type NewMovementInput } from '../domain/capital';
+import { matchesPartner } from '../domain/partner-search';
 import {
   DAY_CURSOR,
   pageRequest,
@@ -8,8 +9,8 @@ import {
   UUID_CURSOR,
 } from '../../../shared/pagination';
 import { MemberNotFoundError } from './errors';
-import type { CapitalStore, MovementRecord } from './ports/capital-store';
-import type { MemberDirectory, MemberRecord } from './ports/member-directory';
+import type { CapitalStore, MovementRecord, PeriodTotals } from './ports/capital-store';
+import type { MemberDirectory, MemberRecord, PartnerCensus } from './ports/member-directory';
 
 export interface MemberAreaDeps {
   capital: CapitalStore;
@@ -173,4 +174,76 @@ export async function registerMovement(
   return deps.capital.append(context.cooperativeId, membershipId, context.membershipId, (balance) =>
     createMovement(input, balance),
   );
+}
+
+export interface Period {
+  /** YYYY-MM-DD, inclusive. */
+  from?: string;
+  to?: string;
+}
+
+export interface CapitalSummary {
+  /** Share capital of the cooperative: what its partners hold now. */
+  totalCents: bigint;
+  /** Partners that have not left. */
+  partnerCount: number;
+  /** What was registered in the period (the whole history if no bound is given). */
+  period: PeriodTotals;
+}
+
+/** ADR-025, US-MEM-04: the cooperative's share capital and its movement in a period. "All" scope only. */
+export async function capitalSummary(
+  deps: MemberAreaDeps,
+  context: CooperativeContext,
+  period: Period,
+): Promise<CapitalSummary> {
+  requireAllScope(context, 'read');
+  const [list, totals] = await Promise.all([
+    listMembers(deps, context),
+    deps.capital.periodTotals(context.cooperativeId, period),
+  ]);
+  return { totalCents: list.totalCents, partnerCount: list.items.length, period: totals };
+}
+
+/** ADR-025, US-MEM-04: partner head counts. "All" scope only, like listing the partners. */
+export async function memberCensus(
+  deps: MemberAreaDeps,
+  context: CooperativeContext,
+  period: Period,
+): Promise<PartnerCensus> {
+  requireAllScope(context, 'read');
+  return deps.members.partnerCensus(context.cooperativeId, period);
+}
+
+/** Partners matching a name, partner number or email, with their capital. "All" scope only. */
+export async function findPartners(
+  deps: MemberAreaDeps,
+  context: CooperativeContext,
+  query: string,
+): Promise<MemberCapital[]> {
+  requireAllScope(context, 'read');
+  const { items } = await listMembers(deps, context);
+  return items.filter((item) => matchesPartner(item.member, query));
+}
+
+/** ADR-025: the partners that have a NIF, to cross with third parties. "All" scope only. */
+export async function partnersWithNif(
+  deps: MemberAreaDeps,
+  context: CooperativeContext,
+): Promise<MemberRecord[]> {
+  requireAllScope(context, 'read');
+  const partners = await deps.members.listPartners(context.cooperativeId);
+  return partners.filter((partner) => partner.nif !== null);
+}
+
+/** The latest movements of a partner the caller may see ("all" scope), for the assistant. */
+export async function latestMovementsOf(
+  deps: MemberAreaDeps,
+  context: CooperativeContext,
+  member: MemberRecord,
+  limit: number,
+) {
+  requireAllScope(context, 'read');
+  const { movements } = await statement(deps, context.cooperativeId, member, { limit });
+  return movements;
 }

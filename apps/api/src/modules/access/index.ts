@@ -58,7 +58,7 @@ export { AccessApplicationError } from './application/errors';
 export { AccessDomainError, ModuleAccessDeniedError } from './domain/errors';
 /** Guard for use cases: returns the scope to filter by, or throws 403 (US-ACC-07). */
 export { requireAccess } from './domain/permission';
-export { hasAccess } from './domain/permission';
+export { hasAccess, resolveAccess } from './domain/permission';
 /** The four profiles every cooperative is born with (requisitos/01, section 3). */
 export { PREDEFINED_PROFILES } from './domain/predefined-profiles';
 export {

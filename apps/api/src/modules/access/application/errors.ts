@@ -143,3 +143,12 @@ export class InvitationDeliveryUnavailableError extends AccessApplicationError {
     super('The invitation could not be sent. Try again later by resending it.');
   }
 }
+
+/** Another live membership of the cooperative already has this NIF (ADR-025). */
+export class MemberNifTakenError extends AccessApplicationError {
+  readonly code = 'member_nif_taken';
+
+  constructor() {
+    super('Another member of the cooperative already has this NIF.');
+  }
+}

@@ -7,7 +7,14 @@ import { membersErrorHandler } from './infrastructure/http/error-handler';
 import { createMemberAreaRouter } from './infrastructure/http/member-area-router';
 import { PrismaCapitalStore } from './infrastructure/prisma-capital-store';
 
-export type { MemberAreaReads, MyContributions } from './application/assistant-reads';
+export type {
+  CapitalSummaryView,
+  CensusView,
+  MemberAreaReads,
+  MyContributions,
+  PartnerDetail,
+  PartnerIdentity,
+} from './application/assistant-reads';
 
 /** Public interface of the member area module (docs/requirements/06-member-area.md). */
 export function createMembersModule(deps: {

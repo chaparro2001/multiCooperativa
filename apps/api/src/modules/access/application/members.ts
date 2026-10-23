@@ -9,11 +9,12 @@ import { assertKeepsAnAdmin, assertNotSelf } from '../domain/administration';
 import { normalizeEmail } from '../domain/email';
 import { InvalidMembershipTransitionError } from '../domain/errors';
 import { issueInvitation } from '../domain/invitation';
-import { reactivate, remove, suspend } from '../domain/membership';
+import { parseMemberNif, reactivate, remove, suspend } from '../domain/membership';
 import { requireAccess } from '../domain/permission';
 import {
   InvitationNotPendingError,
   MemberAlreadyExistsError,
+  MemberNifTakenError,
   MemberNotFoundError,
   ProfileNotFoundError,
 } from './errors';
@@ -132,6 +133,8 @@ export interface InviteMemberInput {
   profileId: string;
   isPartner: boolean;
   partnerNumber?: string | null;
+  /** ADR-025: optional; normalized and validated like a third party's NIF. */
+  nif?: string | null;
 }
 
 /** US-ACC-08. */
@@ -144,6 +147,7 @@ export async function inviteMember(
   const profile = await findProfileOrFail(deps, context, input.profileId);
 
   const email = normalizeEmail(input.email);
+  const nif = parseMemberNif(input.nif);
   const token = deps.secrets.generate();
   const { expiresAt } = issueInvitation(deps.now());
 
@@ -153,6 +157,7 @@ export async function inviteMember(
     profileId: profile.id,
     isPartner: input.isPartner,
     partnerNumber: input.partnerNumber?.trim() || null,
+    nif,
     invitation: { tokenHash: deps.secrets.hash(token), expiresAt },
     audit: {
       actorUserId: context.userId,
@@ -161,6 +166,7 @@ export async function inviteMember(
     },
   });
   if (created === 'already_member') throw new MemberAlreadyExistsError();
+  if (created === 'nif_taken') throw new MemberNifTakenError();
 
   const delivery = await deps.invitationSender.send({
     email,
@@ -175,7 +181,11 @@ export async function inviteMember(
   };
 }
 
-export type MemberChange = { profileId: string } | { status: 'active' | 'suspended' };
+export type MemberChange =
+  | { profileId: string }
+  | { status: 'active' | 'suspended' }
+  /** ADR-025: sets the partner's NIF, or clears it with null. */
+  | { nif: string | null };
 
 /** US-ACC-09 (profile) and US-ACC-10 (suspend, reactivate). */
 export async function changeMember(
@@ -185,6 +195,7 @@ export async function changeMember(
   change: MemberChange,
 ): Promise<MemberRecord> {
   requireUserManagement(context);
+  const newNif = 'nif' in change ? parseMemberNif(change.nif) : undefined;
   const newProfile =
     'profileId' in change ? await findProfileOrFail(deps, context, change.profileId) : null;
 
@@ -194,6 +205,23 @@ export async function changeMember(
       action,
       detail: { before, after },
     });
+
+    if ('nif' in change) {
+      if (member.status === 'removed') {
+        throw new InvalidMembershipTransitionError(
+          'The NIF of a removed membership cannot be changed.',
+        );
+      }
+      return {
+        nif: newNif ?? null,
+        // The tax id is personal data: the audit says it changed, not what it was.
+        audit: audit(
+          'member.nif_changed',
+          { hasNif: member.nif !== null },
+          { hasNif: newNif != null },
+        ),
+      };
+    }
 
     if (newProfile) {
       if (member.status === 'removed') {

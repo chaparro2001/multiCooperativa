@@ -38,6 +38,8 @@ interface DemoMember {
   profile: ProfileName;
   isPartner: boolean;
   partnerNumber?: string;
+  /** Valid DNI (ADR-025): lets the assistant cross partners with suppliers. */
+  nif?: string;
   status?: Status;
   /** Added once, only to a member who has no movement yet. */
   capital?: DemoMovement[];
@@ -47,12 +49,18 @@ interface DemoCooperative {
   name: string;
   /** Valid control digit: invoices will validate tax ids (Milestone 4). */
   cif: string;
-  admin: { email: string; name: string; partnerNumber: string; capital?: DemoMovement[] };
+  admin: {
+    email: string;
+    name: string;
+    partnerNumber: string;
+    nif?: string;
+    capital?: DemoMovement[];
+  };
   members: DemoMember[];
 }
 
 /** In two cooperatives with different profiles: exercises the cooperative selector (US-ACC-05). */
-const LUCIA = { email: 'lucia@demo.test', name: 'Lucía Martín' };
+const LUCIA = { email: 'lucia@demo.test', name: 'Lucía Martín', nif: '11111111H' };
 
 export const DEMO_COOPERATIVES: DemoCooperative[] = [
   {
@@ -62,6 +70,7 @@ export const DEMO_COOPERATIVES: DemoCooperative[] = [
       email: 'admin@sanisidro.test',
       name: 'Ana Torres',
       partnerNumber: '001',
+      nif: '12345678Z',
       capital: [
         mandatory('2024-01-15', '600.00'),
         voluntary('2025-03-10', '150.00', 'Aportación voluntaria'),
@@ -74,6 +83,7 @@ export const DEMO_COOPERATIVES: DemoCooperative[] = [
         profile: 'Consejo rector',
         isPartner: true,
         partnerNumber: '002',
+        nif: '87654321X',
         capital: [
           mandatory('2024-01-15', '600.00'),
           voluntary('2025-06-02', '500.00', 'Aportación voluntaria para la nave nueva'),
@@ -93,6 +103,8 @@ export const DEMO_COOPERATIVES: DemoCooperative[] = [
         profile: 'Socio',
         isPartner: true,
         partnerNumber: '003',
+        // Also a supplier of the cooperative (seed:content): the NIF is how they are crossed (ADR-025).
+        nif: '33333333P',
         capital: [
           mandatory('2024-02-01', '600.00'),
           voluntary('2025-05-20', '250.50', 'Aportación voluntaria campaña 2025'),
@@ -123,6 +135,7 @@ export const DEMO_COOPERATIVES: DemoCooperative[] = [
         profile: 'Socio',
         isPartner: true,
         partnerNumber: '005',
+        nif: '22222222J',
         status: 'suspended',
         capital: [mandatory('2024-01-20', '600.00')],
       },
@@ -132,6 +145,7 @@ export const DEMO_COOPERATIVES: DemoCooperative[] = [
         profile: 'Socio',
         isPartner: true,
         partnerNumber: '006',
+        nif: '44444444A',
         status: 'invited',
       },
     ],
@@ -143,6 +157,7 @@ export const DEMO_COOPERATIVES: DemoCooperative[] = [
       email: 'admin@laesperanza.test',
       name: 'Rosa Navarro',
       partnerNumber: '001',
+      nif: '55555555K',
       capital: [mandatory('2023-11-30', '900.00')],
     },
     members: [
@@ -168,6 +183,7 @@ export const DEMO_COOPERATIVES: DemoCooperative[] = [
         profile: 'Socio',
         isPartner: true,
         partnerNumber: '003',
+        nif: '66666666Q',
         capital: [
           mandatory('2024-05-06', '900.00'),
           voluntary('2026-01-15', '100.00', 'Aportación voluntaria'),
@@ -183,6 +199,8 @@ export interface DemoSeedResult {
   invitations: { email: string; token: string }[];
   /** Capital movements added now: only to members who had none, so a second run adds nothing. */
   capitalMovementsAdded: number;
+  /** NIFs filled in now, only where a partner had none (a second run adds nothing). */
+  nifsSet: number;
 }
 
 /**
@@ -194,13 +212,19 @@ export async function seedDemoData(
   password: string,
 ): Promise<DemoSeedResult> {
   const { prisma, access } = deps;
-  const result: DemoSeedResult = { cooperatives: [], invitations: [], capitalMovementsAdded: 0 };
+  const result: DemoSeedResult = {
+    cooperatives: [],
+    invitations: [],
+    capitalMovementsAdded: 0,
+    nifsSet: 0,
+  };
 
   for (const demo of DEMO_COOPERATIVES) {
     const existing = await prisma.cooperative.findUnique({ where: { cif: demo.cif } });
     if (existing) {
       result.cooperatives.push({ name: demo.name, id: existing.id, created: false });
       result.capitalMovementsAdded += await seedCapital(prisma, existing.id, demo);
+      result.nifsSet += await seedNifs(prisma, existing.id, demo);
       continue;
     }
 
@@ -213,7 +237,11 @@ export async function seedDemoData(
     const cooperativeId = provisioned.cooperativeId;
     await prisma.membership.update({
       where: { id: provisioned.adminMembershipId },
-      data: { isPartner: true, partnerNumber: demo.admin.partnerNumber },
+      data: {
+        isPartner: true,
+        partnerNumber: demo.admin.partnerNumber,
+        nif: demo.admin.nif ?? null,
+      },
     });
     // Same password for everyone: reuse the admin's Argon2id hash instead of hashing again.
     const { passwordHash } = await prisma.user.findUniqueOrThrow({
@@ -255,6 +283,7 @@ export async function seedDemoData(
           status,
           isPartner: member.isPartner,
           partnerNumber: member.partnerNumber ?? null,
+          nif: member.nif ?? null,
           ...(invitation && { invitation: { create: invitation } }),
         },
       });
@@ -322,4 +351,34 @@ async function seedCapital(
     added += movements.length;
   }
   return added;
+}
+
+/**
+ * Additive and idempotent, also on a cooperative that already exists (the hosted demo): a NIF is
+ * only filled in where the partner has none, and never one that another live member holds.
+ */
+async function seedNifs(
+  prisma: PrismaClient,
+  cooperativeId: string,
+  demo: DemoCooperative,
+): Promise<number> {
+  let set = 0;
+  const planned = [
+    { email: demo.admin.email, nif: demo.admin.nif },
+    ...demo.members.map((member) => ({ email: member.email, nif: member.nif })),
+  ];
+  for (const { email, nif } of planned) {
+    if (!nif) continue;
+    const taken = await prisma.membership.count({
+      where: { cooperativeId, nif, status: { not: 'removed' } },
+    });
+    const updated = taken
+      ? { count: 0 }
+      : await prisma.membership.updateMany({
+          where: { cooperativeId, nif: null, user: { email }, status: { not: 'removed' } },
+          data: { nif },
+        });
+    set += updated.count;
+  }
+  return set;
 }

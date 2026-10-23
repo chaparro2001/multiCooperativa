@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { messageFor } from '@/api/api-error';
+import { messageText } from '@/forms/errors';
+import { routeServerError } from '@/forms/server-errors';
 import { useActiveCooperative } from '@/cooperatives/active-cooperative';
+import { INVITE_FIELDS, INVITE_SERVER_MAPPING } from '@/features/members/form-validation';
 import { InvitationLinkCard } from '@/features/members/invitation-link-card';
 import { memberActions, statusTone } from '@/features/members/members';
 import { ProfilePicker } from '@/features/members/profile-picker';
@@ -16,6 +19,7 @@ import { confirmAction } from '@/ui/confirm';
 import { Banner } from '@/ui/banner';
 import { Text, useTheme } from '@/ui/paper';
 import { Screen } from '@/ui/screen';
+import { TextField } from '@/ui/text-field';
 import { ErrorState, Skeleton } from '@/ui/states';
 import { space } from '@/ui/theme';
 
@@ -30,6 +34,9 @@ export default function MemberScreen() {
   const change = useChangeMember();
   const resend = useResendInvitation();
   const [profileId, setProfileId] = useState<string | null>(null);
+  // null while the NIF box is untouched: it then shows the recorded one (ADR-025).
+  const [nifDraft, setNifDraft] = useState<string | null>(null);
+  const [nifError, setNifError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [link, setLink] = useState<{ url: string; expiresAt: string } | null>(null);
@@ -55,6 +62,27 @@ export default function MemberScreen() {
       setNotice(success);
     } catch (failure) {
       setError(messageFor(failure));
+    }
+  }
+
+  async function saveNif() {
+    setError(null);
+    setNotice(null);
+    setNifError(null);
+    try {
+      await change.mutateAsync({
+        id: member!.membershipId,
+        change: { nif: (nifDraft ?? '').trim() || null },
+      });
+      setNifDraft(null);
+      setNotice(t('members.detail.nifSaved'));
+    } catch (failure) {
+      // A wrong control character or a NIF another partner holds is marked on the NIF box.
+      const routed = routeServerError(failure, INVITE_SERVER_MAPPING, (field) =>
+        (INVITE_FIELDS as readonly string[]).includes(field),
+      );
+      if (routed.fields.nif) setNifError(messageText(routed.fields.nif));
+      setError(routed.banner);
     }
   }
 
@@ -107,7 +135,37 @@ export default function MemberScreen() {
             {t('members.fields.partnerNumber')}: {member.partnerNumber}
           </Text>
         ) : null}
+        {member.isPartner ? (
+          <Text variant="bodyLarge" style={muted} testID="member-nif">
+            {t('members.detail.nif')}: {member.nif ?? t('members.detail.noNif')}
+          </Text>
+        ) : null}
       </View>
+
+      {actions.editNif && (
+        <View style={styles.section}>
+          <TextField
+            label={t('members.fields.nif')}
+            value={nifDraft ?? member.nif ?? ''}
+            onChangeText={(text) => {
+              setNifDraft(text);
+              setNifError(null);
+            }}
+            error={nifError ?? undefined}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={20}
+            testID="member-nif-input"
+          />
+          <Button
+            title={t('members.detail.saveNif')}
+            disabled={nifDraft === null || nifDraft.trim() === (member.nif ?? '')}
+            loading={change.isPending}
+            onPress={() => void saveNif()}
+            testID="save-nif"
+          />
+        </View>
+      )}
 
       {actions.changeProfile && (
         <View style={styles.section}>

@@ -1,4 +1,5 @@
 import type { MembershipStatus } from '../../domain/membership';
+import { MemberNifTakenError } from '../errors';
 import type { PendingInvitation } from '../ports/invitation-store';
 import type { LoginStore, UserCredentials } from '../ports/login-store';
 import type {
@@ -155,6 +156,7 @@ export class InMemoryMemberStore implements MemberStore {
       status,
       isPartner: false,
       partnerNumber: null,
+      nif: null,
     };
     this.members.push(member);
     return member;
@@ -209,6 +211,9 @@ export class InMemoryMemberStore implements MemberStore {
     if (this.members.some((m) => m.email === data.email && m.status !== 'removed')) {
       return 'already_member' as const;
     }
+    if (data.nif && this.members.some((m) => m.nif === data.nif && m.status !== 'removed')) {
+      return 'nif_taken' as const;
+    }
     const existing = this.members.find((m) => m.email === data.email);
     const member = this.addMember(
       data.email,
@@ -218,6 +223,7 @@ export class InMemoryMemberStore implements MemberStore {
     if (existing) member.userId = existing.userId;
     member.isPartner = data.isPartner;
     member.partnerNumber = data.partnerNumber;
+    member.nif = data.nif;
     this.invitations.set(member.membershipId, data.invitation);
     this.audit.push({ ...data.audit, targetUserId: member.userId });
     return { membershipId: member.membershipId, userId: member.userId };
@@ -233,6 +239,17 @@ export class InMemoryMemberStore implements MemberStore {
     const activeAdminCount = this.members.filter((m) => m.status === 'active' && m.isAdmin).length;
 
     const update = decide({ member: { ...member }, activeAdminCount });
+    if (update.nif !== undefined) {
+      if (
+        update.nif &&
+        this.members.some(
+          (m) => m.nif === update.nif && m.status !== 'removed' && m.membershipId !== membershipId,
+        )
+      ) {
+        throw new MemberNifTakenError();
+      }
+      member.nif = update.nif;
+    }
     if (update.status) member.status = update.status;
     if (update.profileId) {
       const profile = this.profiles.find((p) => p.id === update.profileId)!;

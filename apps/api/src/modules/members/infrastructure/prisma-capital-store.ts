@@ -74,6 +74,31 @@ export class PrismaCapitalStore implements CapitalStore {
     return rows.map(toRecord);
   }
 
+  async periodTotals(cooperativeId: string, period: { from?: string; to?: string }) {
+    const sums = await this.prisma.capitalMovement.groupBy({
+      by: ['type'],
+      where: {
+        cooperativeId,
+        ...((period.from || period.to) && {
+          date: {
+            ...(period.from && { gte: new Date(`${period.from}T00:00:00Z`) }),
+            ...(period.to && { lte: new Date(`${period.to}T00:00:00Z`) }),
+          },
+        }),
+      },
+      _sum: { amount: true },
+    });
+    const totals = { contributionsCents: 0n, refundsCents: 0n, correctionsCents: 0n };
+    for (const sum of sums) {
+      if (!sum._sum.amount) continue;
+      const cents = parseMoney(sum._sum.amount.toFixed(2));
+      if (sum.type === 'refund') totals.refundsCents += cents;
+      else if (sum.type === 'correction') totals.correctionsCents += cents;
+      else totals.contributionsCents += cents;
+    }
+    return totals;
+  }
+
   async balances(cooperativeId: string, membershipIds: string[]): Promise<Map<string, bigint>> {
     if (membershipIds.length === 0) return new Map();
     const sums = await this.prisma.capitalMovement.groupBy({

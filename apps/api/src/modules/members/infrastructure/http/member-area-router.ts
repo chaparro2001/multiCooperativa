@@ -23,6 +23,7 @@ const toMember = (member: MemberRecord): MemberRecordDto => ({
   name: member.name,
   email: member.email,
   partnerNumber: member.partnerNumber,
+  nif: member.nif,
   isPartner: member.isPartner,
   status: member.status,
   profileName: member.profileName,

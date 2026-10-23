@@ -34,6 +34,8 @@ export const memberRecordSchema = z.object({
   name: z.string(),
   email: z.string(),
   partnerNumber: z.string().nullable(),
+  /** Tax id (ADR-025); only whoever can read every partner's record, or the partner themself, gets it. */
+  nif: z.string().nullable(),
   isPartner: z.boolean(),
   status: z.enum(['invited', 'active', 'suspended', 'removed']),
   profileName: z.string(),

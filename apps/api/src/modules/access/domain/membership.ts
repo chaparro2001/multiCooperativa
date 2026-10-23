@@ -1,4 +1,5 @@
-import { InvalidMembershipTransitionError } from './errors';
+import { isValidNif, normalizeNif } from '../../../shared/domain/nif';
+import { InvalidMemberNifError, InvalidMembershipTransitionError } from './errors';
 
 export const MEMBERSHIP_STATUSES = ['invited', 'active', 'suspended', 'removed'] as const;
 export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
@@ -42,4 +43,16 @@ export function grantsAccess(membership: WithStatus): boolean {
 /** Voting depends on being a partner, not on the profile (BR-ACC-06). */
 export function canVote(membership: WithStatus & { readonly isPartner: boolean }): boolean {
   return grantsAccess(membership) && membership.isPartner;
+}
+
+/**
+ * ADR-025: a partner's NIF, as stored. Blank means none (null); otherwise it is normalized and
+ * must pass the same check as a third party's (DNI, NIE or CIF with a correct control character).
+ */
+export function parseMemberNif(raw: string | null | undefined): string | null {
+  const trimmed = raw?.trim();
+  if (!trimmed) return null;
+  const nif = normalizeNif(trimmed);
+  if (!isValidNif(nif)) throw new InvalidMemberNifError();
+  return nif;
 }

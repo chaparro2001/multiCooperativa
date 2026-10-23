@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  InvalidMemberNifError,
   InvalidMembershipTransitionError,
   LastAdminError,
   ModuleAccessDeniedError,
@@ -10,6 +11,7 @@ import { PREDEFINED_PROFILES } from '../domain/predefined-profiles';
 import {
   InvitationNotPendingError,
   MemberAlreadyExistsError,
+  MemberNifTakenError,
   MemberNotFoundError,
   ProfileNotFoundError,
 } from './errors';
@@ -354,5 +356,81 @@ describe('suspend, reactivate and remove (US-ACC-10)', () => {
       changeMember(deps, actor, other.membershipId, { status: 'suspended' }),
     ).rejects.toThrow(LastAdminError);
     await expect(removeMember(deps, actor, other.membershipId)).rejects.toThrow(LastAdminError);
+  });
+});
+
+describe('partner NIF (ADR-025, BR-ACC-18)', () => {
+  const inviteWithNif = (email: string, nif: string | null) =>
+    inviteMember(deps, ctx, {
+      email,
+      name: 'Grace',
+      profileId: store.profile('Socio').id,
+      isPartner: true,
+      nif,
+    });
+
+  it('US-ACC-08: an invitation stores the NIF normalized', async () => {
+    await inviteWithNif('grace@campo.es', ' 12.345.678-z ');
+
+    expect(store.members.find((m) => m.email === 'grace@campo.es')!.nif).toBe('12345678Z');
+  });
+
+  it('US-ACC-08: a NIF with a wrong control character is rejected and nothing is created', async () => {
+    await expect(inviteWithNif('grace@campo.es', '12345678A')).rejects.toBeInstanceOf(
+      InvalidMemberNifError,
+    );
+    expect(store.members.some((m) => m.email === 'grace@campo.es')).toBe(false);
+    expect(sent).toEqual([]);
+  });
+
+  it('BR-ACC-18: two live members of the cooperative cannot share a NIF', async () => {
+    await inviteWithNif('grace@campo.es', '12345678Z');
+
+    await expect(inviteWithNif('ada@campo.es', '12345678z')).rejects.toBeInstanceOf(
+      MemberNifTakenError,
+    );
+  });
+
+  it('BR-ACC-18: a removed member does not hold its NIF', async () => {
+    const first = await inviteWithNif('grace@campo.es', '12345678Z');
+    const granted = store.members.find((m) => m.membershipId === first.membershipId)!;
+    granted.status = 'removed';
+
+    await expect(inviteWithNif('ada@campo.es', '12345678Z')).resolves.toBeDefined();
+  });
+
+  it('US-ACC-09: the NIF is set and cleared by a change, and audited without its value', async () => {
+    const member = store.addMember('grace@campo.es', 'Socio');
+
+    const set = await changeMember(deps, ctx, member.membershipId, { nif: '12345678z' });
+    const cleared = await changeMember(deps, ctx, member.membershipId, { nif: null });
+
+    expect(set.nif).toBe('12345678Z');
+    expect(cleared.nif).toBeNull();
+    expect(JSON.stringify(store.audit)).not.toContain('12345678');
+    expect(store.audit.map((event) => event.action)).toContain('member.nif_changed');
+  });
+
+  it('BR-ACC-18: changing to a NIF another member holds is refused; invalid ones too', async () => {
+    const one = store.addMember('grace@campo.es', 'Socio');
+    const two = store.addMember('ada@campo.es', 'Socio');
+    await changeMember(deps, ctx, one.membershipId, { nif: '12345678Z' });
+
+    await expect(
+      changeMember(deps, ctx, two.membershipId, { nif: '12345678Z' }),
+    ).rejects.toBeInstanceOf(MemberNifTakenError);
+    await expect(
+      changeMember(deps, ctx, two.membershipId, { nif: '12345678A' }),
+    ).rejects.toBeInstanceOf(InvalidMemberNifError);
+  });
+
+  it('BR-ACC-08: nobody sets their own NIF, and the change needs user management', async () => {
+    await expect(
+      changeMember(deps, ctx, admin.membershipId, { nif: '12345678Z' }),
+    ).rejects.toBeInstanceOf(SelfModificationError);
+    const socio = store.addMember('grace@campo.es', 'Socio');
+    await expect(
+      changeMember(deps, contextFor(socio), admin.membershipId, { nif: '12345678Z' }),
+    ).rejects.toBeInstanceOf(ModuleAccessDeniedError);
   });
 });
