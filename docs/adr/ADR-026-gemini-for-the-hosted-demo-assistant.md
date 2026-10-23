@@ -42,7 +42,7 @@ Option 5, for the published demo only.
 
 - **Privacy**: with Gemini the questions and the data returned by the tools (invoices, documents, members of the demo) are sent to Google, and the free tier lets Google use the content to improve its products. This is acceptable because the demo data is fictitious. A real cooperative keeps the local default (`ollama`), which sends nothing out ([ADR-013](ADR-013-local-language-model-for-the-assistant.md)).
 - **Shared quota**: the assistant and invoice extraction use the same key and the same daily quota. Heavy use of the assistant can leave scanning without quota and the other way round.
-- **Not measured on the evaluation set**: the assistant was tuned and evaluated with `qwen3:4b-instruct` (47 of 60 on the set); `gemini-3.5-flash-lite` has not been run on the 60 questions yet. Until it is, no precision claim is made for the published demo.
+- **Measured on the evaluation set** (2026-10-23, same model and fallbacks as the demo, 4 s pause between questions): `gemini-3.5-flash-lite` passed **53 of 60** with a median of 1.7 s per question (p90 3.0 s), against 47 of 60 and a 7.4 s median for `qwen3:4b-instruct` on a Mac GPU. It fixes the document follow-ups, "not found", the injected-document case and most invoicing aggregates; it misses a figure or a citation in four aggregate cases, the "approved" wording in one, and one question failed on a Google `504 DEADLINE_EXCEEDED`. The key's daily quota of Flash-Lite was nearly spent before the run, so 8 calls answered with the fallback `gemini-3.1-flash-lite` (9 HTTP 429): the figure describes the fallback chain as the demo really runs it.
 - The Settings selector of the local model is inert on the demo while the server provider is Gemini.
 
 **How to revert**

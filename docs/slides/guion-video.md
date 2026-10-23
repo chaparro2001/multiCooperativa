@@ -62,7 +62,7 @@ Hacer:
 2. Preguntar "¿cuánto he aportado?": usa la herramienta `my_contributions` con los permisos del socio.
 3. Preguntar por las facturas: el socio no obtiene datos, porque el asistente usa los permisos del usuario.
 
-Decir: la demo publicada usa Gemini Flash-Lite (ADR-026) porque el modelo local tardaba más de 30 s en la CPU del servidor; los datos de la demo son ficticios. Por defecto el modelo es local y la pregunta no sale a internet (ADR-013).
+Decir: la demo publicada usa Gemini Flash-Lite (ADR-026) porque el modelo local tardaba más de 30 s en la CPU del servidor (con Gemini, 1,7 s de mediana y 53 de 60 en la evaluación); los datos de la demo son ficticios. Por defecto el modelo es local y la pregunta no sale a internet (ADR-013).
 
 ### 4:40-6:00 Cambio a gestor: facturas, escaneo con IA, discrepancia, proveedores y clientes
 
@@ -91,7 +91,7 @@ Pantalla: editor.
 2. Estructura de un módulo en `apps/api/src/modules/<módulo>/`: `domain`, `application`, `infrastructure` e `index.ts` como única interfaz pública; mencionar la regla ESLint de fronteras.
 3. Un test de dominio (TDD) y señalar un identificador de requisito (`US-...`, `BR-...`) en el nombre.
 4. Un ADR (por ejemplo ADR-013, modelo local para el asistente, o ADR-012, servidor propio) y recordar que hay 26; ADR-020 es la migración a react-native-paper, ADR-021 retira el logo por cooperativa, ADR-022 y ADR-023 mejoran la recuperación de documentos (RAG) y ADR-024 adopta el sistema de diseño de `docs/design-system/`, ADR-025 cruza socios y terceros por NIF y el último, ADR-026, pone Gemini en el asistente de la demo publicada.
-5. El conjunto de evaluación del asistente (60 preguntas, `ai:eval`; qwen3:4b-instruct 47/60) y el benchmark de modelos locales del ADR-013 (qwen3:8b 19/22, qwen3:4b-instruct 18/22, gemma4:e4b 15/22).
+5. El conjunto de evaluación del asistente (60 preguntas, `ai:eval`; qwen3:4b-instruct 47/60, gemini-3.5-flash-lite 53/60) y el benchmark de modelos locales del ADR-013 (qwen3:8b 19/22, qwen3:4b-instruct 18/22, gemma4:e4b 15/22).
 6. Cifras (a fecha 2026-10-22): 1338 tests unitarios (133 ficheros) y 574 de integración (30 ficheros), y 236 de 237 commits sin fusiones co-autorados con Claude (`git rev-list --no-merges`).
 7. Proceso con IA, en una o dos frases: `skills-lock.json` y `.agents/skills` (skills de la comunidad fijadas, siempre por debajo de `CLAUDE.md`, los ADR y las especificaciones) y agentes en paralelo. El flujo del diseño (diapositiva 6): brief de interfaz (`docs/05-ui-design-brief.md`), herramienta de diseño con IA que genera el sistema de diseño (`docs/design-system/`: tokens, 8 colores de marca, unos 40 componentes, 14 pantallas), análisis de brechas con la app (`docs/06-design-system-migration.md`) y migración por un orquestador con un subagente de base, siete en paralelo sobre carpetas de funcionalidad disjuntas, uno de verificación y otro que lanzó la app en web con Playwright, hizo capturas y encontró errores visuales que se corrigieron. Antes también trabajé con agentes en git worktrees.
 
