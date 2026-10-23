@@ -386,7 +386,7 @@ Branding (US-ACC-14, [ADR-018](../adr/ADR-018-per-cooperative-branding.md), logo
 2. Activation from an invitation.
 3. Password recovery.
 4. Cooperative selector (each cooperative with a dot in its primary colour, from `primaryColor` in `/me`).
-5. Home, with permission-based navigation and the "Pendiente para ti" strip (US-ACC-06).
+5. Home, with permission-based navigation, the "Pendiente para ti" strip (US-ACC-06) and header actions for Settings and sign out (US-ACC-03).
 6. Settings: biometrics, cooperative switch, sign out and, for the administrator, sub-pages under `settings/`: Appearance (colour, US-ACC-14), Billing (05-invoices-and-delivery-notes.md) and AI assistant (US-AI-07).
 7. Members (administrator): list, invite, change profile, suspend, reactivate and remove with confirmation.
 
