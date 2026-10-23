@@ -66,21 +66,21 @@ Permissions are defined by module, level and scope (ADR-004). The backend decide
 
 ## 2. Tech stack
 
-| Layer            | Choice                                                                                                                                                                                 |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mobile app       | Expo + React Native + TypeScript, Expo Router, react-native-paper (Material Design 3, ADR-020) with the design-system kit in `src/ui` (ADR-024)                                        |
-| Client data      | TanStack Query; tokens in the device's secure storage                                                                                                                                  |
-| User-facing text | i18next + react-i18next + expo-localization; `es` default (ADR-008)                                                                                                                    |
-| Contracts        | Shared package with Zod schemas (validate on the server and type the app)                                                                                                              |
-| Backend          | Node + TypeScript, modular monolith with Clean Architecture and internal events                                                                                                        |
-| API              | REST, JWT authentication, stable error codes                                                                                                                                           |
-| Persistence      | PostgreSQL + Prisma; pgvector for RAG                                                                                                                                                  |
-| Language model   | Assistant: local Ollama model on the home server, `qwen3:4b-instruct` by default and `qwen3:8b` selectable (ADR-013, ADR-015); vision and explanations: Gemini (ADR-009); behind ports |
-| Embeddings       | Local `bge-m3` with Ollama (ADR-006); Gemini embeddings in the hosted demo (ADR-010)                                                                                                   |
-| Files            | S3-compatible storage with expiring signed URLs (ADR-005); RustFS locally                                                                                                              |
-| Tests            | Vitest (unit and integration); Maestro E2E flows on the iOS simulator (local only); React Native Testing Library planned, not delivered                                                |
-| Quality          | ESLint, Prettier, Husky (pre-commit), custom module-boundaries rule                                                                                                                    |
-| Delivery         | GitHub Actions; demo with the API on a home server (Cloudflare Tunnel) and GitHub Pages (web)                                                                                          |
+| Layer            | Choice                                                                                                                                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Mobile app       | Expo + React Native + TypeScript, Expo Router, react-native-paper (Material Design 3, ADR-020) with the design-system kit in `src/ui` (ADR-024)                                                                          |
+| Client data      | TanStack Query; tokens in the device's secure storage                                                                                                                                                                    |
+| User-facing text | i18next + react-i18next + expo-localization; `es` default (ADR-008)                                                                                                                                                      |
+| Contracts        | Shared package with Zod schemas (validate on the server and type the app)                                                                                                                                                |
+| Backend          | Node + TypeScript, modular monolith with Clean Architecture and internal events                                                                                                                                          |
+| API              | REST, JWT authentication, stable error codes                                                                                                                                                                             |
+| Persistence      | PostgreSQL + Prisma; pgvector for RAG                                                                                                                                                                                    |
+| Language model   | Assistant: local Ollama model by default, `qwen3:4b-instruct` and `qwen3:8b` selectable (ADR-013, ADR-015); the published demo uses Gemini Flash-Lite (ADR-026); vision and explanations: Gemini (ADR-009); behind ports |
+| Embeddings       | Local `bge-m3` with Ollama (ADR-006); Gemini embeddings in the hosted demo (ADR-010)                                                                                                                                     |
+| Files            | S3-compatible storage with expiring signed URLs (ADR-005); RustFS locally                                                                                                                                                |
+| Tests            | Vitest (unit and integration); Maestro E2E flows on the iOS simulator (local only); React Native Testing Library planned, not delivered                                                                                  |
+| Quality          | ESLint, Prettier, Husky (pre-commit), custom module-boundaries rule                                                                                                                                                      |
+| Delivery         | GitHub Actions; demo with the API on a home server (Cloudflare Tunnel) and GitHub Pages (web)                                                                                                                            |
 
 ## 3. Local setup and run
 
@@ -119,7 +119,7 @@ To enable the assistant (with the default provider), invoice extraction and disc
 
 **Model per cooperative (ADR-014)**: with the local provider, each cooperative's administrator chooses the assistant's model in Settings among `ASSISTANT_OLLAMA_MODELS` (only models installed in Ollama are offered; the app never downloads one).
 
-**Assistant on a local model (ADR-013)**: with `ASSISTANT_LLM_PROVIDER=ollama` the assistant answers with an Ollama model (`ASSISTANT_OLLAMA_MODEL`, default `qwen3:8b`; `pnpm ai:pull:chat` downloads it), uses no Gemini quota and sends no question to the cloud. This is what the home-server demo uses, with `qwen3:4b-instruct` as the default model (user-reported as acceptably fast on that CPU; not measured with the evaluation set, ADR-015) and `qwen3:8b` selectable per cooperative in Settings (ADR-014). Gemini stays for invoice extraction (vision) and discrepancy explanations. With the local model a question takes about 7 s on average on a 12-core CPU (p90 26 s) and it passes 19 of the 22 evaluation questions the set had then (60 today) (benchmark of `qwen3:8b` on the development Mac; `qwen3:4b-instruct` passed 18 of 22 in 5.0 s on average).
+**Assistant on a local model (ADR-013)**: with `ASSISTANT_LLM_PROVIDER=ollama` the assistant answers with an Ollama model (`ASSISTANT_OLLAMA_MODEL`, default `qwen3:8b`; `pnpm ai:pull:chat` downloads it), uses no Gemini quota and sends no question to the cloud. This is the default of the home-server stack, with `qwen3:4b-instruct` as the default model (user-reported as acceptably fast on that CPU; not measured with the evaluation set, ADR-015) and `qwen3:8b` selectable per cooperative in Settings (ADR-014). Gemini stays for invoice extraction (vision) and discrepancy explanations. **The published demo uses Gemini Flash-Lite (`ASSISTANT_LLM_PROVIDER=gemini`, ADR-026)**: on the server CPU the local model took more than 30 s per question; with Gemini it answers in a few seconds, and the questions and tool data (fictitious) go to Google. Embeddings stay local. With the local model a question takes about 7 s on average on a 12-core CPU (p90 26 s) and it passes 19 of the 22 evaluation questions the set had then (60 today) (benchmark of `qwen3:8b` on the development Mac; `qwen3:4b-instruct` passed 18 of 22 in 5.0 s on average).
 
 Without the Gemini key (and with the `gemini` provider) the assistant answers 503 and **the rest of the app works normally**. The AI features that use Gemini (invoice extraction, discrepancy explanation) are not available either. Local embeddings are served by Ollama, not Gemini.
 
@@ -230,21 +230,21 @@ Data defined in the seed (`apps/api/src/dev/demo-seed.ts`) and described in [doc
 
 Summary of [docs/04-deployment.md](docs/04-deployment.md). Cost: 0 EUR, no credit card: the API runs on a home server (ADR-012) because Render and Railway ask for a card.
 
-| Piece         | Service                                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------ |
-| Web app       | GitHub Pages at `cooperativa.chaparro2001.com` (Expo web export, Actions)                              |
-| API           | Docker container on a home server, exposed with Cloudflare Tunnel (`api-cooperativa.chaparro2001.com`) |
-| Database      | PostgreSQL 17 with pgvector (container)                                                                |
-| Files         | RustFS, S3-compatible (container)                                                                      |
-| Embeddings    | Ollama with bge-m3 (container, ADR-006)                                                                |
-| Assistant     | Ollama with `qwen3:4b-instruct` (default) or `qwen3:8b` on the server (ADR-013, ADR-015)               |
-| Vision        | Gemini API (free key): invoice extraction and explanations                                             |
-| Scheduled job | GitHub Actions cron every hour (due dates)                                                             |
+| Piece         | Service                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Web app       | GitHub Pages at `cooperativa.chaparro2001.com` (Expo web export, Actions)                                                          |
+| API           | Docker container on a home server, exposed with Cloudflare Tunnel (`api-cooperativa.chaparro2001.com`)                             |
+| Database      | PostgreSQL 17 with pgvector (container)                                                                                            |
+| Files         | RustFS, S3-compatible (container)                                                                                                  |
+| Embeddings    | Ollama with bge-m3 (container, ADR-006)                                                                                            |
+| Assistant     | Ollama with `qwen3:4b-instruct` (default) or `qwen3:8b` on the server (ADR-013, ADR-015); the published demo uses Gemini (ADR-026) |
+| Vision        | Gemini API (free key): invoice extraction and explanations                                                                         |
+| Scheduled job | GitHub Actions cron every hour (due dates)                                                                                         |
 
 Warnings:
 
 - **Availability**: the API only answers while the home server is on and online. There is no cold start.
-- **Gemini quota**: the assistant no longer uses it on the home server (local model); invoice extraction does.
+- **Gemini quota**: the published demo also uses Gemini for the assistant (ADR-026), so the assistant and invoice extraction share the key's daily quota; with the default local model the assistant does not use it.
 - **Data use on the Gemini free tier**: Google may use the content to improve its products. **Do not upload real invoices, delivery notes or third-party documents**; use the sample data.
 - It is a demo, not a system of record: data may be lost.
 
@@ -314,6 +314,8 @@ ADRs are immutable: a decision that changes produces a new ADR.
 - [ADR-022](docs/adr/ADR-022-hybrid-retrieval-and-similarity-threshold.md): hybrid search (vector + Spanish full text with RRF) and minimum similarity threshold.
 - [ADR-023](docs/adr/ADR-023-rag-quality-benchmark-and-retrieval-improvements.md): RAG quality: retrieval benchmark, accent-insensitive full text, structure-aware chunking with contextual headers and neighbour expansion.
 - [ADR-024](docs/adr/ADR-024-adopt-the-design-system.md): adoption of the design system (`docs/design-system/`): tokens in `theme.ts`, complete kit in `src/ui` and the related behaviours ("Pendiente para ti" strip, "Cómo llegar", quorum mark, Settings sub-pages).
+- [ADR-025](docs/adr/ADR-025-partner-nif-and-member-third-party-crossing.md): partner NIF on the membership and crossing of partners with third parties by NIF for the assistant.
+- [ADR-026](docs/adr/ADR-026-gemini-for-the-hosted-demo-assistant.md): Gemini Flash-Lite for the assistant of the published demo (the local model stays the default).
 
 ## 11. Quality
 
@@ -340,7 +342,7 @@ The project was built with Spec Driven Development using Claude Code:
 | Master's topic                      | Evidence in the project                                                                                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Spec Driven Development             | `docs/requirements/`, plan by milestones with ticked tasks, specification IDs in tests and commits                                                           |
-| ADRs and Docs as Code               | `docs/adr/` (24 immutable ADRs), documentation versioned with the code, Mermaid diagrams                                                                     |
+| ADRs and Docs as Code               | `docs/adr/` (26 immutable ADRs), documentation versioned with the code, Mermaid diagrams                                                                     |
 | Clean Architecture with TypeScript  | `domain/application/infrastructure` layers per module, ports and adapters, ESLint module-boundaries rule                                                     |
 | Testing, TDD and quality gate       | Vitest, domain tests first, integration tests, Husky on pre-commit                                                                                           |
 | CI/CD with GitHub Actions           | `ci.yml` (format, lint, typecheck, tests, migrations, integration), Pages deploy and cron                                                                    |
