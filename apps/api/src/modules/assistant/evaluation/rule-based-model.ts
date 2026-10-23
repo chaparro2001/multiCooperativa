@@ -17,7 +17,56 @@ function plan(question: string): { name: string; input: unknown }[] {
     if (!calls.some((call) => call.name === name)) calls.push({ name, input });
   };
 
-  if (q.includes('busca el proveedor')) {
+  // Questions about other members (ADR-025): their tools replace the member's own capital.
+  const aboutMembers =
+    /socios|socio\b|censo|altas|bajas|capital social|capital de la cooperativa|capital total/.test(
+      q,
+    ) && !/tengo|mi |mis /.test(q);
+  if (aboutMembers && /proveedor|compramos|vendimos|clientes/.test(q)) {
+    add('partner_trade', { from: '2026-01-01', to: '2026-12-31' });
+  } else if (aboutMembers && /capital social|capital de la cooperativa|capital total/.test(q)) {
+    add('capital_summary');
+  } else if (aboutMembers && /cuantos socios|socios activos|altas|bajas|invitad/.test(q)) {
+    add('member_census', { from: '2026-01-01', to: '2026-12-31' });
+  } else if (aboutMembers && /capital|aportacion|numero de socio/.test(q)) {
+    const named = question.match(/socio\s+(?:n[º°.]*\s*)?([^?¿]+?)\s*\??$/i)?.[1];
+    add('member_detail', { query: (named ?? question).trim() });
+  }
+
+  const summaryOf = q.match(/como estamos con ([^?]+)/);
+  if (summaryOf) {
+    add('third_party_summary', { text: question.match(/con ([^?]+)/i)?.[1]?.trim() });
+  } else if (q.includes('mayores proveedores')) {
+    add('invoice_totals', {
+      operation: 'purchase',
+      from: '2026-01-01',
+      to: '2026-12-31',
+      group_by: 'third_party',
+      limit: 5,
+    });
+  } else if (q.includes('hemos facturado')) {
+    add('invoice_totals', { operation: 'sale', from: '2026-01-01', to: '2026-12-31' });
+  } else if (q.includes('detalle de la factura')) {
+    add('invoice_detail', { number: question.match(/factura\s+([\w-]+)/i)?.[1] });
+  } else if (q.includes('discrepancia')) {
+    add('open_discrepancies');
+  } else if (q.includes('prevision de caja')) {
+    add('cash_forecast', { group_by: 'week' });
+  } else if (q.includes('evolucionado')) {
+    add('top_items', { concept: 'aceite', group_by: 'month', operation: 'purchase' });
+  } else if (q.includes('compramos mas')) {
+    add('top_items', { operation: 'purchase' });
+  } else if (q.includes('sin actividad')) {
+    add('list_third_parties', { type: 'supplier', inactive_since: '2026-09-01' });
+  } else if (q.includes('albaran') && q.includes('antiguos')) {
+    add('list_delivery_notes', { status: 'pending_invoicing', sort: 'oldest_first' });
+  } else if (q.includes('se pagaron')) {
+    add('list_invoices', {
+      status: 'settled',
+      settled_from: '2026-09-01',
+      settled_to: '2026-09-30',
+    });
+  } else if (q.includes('busca el proveedor')) {
     add('find_third_party', { text: question.trim().split(/\s+/).at(-1) });
   } else if (q.includes('ultimo proveedor') || q.includes('proveedor nuevo')) {
     add('list_third_parties', { type: 'supplier', limit: 1 });
@@ -40,7 +89,7 @@ function plan(question: string): { name: string; input: unknown }[] {
   if (q.includes('votacion')) add('voting_result');
   if (q.includes('asamblea') && q.includes('proxima')) add('upcoming_assemblies');
   if (q.includes('comunicado')) add('latest_announcements');
-  if (/capital|aportacion|aportado/.test(q)) add('my_contributions');
+  if (!aboutMembers && /capital|aportacion|aportado/.test(q)) add('my_contributions');
   if (/estatutos|quorum|consejo|riego|helicoptero|documento/.test(q)) {
     add('search_documents', { query: question });
   }

@@ -23,6 +23,7 @@ import {
   UnavailableDiscrepancyExplainer,
   UnavailableDocumentExtractor,
 } from './infrastructure/gemini-ai';
+import { PrismaAssistantQueries } from './infrastructure/prisma-assistant-queries';
 import { PrismaDueDatesStore } from './infrastructure/prisma-due-dates-store';
 import { PrismaThirdPartyStore } from './infrastructure/prisma-third-party-store';
 
@@ -34,7 +35,12 @@ export {
   createGeminiClient,
 } from './infrastructure/gemini-ai';
 export { FakeDocumentExtractor } from './infrastructure/fake-document-extractor';
-export type { InvoicingReads, ThirdPartyLine } from './application/assistant-reads';
+export type {
+  InvoiceDetail,
+  InvoicingReads,
+  NifTrade,
+  ThirdPartyLine,
+} from './application/assistant-reads';
 export type {
   DeliveryNoteRegistered,
   DiscrepancyDetected,
@@ -116,6 +122,9 @@ export function createInvoicingModule(deps: {
     router,
     errorHandler: invoicingErrorHandler,
     /** For the AI assistant's tools (requirements/07): same use cases and permissions. */
-    reads: createInvoicingReads(useCaseDeps),
+    reads: createInvoicingReads({
+      ...useCaseDeps,
+      assistantQueries: new PrismaAssistantQueries(deps.prisma),
+    }),
   };
 }

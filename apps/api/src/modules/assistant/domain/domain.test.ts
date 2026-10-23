@@ -12,7 +12,10 @@ import { availableTools, TOOL_CATALOG } from './tool-catalog';
 import { buildSystemPrompt } from './system-prompt';
 
 type Grants = Record<string, 'read' | 'manage'>;
-const can = (grants: Grants) => (module: string, level: 'read' | 'manage') => {
+// A profile that reads only its own data in the member area (requirements/01, section 3).
+const OWN_SCOPE = new Set<Grants>();
+const can = (grants: Grants) => (module: string, level: 'read' | 'manage', scope?: 'all') => {
+  if (scope === 'all' && OWN_SCOPE.has(grants)) return false;
   const granted = grants[module];
   return granted === 'manage' || granted === level;
 };
@@ -26,6 +29,7 @@ const SOCIO: Grants = {
   'member-area': 'read',
   assistant: 'read',
 };
+OWN_SCOPE.add(SOCIO);
 const GESTOR: Grants = {
   announcements: 'read',
   documents: 'read',
@@ -58,16 +62,38 @@ describe('tools available per profile (BR-AI-01, US-AI-03)', () => {
       'search_documents',
       'list_invoices',
       'list_delivery_notes',
+      'invoice_totals',
+      'invoice_detail',
+      'open_discrepancies',
+      'cash_forecast',
+      'top_items',
+      'third_party_summary',
       'payments_and_collections_summary',
       'find_third_party',
       'list_third_parties',
       'latest_announcements',
       'my_contributions',
+      'capital_summary',
+      'member_census',
+      'member_detail',
+      'partner_trade',
     ]);
   });
 
   it('BR-AI-01: the board gets every tool that exists', () => {
     expect(names(CONSEJO)).toEqual(TOOL_CATALOG.map((tool) => tool.name));
+  });
+
+  it('BR-AI-01 (ADR-025): tools on other members need "all" scope; partner_trade also needs invoicing', () => {
+    const memberTools = ['capital_summary', 'member_census', 'member_detail', 'partner_trade'];
+    expect(names(SOCIO)).not.toEqual(expect.arrayContaining(memberTools.slice(0, 1)));
+    for (const tool of memberTools) expect(names(SOCIO)).not.toContain(tool);
+    expect(names({ 'member-area': 'read', assistant: 'read' })).toEqual([
+      'my_contributions',
+      'capital_summary',
+      'member_census',
+      'member_detail',
+    ]);
   });
 
   it('US-AI-03: a profile with no module at all gets no tool', () => {

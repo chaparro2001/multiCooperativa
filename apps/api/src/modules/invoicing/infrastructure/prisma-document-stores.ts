@@ -126,6 +126,7 @@ function noteWhere(cooperativeId: string, filter: DocumentFilter & { status?: st
     cooperativeId,
     ...(filter.operation && { operation: filter.operation }),
     ...(filter.thirdPartyId && { thirdPartyId: filter.thirdPartyId }),
+    ...(filter.number && { number: { equals: filter.number, mode: 'insensitive' as const } }),
     ...(filter.status && { status: filter.status as DeliveryNoteRecord['status'] }),
     ...dateRange(filter, 'date'),
   };
@@ -349,6 +350,7 @@ function invoiceWhere(cooperativeId: string, filter: InvoiceFilter) {
     cooperativeId,
     ...(filter.operation && { operation: filter.operation }),
     ...(filter.thirdPartyId && { thirdPartyId: filter.thirdPartyId }),
+    ...(filter.number && { number: { equals: filter.number, mode: 'insensitive' as const } }),
     ...(filter.paymentStatus && { paymentStatus: filter.paymentStatus }),
     ...(filter.reconciliationStatus && { reconciliationStatus: filter.reconciliationStatus }),
     ...dateRange(filter, 'issueDate'),
