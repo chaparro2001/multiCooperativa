@@ -11,6 +11,7 @@ import { tileBadge } from '@/features/home/tile-badges';
 import { useTileBadgeCounts } from '@/features/home/use-tile-badges';
 import { formatDateTime } from '@/i18n/format';
 import { canAccess, type VisibleModule, visibleModules } from '@/navigation/modules';
+import { useSession } from '@/session/session-context';
 import { AttentionItem } from '@/ui/attention-item';
 import { HeaderAction, HeaderActions } from '@/ui/header-action';
 import { HomeTile } from '@/ui/home-tile';
@@ -45,6 +46,7 @@ export default function HomeScreen() {
   const { cooperative, permissions } = useActiveCooperative();
   const { width } = useWindowDimensions();
   const { colors } = useTheme();
+  const { signOut } = useSession();
   // Count badges (unread announcements, invoices and delivery notes needing attention).
   const badgeCounts = useTileBadgeCounts();
   const list = permissions?.permissions;
@@ -113,6 +115,12 @@ export default function HomeScreen() {
                 icon="cog-outline"
                 label={t('settings.title')}
                 testID="settings-link"
+              />
+              <HeaderAction
+                onPress={() => void signOut()}
+                icon="logout"
+                label={t('settings.signOut')}
+                testID="home-sign-out"
               />
             </HeaderActions>
           ),
